@@ -1,0 +1,18 @@
+round = 0;
+
+while (1) {
+  write("Please enter a number (-999 to exit): ");
+  number = readnum();
+  if (number == -999) {
+    break;
+  } elif (number < 0) {
+    printred("Read a negative number: ", number, ".");
+  } elif (number > 0) {
+    printgreen("Read a positive number: ", number, ".");
+  } else {
+    printblack("Read number zero.");
+  }
+  round++;
+}
+
+print("Thanks, we played ", round, " round(s).");

@@ -1,0 +1,157 @@
+
+function max(a, b) {
+  if (a >= b) {
+    return a;
+  }
+  return b;
+}
+
+function max3(a, b, c) {
+  return max(a, max(b, c));
+}
+
+function isInteger(candidate) {
+  return candidate == round(candidate);
+}
+
+function factorial(n) {
+  if (!isInteger(n) || n < 0) {
+    exc = "Factorial is for nonnegative integers only (n="+ n +")";
+    throw (exc);
+  }
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+
+функция факториал (n) {
+  если(!isInteger(n) || n < 0) {
+    exc = "Factorial is for nonnegative integers only (n=" + n + ")";
+    ошибка(exc);
+  }
+  если(n <= 1) {
+    вернуть 1;
+  }
+  вернуть n * факториал(n - 1);
+}
+
+// Catalan numbers function implemented in CSCS.
+// C(0) = 1, C(n + 1) = Sum(C(i) * C(n - i)), i: 0 --> n, for n >= 0
+// Equivalent to: C(n) = 2 * (2*n - 1) / (n + 1) * C(n - 1), n > 0
+function catalan(n) {
+  if (!isInteger(n)) {
+    exc = "Catalan is for integers only (n="+ n +")";
+    throw (exc);
+  }
+  if (n < 0) {
+    exc = "Negative number (n="+ n +") supplied";
+    throw (exc);
+  }
+  if (n <= 1) {
+    return 1;
+  }
+
+  return 2 * (2*n - 1) / (n + 1) * catalan(n - 1);
+}
+
+primes = {};
+function isPrime(n) {
+  if (size(primes) > n) {
+    return primes[n];
+  }
+  if (n == 0 || n == 1) {
+    primes[n] = 0;
+    return 0;
+  }
+
+  bound = round(sqrt(n));
+  sz = size(primes);
+  if (sz <= bound) {
+    print("calling isPrime(", bound, "),n=", n);
+    a=isPrime(bound);
+    print("called isPrime(", bound, "),a=", a);
+  }
+  i = 2;
+  primes[n] = 1;
+  while (i <= bound) {
+    if (n % i == 0) {
+      primes[n] = 0;
+      return 0;
+    }
+    i++;
+  }
+  return primes[n];
+}
+
+function getPrimes(n) {
+  bound = n;//round(sqrt(n));
+  i = 0;
+  while (++i < bound) {
+    if (isPrime(i)) {
+      print(i);
+    }
+  }
+}
+
+cache["fib"] = 0;
+
+function fibonacci(n) {
+  if (contains(cache["fib"], n)) {
+    result = cache["fib"][n];    
+    //print("  found in cache fib(", n, ")=[", result, "]");
+    return result;
+  }
+  if (!isInteger(n) || n < 0) {
+    exc = "Fibonacci is for nonnegative integers only (n="+ n +")";
+    throw (exc);
+  }
+  if (n <= 1) {
+    return n;
+  }
+
+  result = fibonacci(n - 2) + fibonacci(n - 1);
+  cache["fib"][n] = result;
+  return result;
+}
+
+function tan(x) {
+  return sin(x) / cos(x);
+}
+
+function cot(x) {
+  return cos(x) / sin(x);
+}
+function test(x, expected) {
+  if (x == expected) {
+    printgreen(x, " as expected. OK");
+    return;
+  } 
+  if (type(expected) != "NUMBER") {
+    printred("[", x, "] but expected [", expected, "]. ERROR");
+    return;
+  }
+
+  epsilon = 0.000001;
+  if ((expected == 0 && abs(x) <= epsilon) ||
+       abs(x - expected) / expected <= epsilon) {
+    printgray(x, " within epsion to ", expected, ". almost OK");
+  } else {
+    diff = expected - x;
+    printred(x, " but expected ", expected, ", diff=", diff, ". ERROR");
+  }
+}
+
+function test2(x, expected) {
+  epsilon = 0.000001;
+  if (x == expected) {
+    printgreen(x, " as expected. OK");
+  } elif ((expected == 0 && abs(x) <= epsilon) ||
+           abs(x - expected) / expected <= epsilon) {
+    printgray(x, " within epsion to ", expected, ". almost OK");
+  } else {
+    diff = expected - x;
+    printred(x, " but expected ", expected, ", diff=", diff, ". ERROR");
+  }
+}

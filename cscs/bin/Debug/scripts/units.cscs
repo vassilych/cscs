@@ -1,0 +1,38 @@
+print ("Testing math operators");
+test(2.0E+15 + 3e+15 - 1.0e15, 4e+15);
+test(cos(pi/2), 0);
+a = 10;
+test((a++)-(--a)-a--, a - 2 * a - 1);
+test((a++)-(--a)-a--, a - 2 * a - 1);
+
+print ("Testing factorial");
+test(factorial(5), 120);
+
+print ("Testing strings");
+txt = "lu";
+txt += txt + substr(txt, 0, 1) + "_" + 1;
+test(txt, "lulula_1");  
+ind = indexof(txt, "_");
+test(ind, 5);
+
+print ("Testing short circuit evaluation");
+function f(x) {
+  counter++;
+  return x;
+}
+counter = 0; test(f(0) && f(1), 0); test(counter, 1);
+counter = 0; test(f(1) && f(0), 0); test(counter, 2);
+counter = 0; test(f(1) || f(2), 1); test(counter, 1);
+counter = 0; test(f(0) || f(3), 1); test(counter, 2);
+
+print ("Testing arrays and maps");
+arr[2] = 10; arr[1] = "str";
+test(type(arr),    "ARRAY");
+test(type(arr[0]), "NONE");
+test(type(arr[1]), "STRING");
+test(type(arr[2]), "NUMBER");
+x["bla"]["blu"]=113;
+test(contains(x["bla"], "blu"), 1);
+test(contains(x["bla"], "bla"), 0);
+x["blabla"]["blablu"]=125;
+test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 250);

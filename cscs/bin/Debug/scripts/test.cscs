@@ -1,0 +1,487 @@
+start = pstime;
+
+print("Testing strings");
+txt = "lu";
+txt += txt;
+txt = txt + "_";
+txt += "la";
+txt += 1;
+test(txt, "lulu_la1");
+
+txt = "lu";
+txt += txt + substr(txt, 0, 1) + "_" + 1;
+test(txt, "lulul_1");  
+
+bb = "abc_blah";
+c = substr(bb, 4, 3);
+test(c, "bla");
+ind = indexof(bb, "bla");
+test(ind, 4);
+
+print("Testing numbers");
+a=(-3+2*9)-(10-15);
+a++; --a;
+print("a=[", a, "]");
+test(a, 20);
+
+x = 1;
+b = x++ - x--; // b = -1, x = 1
+test(x, 1);
+test(b, -1);
+c = x = (b += 1); // x = b = c = 0,
+test(x, 0);
+test(b, 0);
+test(c, 0);
+x -= ++c; // c = 1, x = -1
+test(x, -1);
+test(c, 1);
+
+test(2-11-3*7, -30);
+test((((-5.5))), -5.5);
+test(((16-3)-3)+15/2*5, 47.5);
+test(1-2-3-(4-(5-(6-7)))-pow(2,3*exp(14-7*2)), -10);
+test(3*50-3*2^4*3, 6);
+test(++a-a--, 0);
+test((a++)-(--a), 0);
+test(a, 20);
+test(1-a--, -19);
+test((a++)-(--a)-a--, -19);
+test(a, 18);
+test(sin(pi/2), 1);
+test(cos(pi/2), 0);
+test(tan(pi/2), 1.63317787283838E+16);
+
+a = 19;
+test((a++)-(--a)-a--, a - 2 * a - 1);
+test((a++)-(--a)-a--, a - 2 * a - 1);
+
+x = 2.0E+15 + 3e+15 - 1.0e15;
+test(x, 4e+15);
+
+print;
+
+n = 10;
+getPrimes(n);
+test(isPrime(5), 1);
+test(isPrime(6), 0);
+function isInteger(candidate) {
+  return candidate == round(candidate);
+}
+
+n="blah";
+if (!isInteger(n) || n < 0) {
+  test(n, n);
+} else {
+  test("integer", n);
+}
+
+c = 0; b = 2;
+c+=3;
+test(c, 3);
+b*=5;
+test(b/=2, 5);
+
+write("Testing factorial(5): ");
+test(factorial(5), 120);
+
+
+x = sin(pi/2);
+if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
+             x < 1 - pi) {
+  print("Error, in if, x=", x);
+} else {
+  print("OK, in else, x=", x);
+}
+
+a=1;
+c=0;
+test(a||c, 1);
+test(c&&b, 0);
+
+a[1]=1;
+a[2]=2;
+c=a[1]+a[2];
+test(c, 3);
+
+a[1][2]=22;
+a[5][3]=15;
+a[1][2]-=100;
+a[5][3]+=100;
+
+test(a[1][2], -78);
+test(a[5][3], 115);
+
+print(a[5][2]);
+
+i=13;
+i++;
+print(i);
+a[1][2]++;
+print(a[1][2]);
+print(a[5][3]++);
+print(a[5][3]++);
+print(a[5][3]++);
+test(a[5][3], 118);
+
+print(++a[5][3]);
+print(++a[5][3]);
+print(++a[5][3]);
+print(a[5][3]++);
+test(a[5][3], 122);
+
+print(--a[5][3]);
+print(--a[5][3]);
+print(--a[5][3]);
+print(a[5][3]--);
+print(a[5][3]--);
+print(a[5][3]--);
+test(a[5][3], 116);
+
+i=10;
+
+while(--i > 0) {
+  newarray[i] = 2*i;
+}
+print("size(newarray)=", size(newarray));
+test(i, 0);
+test(newarray[9], 18);
+test(size(newarray), 10);
+
+print("Testing short circuit evaluation");
+function f(x) {
+  counter++;
+  return x;
+}
+counter = 0; test(f(0) && f(1), 0); test(counter, 1);
+counter = 0; test(f(1) && f(0), 0); test(counter, 2);
+counter = 0; test(f(1) || f(2), 1); test(counter, 1);
+counter = 0; test(f(0) || f(3), 1); test(counter, 2);
+
+a = (f(1) && ((sin(0) || sin(1*2)) && f(2) && (f(3) || f(4))));
+test(a, 1);
+
+print("Testing arrays and maps");
+arr[2] = 10; arr[1] = "str";
+test(type(arr),    "ARRAY");
+test(type(arr[0]), "NONE");
+test(type(arr[1]), "STRING");
+test(type(arr[2]), "NUMBER");
+
+x["bla"]["blu"]=113;
+test(contains (x["bla"], "blu"), 1);
+test(contains (x["bla"], "bla"), 0);
+x["blabla"]["blablu"]=125;
+test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 237);
+
+b[5][3][5][3]=15;
+print(++b[5][3][5][3]);
+print(++b[5][3][5][1]);
+b[5][3][5][3]*=1000;
+test(b[5][3][5][3], 16000);
+test(size(b), 6);
+test(size(b[5]), 4);
+test(size(b[5][3]), 6);
+test(size(b[5][3][5]), 4);
+test(size(b[5][3][5][3]), 5);
+
+bla="bla";
+x["bla"]=13;
+x["blabla"]=26;
+test(x["bla"], 13);
+test(size(x), 2);
+test(contains(x, "bla") , 1);
+test(contains(x, "bla2"), 0);
+test(x["bla"] + x["blabla"], 39);
+
+x["bla"]["blu"]=113;
+test(contains(x["bla"], "blu"), 1);
+test(contains(x["bla"], "bla"), 0);
+x["bla"]["blu"]++;
+test(x["bla"]["blu"], 114);
+x["blabla"]["blablu"]=126;
+--x["blabla"]["blablu"];
+test(x["blabla"]["blablu"], 125);
+
+test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 238);
+print(--x["blabla"]["blablu"]);
+print(--x["blabla"]["blablu"]);
+print(--x["blabla"]["blablu"]);
+print(x["blabla"]["blablu"]++);
+print(x["blabla"]["blablu"]++);
+print(x["blabla"]["blablu"]++);
+
+x = 20 * sin(pi^2);
+cache["if"] = -10 * x;
+cache["else"] = 10 * x;
+//print(x, ", log(x + 3*10^2)=", log(x + 3*10^2));
+if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
+             x < 1 - pi) {
+  print("OK, in if, x=", x, ", cache=", cache["if"]);
+} else {
+  print("ERROR, in else, cache=", cache["else"]);
+}
+
+
+a={0};
+i = 0;
+while(++i < 10) {
+  add(a, 2*i);
+}
+print (a);
+i -= 5;
+d=a[--i];
+test(d, 8);
+test(i, 4);
+
+n=1.5;
+try {
+  c = catalan(n);
+  print("catalan(", n, ")=", c);
+  print("ERROR. Exception needed for n=", n);
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
+n=-10;
+try {
+  c = catalan(n);
+  print("catalan(", n, ")=", c);
+  print("ERROR. Exception needed for n=", n);
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
+n=10;
+try {
+  c = catalan(n);
+  print("catalan(", n, ")=", c);
+} catch(exc) {
+  print("ERROR. Caught: " + exc);
+}
+
+f = fibonacci(n);
+print("fibonacci(", n, ")=", f);
+test(f, 55);
+c = catalan(n);
+print("catalan(", n, ")=", c);
+test(c, 16796);
+
+i = 0; b = 0;
+while(i < 13)
+{
+  b += (i*4 - 1);
+  i++;
+  if ( i >= 4) {
+    print("in if, i==", i, ", break");
+    break;
+  } else {
+    print("in else, i==", i, ", continue");
+    continue;
+  }
+  print("this is never reached");
+}
+print("while() done");
+
+n = 0; y = 1;
+a =  !!!n && !!y;
+test(a, 1);
+b =  !a || !y || n;
+test(b, 0);
+c =  !!(!y || !n && y);
+test(c, 1);
+
+a = 1+(25-2*3);
+arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-++a), ++a/(a/3), 2 * sqrt(pow(2, 2))};
+print(arr);
+i = 0;
+while(i < size(arr)) {
+  print("arr[", i, "]=", arr[i], ", expecting ", i);
+  i++;
+}
+
+if (2*pow(2,4) > pow(2,5)*2 || factorial(3) == 24) {
+  print("if not expected");
+} elif(exp(3) <= (3*(pow(2,3)+1)-(1-sin(pi))) && factorial(4) == 24) {
+  print(exp(3), "<=", (3*(pow(2,3)+1)-(1-sin(pi))), " expected");
+} else {
+  print("else not expected");
+}
+
+print;
+x = sin(pi*2);
+if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
+             x < 1 - pi) {
+  print("in if, x=", x);
+} else {
+  print("in else, x=", x);
+}
+
+b = "bla";
+i = 0;
+while(i < 13)
+{
+  b += (i*4 - 1);
+  i++;
+  if ( i == 3) {
+    break;
+  } else {
+    continue;
+  }
+  //print("this is never reached");
+}
+test(b, "bla-137");
+
+print("who are \"you\" my friend?"," e=", 0+exp(1)-2*sin(0), ", pi=", pi);
+
+a = 23; b = 22;
+cond = "na";
+if (a < b) {
+  if (b < 15) {
+    cond = "cond1";
+  }
+  elif  (b < 50) {
+    cond = "cond2";
+  }
+}
+elif (a >= 25) {
+  cond = "cond3";
+}
+else {
+  cond = "cond4";
+}
+test(cond, "cond4");
+print();
+
+a=1;
+b=2;
+c=0;
+test(a&&c, 0);
+test(a||c, 1);
+test(a||b, 1);
+test(!a&&!b, 0);
+test(!a && !c, 0);
+test(! a || !c, 1);
+test(!a || !b, 0);
+test(a && b && !c, 1);
+test(a || b ||  c, 1);
+test(!a || !b || c, 0);
+
+i = 10;
+while(--i > 0) {
+  newarray[i] = 2*i;
+}
+print("size(newarray)=", size(newarray));
+test(i, 0);
+test(newarray[9], 18);
+test(size(newarray), 10);
+
+function trySuite(n) {
+  print("Trying to calculate negative factorial...");
+  result = tryNegative(n);
+  return result;
+}
+
+function tryNegative(n) {
+  return factorial(-1 * n);
+}
+function tryNonInteger(n) {
+  print ("In try non-integer");
+  return factorial(n + 0.5);
+}
+function tryZeroDivision() {
+  return cot(0);
+}
+
+function variableTest() {
+  print("In function start, n=", n);
+  n = sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
+  test(n, 20);
+  print("In function end, n=", n);
+}
+
+function convertToNegative(n) {
+  return -1 * n;
+}
+n = 5;
+try {
+  f = trySuite(n);
+  print("factorial(", n, ")=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+try {
+  f = tryNonInteger(n);
+  print("factorial(", n, ")=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+try {
+  print ("In try zero division ");
+  f = tryZeroDivision();
+  print("cot(0)=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+print("After try-catches");
+
+n *= 2;
+f=factorial(n);
+print("factorial(", n, ")=", f);
+
+variableTest();
+print("After function, n=", n);
+
+слова = {"Это", "написано", "по-русски"};
+разм = размер(слова);
+и = 0;
+пока(и < разм) {
+  если (и  % 2 == 0) {
+    печать(слова[и]);
+  }
+  и++;
+}
+
+palabras = {"Este", "sentido", "es", "en", "Español"};
+tam = tamaño(palabras);
+i = 0;
+mientras(i < tam) {
+  si (i  % 2 == 0) {
+    imprimir(palabras[i]);
+  }
+  i++;
+}
+
+я = 0;
+пока (я++ < 10) {
+  если (я % 2 == 0) {
+    печать (я, ": чётное число.");
+  } иначе {
+    печать (я, ": нечётное число.");
+  }
+}
+
+for (i = 10; i >= 0; i--) {
+  write(i, " ");
+  arr[i] = 2*i;
+}
+i = 10;
+print;
+for (;;) {
+
+  write(i, " ");  arr[i] = 2*i;
+  i--;
+  if (i < 0) { break; }
+}
+print;
+for (item : arr) {
+  write(item, " ");
+}
+print;
+test("x","x");
+
+end = pstime;
+printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");

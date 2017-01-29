@@ -1,0 +1,111 @@
+function getP(n) {
+  bound = n;//round(sqrt(n));
+  i = 0;
+  while (++i < bound) {
+    if (isPrime(i)) {
+      print(i);
+    }
+  }
+}
+n=34;
+getP(n);
+/*      
+for (i = 10; i >= 0; i--) {
+  write(i, " ");
+  arr[i] = 2*i;
+}
+i = 10;
+print;
+for (;;) {
+
+  write(i, " ");  arr[i] = 2*i;
+  i--;
+  if (i < 0) { break; }
+}
+print;
+for (item : arr) {
+  write(item, " ");
+}
+print;*/
+//--a;
+
+
+/*function factorial(n) {
+  if (!isInteger(n) || n < 0) {
+    exc = "Factorial is for nonnegative integers only (n="+ n +")";
+    throw exc;
+  }
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+function isInteger(candidate) {
+  return candidate == round(candidate);
+}
+
+function factorialHelper(n) {
+  try {
+    f = factorial(n);
+    print("factorial(", n, ")=", f);
+  } catch(exc) {
+    print("Caught exception: ", exc);
+  }
+}
+
+factorialHelper(0);
+factorialHelper(10);
+factorialHelper("blah");*/
+
+
+//print("Thanks, we played ", round, " round(s).");
+
+
+//include("scripts/functions.cscs");
+//show factorial;
+//arr[0]=0;
+//if (arr[0] == 0) { printgreen("Hello, World!"); }
+//n=20;
+//b=isInteger(9.5);
+//a = fibonacci(n);
+//a = factorial(n);
+//print("fibonacci(", n, ")=[", a, "]");
+
+//translate ru test;
+/*
+odd  = {};
+even = {};
+c = 0;
+while (c++ < 10) {
+  if (c % 2 == 1) {
+    odd[size(odd)] = c;
+  } else {
+    even[size(even)] = c;
+  }
+}
+
+for (i : odd) {
+  print("odd number: ", i);
+}
+function factorial(n) {
+  if (n < 0) {
+    exc = "Negative number (n="+ n +") for factorial";
+    throw (exc);
+  }
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+
+try {
+  number = -6;
+  print("Factorial(", number, ")=", factorial(number));
+} catch (problem) {
+  print(problem);
+}
+number = 6;
+print("Factorial(", number, ")=", factorial(number));
+*/

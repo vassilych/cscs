@@ -1,0 +1,185 @@
+include("scripts/functions.cscs");
+
+function f(x) {
+  print("called f(",x, ")");
+  return x;
+}
+
+a = f(0) && f(1);
+test(a, 0);
+b = f(1) || f(2);
+test(b, 1);
+c = f(0) || f(3);
+test(c, 1);
+d = f(5) && f(6);
+test(d, 1);
+
+a=1;b=2;c=0;
+x=a||b;
+y=c&&a;
+
+
+function callfunction(n)
+{
+  bla = 10;
+  blu = 13;
+
+  m = fibonacci(n);
+
+  allvars();
+  return m;
+}
+function callfunc(n)
+{
+  lala = 22;
+  blu  = 33;
+
+  m = callfunction(n);
+  return m;
+}
+function cf(n)
+{
+  m = callfunc(n);
+  return m;
+}
+
+ff= 11;
+n= 50;
+try {
+  f = cf(n);
+  print("Fibonacci(", n, ")=", f);
+} catch(exc) {
+  print("Caught: " + exc);
+}
+
+print("1");
+test(cos(pi/2), 0);
+print("2");
+palabras = {"Este", "sentido", "es", "en", "Español"};
+tam = tamaño(palabras);
+i = 0;
+mientras(i < tam) {
+  si (i % 2 == 0) {
+    imprimir(palabras[i]);
+  }
+  i++;
+}
+
+b=((2+3))-6;
+
+palabras = {"Este", "sentido", "es", "en", "Español"};
+tam = tamaño(palabras);
+i = 10;
+while(--i > 0) {
+  array[i] = 2*i;
+}
+print("array[9]=", array[9]);       // prints 18
+print("size(array)=", size(array)); // prints 10
+a=10;
+arr={++a - a--, ++a*exp(0)/a--, -2*(--a - ++a), (++a + 1)/(2*2)};
+i=0;
+while(i < size(arr)) {
+  print("arr[", i, "]=", arr[i], ", expecting ", i);
+  i++;
+}
+
+i = 10;
+while(--i > 0) {
+  array[i] = 2*i;
+}
+print("array[9]=", array[9]);       // prints 18
+print("size(array)=", size(array)); // prints 10
+
+
+включить("scripts/functions.cscs");
+
+нечётные = {};
+чётные = {};
+ч = 0;
+пока (ч++ < 10) {
+  если (ч % 2 == 1) {
+    нечётные[размер(нечётные)] = ч;
+  } иначе {
+    чётные[размер(чётные)] = ч;
+  }
+}
+
+для (и : нечётные) {
+  печать("нечётное число: ", и);
+}
+
+odd  = {};
+even = {};
+c = 0;
+while (c++ < 10) {
+  if (c % 2 == 1) {
+    odd[size(odd)] = c;
+  } else {
+    even[size(even)] = c;
+  }
+}
+
+for (i : odd) {
+  print("odd number: ", i);
+}
+
+функция факториал(н) {
+  если (н < 0) {
+    текст = "Число " + число + " меньше нуля!";
+    ошибка(текст);
+  }
+  если (н <= 1) {
+    вернуть 1;
+  }
+
+  вернуть н * факториал(н - 1);
+}
+
+попытка {
+  число = -6;
+  печать("Факториал(", число, ")=", факториал(число));
+} поймать (проблема) {
+  печать(проблема);
+}
+число = 6;
+печать("Факториал(", число, ")=", факториал(число));
+
+function factorial(n) {
+  if (n < 0) {
+    exc = "Negative number (n="+ n +") for factorial";
+    throw (exc);
+  }
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * factorial(n - 1);
+}
+
+try {
+  number = -6;
+  print("Factorial(", number, ")=", factorial(number));
+} catch (problem) {
+  print(problem);
+}
+number = 6;
+print("Factorial(", number, ")=", factorial(number));
+
+/*
+
+Chapter 1. Introduccion
+
+- An algorithm to parse expressions
+- A brief history of other parsing algorithms
+- Its usage: for parsing and to create a custom language
+- Custom language: keywords in any language
+- An example of a CSCS program: this is what you will be able to do
+- Script and Shell (Windows and Unix-like systems)
+- Shell: uniform commands for Win and Unix
+
+Chapter 2. The Split-and-Merge Algorithm
+
+Chapter 5. Developing a More Command
+
+*/
+

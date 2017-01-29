@@ -1,0 +1,17 @@
+en
+parseToken        = Couldn't parse [{0}] (not registered as a function).
+parseTokenExtra   = Did you mean [{0}]?
+errorLine         = Line {0}: [{1}]
+errorFile         = File: {0}.
+
+de
+parseToken        = [{0}] konnte nicht analysiert werden (nicht als Funktion registriert).
+parseTokenExtra   = Meinen Sie [{0}]?
+errorLine         = Zeile {0}: [{1}]
+errorFile         = Datei: {0}.
+
+ru
+parseToken        = Не понял [{0}] (не зарегистрирован, как функция).
+parseTokenExtra   = Вы имели в виду [{0}]?
+errorLine         = На линии {0}: [{1}]
+errorFile         = Файл: {0}.

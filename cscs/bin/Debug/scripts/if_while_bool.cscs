@@ -1,0 +1,110 @@
+include("scripts/functions.cscs");
+
+i = 0; b = 0;
+while(i < 13)
+{
+  b += (i*4 - 1);
+  i++;
+  if ( i >= 4) {
+    print("in if, i==", i, ", break");
+    break;
+  } else {
+    print("in else, i==", i, ", continue");
+    continue;
+  }
+  print("this is never reached");
+}
+print("while() done");
+
+n = 0; y = 1;
+a =  !!!n && !!y;
+test(a, 1);
+b =  !a || !y || n;
+test(b, 0);
+c =  !!(!y || !n && y);
+test(c, 1);
+
+a = 1+(25-2*3);
+arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-++a), ++a/(a/3), 2 * sqrt(pow(2, 2))};
+print(arr);
+i = 0;
+while(i < size(arr)) {
+  print("arr[", i, "]=", arr[i], ", expecting ", i);
+  i++;
+}
+
+if (2*pow(2,4) > pow(2,5)*2 || factorial(3) == 24) {
+  print("if not expected");
+} elif(exp(3) <= (3*(pow(2,3)+1)-(1-sin(pi))) && factorial(4) == 24) {
+  print(exp(3), "<=", (3*(pow(2,3)+1)-(1-sin(pi))), " expected");
+} else {
+  print("else not expected");
+}
+
+print;
+x = sin(pi*2);
+if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
+             x < 1 - pi) {
+  print("in if, x=", x);
+} else {
+  print("in else, x=", x);
+}
+
+b = "bla";
+i = 0;
+while(i < 13)
+{
+  b += (i*4 - 1);
+  i++;
+  if ( i == 3) {
+    break;
+  } else {
+    continue;
+  }
+  //print("this is never reached");
+}
+test(b, "bla-137");
+
+print("who are \"you\" my friend?"," e=", 0+exp(1)-2*sin(0), ", pi=", pi);
+
+a = 23; b = 22;
+cond = "na";
+if (a < b) {
+  if (b < 15) {
+    cond = "cond1";
+  }
+  elif  (b < 50) {
+    cond = "cond2";
+  }
+}
+elif (a >= 25) {
+  cond = "cond3";
+}
+else {
+  cond = "cond4";
+}
+test(cond, "cond4");
+print();
+
+a=1;
+b=2;
+c=0;
+test(a&&c, 0);
+test(a||c, 1);
+test(a||b, 1);
+test(!a&&!b, 0);
+test(!a && !c, 0);
+test(! a || !c, 1);
+test(!a || !b, 0);
+test(a && b && !c, 1);
+test(a || b ||  c, 1);
+test(!a || !b || c, 0);
+
+i = 10;
+while(--i > 0) {
+  newarray[i] = 2*i;
+}
+print("size(newarray)=", size(newarray));
+test(i, 0);
+test(newarray[9], 18);
+test(size(newarray), 10);

@@ -1,0 +1,64 @@
+include("scripts/functions.cscs");
+
+function trySuite(n) {
+  print("Trying to calculate negative factorial...");
+  result = tryNegative(n);
+  return result;
+}
+
+function tryNegative(n) {
+  return factorial(-1 * n);
+}
+function tryNonInteger(n) {
+  print ("In try non-integer");
+  return factorial(n + 0.5);
+}
+function tryZeroDivision() {
+  return cot(0);
+}
+
+function variableTest() {
+  print("In function start, n=", n);
+  n = sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
+  test(n, 20);
+  print("In function end, n=", n);
+}
+
+function convertToNegative(n) {
+  return -1 * n;
+}
+n = 5;
+try {
+  f = trySuite(n);
+  print("factorial(", n, ")=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+try {
+  f = tryNonInteger(n);
+  print("factorial(", n, ")=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+try {
+  print ("In try zero division ");
+  f = tryZeroDivision();
+  print("cot(0)=", f);
+}
+catch(exc) {
+  print ("Caught Exception: ", exc);
+}
+
+print("After try-catches");
+
+n *= 2;
+f=factorial(n);
+print("factorial(", n, ")=", f);
+
+variableTest();
+print("After function, n=", n);
+

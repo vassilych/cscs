@@ -1,0 +1,5 @@
+нечётные               odd
+чётные                 even
+число                  number
+факториал              factorial
+проблема               problem
