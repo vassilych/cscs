@@ -1,0 +1,25 @@
+﻿<Properties StartupConfiguration="{F98C494A-35FA-43EE-B02C-314EE78BC811}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="cscs/Parser.cs">
+    <Files>
+      <File FileName="cscs/Main.cs" Line="39" Column="7" />
+      <File FileName="cscs/Functions.OS.cs" Line="426" Column="6" />
+      <File FileName="cscs/Utils.Parsing.cs" Line="237" Column="1" />
+      <File FileName="cscs/Utils.cs" Line="13" Column="64" />
+      <File FileName="cscs/Parser.cs" Line="148" Column="6" />
+      <File FileName="cscs/Constants.cs" Line="16" Column="21" />
+      <File FileName="cscs/ParsingScript.cs" Line="227" Column="46" />
+      <File FileName="cscs/Functions.Flow.cs" Line="336" Column="21" />
+      <File FileName="cscs/Functions.Math.cs" Line="66" Column="37" />
+      <File FileName="cscs/Interpreter.cs" Line="584" Column="1" />
+      <File FileName="cscs/ParserFunction.cs" Line="1" Column="1" />
+      <File FileName="cscs/Translation.cs" Line="1" Column="1" />
+      <File FileName="cscs/Variable.cs" Line="7" Column="16" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.cscsMono PreferredExecutionTarget="MonoDevelop.Default" />
+</Properties>
