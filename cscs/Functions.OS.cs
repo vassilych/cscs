@@ -970,6 +970,39 @@ namespace SplitAndMerge
       return Variable.EmptyInstance;
     }
   }
+  class LockFunction : ParserFunction
+  {
+    static Object lockObject = new Object();
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      string body = Utils.GetBodyBetween(script, Constants.START_ARG,
+                                                 Constants.END_ARG);
+      ParsingScript threadScript = new ParsingScript(body);
+
+      lock (lockObject) {
+        threadScript.ExecuteAll();
+      }
+      return Variable.EmptyInstance;
+    }
+  }
+
+  class SignalWaitFunction : ParserFunction
+  {
+    static AutoResetEvent waitEvent = new AutoResetEvent(false);
+    bool m_isSignal;
+
+    public SignalWaitFunction(bool isSignal)
+    {
+      m_isSignal = isSignal;
+    }
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool result = m_isSignal ? waitEvent.Set() :
+                                 waitEvent.WaitOne();
+      return new Variable(result);
+    }
+  }
   class ClearConsole : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)

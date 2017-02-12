@@ -83,6 +83,7 @@ namespace SplitAndMerge
 		public const string FLOOR       = "floor";
 		public const string INDEX_OF    = "indexof";
     public const string KILL        = "kill";
+    public const string LOCK        = "lock";
     public const string LOG         = "log";
 		public const string MKDIR       = "mkdir";
 		public const string MORE        = "more";
@@ -102,6 +103,7 @@ namespace SplitAndMerge
     public const string READNUMBER  = "readnum";
 		public const string ROUND       = "round";
 		public const string RUN         = "run";
+    public const string SIGNAL      = "signal";
     public const string SETENV      = "setenv";
 		public const string SET         = "set";
     public const string SHOW        = "show";
@@ -117,6 +119,7 @@ namespace SplitAndMerge
 		public const string TOLOWER     = "tolower";
     public const string TOUPPER     = "toupper";
     public const string TRANSLATE   = "translate";
+    public const string WAIT        = "wait";
     public const string WRITE       = "write";
     public const string WRITELINE   = "writeline";
 		public const string WRITELINES  = "writelines";

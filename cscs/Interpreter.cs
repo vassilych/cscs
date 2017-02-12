@@ -101,6 +101,7 @@ namespace SplitAndMerge
 			ParserFunction.RegisterFunction(Constants.FLOOR,       new FloorFunction());
 			ParserFunction.RegisterFunction(Constants.INDEX_OF,    new IndexOfFunction());
       ParserFunction.RegisterFunction(Constants.KILL,        new KillFunction());
+      ParserFunction.RegisterFunction(Constants.LOCK,        new LockFunction());
       ParserFunction.RegisterFunction(Constants.LOG,         new LogFunction());
 			ParserFunction.RegisterFunction(Constants.MKDIR,       new MkdirFunction());
 			ParserFunction.RegisterFunction(Constants.MORE,        new MoreFunction());
@@ -120,6 +121,7 @@ namespace SplitAndMerge
       ParserFunction.RegisterFunction(Constants.READNUMBER,  new ReadConsole(true));
 			ParserFunction.RegisterFunction(Constants.ROUND,       new RoundFunction());
 			ParserFunction.RegisterFunction(Constants.RUN,         new RunFunction());
+      ParserFunction.RegisterFunction(Constants.SIGNAL,      new SignalWaitFunction(true));
 			ParserFunction.RegisterFunction(Constants.SETENV,      new SetEnvFunction());
       ParserFunction.RegisterFunction(Constants.SHOW,        new ShowFunction());
 			ParserFunction.RegisterFunction(Constants.SIN,         new SinFunction());
@@ -134,6 +136,7 @@ namespace SplitAndMerge
 			ParserFunction.RegisterFunction(Constants.TOLOWER,     new ToLowerFunction());
 			ParserFunction.RegisterFunction(Constants.TOUPPER,     new ToUpperFunction());
       ParserFunction.RegisterFunction(Constants.TRANSLATE,   new TranslateFunction());
+      ParserFunction.RegisterFunction(Constants.WAIT,        new SignalWaitFunction(false));
       ParserFunction.RegisterFunction(Constants.WRITE,       new PrintFunction(false));
 			ParserFunction.RegisterFunction(Constants.WRITELINE,   new WriteLineFunction());
 			ParserFunction.RegisterFunction(Constants.WRITELINES,  new WriteLinesFunction());
@@ -215,6 +218,7 @@ namespace SplitAndMerge
 				Translation.Add(languageSection, Constants.FLOOR, tr1, tr2);
 				Translation.Add(languageSection, Constants.INDEX_OF, tr1, tr2);
 				Translation.Add(languageSection, Constants.KILL, tr1, tr2);
+        Translation.Add(languageSection, Constants.LOCK, tr1, tr2);
 				Translation.Add(languageSection, Constants.MKDIR, tr1, tr2);
 				Translation.Add(languageSection, Constants.MORE, tr1, tr2);
 				Translation.Add(languageSection, Constants.MOVE, tr1, tr2);
@@ -234,6 +238,7 @@ namespace SplitAndMerge
 				Translation.Add(languageSection, Constants.SET, tr1, tr2);
 				Translation.Add(languageSection, Constants.SETENV, tr1, tr2);
         Translation.Add(languageSection, Constants.SHOW, tr1, tr2);
+        Translation.Add(languageSection, Constants.SIGNAL, tr1, tr2);
         Translation.Add(languageSection, Constants.SIZE, tr1, tr2);
         Translation.Add(languageSection, Constants.SLEEP, tr1, tr2);
 				Translation.Add(languageSection, Constants.SUBSTR, tr1, tr2);
@@ -243,6 +248,7 @@ namespace SplitAndMerge
 				Translation.Add(languageSection, Constants.TOLOWER, tr1, tr2);
 				Translation.Add(languageSection, Constants.TOUPPER, tr1, tr2);
         Translation.Add(languageSection, Constants.TRANSLATE, tr1, tr2);
+        Translation.Add(languageSection, Constants.WAIT, tr1, tr2);
         Translation.Add(languageSection, Constants.WRITE, tr1, tr2);
 				Translation.Add(languageSection, Constants.WRITELINE, tr1, tr2);
 				Translation.Add(languageSection, Constants.WRITELINES, tr1, tr2);
