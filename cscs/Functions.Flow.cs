@@ -186,7 +186,12 @@ namespace SplitAndMerge
       //script.MoveForwardIf(Constants.END_ARG);
       //script.MoveForwardIf(Constants.END_STATEMENT);
 
-      result.IsReturn = false;
+      if (result == null) {
+        result = Variable.EmptyInstance;
+      } else {
+        result.IsReturn = false;
+      }
+
       return result;
     }
 

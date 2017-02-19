@@ -471,7 +471,6 @@ for (i = 10; i >= 0; i--) {
 i = 10;
 print;
 for (;;) {
-
   write(i, " ");  arr[i] = 2*i;
   i--;
   if (i < 0) { break; }
@@ -485,3 +484,17 @@ test("x","x");
 
 end = pstime;
 printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
+
+function threadWork() {
+  sleep(10);
+  print("  Starting thread work in thread", threadid());
+  sleep(1000);
+  print("  Finishing thread work in thread", threadid());
+  signal();
+}
+
+print("Main, starting new thread from ", threadid());
+thread(threadWork());
+print("Main, waiting for thread in ", threadid());
+wait();
+print("Main, wait returned in ", threadid());

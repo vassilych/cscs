@@ -232,12 +232,17 @@ namespace SplitAndMerge
 
       ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
       string body = Utils.GetBodyBetween(tempScript, start, end);
+      string rest = script.Rest;
       // After the statement above tempScript.Parent will point to the last
       // character belonging to the body between start and end characters. 
 
       while (script.Pointer < tempScript.Pointer)	{
         Variable item = Utils.GetItem(script);
 				args.Add(item);
+        rest = script.Rest;
+        if (script.Pointer == tempScript.Pointer) {
+          rest = script.Rest;
+        }
 			}
 
       if (script.Pointer <= tempScript.Pointer) {

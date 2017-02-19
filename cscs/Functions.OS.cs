@@ -955,7 +955,7 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       int threadID = Thread.CurrentThread.ManagedThreadId;
-      return new Variable(threadID);
+      return new Variable(threadID.ToString());
     }
   }
   class SleepFunction : ParserFunction

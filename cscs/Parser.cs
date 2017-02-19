@@ -118,6 +118,7 @@ private static List<Variable> Split(ParsingScript script, char [] to)
                   action + "] without an argument.");
       }
       // If there is no numerical result, we are not in a math expression.
+      string brest = script.Rest;
       listToMerge.Add(current);
       return listToMerge;
     }
@@ -189,7 +190,8 @@ private static List<Variable> Split(ParsingScript script, char [] to)
 
       // Case of a negative number, or starting with the closing bracket:
       if (item.Length == 0 &&
-         ((ch == '-' && next != '-') || ch == Constants.END_ARG)) {
+         ((ch == '-' && next != '-') || ch == Constants.END_ARRAY
+                                     || ch == Constants.END_ARG)) {
         return true;
       }
 
