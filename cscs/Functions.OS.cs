@@ -264,7 +264,6 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       bool isList;
-      string parsing1 = script.Rest;
       List<Variable> args = Utils.GetArgs(script,
         Constants.START_ARG, Constants.END_ARG, out isList);
 

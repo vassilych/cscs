@@ -118,7 +118,6 @@ private static List<Variable> Split(ParsingScript script, char [] to)
                   action + "] without an argument.");
       }
       // If there is no numerical result, we are not in a math expression.
-      string brest = script.Rest;
       listToMerge.Add(current);
       return listToMerge;
     }

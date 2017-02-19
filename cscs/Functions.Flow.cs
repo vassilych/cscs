@@ -57,8 +57,7 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       // 1. Extract what to throw.
-      string rest = script.Rest;
-      Variable arg = Utils.GetItem(script);
+       Variable arg = Utils.GetItem(script);
 
       // 2. Convert it to a string.
       string result = arg.AsString();
@@ -143,12 +142,10 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       bool isList;
-      string rest0 = script.Rest;
 
       List<Variable> functionArgs = Utils.GetArgs(script,
           Constants.START_ARG, Constants.END_ARG, out isList);
 
-      string rest1 = script.Rest;
       //script.MoveForwardIf(Constants.END_ARG);
       script.MoveBackIf(Constants.START_GROUP);
 
@@ -177,7 +174,6 @@ namespace SplitAndMerge
 
       while (tempScript.Pointer < m_body.Length - 1 && 
             (result == null || !result.IsReturn)) {
-        string rest = tempScript.Rest;
         result = tempScript.ExecuteTo();
         tempScript.GoToNextStatement();
       }
@@ -534,7 +530,6 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      string rest = script.Rest;
       Variable varValue = Utils.GetItem(script);
 
       // Check if the variable to be set has the form of x[a][b]...,
