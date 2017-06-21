@@ -36,7 +36,7 @@ namespace SplitAndMerge
 
       ProcessScript("include(\"scripts/functions.cscs\");");
       string script = null;
-      script = GetFileContents("/Users/vk/Documents/github/cscscpp/bin/Debug/scripts/temp.cscs");
+      //script = GetFileContents("/Users/vk/Documents/github/cscscpp/bin/Debug/scripts/temp.cscs");
 
       if (args.Length >= 3) {
         Translation.TranslateScript(args);
