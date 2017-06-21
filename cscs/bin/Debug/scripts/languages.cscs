@@ -8,13 +8,13 @@
   и++;
 }
 
-numeros = {"uno", "dos", "tres", "quatro", "cinco", "seis"};
-tam = tamaño(palabras);
+números = {"uno", "dos", "tres", "quatro", "cinco", "seis"};
+tam = tamaño(números);
 para (i = 1; i <= tam; i++) {
   si (i % 2 == 0) {
-    imprimir(numeros[i-1], " es par");
+    imprimir(números[i-1], " es par");
   } sino {
-    imprimir(numeros[i-1], " es impar");   
+    imprimir(números[i-1], " es impar");   
   }
 }
 
@@ -27,4 +27,3 @@ para (i = 1; i <= tam; i++) {
     печать (я, ": нечётное число.");
   }
 }
-
