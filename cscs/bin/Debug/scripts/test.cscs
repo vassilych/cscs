@@ -482,6 +482,32 @@ for (item : arr) {
 print;
 test("x","x");
 
+test1 = {0,3,5};
+if(test1[1] == 3) { result="equal";}
+else { result="not equal"; }
+test(result, "equal");
+
+if(test1[1] == 5) { result="equal";}
+else { result="not equal"; }
+test(result, "not equal");
+
+if(3 == test1[2]) { result="equal";}
+else { result="not equal"; }
+test(result, "not equal");
+
+if(5 == test1[2]) { result="equal";}
+else { result="not equal"; }
+test(result, "equal");
+
+ab=2;
+if(ab == 2) { result="equal";}
+else { result="not equal"; }
+test(result, "equal");
+
+if(2 != ab) { result="equal";}
+else { result="not equal"; }
+test(result, "not equal");
+
 end = pstime;
 printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
 
