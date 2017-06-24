@@ -74,9 +74,12 @@ namespace SplitAndMerge
         return null;
       }
 
+      // we temporarily backtrack for the processing
       script.Backward(name.Length - arrayStart - 1);
       script.Backward(action != null ? action.Length : 0);
+      // delta shows us how manxy chars we need to advance forward in GetVarFunction()
       delta -= arrayName.Length;
+      delta += action != null ? action.Length : 0;
 
       varFunc.Indices = arrayIndices;
       varFunc.Delta = delta;
