@@ -521,7 +521,8 @@ namespace SplitAndMerge
 
 		public static string IsNotSign(string data)
 		{
-			return data.StartsWith(Constants.NOT) ? Constants.NOT : null;
+		    //return data.StartsWith(Constants.NOT) ? Constants.NOT : null;
+                    return data.StartsWith(Constants.NOT) && !data.StartsWith(Constants.NOT_EQUAL) ? Constants.NOT : null;
 		}
 
 		public static string ValidAction(string rest)
