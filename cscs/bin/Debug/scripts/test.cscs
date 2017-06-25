@@ -508,6 +508,20 @@ if(2 != ab) { result="equal";}
 else { result="not equal"; }
 test(result, "not equal");
 
+if (sin(10) > -1) { result = "sintestOK"; }
+else { result = "sintestNotOK";  }
+test(result, "sintestOK");
+
+objName = "Columns";
+if (indexof(objName,"Columns") > -1) { result = "indexofOK"; }
+else { result = "indexofNotOK";  }
+test(result, "indexofOK");
+
+objName = "aColumns";
+if (indexof(objName,"Columns") < 1) { result = "indexofNotOK"; }
+else { result = "indexofOK";  }
+test(result, "indexofOK");
+
 end = pstime;
 printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
 
