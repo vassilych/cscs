@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -25,17 +25,8 @@ namespace SplitAndMerge
                                     script.Rest + "]");
       }
 
-      // If there is just one resulting cell there is no need
-      // to perform the second step to merge tokens.
-      if (listToMerge.Count == 1) {
-        return listToMerge[0];
-      }
-
-      Variable baseCell = listToMerge[0];
-      int index = 1;
-
       // Second step: merge list of cells to get the result of an expression.
-      Variable result = Merge(baseCell, ref index, listToMerge);
+      Variable result = MergeList(listToMerge);
       return result;
     }
 
@@ -125,9 +116,10 @@ private static List<Variable> Split(ParsingScript script, char [] to)
     Variable cell = new Variable (current);
     cell.Action = action;
 
-    UpdateIfBool(script, cell);
-
-    listToMerge.Add(cell);
+    bool addIt = UpdateIfBool(script, ref cell, ref listToMerge);
+    if (addIt) {
+      listToMerge.Add(cell);
+    }
     item.Clear();
 
   } while (script.StillValid() &&
@@ -211,17 +203,29 @@ private static List<Variable> Split(ParsingScript script, char [] to)
       return true;
     }
 
-    private static void UpdateIfBool(ParsingScript script, Variable current)
+    private static bool UpdateIfBool(ParsingScript script, ref Variable current, ref List<Variable> listToMerge)
     {
-      if ((current.Action == "&&" && current.Value == 0.0) ||
-          (current.Action == "||" && current.Value != 0.0)) {
-        // Short-circuit evaluation: don't need to evaluate more.
-        Utils.SkipRestExpr(script);
-        current.Action = Constants.NULL_ACTION;
+      // Short-circuit evaluation: check if don't need to evaluate more.
+      bool needToAdd = true;
+      if ((current.Action == "&&" || current.Action == "||" ) &&
+              listToMerge.Count > 0) {
+        if (CanMergeCells(listToMerge.Last(), current)) {
+          listToMerge.Add(current);
+          current = MergeList(listToMerge);
+          listToMerge.Clear();
+          needToAdd = false;
+        }
       }
+    	if ((current.Action == "&&" && current.Value == 0.0) ||
+          (current.Action == "||" && current.Value != 0.0))	{
+    		Utils.SkipRestExpr(script);
+    		current.Action = Constants.NULL_ACTION;
+        needToAdd = true;
+    	}
+      return needToAdd;
     }
 
-    private static string UpdateAction(ParsingScript script, char[] to)
+   private static string UpdateAction(ParsingScript script, char[] to)
     {
       // We search a valid action till we get to the End of Argument ')'
       // or pass the end of string.
@@ -237,6 +241,25 @@ private static List<Variable> Split(ParsingScript script, char [] to)
       int advance = action == null ? 0 : action.Length;
       script.Forward (advance);
       return action == null ? Constants.NULL_ACTION : action;
+    }
+
+    private static Variable MergeList(List<Variable> listToMerge)
+    {
+      if (listToMerge.Count == 0) {
+        return Variable.EmptyInstance;
+      }
+      // If there is just one resulting cell there is no need
+      // to perform the second step to merge tokens.
+      if (listToMerge.Count == 1) {
+        return listToMerge[0];
+      }
+
+      Variable baseCell = listToMerge[0];
+      int index = 1;
+
+      // Second step: merge list of cells to get the result of an expression.
+      Variable result = Merge(baseCell, ref index, listToMerge);
+      return result;
     }
 
     // From outside this function is called with mergeOneOnly = false.
