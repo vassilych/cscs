@@ -31,7 +31,7 @@ namespace SplitAndMerge
       if (inQuotes) {
         script.MoveForwardIf(Constants.QUOTE);
       }
-      script.MoveForwardIf(Constants.SPACE);
+      script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
 			return value;
 		}
 
