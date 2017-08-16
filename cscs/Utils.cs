@@ -494,6 +494,47 @@ namespace SplitAndMerge
       Console.ForegroundColor = currentForeground;
     }
 
+        public static int GetSafeInt(List<Variable> args, int index, int defaultValue = 0)
+        {
+            if (args.Count <= index) {
+                return defaultValue;
+            }
+			Utils.CheckNumber(args[index]);
+			return args[index].AsInt();
+		}
+		public static string GetSafeString(List<Variable> args, int index, string defaultValue = "")
+		{
+			if (args.Count <= index) {
+				return defaultValue;
+			}
+			return args[index].AsString();
+		}
+        public static Variable GetSafeVariable(List<Variable> args, int index, Variable defaultValue)
+		{
+			if (args.Count <= index) {
+				return defaultValue;
+			}
+			return args[index];
+		}
+		public static Variable InvokeCall(object master, string methodName, string paramName,
+                                          string paramValue, bool isStatic = true)
+        {
+            var type = master.GetType();
+            MethodInfo methodInfo = type.GetMethod(methodName, new Type[] { typeof(string) });
+			ParameterExpression param = Expression.Parameter(typeof(string), paramName);
+
+			MethodCallExpression methodCall = isStatic ? Expression.Call(methodInfo, param) :
+                                                         Expression.Call(Expression.Constant(master), methodInfo, param);
+			Expression<Func<string, string>> lambda = Expression.Lambda<Func<string, string>>(
+			        methodCall,
+			        new ParameterExpression[] { param }
+			);
+			Func<string, string> func = lambda.Compile();
+            string result = func(paramValue);
+
+            return new Variable(result);
+		}
+
 		private static readonly object s_mutexLock = new object();
 	}
 }
