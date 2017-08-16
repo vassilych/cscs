@@ -141,27 +141,33 @@ namespace SplitAndMerge
 
     public static bool FunctionExists(string item)
     {
-      bool exists = false;
-      // First check if the local function stack has this variable defined.
-      if (s_locals.Count > 0) {
-        Dictionary<string, ParserFunction> local = s_locals.Peek().Variables;
-        exists = local.ContainsKey(item);
-      }
-
-      // If it is not defined locally, then check globally:
-      return exists || s_functions.ContainsKey(item);
+      return LocalNameExists(item) || GlobalNameExists(item);
     }
 
     public static void AddGlobalOrLocalVariable(string name, ParserFunction function)
     {
       function.Name = name;
-      if (s_locals.Count > 0) {
+      if (s_locals.Count > 0 && (LocalNameExists(name) || !GlobalNameExists(name))) {
         AddLocalVariable(function);
       } else {
         AddGlobal(name, function, false /* not native */);
       }
     }
 
+    static bool LocalNameExists(string name)
+    {
+      if (s_locals.Count == 0) {
+          return false;
+		  }
+      var vars = s_locals.Peek().Variables;
+      return vars.ContainsKey(name);
+    }
+    
+    static bool GlobalNameExists(string name)
+	  {
+		  return s_functions.ContainsKey(name);
+	  }
+    
     public static void RegisterFunction(string name, ParserFunction function,
                                         bool isNative = true)
     {
