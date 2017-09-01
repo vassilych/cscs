@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -27,15 +27,17 @@ namespace SplitAndMerge
     public Variable(List<Variable> a) {
       this.Tuple = a;
     }
-    public Variable(Variable other) {
-      Copy(other);
+    public virtual Variable Clone()
+    {
+        Variable newVar = new Variable();
+        newVar.Copy(this);
+        return newVar;
     }
-
-    public void Copy(Variable other) {
+    public virtual void Copy(Variable other) {
       Reset();
-      Action      = other.Action;
-      Type     = other.Type;
-      IsReturn = other.IsReturn;
+      Action       = other.Action;
+      Type         = other.Type;
+      IsReturn     = other.IsReturn;
       m_dictionary = other.m_dictionary;
 
       switch (other.Type) {
@@ -53,7 +55,7 @@ namespace SplitAndMerge
 
     public static Variable NewEmpty()
     {
-      return new Variable(EmptyInstance);
+      return new Variable();
     }
 
     public void Reset()
@@ -169,8 +171,21 @@ namespace SplitAndMerge
       return Exists (hash);
     }
 
-    public string AsString(bool isList   = true,
-                           bool sameLine = true)
+    public int AsInt()
+    {
+       int result = 0;
+       if (Type == VarType.NUMBER || Value != 0.0) {
+           return (int)Value;
+       }
+       if (Type == VarType.STRING) {
+           Int32.TryParse(String, out result);
+       }
+
+       return result;
+    }
+
+    public virtual string AsString(bool isList   = true,
+                                   bool sameLine = true)
     {
       if (Type == VarType.NUMBER) {
         return Value.ToString();
@@ -253,4 +268,3 @@ namespace SplitAndMerge
     private Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
   }
 }
-
