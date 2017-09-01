@@ -286,6 +286,18 @@ namespace SplitAndMerge
     }
   }
 
+  class BoolFunction : ParserFunction
+  {
+      bool m_value;
+      public BoolFunction(bool init)
+      {
+        m_value = init;  
+      }
+      protected override Variable Evaluate(ParsingScript script)
+      {
+        return new Variable(m_value);
+      }
+  }
   class IdentityFunction : ParserFunction
   {
       protected override Variable Evaluate(ParsingScript script)
