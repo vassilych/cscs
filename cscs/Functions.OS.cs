@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1010,4 +1010,48 @@ namespace SplitAndMerge
       return Variable.EmptyInstance;
     }
   }
+    class CheckOSFunction : ParserFunction
+    {
+        public enum OS { NONE, IOS, ANDROID, WINDOWS_PHONE, MAC, WINDOWS };
+
+        OS m_os;
+        public CheckOSFunction(OS toCheck)
+        {
+            m_os = toCheck;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            bool isTheOS = false;
+
+#if __ANDROID__
+            isTheOS = m_os == OS.ANDROID;
+#endif
+#if __IOS__
+            isTheOS = m_os == OS.IOS;
+#endif
+#if SILVERLIGHT
+            isTheOS = m_os == OS.WINDOWS_PHONE;
+#endif
+
+            return new Variable(isTheOS);
+        }
+    }
+    class GetVersionFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string version = "";
+
+#if __ANDROID__
+            version = Android.OS.Build.Brand + " " + Android.OS.Build.VERSION.Release +
+                      " - " + Android.OS.Build.VERSION.Sdk;
+#endif
+#if __IOS__
+            version = UIKit.UIDevice.CurrentDevice.SystemName + " " +
+                      UIKit.UIDevice.CurrentDevice.SystemVersion;
+#endif
+            return new Variable(version);
+        }
+    }
 }
