@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SplitAndMerge
 {
-	class BreakStatement : ParserFunction
+  class BreakStatement : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -11,12 +11,12 @@ namespace SplitAndMerge
     }
   }
   class ContinueStatement : ParserFunction
-	{
-		protected override Variable Evaluate(ParsingScript script)
-		{
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
       return new Variable(Variable.VarType.CONTINUE);
-		}
-	}
+    }
+  }
 
   class ReturnStatement : ParserFunction
   {
@@ -206,27 +206,27 @@ namespace SplitAndMerge
     private int           m_parentOffset = 0;
   }
 
- 	class StringOrNumberFunction : ParserFunction
-	{
-		protected override Variable Evaluate(ParsingScript script)
-		{
-			// First check if the passed expression is a string between quotes.
-			if (Item.Length > 1 &&
-				Item[0] == Constants.QUOTE &&
-				Item[Item.Length - 1]  == Constants.QUOTE) {
-			  return new Variable(Item.Substring(1, Item.Length - 2));
-			}
+    class StringOrNumberFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            // First check if the passed expression is a string between quotes.
+            if (Item.Length > 1 &&
+                Item[0] == Constants.QUOTE &&
+                Item[Item.Length - 1]  == Constants.QUOTE) {
+              return new Variable(Item.Substring(1, Item.Length - 2));
+            }
 
-			// Otherwise this should be a number.
-			double num;
-			if (!Double.TryParse(Item, out num)) {
-        Utils.ThrowException(script, "parseToken", Item, "parseTokenExtra");
-			}
-			return new Variable(num);
-		}
+            // Otherwise this should be a number.
+            double num;
+            if (!Double.TryParse(Item, out num)) {
+                Utils.ThrowException(script, "parseToken", Item, "parseTokenExtra");
+            }
+            return new Variable(num);
+        }
     
-		public string Item { private get; set; }
-	}
+        public string Item { private get; set; }
+    }
 
   class AddFunction : ParserFunction
   {
@@ -286,13 +286,13 @@ namespace SplitAndMerge
     }
   }
 
-	class IdentityFunction : ParserFunction
+  class IdentityFunction : ParserFunction
   {
-		protected override Variable Evaluate(ParsingScript script)
-		{
-      return script.ExecuteTo(Constants.END_ARG);
-		}
-	}
+      protected override Variable Evaluate(ParsingScript script)
+      {
+        return script.ExecuteTo(Constants.END_ARG);
+      }
+  }
 
   class IfStatement : ParserFunction
   {
