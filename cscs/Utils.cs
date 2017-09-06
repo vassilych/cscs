@@ -512,6 +512,14 @@ namespace SplitAndMerge
             Utils.CheckNumber(args[index]);
             return args[index].AsInt();
         }
+        public static double GetSafeDouble(List<Variable> args, int index, double defaultValue = 0.0)
+        {
+            if (args.Count <= index) {
+                return defaultValue;
+            }
+            Utils.CheckNumber(args[index]);
+            return args[index].AsDouble();
+        }
         public static string GetSafeString(List<Variable> args, int index, string defaultValue = "")
         {
             if (args.Count <= index) {
@@ -542,23 +550,23 @@ namespace SplitAndMerge
                                           string paramValue, object master = null)
         {
             string key = type + "_" + methodName + "_" + paramName;
-				    Func<string, string> func = null;
+		    Func<string, string> func = null;
 
-				    // Cache compiled function:
-				    if (!m_compiledCode.TryGetValue(key, out func)) {
-				        MethodInfo methodInfo = type.GetMethod(methodName, new Type[] { typeof(string) });
-				        ParameterExpression param = Expression.Parameter(typeof(string), paramName);
+		    // Cache compiled function:
+		    if (!m_compiledCode.TryGetValue(key, out func)) {
+		        MethodInfo methodInfo = type.GetMethod(methodName, new Type[] { typeof(string) });
+		        ParameterExpression param = Expression.Parameter(typeof(string), paramName);
 
-				        MethodCallExpression methodCall = master == null ? Expression.Call(methodInfo, param) :
-				                                                     Expression.Call(Expression.Constant(master), methodInfo, param);
-				        Expression<Func<string, string>> lambda = 
-				            Expression.Lambda<Func<string, string>>(methodCall, new ParameterExpression[] { param });
-				        func = lambda.Compile();
-				        m_compiledCode[key] = func;
-				    }
+		        MethodCallExpression methodCall = master == null ? Expression.Call(methodInfo, param) :
+		                                                     Expression.Call(Expression.Constant(master), methodInfo, param);
+		        Expression<Func<string, string>> lambda = 
+		            Expression.Lambda<Func<string, string>>(methodCall, new ParameterExpression[] { param });
+		        func = lambda.Compile();
+		        m_compiledCode[key] = func;
+		    }
 
-				    string result = func(paramValue);
-				    return new Variable(result);
-				}
+		    string result = func(paramValue);
+		    return new Variable(result);
+		}
     }
 }
