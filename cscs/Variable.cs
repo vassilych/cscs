@@ -183,9 +183,21 @@ namespace SplitAndMerge
 
        return result;
     }
+    public double AsDouble()
+    {
+        double result = 0.0;
+        if (Type == VarType.NUMBER || Value != 0.0) {
+            return Value;
+        }
+        if (Type == VarType.STRING) {
+            Double.TryParse(String, out result);
+        }
+
+        return result;
+    }
 
     public virtual string AsString(bool isList   = true,
-                                   bool sameLine = true)
+                               bool sameLine = true)
     {
       if (Type == VarType.NUMBER) {
         return Value.ToString();
