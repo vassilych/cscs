@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,8 +17,7 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       string pattern = Utils.GetItem(script).String;
-      if (string.IsNullOrWhiteSpace(pattern))
-      {
+      if (string.IsNullOrWhiteSpace(pattern)) {
         throw new ArgumentException("Couldn't extract process name");
       }
 
@@ -31,23 +30,19 @@ namespace SplitAndMerge
 
       Process[] processes = Process.GetProcessesByName(pattern);
       List<Variable> results = new List<Variable>(processes.Length);
-      for (int i = 0; i < processes.Length; i++)
-      {
+      for (int i = 0; i < processes.Length; i++) {
         Process pr = processes[i];
         int workingSet = (int)(((double)pr.WorkingSet64) / 1000000.0);
         int virtMemory = (int)(((double)pr.VirtualMemorySize64) / 1000000.0);
         string procTitle = pr.ProcessName + " " + pr.MainWindowTitle.Split(null)[0];
         string startTime = pr.StartTime.ToString();
-        if (procTitle.Length > MAX_PROC_NAME)
-        {
+        if (procTitle.Length > MAX_PROC_NAME) {
           procTitle = procTitle.Substring(0, MAX_PROC_NAME);
         }
         string procTime = string.Empty;
-        try
-        {
+        try {
           procTime = pr.TotalProcessorTime.ToString().Substring(0, 11);
-        }
-        catch (Exception) { }
+        } catch (Exception) { }
 
         results.Add(new Variable(
           string.Format("{0,15} {1," + MAX_PROC_NAME + "} {2,15} {3,15} {4,15} {5,25}",
@@ -57,8 +52,7 @@ namespace SplitAndMerge
       }
       Interpreter.Instance.AppendOutput(Utils.GetLine(), true);
 
-      if (script.TryCurrent() == Constants.NEXT_ARG)
-      {
+      if (script.TryCurrent() == Constants.NEXT_ARG) {
         script.Forward(); // eat end of statement semicolon
       }
 
@@ -122,24 +116,24 @@ namespace SplitAndMerge
 
       try {
         IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-        IPAddress ipAddress = ipHostInfo.AddressList [0];
-        IPEndPoint localEndPoint = new IPEndPoint (ipAddress, port);
+        IPAddress ipAddress = ipHostInfo.AddressList[0];
+        IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
 
         Socket listener = new Socket(AddressFamily.InterNetwork,
                             SocketType.Stream, ProtocolType.Tcp);
 
-        listener.Bind (localEndPoint);
+        listener.Bind(localEndPoint);
         listener.Listen(10);
 
         Socket handler = null;
         while (true) {
           Interpreter.Instance.AppendOutput("Waiting for connections on " + port + " ...", true);
-          handler = listener.Accept ();
+          handler = listener.Accept();
 
           // Data buffer for incoming data.
           byte[] bytes = new byte[1024];
           int bytesRec = handler.Receive(bytes);
-          string received = Encoding.UTF8.GetString (bytes, 0, bytesRec);
+          string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
 
           Interpreter.Instance.AppendOutput("Received from " + handler.RemoteEndPoint.ToString() +
             ": [" + received + "]", true);
@@ -147,22 +141,22 @@ namespace SplitAndMerge
           byte[] msg = Encoding.UTF8.GetBytes(received);
           handler.Send(msg);
 
-          if (received.Contains ("<EOF>")) {
+          if (received.Contains("<EOF>")) {
             break;
           }
         }
 
         if (handler != null) {
-          handler.Shutdown (SocketShutdown.Both);
-          handler.Close ();
+          handler.Shutdown(SocketShutdown.Both);
+          handler.Close();
         }
       } catch (Exception exc) {
-        throw new ArgumentException ("Couldn't start server: (" + exc.Message + ")");
+        throw new ArgumentException("Couldn't start server: (" + exc.Message + ")");
       }
 
       return Variable.EmptyInstance;
     }
-      }
+  }
 
   // Starts running an "echo" client
   class ClientSocket : ParserFunction
@@ -183,8 +177,8 @@ namespace SplitAndMerge
       int port = (int)args[1].Value;
       string msgToSend = args[2].String;
 
-      if (string.IsNullOrWhiteSpace(hostname) || hostname.Equals ("localhost")) {
-        hostname = Dns.GetHostName ();
+      if (string.IsNullOrWhiteSpace(hostname) || hostname.Equals("localhost")) {
+        hostname = Dns.GetHostName();
       }
 
       try {
@@ -193,8 +187,8 @@ namespace SplitAndMerge
         IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
 
         // Create a TCP/IP  socket.
-        Socket sender = new Socket(AddressFamily.InterNetwork, 
-                SocketType.Stream, ProtocolType.Tcp );
+        Socket sender = new Socket(AddressFamily.InterNetwork,
+                SocketType.Stream, ProtocolType.Tcp);
 
         sender.Connect(remoteEP);
 
@@ -206,13 +200,13 @@ namespace SplitAndMerge
         // Receive the response from the remote device.
         int bytesRec = sender.Receive(bytes);
         string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
-        Interpreter.Instance.AppendOutput ("Received [" + received + "]", true);
+        Interpreter.Instance.AppendOutput("Received [" + received + "]", true);
 
         sender.Shutdown(SocketShutdown.Both);
         sender.Close();
 
       } catch (Exception exc) {
-        throw new ArgumentException ("Couldn't connect to server: (" + exc.Message + ")");
+        throw new ArgumentException("Couldn't connect to server: (" + exc.Message + ")");
       }
 
       return Variable.EmptyInstance;
@@ -252,7 +246,7 @@ namespace SplitAndMerge
   {
     internal PrintFunction(bool newLine = true)
     {
-      m_newLine     = newLine;
+      m_newLine = newLine;
     }
 
     internal PrintFunction(ConsoleColor fgcolor)
@@ -282,9 +276,28 @@ namespace SplitAndMerge
       return Variable.EmptyInstance;
     }
 
-    private bool m_newLine     = true;
+    private bool m_newLine = true;
     private bool m_changeColor = false;
     private ConsoleColor m_fgcolor;
+  }
+
+  class WriteToConsole : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList;
+      List<Variable> args = Utils.GetArgs(script,
+        Constants.START_ARG, Constants.END_ARG, out isList);
+
+      //if (args.Count > 0 && args[0] == "TIMESTAMP")
+
+      for (int i = 0; i < args.Count; i++) {
+        Console.Write(args[i].AsString());
+      }
+      Console.WriteLine();
+
+      return Variable.EmptyInstance;
+    }
   }
 
   // Reads either a string or a number from the Console.
@@ -346,8 +359,7 @@ namespace SplitAndMerge
     {
       string newDir = null;
 
-      try
-      {
+      try {
         string pwd = Directory.GetCurrentDirectory();
         DirectoryInfo parent = Directory.GetParent(pwd);
         if (parent == null) {
@@ -355,8 +367,7 @@ namespace SplitAndMerge
         }
         newDir = parent.FullName;
         Directory.SetCurrentDirectory(newDir);
-      }
-      catch (Exception exc) {
+      } catch (Exception exc) {
         throw new ArgumentException("Couldn't change directory: " + exc.Message);
       }
 
@@ -398,7 +409,7 @@ namespace SplitAndMerge
   }
 
   // Reads a file and returns all lines of that file as a "tuple" (list)
-  class ReadFileFunction : ParserFunction
+  class ReadCSCSFileFunction : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -409,6 +420,96 @@ namespace SplitAndMerge
       Interpreter.Instance.AppendOutput("Read " + lines.Length + " line(s).", true);
 
       return new Variable(results);
+    }
+  }
+
+  class TokenizeFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+          Constants.START_ARG, Constants.END_ARG, out isList);
+
+      Utils.CheckArgs(args.Count, 1, m_name);
+      string data = Utils.GetSafeString(args, 0);
+
+      string sep = Utils.GetSafeString(args, 1, "\t");
+      if (sep == "\\t") {
+        sep = "\t";
+      }
+      var sepArray = sep.ToCharArray();
+      string[] tokens = data.Split(sepArray);
+
+      var option = Utils.GetSafeString(args, 2);
+
+      List<Variable> results = new List<Variable>();
+      for (int i = 0; i < tokens.Length; i++) {
+        string token = tokens[i];
+        if (i > 0 && string.IsNullOrWhiteSpace(token) &&
+            option.StartsWith("prev", StringComparison.OrdinalIgnoreCase)) {
+          token = tokens[i - 1];
+        }
+        results.Add(new Variable(token));
+      }
+
+      return new Variable(results);
+    }
+  }
+
+  class StringManipulationFunction : ParserFunction
+  {
+    public enum Mode { CONTAINS, STARTS_WITH, ENDS_WITH, INDEX_OF, EQUALS, REPLACE, UPPER, LOWER, TRIM, SUBSTRING };
+    Mode m_mode;
+
+    public StringManipulationFunction(Mode mode)
+    {
+      m_mode = mode;
+    }
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      string rest = script.Rest;
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+          Constants.START_ARG, Constants.END_ARG, out isList);
+
+      Utils.CheckArgs(args.Count, 1, m_name);
+      string source = Utils.GetSafeString(args, 0);
+      string argument = Utils.GetSafeString(args, 1);
+      string parameter = Utils.GetSafeString(args, 2, "case");
+      int startFrom = Utils.GetSafeInt(args, 3, 0);
+      int length = Utils.GetSafeInt(args, 4, source.Length);
+
+      StringComparison comp = StringComparison.Ordinal;
+      if (parameter.Equals("nocase") || parameter.Equals("no_case")) {
+        comp = StringComparison.OrdinalIgnoreCase;
+      }
+
+      switch (m_mode) {
+        case Mode.CONTAINS:
+          return new Variable(source.IndexOf(argument, comp) >= 0);
+        case Mode.STARTS_WITH:
+          return new Variable(source.StartsWith(argument, comp));
+        case Mode.ENDS_WITH:
+          return new Variable(source.EndsWith(argument, comp));
+        case Mode.INDEX_OF:
+          return new Variable(source.IndexOf(argument, startFrom, comp));
+        case Mode.EQUALS:
+          return new Variable(source.Equals(argument, comp));
+        case Mode.REPLACE:
+          return new Variable(source.Replace(argument, parameter));
+        case Mode.UPPER:
+          return new Variable(source.ToUpper());
+        case Mode.LOWER:
+          return new Variable(source.ToLower());
+        case Mode.TRIM:
+          return new Variable(source.Trim());
+        case Mode.SUBSTRING:
+          return new Variable(source.Substring(startFrom, length));
+      }
+
+      return new Variable(-1);
     }
   }
 
@@ -443,8 +544,7 @@ namespace SplitAndMerge
       int size = Constants.DEFAULT_FILE_LINES;
 
       bool sizeAvailable = Utils.SeparatorExists(script);
-      if (sizeAvailable)
-      {
+      if (sizeAvailable) {
         Variable length = Utils.GetItem(script);
         Utils.CheckPosInt(length);
         size = (int)length.Value;
@@ -572,7 +672,7 @@ namespace SplitAndMerge
     {
       string source = Utils.GetStringOrVarValue(script);
       script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
-      string dest   = Utils.GetStringOrVarValue(script);
+      string dest = Utils.GetStringOrVarValue(script);
 
       string src = Path.GetFullPath(source);
       string dst = Path.GetFullPath(dest);
@@ -609,25 +709,25 @@ namespace SplitAndMerge
     {
       string source = Utils.GetStringOrVarValue(script);
       script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
-      string dest   = Utils.GetStringOrVarValue(script);
+      string dest = Utils.GetStringOrVarValue(script);
 
       string src = Path.GetFullPath(source);
       string dst = Path.GetFullPath(dest);
 
       bool isFile = File.Exists(src);
-      bool isDir  = Directory.Exists(src);
+      bool isDir = Directory.Exists(src);
       if (!isFile && !isDir) {
         throw new ArgumentException("[" + src + "] doesn't exist");
       }
 
-      if (isFile && Directory.Exists (dst)) {
+      if (isFile && Directory.Exists(dst)) {
         // If filename is missing in the destination file,
         // add it from the source.
         dst = Path.Combine(dst, Path.GetFileName(src));
       }
 
       try {
-        if (isFile) { 
+        if (isFile) {
           File.Move(src, dst);
         } else {
           Directory.Move(src, dst);
@@ -664,12 +764,12 @@ namespace SplitAndMerge
       string pathname = Utils.GetStringOrVarValue(script);
 
       bool isFile = File.Exists(pathname);
-      bool isDir  = Directory.Exists(pathname);
+      bool isDir = Directory.Exists(pathname);
       if (!isFile && !isDir) {
         throw new ArgumentException("[" + pathname + "] doesn't exist");
       }
       try {
-        if (isFile) { 
+        if (isFile) {
           File.Delete(pathname);
         } else {
           Directory.Delete(pathname, true);
@@ -690,13 +790,13 @@ namespace SplitAndMerge
       string pathname = Utils.GetStringOrVarValue(script);
 
       bool isFile = File.Exists(pathname);
-      bool isDir  = Directory.Exists(pathname);
+      bool isDir = Directory.Exists(pathname);
       if (!isFile && !isDir) {
         throw new ArgumentException("[" + pathname + "] doesn't exist");
       }
       bool exists = false;
       try {
-        if (isFile) { 
+        if (isFile) {
           exists = File.Exists(pathname);
         } else {
           exists = Directory.Exists(pathname);
@@ -775,7 +875,7 @@ namespace SplitAndMerge
         foreach (DirectoryInfo di in dirInfos) {
           try {
             Interpreter.Instance.AppendOutput(Utils.GetPathDetails(di, di.Name), true);
-            results.Add (new Variable(di.Name));
+            results.Add(new Variable(di.Name));
           } catch (Exception) {
             continue;
           }
@@ -986,6 +1086,70 @@ namespace SplitAndMerge
     }
   }
 
+  class DateTimeFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+        Constants.START_ARG, Constants.END_ARG, out isList);
+
+      string strFormat = Utils.GetSafeString(args, 0, "hh:mm:ss.fff");
+      Utils.CheckNotEmpty(strFormat, m_name);
+
+      string when = DateTime.Now.ToString(strFormat);
+      return new Variable(when);
+    }
+  }
+  class StopWatchFunction : ParserFunction
+  {
+    static System.Diagnostics.Stopwatch m_stopwatch = new System.Diagnostics.Stopwatch();
+    public enum Mode { START, STOP, ELAPSED, TOTAL_SECS, TOTAL_MS };
+
+    Mode m_mode;
+    public StopWatchFunction(Mode mode)
+    {
+      m_mode = mode;
+    }
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+        Constants.START_ARG, Constants.END_ARG, out isList);
+
+      if (m_mode == Mode.START) {
+        m_stopwatch.Restart();
+        return Variable.EmptyInstance;
+      }
+
+      string strFormat = Utils.GetSafeString(args, 0, "secs");
+      string elapsedStr = "";
+      double elapsed = -1.0;
+      if (strFormat == "hh::mm:ss.fff") {
+        elapsedStr = string.Format("{0:D2}:{1:D2}:{2:D2}.{3:D3}",
+          m_stopwatch.Elapsed.Hours, m_stopwatch.Elapsed.Minutes,
+          m_stopwatch.Elapsed.Seconds, m_stopwatch.Elapsed.Milliseconds);
+      } else if (strFormat == "mm:ss.fff") {
+        elapsedStr = string.Format("{0:D2}:{1:D2}.{2:D3}",
+            m_stopwatch.Elapsed.Minutes,
+            m_stopwatch.Elapsed.Seconds, m_stopwatch.Elapsed.Milliseconds);
+      } else if (strFormat == "ss.fff") {
+        elapsedStr = string.Format("{0:D2}.{1:D3}",
+            m_stopwatch.Elapsed.Seconds, m_stopwatch.Elapsed.Milliseconds);
+      } else if (strFormat == "secs") {
+        elapsed = Math.Round(m_stopwatch.Elapsed.TotalSeconds);
+      } else if (strFormat == "ms") {
+        elapsed = Math.Round(m_stopwatch.Elapsed.TotalMilliseconds);
+      }
+
+      if (m_mode == Mode.STOP) {
+        m_stopwatch.Stop();
+      }
+
+      return elapsed >= 0 ? new Variable(elapsed) : new Variable(elapsedStr);
+    }
+  }
   class SignalWaitFunction : ParserFunction
   {
     static AutoResetEvent waitEvent = new AutoResetEvent(false);
@@ -1010,48 +1174,4 @@ namespace SplitAndMerge
       return Variable.EmptyInstance;
     }
   }
-    class CheckOSFunction : ParserFunction
-    {
-        public enum OS { NONE, IOS, ANDROID, WINDOWS_PHONE, MAC, WINDOWS };
-
-        OS m_os;
-        public CheckOSFunction(OS toCheck)
-        {
-            m_os = toCheck;
-        }
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            bool isTheOS = false;
-
-#if __ANDROID__
-            isTheOS = m_os == OS.ANDROID;
-#endif
-#if __IOS__
-            isTheOS = m_os == OS.IOS;
-#endif
-#if SILVERLIGHT
-            isTheOS = m_os == OS.WINDOWS_PHONE;
-#endif
-
-            return new Variable(isTheOS);
-        }
-    }
-    class GetVersionFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            string version = "";
-
-#if __ANDROID__
-            version = Android.OS.Build.Brand + " " + Android.OS.Build.VERSION.Release +
-                      " - " + Android.OS.Build.VERSION.Sdk;
-#endif
-#if __IOS__
-            version = UIKit.UIDevice.CurrentDevice.SystemName + " " +
-                      UIKit.UIDevice.CurrentDevice.SystemVersion;
-#endif
-            return new Variable(version);
-        }
-    }
 }

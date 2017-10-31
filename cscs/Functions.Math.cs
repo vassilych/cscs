@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SplitAndMerge
 {
@@ -117,9 +119,14 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
-      arg.Value = Math.Round(arg.Value);
-      return arg;
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 1, m_name);
+      int numberDigits = Utils.GetSafeInt(args, 1, 0);
+
+      args[0].Value = Math.Round(args[0].Value, numberDigits);
+      return args[0];
     }
   }
 
@@ -130,6 +137,36 @@ namespace SplitAndMerge
       Variable arg = script.ExecuteTo(Constants.END_ARG);
       arg.Value = Math.Log(arg.Value);
       return arg;
+    }
+  }
+  class GetRandomFunction : ParserFunction
+  {
+    static Random m_random = new Random();
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 1, m_name);
+      int limit = args[0].AsInt();
+      Utils.CheckPosInt(args[0]);
+      int numberRandoms = Utils.GetSafeInt(args, 1, 1);
+
+      if (numberRandoms <= 1) {
+        return new Variable(m_random.Next(0, limit));
+      }
+
+      List<int> available = Enumerable.Range(0, limit).ToList();
+      List<Variable> result = new List<Variable>();
+
+      for (int i = 0; i < numberRandoms && available.Count > 0; i++) {
+        int nextRandom = m_random.Next(0, available.Count);
+        result.Add(new Variable(available[nextRandom]));
+        available.RemoveAt(nextRandom);
+      }
+
+      return new Variable(result);
     }
   }
 

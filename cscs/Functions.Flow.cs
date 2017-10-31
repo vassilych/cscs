@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace SplitAndMerge
 {
@@ -142,7 +143,6 @@ namespace SplitAndMerge
     protected override Variable Evaluate(ParsingScript script)
     {
       bool isList;
-
       List<Variable> functionArgs = Utils.GetArgs(script,
           Constants.START_ARG, Constants.END_ARG, out isList);
 
@@ -219,7 +219,8 @@ namespace SplitAndMerge
 
             // Otherwise this should be a number.
             double num;
-            if (!Double.TryParse(Item, out num)) {
+            if (!Double.TryParse(Item, NumberStyles.Number | NumberStyles.AllowExponent,
+                                 CultureInfo.InvariantCulture, out num)) {
                 Utils.ThrowException(script, "parseToken", Item, "parseTokenExtra");
             }
             return new Variable(num);
@@ -234,7 +235,7 @@ namespace SplitAndMerge
     {
       // 1. Get the name of the variable.
       string varName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
-      Utils.CheckNotEnd(script, Constants.CONTAINS);
+      Utils.CheckNotEnd(script, m_name);
 
       // 2. Get the current value of the variable.
       ParserFunction func = ParserFunction.GetFunction(varName);
@@ -253,6 +254,55 @@ namespace SplitAndMerge
       return currentValue;
     }
   }
+  class RemoveFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      // 1. Get the name of the variable.
+      string varName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+      Utils.CheckNotEnd(script, m_name);
+
+      // 2. Get the current value of the variable.
+      ParserFunction func = ParserFunction.GetFunction(varName);
+      Utils.CheckNotNull(varName, func);
+      Variable currentValue = func.GetValue(script);
+      Utils.CheckArray(currentValue, varName);
+
+      // 3. Get the variable to remove.
+      Variable item = Utils.GetItem(script);
+
+      bool removed = currentValue.Tuple.Remove(item);
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                              new GetVarFunction(currentValue));
+      return new Variable(removed);
+    }
+  }
+  class RemoveAtFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      // 1. Get the name of the variable.
+      string varName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+      Utils.CheckNotEnd(script, m_name);
+
+      // 2. Get the current value of the variable.
+      ParserFunction func = ParserFunction.GetFunction(varName);
+      Utils.CheckNotNull(varName, func);
+      Variable currentValue = func.GetValue(script);
+      Utils.CheckArray(currentValue, varName);
+
+      // 3. Get the variable to remove.
+      Variable item = Utils.GetItem(script);
+      Utils.CheckNonNegativeInt(item);
+
+      currentValue.Tuple.RemoveAt(item.AsInt());
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                              new GetVarFunction(currentValue));
+      return Variable.EmptyInstance;
+    }
+  }
 
   class ContainsFunction : ParserFunction
   {
@@ -260,7 +310,7 @@ namespace SplitAndMerge
     {
       // 1. Get the name of the variable.
       string varName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
-      Utils.CheckNotEnd(script, Constants.CONTAINS);
+      Utils.CheckNotEnd(script, m_name);
 
       // 2. Get the current value of the variable.
       List<Variable> arrayIndices = Utils.GetArrayIndices(ref varName);
@@ -276,7 +326,7 @@ namespace SplitAndMerge
 
       // 3. Get the value to be looked for.
       Variable searchValue = Utils.GetItem(script);
-      Utils.CheckNotEnd(script, Constants.CONTAINS);
+      Utils.CheckNotEnd(script, m_name);
 
       // 4. Check if the value to search for exists.
       bool exists = query.Exists(searchValue, true /* notEmpty */);
@@ -377,6 +427,8 @@ namespace SplitAndMerge
         }
 
         script.Forward(m_delta);
+        while (script.MoveForwardIf(Constants.END_ARRAY)) {
+        }
 
         Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices);
         return result;
@@ -532,7 +584,7 @@ namespace SplitAndMerge
       }
     }
 
-    override public ParserFunction NewInstance()
+        override public ParserFunction NewInstance()
     {
       return new OperatorAssignFunction();
     }
@@ -554,7 +606,7 @@ namespace SplitAndMerge
       }
 
       Variable array;
- 
+
       ParserFunction pf = ParserFunction.GetFunction(m_name);
       if (pf != null) {
         array = pf.GetValue(script);
@@ -581,10 +633,10 @@ namespace SplitAndMerge
       if (arrayIndices.Count <= indexPtr) {
         return;
       }
-      
+
       Variable index = arrayIndices[indexPtr];
       int currIndex = ExtendArrayHelper(parent, index);
-      
+
       if (arrayIndices.Count - 1 == indexPtr) {
         parent.Tuple[currIndex] = varValue;
         return;
@@ -597,15 +649,15 @@ namespace SplitAndMerge
     private static int ExtendArrayHelper(Variable parent, Variable indexVar)
     {
       parent.SetAsArray();
-  
+
       int arrayIndex = parent.GetArrayIndex(indexVar);
       if (arrayIndex < 0) {
         // This is not a "normal index" but a new string for the dictionary.
         string hash = indexVar.AsString();
-        arrayIndex  = parent.SetHashVariable(hash, Variable.NewEmpty());
+        arrayIndex = parent.SetHashVariable(hash, Variable.NewEmpty());
         return arrayIndex;
       }
-  
+
       if (parent.Tuple.Count <= arrayIndex) {
         for (int i = parent.Tuple.Count; i <= arrayIndex; i++) {
           parent.Tuple.Add(Variable.NewEmpty());
@@ -615,12 +667,220 @@ namespace SplitAndMerge
     }
   }
 
+  class DeepCopyFunction : ActionFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      Variable varValue = Utils.GetItem(script);
+      return varValue.DeepClone(); ;
+    }
+  }
+
+  class TokenizeLinesFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 3, m_name);
+
+      string varName = Utils.GetSafeString(args, 0);
+      Variable lines = Utils.GetSafeVariable(args, 1);
+      int fromLine   = Utils.GetSafeInt(args, 2);
+      string sepStr  = Utils.GetSafeString(args, 3, "\t");
+      if (sepStr == "\\t") {
+        sepStr = "\t";
+      }
+      char[] sep = sepStr.ToCharArray();
+
+      var function = ParserFunction.GetFunction(varName);
+      Variable allTokensVar = new Variable(Variable.VarType.ARRAY);
+
+      for (int counter = fromLine; counter < lines.Tuple.Count; counter++) {
+        Variable lineVar = lines.Tuple[counter];
+        Variable toAdd = new Variable(counter - fromLine);
+        string line = lineVar.AsString();
+        var tokens = line.Split(sep);
+        Variable tokensVar = new Variable(Variable.VarType.ARRAY);
+        foreach (string token in tokens) {
+          tokensVar.Tuple.Add(new Variable(token));
+        }
+        allTokensVar.Tuple.Add(tokensVar);
+      }
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                              new GetVarFunction(allTokensVar));
+
+      return Variable.EmptyInstance;
+    }
+  }
+
+  class AddVariablesToHashFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 3, m_name);
+
+      string varName = Utils.GetSafeString(args, 0);
+      Variable lines = Utils.GetSafeVariable(args, 1);
+      int fromLine   = Utils.GetSafeInt(args, 2);
+      string hash2   = Utils.GetSafeString(args, 3);
+      string sepStr  = Utils.GetSafeString(args, 4, "\t");
+      if (sepStr == "\\t") {
+        sepStr = "\t";
+      }
+      char[] sep = sepStr.ToCharArray();
+
+      var function = ParserFunction.GetFunction(varName);
+      Variable mapVar = function != null ? function.GetValue(script) :
+                                  new Variable(Variable.VarType.ARRAY);
+
+      for (int counter = fromLine; counter < lines.Tuple.Count; counter++) {
+        Variable lineVar = lines.Tuple[counter];
+        Variable toAdd = new Variable(counter - fromLine);
+        string line = lineVar.AsString();
+        var tokens = line.Split(sep);
+        string hash = tokens[0];
+        mapVar.AddVariableToHash(hash, toAdd);
+        if (!string.IsNullOrWhiteSpace(hash2) &&
+            !hash2.Equals(hash, StringComparison.OrdinalIgnoreCase)) {
+          mapVar.AddVariableToHash(hash2, toAdd);
+        }
+      }
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                        new GetVarFunction(mapVar));
+      return Variable.EmptyInstance;
+    }
+  }
+  class AddVariableToHashFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 3, m_name);
+
+      string varName = Utils.GetSafeString(args, 0);
+      Variable toAdd = Utils.GetSafeVariable(args, 1);
+      string hash    = Utils.GetSafeString(args, 2);
+
+      var function = ParserFunction.GetFunction(varName);
+      Variable mapVar = function != null ? function.GetValue(script) :
+                                  new Variable(Variable.VarType.ARRAY);
+
+      mapVar.AddVariableToHash(hash, toAdd);
+      for (int i = 3; i < args.Count; i++) {
+        string hash2 = Utils.GetSafeString(args, 3);
+        if (!string.IsNullOrWhiteSpace(hash2) &&
+            !hash2.Equals(hash, StringComparison.OrdinalIgnoreCase)) {
+          mapVar.AddVariableToHash(hash2, toAdd);
+        }
+      }
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                          new GetVarFunction(mapVar));
+
+      return Variable.EmptyInstance;
+    }
+  }
+  class TokenCounterFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 2, m_name);
+
+      Variable all    = Utils.GetSafeVariable(args, 0);
+      string varName  = Utils.GetSafeString(args, 1);
+      int index       = Utils.GetSafeInt(args, 2);
+
+      var function    = ParserFunction.GetFunction(varName);
+      Variable mapVar = new Variable(Variable.VarType.ARRAY);
+
+      if (all.Tuple == null) {
+        return Variable.EmptyInstance;
+      }
+
+      string currentValue = "";
+      int currentCount = 0;
+
+      int globalCount = 0;
+
+      for (int i = 0; i < all.Tuple.Count; i++) {
+        Variable current = all.Tuple[i];
+        if (current.Tuple == null || current.Tuple.Count < index) {
+          break;
+        }
+        string newValue = current.Tuple[index].AsString();
+        if (currentValue != newValue) {
+          currentValue = newValue;
+          currentCount = 0;
+        }
+        mapVar.Tuple.Add(new Variable(currentCount));
+        currentCount++;
+        globalCount++;
+      }
+
+      ParserFunction.AddGlobalOrLocalVariable(varName,
+                                          new GetVarFunction(mapVar));
+      return mapVar;
+    }
+  }
+  class GetColumnFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      bool isList = false;
+      List<Variable> args = Utils.GetArgs(script,
+                            Constants.START_ARG, Constants.END_ARG, out isList);
+      Utils.CheckArgs(args.Count, 2, m_name);
+
+      Variable arrayVar = Utils.GetSafeVariable(args, 0);
+      int col           = Utils.GetSafeInt(args, 1);
+      int fromCol       = Utils.GetSafeInt(args, 2, 0);
+
+      var tuple = arrayVar.Tuple;
+
+      List<Variable> result = new List<Variable>(tuple.Count);
+      for (int i = fromCol; i < tuple.Count; i++) {
+        Variable current = tuple[i];
+        if (current.Tuple == null || current.Tuple.Count <= col) {
+          throw new ArgumentException(m_name + ": Index [" + col + "] doesn't exist in column " +
+                                      i + "/" + (tuple.Count - 1));
+        }
+        result.Add(current.Tuple[col]);
+      }
+
+      return new Variable(result);
+    }
+  }
+  class GetAllKeysFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      Variable varName = Utils.GetItem(script);
+      Utils.CheckNotNull(varName, m_name);
+
+      List<Variable> results = varName.GetAllKeys();
+
+      return new Variable(results);
+    }
+  }
+
   class TypeFunction : ParserFunction
   {
     protected override Variable Evaluate (ParsingScript script)
     {
       // 1. Get the name of the variable.
-      string varName = Utils.GetToken (script, Constants.END_ARG_ARRAY);
+      string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
       Utils.CheckNotEnd(script, m_name);
 
       List<Variable> arrayIndices = Utils.GetArrayIndices(ref varName);

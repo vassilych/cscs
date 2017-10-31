@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -8,36 +8,60 @@ namespace SplitAndMerge
   {
     public enum VarType { NONE, NUMBER, STRING, ARRAY, BREAK, CONTINUE };
 
-    public Variable() {
+    public Variable()
+    {
       Reset();
     }
-    public Variable(VarType type) {
+    public Variable(VarType type)
+    {
       Type = type;
+      if (Type == VarType.ARRAY) {
+        SetAsArray();
+      }
     }
-    public Variable(double d) {
+    public Variable(double d)
+    {
       Value = d;
     }
     public Variable(bool d)
     {
       Value = d ? 1.0 : 0.0;
     }
-    public Variable(string s) {
+    public Variable(string s)
+    {
       String = s;
     }
-    public Variable(List<Variable> a) {
+    public Variable(List<Variable> a)
+    {
       this.Tuple = a;
     }
     public virtual Variable Clone()
     {
-        Variable newVar = new Variable();
-        newVar.Copy(this);
-        return newVar;
+      Variable newVar = new Variable();
+      newVar.Copy(this);
+      return newVar;
     }
-    public virtual void Copy(Variable other) {
+    public virtual Variable DeepClone()
+    {
+      Variable newVar = new Variable();
+      newVar.Copy(this);
+
+      if (m_tuple != null) {
+        List<Variable> newTuple = new List<Variable>();
+        foreach (var item in m_tuple) {
+          newTuple.Add(item.DeepClone());
+        }
+
+        newVar.Tuple = newTuple;
+      }
+      return newVar;
+    }
+    public virtual void Copy(Variable other)
+    {
       Reset();
-      Action       = other.Action;
-      Type         = other.Type;
-      IsReturn     = other.IsReturn;
+      Action = other.Action;
+      Type = other.Type;
+      IsReturn = other.IsReturn;
       m_dictionary = other.m_dictionary;
 
       switch (other.Type) {
@@ -60,22 +84,13 @@ namespace SplitAndMerge
 
     public void Reset()
     {
-      m_value  = Double.NaN;
+      m_value = Double.NaN;
       m_string = null;
-      m_tuple  = null;
-      Action   = null;
+      m_tuple = null;
+      Action = null;
       IsReturn = false;
-      Type     = VarType.NONE;
+      Type = VarType.NONE;
       m_dictionary.Clear();
-    }
-
-    public static Variable ResetOnBreak(Variable v)
-    {
-      if (v.Type == Variable.VarType.BREAK ||
-          v.Type == Variable.VarType.CONTINUE) {
-        return v;
-      }
-      return EmptyInstance;
     }
 
     public bool Equals(Variable other)
@@ -100,6 +115,40 @@ namespace SplitAndMerge
         return false;
       }
       return true;
+    }
+
+    public void AddVariableToHash(string hash, Variable newVar)
+    {
+      int retValue = 0;
+      Variable listVar = null;
+      if (m_dictionary.TryGetValue(hash, out retValue)) {
+        // already exists, change the value:
+        listVar = m_tuple[retValue];
+      } else {
+        listVar = new Variable(VarType.ARRAY);
+        m_tuple.Add(listVar);
+        m_dictionary[hash] = m_tuple.Count - 1;
+      }
+
+      listVar.AddVariable(newVar);
+    }
+
+    public List<Variable> GetAllKeys()
+    {
+      List<Variable> results = new List<Variable>();
+      var keys = m_dictionary.Keys;
+      foreach (var key in keys) {
+        results.Add(new Variable(key));
+      }
+
+      if (results.Count == 0 && m_tuple != null) {
+        /*foreach (var keyVar in m_tuple) {
+          results
+        }*/
+        results = m_tuple;
+      }
+
+      return results;
     }
 
     public int SetHashVariable(string hash, Variable var)
@@ -135,6 +184,12 @@ namespace SplitAndMerge
         return ptr;
       }
 
+      int result = -1;
+      if (!String.IsNullOrWhiteSpace(indexVar.String) &&
+          Int32.TryParse(indexVar.String, out result)) {
+        return result;
+      }
+
       return -1;
     }
 
@@ -153,57 +208,56 @@ namespace SplitAndMerge
     {
       if (this.Type != VarType.ARRAY) {
         return false;
-        //throw new ArgumentException ("Cannot perform array operations on a variable");
       }
       if (indexVar.Type == VarType.NUMBER) {
         if (indexVar.Value < 0 ||
             indexVar.Value >= m_tuple.Count ||
             indexVar.Value - Math.Floor(indexVar.Value) != 0.0) {
-            return false;
+          return false;
         }
         if (notEmpty) {
           return m_tuple[(int)indexVar.Value].Type != VarType.NONE;
         }
         return true;
-      } 
-    
+      }
+
       string hash = indexVar.AsString();
-      return Exists (hash);
+      return Exists(hash);
     }
 
     public int AsInt()
     {
-       int result = 0;
-       if (Type == VarType.NUMBER || Value != 0.0) {
-           return (int)Value;
-       }
-       if (Type == VarType.STRING) {
-           Int32.TryParse(String, out result);
-       }
+      int result = 0;
+      if (Type == VarType.NUMBER || Value != 0.0) {
+        return (int)m_value;
+      }
+      if (Type == VarType.STRING) {
+        Int32.TryParse(m_string, out result);
+      }
 
-       return result;
+      return result;
     }
     public double AsDouble()
     {
-        double result = 0.0;
-        if (Type == VarType.NUMBER || Value != 0.0) {
-            return Value;
-        }
-        if (Type == VarType.STRING) {
-            Double.TryParse(String, out result);
-        }
+      double result = 0.0;
+      if (Type == VarType.NUMBER) {// || (Value != 0.0 && Value != Double.NaN)) {
+        return m_value;
+      }
+      if (Type == VarType.STRING) {
+        Double.TryParse(m_string, out result);
+      }
 
-        return result;
+      return result;
     }
 
-    public virtual string AsString(bool isList   = true,
+    public virtual string AsString(bool isList = true,
                                bool sameLine = true)
     {
       if (Type == VarType.NUMBER) {
         return Value.ToString();
       }
       if (Type == VarType.STRING) {
-        return String;
+        return m_string == null ? "" : m_string;
       }
       if (Type == VarType.NONE || m_tuple == null) {
         return string.Empty;
@@ -246,7 +300,7 @@ namespace SplitAndMerge
     public Variable GetValue(int index)
     {
       if (index >= TotalElements()) {
-        throw new ArgumentException ("There are only [" + TotalElements() +
+        throw new ArgumentException("There are only [" + TotalElements() +
                                      "] but " + index + " requested.");
 
       }
@@ -256,21 +310,24 @@ namespace SplitAndMerge
       return this;
     }
 
-    public double         Value  {
+    public double Value {
       get { return m_value; }
-      set { m_value = value; Type = VarType.NUMBER; } }
-    
-    public string         String {
+      set { m_value = value; Type = VarType.NUMBER; }
+    }
+
+    public string String {
       get { return m_string; }
-      set { m_string = value; Type = VarType.STRING; } }
-    
-    public List<Variable> Tuple  {
+      set { m_string = value; Type = VarType.STRING; }
+    }
+
+    public List<Variable> Tuple {
       get { return m_tuple; }
-      set { m_tuple = value; Type = VarType.ARRAY; } }
-    
-    public string         Action   { get; set; }
-    public VarType        Type     { get; set; }
-    public bool           IsReturn { get; set; }
+      set { m_tuple = value; Type = VarType.ARRAY; }
+    }
+
+    public string Action { get; set; }
+    public VarType Type { get; set; }
+    public bool IsReturn { get; set; }
 
     public static Variable EmptyInstance = new Variable();
 
@@ -280,3 +337,4 @@ namespace SplitAndMerge
     private Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
   }
 }
+
