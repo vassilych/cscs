@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using scripting;
-
 namespace SplitAndMerge
 {
   public class WordHint
@@ -31,13 +29,12 @@ namespace SplitAndMerge
     {
       OriginalText = word;
       Id = id;
-      m_text = UIUtils.RemovePrefix(OriginalText);
+      m_text = Utils.RemovePrefix(OriginalText);
     }
   }
   public class TrieCell
   {
     string m_name;
-    int m_level;
     WordHint m_wordHint;
 
     Dictionary<string, TrieCell> m_children = new Dictionary<string, TrieCell>();
@@ -132,7 +129,7 @@ namespace SplitAndMerge
 
     public void Search(string text, int max, List<WordHint> results)
     {
-      text = UIUtils.RemovePrefix(text);
+      text = Utils.RemovePrefix(text);
       TrieCell current = m_root;
 
       for (int level = 1; level <= text.Length && current != null; level++) {
@@ -169,3 +166,4 @@ namespace SplitAndMerge
     }
   }
 }
+

@@ -16,10 +16,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      string pattern = Utils.GetItem(script).String;
-      if (string.IsNullOrWhiteSpace(pattern)) {
-        throw new ArgumentException("Couldn't extract process name");
-      }
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      string pattern = args[0].AsString();
 
       int MAX_PROC_NAME = 26;
       Interpreter.Instance.AppendOutput(Utils.GetLine(), true);
@@ -52,10 +51,6 @@ namespace SplitAndMerge
       }
       Interpreter.Instance.AppendOutput(Utils.GetLine(), true);
 
-      if (script.TryCurrent() == Constants.NEXT_ARG) {
-        script.Forward(); // eat end of statement semicolon
-      }
-
       return new Variable(results);
     }
   }
@@ -65,7 +60,10 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable id = Utils.GetItem(script);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+
+      Variable id = args[0];
       Utils.CheckPosInt(id);
 
       int processId = (int)id.Value;
@@ -166,9 +164,7 @@ namespace SplitAndMerge
       // Data buffer for incoming data.
       byte[] bytes = new byte[1024];
 
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-        Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
       Utils.CheckArgs(args.Count, 3, Constants.CONNECTSRV);
       Utils.CheckPosInt(args[1]);
@@ -257,9 +253,7 @@ namespace SplitAndMerge
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList;
-      List<Variable> args = Utils.GetArgs(script,
-        Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
       string output = string.Empty;
       for (int i = 0; i < args.Count; i++) {
@@ -285,11 +279,7 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList;
-      List<Variable> args = Utils.GetArgs(script,
-        Constants.START_ARG, Constants.END_ARG, out isList);
-
-      //if (args.Count > 0 && args[0] == "TIMESTAMP")
+      List<Variable> args = script.GetFunctionArgs();
 
       for (int i = 0; i < args.Count; i++) {
         Console.Write(args[i].AsString());
@@ -427,9 +417,7 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-          Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
       Utils.CheckArgs(args.Count, 1, m_name);
       string data = Utils.GetSafeString(args, 0);
@@ -459,7 +447,8 @@ namespace SplitAndMerge
 
   class StringManipulationFunction : ParserFunction
   {
-    public enum Mode { CONTAINS, STARTS_WITH, ENDS_WITH, INDEX_OF, EQUALS, REPLACE, UPPER, LOWER, TRIM, SUBSTRING };
+    public enum Mode { CONTAINS, STARTS_WITH, ENDS_WITH, INDEX_OF, EQUALS, REPLACE,
+      UPPER, LOWER, TRIM, SUBSTRING, BEETWEEN, BEETWEEN_ANY };
     Mode m_mode;
 
     public StringManipulationFunction(Mode mode)
@@ -469,22 +458,22 @@ namespace SplitAndMerge
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      string rest = script.Rest;
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-          Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
       Utils.CheckArgs(args.Count, 1, m_name);
-      string source = Utils.GetSafeString(args, 0);
-      string argument = Utils.GetSafeString(args, 1);
+      string source    = Utils.GetSafeString(args, 0);
+      string argument  = Utils.GetSafeString(args, 1);
       string parameter = Utils.GetSafeString(args, 2, "case");
-      int startFrom = Utils.GetSafeInt(args, 3, 0);
-      int length = Utils.GetSafeInt(args, 4, source.Length);
+      int startFrom    = Utils.GetSafeInt(args, 3, 0);
+      int length       = Utils.GetSafeInt(args, 4, source.Length);
 
       StringComparison comp = StringComparison.Ordinal;
       if (parameter.Equals("nocase") || parameter.Equals("no_case")) {
         comp = StringComparison.OrdinalIgnoreCase;
       }
+
+      source   = source.Replace("\\\"", "\"");
+      argument = argument.Replace("\\\"", "\"");
 
       switch (m_mode) {
         case Mode.CONTAINS:
@@ -506,7 +495,23 @@ namespace SplitAndMerge
         case Mode.TRIM:
           return new Variable(source.Trim());
         case Mode.SUBSTRING:
+          startFrom = Utils.GetSafeInt(args, 1, 0);
+          length = Utils.GetSafeInt(args, 2, source.Length);
+          length = Math.Min(length, source.Length - startFrom);
           return new Variable(source.Substring(startFrom, length));
+        case Mode.BEETWEEN:
+        case Mode.BEETWEEN_ANY:
+          int index1 = source.IndexOf(argument);
+          int index2 = m_mode == Mode.BEETWEEN ? source.IndexOf(parameter, index1 + 1) :
+                                source.IndexOfAny(parameter.ToCharArray(), index1 + 1);
+          startFrom  = index1 + argument.Length;
+
+          if (index1 < 0 || index2 < index1) {
+            throw new ArgumentException("Couldn't extract string between [" + argument +
+                                        "] and [" + parameter + "] + from " + source);
+          }
+          string result = source.Substring(startFrom, index2 - startFrom);
+          return new Variable(result);
       }
 
       return new Variable(-1);
@@ -1086,15 +1091,41 @@ namespace SplitAndMerge
     }
   }
 
+  class TimestampFunction : ParserFunction
+  {
+    bool m_millis = false;
+    public TimestampFunction(bool millis = false)
+    {
+      m_millis = millis;
+    }
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      List<Variable> args = script.GetFunctionArgs();
+
+      double timestamp = Utils.GetSafeDouble(args, 0);
+      string strFormat = Utils.GetSafeString(args, 1, "yyyy/MM/dd HH:mm:ss.fff");
+      Utils.CheckNotEmpty(strFormat, m_name);
+
+      var dt = new DateTime(1970, 1, 1, 0, 0, 0, 0);
+      if (m_millis) {
+        dt = dt.AddMilliseconds(timestamp);
+      } else {
+        dt = dt.AddSeconds(timestamp);
+      }
+
+      DateTime runtimeKnowsThisIsUtc = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+      DateTime localVersion = runtimeKnowsThisIsUtc.ToLocalTime();
+      string when = localVersion.ToString(strFormat);
+      return new Variable(when);
+    }
+  }
   class DateTimeFunction : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-        Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
-      string strFormat = Utils.GetSafeString(args, 0, "hh:mm:ss.fff");
+      string strFormat = Utils.GetSafeString(args, 0, "HH:mm:ss.fff");
       Utils.CheckNotEmpty(strFormat, m_name);
 
       string when = DateTime.Now.ToString(strFormat);
@@ -1114,9 +1145,7 @@ namespace SplitAndMerge
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-        Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
 
       if (m_mode == Mode.START) {
         m_stopwatch.Restart();

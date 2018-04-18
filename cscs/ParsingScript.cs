@@ -195,6 +195,15 @@ namespace SplitAndMerge
       }
     }
 
+    public List<Variable> GetFunctionArgs(char start = Constants.START_ARG,
+                                  char end   = Constants.END_ARG)
+    {
+      bool isList;
+      List<Variable> args = Utils.GetArgs(this,
+                                          start, end, out isList);
+      return args;
+    }
+
     public int GoToNextStatement()
     {
       int endGroupRead = 0;

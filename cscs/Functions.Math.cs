@@ -16,9 +16,11 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable result = script.ExecuteTo(Constants.END_ARG);
-      result.Value = Math.Exp(result.Value);
-      return result;
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
+      arg.Value = Math.Exp(arg.Value);
+      return arg;
     }
   }
 
@@ -26,9 +28,10 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg1 = script.ExecuteTo(Constants.NEXT_ARG);
-      script.Forward(); // eat separation
-      Variable arg2 = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 2, m_name, true);
+      Variable arg1 = args[0];
+      Variable arg2 = args[1];
 
       arg1.Value = Math.Pow(arg1.Value, arg2.Value);
       return arg1;
@@ -39,7 +42,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Sin(arg.Value);
       return arg;
     }
@@ -49,7 +54,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Cos(arg.Value);
       return arg;
     }
@@ -59,7 +66,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Asin(arg.Value);
       return arg;
     }
@@ -69,7 +78,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Acos(arg.Value);
       return arg;
     }
@@ -79,7 +90,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Sqrt(arg.Value);
       return arg;
     }
@@ -89,7 +102,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Abs(arg.Value);
       return arg;
     }
@@ -99,7 +114,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Ceiling(arg.Value);
       return arg;
     }
@@ -109,7 +126,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Floor(arg.Value);
       return arg;
     }
@@ -119,12 +138,10 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
-      int numberDigits = Utils.GetSafeInt(args, 1, 0);
 
+      int numberDigits = Utils.GetSafeInt(args, 1, 0);
       args[0].Value = Math.Round(args[0].Value, numberDigits);
       return args[0];
     }
@@ -134,7 +151,9 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      Variable arg = script.ExecuteTo(Constants.END_ARG);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name, true);
+      Variable arg = args[0];
       arg.Value = Math.Log(arg.Value);
       return arg;
     }
@@ -145,9 +164,7 @@ namespace SplitAndMerge
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
       int limit = args[0].AsInt();
       Utils.CheckPosInt(args[0]);

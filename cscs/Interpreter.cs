@@ -140,6 +140,8 @@ namespace SplitAndMerge
       ParserFunction.RegisterFunction(Constants.STOPWATCH_ELAPSED, new StopWatchFunction(StopWatchFunction.Mode.ELAPSED));
       ParserFunction.RegisterFunction(Constants.STOPWATCH_START, new StopWatchFunction(StopWatchFunction.Mode.START));
       ParserFunction.RegisterFunction(Constants.STOPWATCH_STOP, new StopWatchFunction(StopWatchFunction.Mode.STOP));
+      ParserFunction.RegisterFunction(Constants.STR_BETWEEN, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN));
+      ParserFunction.RegisterFunction(Constants.STR_BETWEEN_ANY, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN_ANY));
       ParserFunction.RegisterFunction(Constants.STR_CONTAINS, new StringManipulationFunction(StringManipulationFunction.Mode.CONTAINS));
       ParserFunction.RegisterFunction(Constants.STR_LOWER, new StringManipulationFunction(StringManipulationFunction.Mode.LOWER));
       ParserFunction.RegisterFunction(Constants.STR_ENDS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.ENDS_WITH));
@@ -154,11 +156,17 @@ namespace SplitAndMerge
       ParserFunction.RegisterFunction(Constants.TAIL, new TailFunction());
       ParserFunction.RegisterFunction(Constants.THREAD, new ThreadFunction());
       ParserFunction.RegisterFunction(Constants.THREAD_ID, new ThreadIDFunction());
+      ParserFunction.RegisterFunction(Constants.TIMESTAMP, new TimestampFunction());
       ParserFunction.RegisterFunction(Constants.TOKENIZE, new TokenizeFunction());
       ParserFunction.RegisterFunction(Constants.TOKENIZE_LINES, new TokenizeLinesFunction());
       ParserFunction.RegisterFunction(Constants.TOKEN_COUNTER, new TokenCounterFunction());
       ParserFunction.RegisterFunction(Constants.TOLOWER, new ToLowerFunction());
       ParserFunction.RegisterFunction(Constants.TOUPPER, new ToUpperFunction());
+      ParserFunction.RegisterFunction(Constants.TO_BOOL, new ToBoolFunction());
+      ParserFunction.RegisterFunction(Constants.TO_DECIMAL, new ToDecimalFunction());
+      ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
+      ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
+      ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
       ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
       ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
       ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
@@ -185,134 +193,142 @@ namespace SplitAndMerge
     {
       MAX_LOOPS = ReadConfig("maxLoops", 256000);
 #if !__MOBILE__
-            if (ConfigurationManager.GetSection("Languages") == null) {
-                return;
-            }
-            var languagesSection = ConfigurationManager.GetSection("Languages") as NameValueCollection;
-            if (languagesSection.Count == 0) {
-                return;
-            }
+      if (ConfigurationManager.GetSection("Languages") == null) {
+        return;
+      }
+      var languagesSection = ConfigurationManager.GetSection("Languages") as NameValueCollection;
+      if (languagesSection.Count == 0) {
+        return;
+      }
 
-            string errorsPath = ConfigurationManager.AppSettings["errorsPath"];
-            Translation.Language = ConfigurationManager.AppSettings["language"];
-            Translation.LoadErrors(errorsPath);
+      string errorsPath = ConfigurationManager.AppSettings["errorsPath"];
+      Translation.Language = ConfigurationManager.AppSettings["language"];
+      Translation.LoadErrors(errorsPath);
 
-            string dictPath = ConfigurationManager.AppSettings["dictionaryPath"];
+      string dictPath = ConfigurationManager.AppSettings["dictionaryPath"];
 
-            string baseLanguage = Constants.ENGLISH;
-            string languages = languagesSection["languages"];
-            string[] supportedLanguages = languages.Split(",".ToCharArray());
+      string baseLanguage = Constants.ENGLISH;
+      string languages = languagesSection["languages"];
+      string[] supportedLanguages = languages.Split(",".ToCharArray());
 
-            foreach(string lang in supportedLanguages) {
-                string language = Constants.Language(lang);
-                Dictionary<string, string> tr1 = Translation.KeywordsDictionary(baseLanguage, language);
-                Dictionary<string, string> tr2 = Translation.KeywordsDictionary(language, baseLanguage);
+      foreach(string lang in supportedLanguages) {
+        string language = Constants.Language(lang);
+        Dictionary<string, string> tr1 = Translation.KeywordsDictionary(baseLanguage, language);
+        Dictionary<string, string> tr2 = Translation.KeywordsDictionary(language, baseLanguage);
 
-                Translation.TryLoadDictionary(dictPath, baseLanguage, language);
+        Translation.TryLoadDictionary(dictPath, baseLanguage, language);
 
-                var languageSection    = ConfigurationManager.GetSection(lang) as NameValueCollection;
+        var languageSection    = ConfigurationManager.GetSection(lang) as NameValueCollection;
 
-                Translation.Add(languageSection, Constants.IF, tr1, tr2);
-                Translation.Add(languageSection, Constants.FOR, tr1, tr2);
-                Translation.Add(languageSection, Constants.WHILE, tr1, tr2);
-                Translation.Add(languageSection, Constants.BREAK, tr1, tr2);
-                Translation.Add(languageSection, Constants.CONTINUE, tr1, tr2);
-                Translation.Add(languageSection, Constants.RETURN, tr1, tr2);
-                Translation.Add(languageSection, Constants.FUNCTION, tr1, tr2);
-                Translation.Add(languageSection, Constants.INCLUDE, tr1, tr2);
-                Translation.Add(languageSection, Constants.THROW, tr1, tr2);
-                Translation.Add(languageSection, Constants.TRY, tr1, tr2);
-                Translation.Add(languageSection, Constants.TYPE, tr1, tr2);
-                Translation.Add(languageSection, Constants.TRUE, tr1, tr2);
-                Translation.Add(languageSection, Constants.FALSE, tr1, tr2);
+        Translation.Add(languageSection, Constants.IF, tr1, tr2);
+        Translation.Add(languageSection, Constants.FOR, tr1, tr2);
+        Translation.Add(languageSection, Constants.WHILE, tr1, tr2);
+        Translation.Add(languageSection, Constants.BREAK, tr1, tr2);
+        Translation.Add(languageSection, Constants.CONTINUE, tr1, tr2);
+        Translation.Add(languageSection, Constants.RETURN, tr1, tr2);
+        Translation.Add(languageSection, Constants.FUNCTION, tr1, tr2);
+        Translation.Add(languageSection, Constants.INCLUDE, tr1, tr2);
+        Translation.Add(languageSection, Constants.THROW, tr1, tr2);
+        Translation.Add(languageSection, Constants.TRY, tr1, tr2);
+        Translation.Add(languageSection, Constants.TYPE, tr1, tr2);
+        Translation.Add(languageSection, Constants.TRUE, tr1, tr2);
+        Translation.Add(languageSection, Constants.FALSE, tr1, tr2);
 
-                Translation.Add(languageSection, Constants.ADD, tr1, tr2);
-                Translation.Add(languageSection, Constants.ADD_TO_HASH, tr1, tr2);
-                Translation.Add(languageSection, Constants.ADD_ALL_TO_HASH, tr1, tr2);
-                Translation.Add(languageSection, Constants.APPEND, tr1, tr2);
-                Translation.Add(languageSection, Constants.APPENDLINE, tr1, tr2);
-                Translation.Add(languageSection, Constants.APPENDLINES, tr1, tr2);
-                Translation.Add(languageSection, Constants.CD, tr1, tr2);
-                Translation.Add(languageSection, Constants.CD__, tr1, tr2);
-                Translation.Add(languageSection, Constants.CEIL, tr1, tr2);
-                Translation.Add(languageSection, Constants.CONSOLE_CLR, tr1, tr2);
-                Translation.Add(languageSection, Constants.CONTAINS, tr1, tr2);
-                Translation.Add(languageSection, Constants.COPY, tr1, tr2);
-                Translation.Add(languageSection, Constants.DEEP_COPY, tr1, tr2);
-                Translation.Add(languageSection, Constants.DELETE, tr1, tr2);
-                Translation.Add(languageSection, Constants.DIR, tr1, tr2);
-                Translation.Add(languageSection, Constants.ENV, tr1, tr2);
-                Translation.Add(languageSection, Constants.EXIT, tr1, tr2);
-                Translation.Add(languageSection, Constants.EXISTS, tr1, tr2);
-                Translation.Add(languageSection, Constants.FINDFILES, tr1, tr2);
-                Translation.Add(languageSection, Constants.FINDSTR, tr1, tr2);
-                Translation.Add(languageSection, Constants.FLOOR, tr1, tr2);
-                Translation.Add(languageSection, Constants.GET_COLUMN, tr1, tr2);
-                Translation.Add(languageSection, Constants.GET_KEYS, tr1, tr2);
-                Translation.Add(languageSection, Constants.INDEX_OF, tr1, tr2);
-                Translation.Add(languageSection, Constants.KILL, tr1, tr2);
-                Translation.Add(languageSection, Constants.LOCK, tr1, tr2);
-                Translation.Add(languageSection, Constants.MKDIR, tr1, tr2);
-                Translation.Add(languageSection, Constants.MORE, tr1, tr2);
-                Translation.Add(languageSection, Constants.MOVE, tr1, tr2);
-                Translation.Add(languageSection, Constants.NOW, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT_BLACK, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT_GRAY, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT_GREEN, tr1, tr2);
-                Translation.Add(languageSection, Constants.PRINT_RED, tr1, tr2);
-                Translation.Add(languageSection, Constants.PSINFO, tr1, tr2);
-                Translation.Add(languageSection, Constants.PWD, tr1, tr2);
-                Translation.Add(languageSection, Constants.RANDOM, tr1, tr2);
-                Translation.Add(languageSection, Constants.READ, tr1, tr2);
-                Translation.Add(languageSection, Constants.READFILE, tr1, tr2);
-                Translation.Add(languageSection, Constants.READNUMBER, tr1, tr2);
-                Translation.Add(languageSection, Constants.REMOVE, tr1, tr2);
-                Translation.Add(languageSection, Constants.REMOVE_AT, tr1, tr2);
-                Translation.Add(languageSection, Constants.ROUND, tr1, tr2);
-                Translation.Add(languageSection, Constants.RUN, tr1, tr2);
-                Translation.Add(languageSection, Constants.SET, tr1, tr2);
-                Translation.Add(languageSection, Constants.SETENV, tr1, tr2);
-                Translation.Add(languageSection, Constants.SHOW, tr1, tr2);
-                Translation.Add(languageSection, Constants.SIGNAL, tr1, tr2);
-                Translation.Add(languageSection, Constants.SIZE, tr1, tr2);
-                Translation.Add(languageSection, Constants.SLEEP, tr1, tr2);
-                Translation.Add(languageSection, Constants.STOPWATCH_ELAPSED, tr1, tr2);
-                Translation.Add(languageSection, Constants.STOPWATCH_START, tr1, tr2);
-                Translation.Add(languageSection, Constants.STOPWATCH_STOP, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_CONTAINS, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_ENDS_WITH, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_EQUALS, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_INDEX_OF, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_LOWER, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_REPLACE, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_STARTS_WITH, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_SUBSTR, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_TRIM, tr1, tr2);
-                Translation.Add(languageSection, Constants.STR_UPPER, tr1, tr2);
-                Translation.Add(languageSection, Constants.SUBSTR, tr1, tr2);
-                Translation.Add(languageSection, Constants.TAIL, tr1, tr2);
-                Translation.Add(languageSection, Constants.THREAD, tr1, tr2);
-                Translation.Add(languageSection, Constants.THREAD_ID, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOKENIZE, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOKENIZE_LINES, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOKEN_COUNTER, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOLOWER, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOUPPER, tr1, tr2);
-                Translation.Add(languageSection, Constants.TRANSLATE, tr1, tr2);
-                Translation.Add(languageSection, Constants.WAIT, tr1, tr2);
-                Translation.Add(languageSection, Constants.WRITE, tr1, tr2);
-                Translation.Add(languageSection, Constants.WRITELINE, tr1, tr2);
-                Translation.Add(languageSection, Constants.WRITELINES, tr1, tr2);
-                Translation.Add(languageSection, Constants.WRITE_CONSOLE, tr1, tr2);
+        Translation.Add(languageSection, Constants.ADD, tr1, tr2);
+        Translation.Add(languageSection, Constants.ADD_TO_HASH, tr1, tr2);
+        Translation.Add(languageSection, Constants.ADD_ALL_TO_HASH, tr1, tr2);
+        Translation.Add(languageSection, Constants.APPEND, tr1, tr2);
+        Translation.Add(languageSection, Constants.APPENDLINE, tr1, tr2);
+        Translation.Add(languageSection, Constants.APPENDLINES, tr1, tr2);
+        Translation.Add(languageSection, Constants.CD, tr1, tr2);
+        Translation.Add(languageSection, Constants.CD__, tr1, tr2);
+        Translation.Add(languageSection, Constants.CEIL, tr1, tr2);
+        Translation.Add(languageSection, Constants.CONSOLE_CLR, tr1, tr2);
+        Translation.Add(languageSection, Constants.CONTAINS, tr1, tr2);
+        Translation.Add(languageSection, Constants.COPY, tr1, tr2);
+        Translation.Add(languageSection, Constants.DEEP_COPY, tr1, tr2);
+        Translation.Add(languageSection, Constants.DELETE, tr1, tr2);
+        Translation.Add(languageSection, Constants.DIR, tr1, tr2);
+        Translation.Add(languageSection, Constants.ENV, tr1, tr2);
+        Translation.Add(languageSection, Constants.EXIT, tr1, tr2);
+        Translation.Add(languageSection, Constants.EXISTS, tr1, tr2);
+        Translation.Add(languageSection, Constants.FINDFILES, tr1, tr2);
+        Translation.Add(languageSection, Constants.FINDSTR, tr1, tr2);
+        Translation.Add(languageSection, Constants.FLOOR, tr1, tr2);
+        Translation.Add(languageSection, Constants.GET_COLUMN, tr1, tr2);
+        Translation.Add(languageSection, Constants.GET_KEYS, tr1, tr2);
+        Translation.Add(languageSection, Constants.INDEX_OF, tr1, tr2);
+        Translation.Add(languageSection, Constants.KILL, tr1, tr2);
+        Translation.Add(languageSection, Constants.LOCK, tr1, tr2);
+        Translation.Add(languageSection, Constants.MKDIR, tr1, tr2);
+        Translation.Add(languageSection, Constants.MORE, tr1, tr2);
+        Translation.Add(languageSection, Constants.MOVE, tr1, tr2);
+        Translation.Add(languageSection, Constants.NOW, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT_BLACK, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT_GRAY, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT_GREEN, tr1, tr2);
+        Translation.Add(languageSection, Constants.PRINT_RED, tr1, tr2);
+        Translation.Add(languageSection, Constants.PSINFO, tr1, tr2);
+        Translation.Add(languageSection, Constants.PWD, tr1, tr2);
+        Translation.Add(languageSection, Constants.RANDOM, tr1, tr2);
+        Translation.Add(languageSection, Constants.READ, tr1, tr2);
+        Translation.Add(languageSection, Constants.READFILE, tr1, tr2);
+        Translation.Add(languageSection, Constants.READNUMBER, tr1, tr2);
+        Translation.Add(languageSection, Constants.REMOVE, tr1, tr2);
+        Translation.Add(languageSection, Constants.REMOVE_AT, tr1, tr2);
+        Translation.Add(languageSection, Constants.ROUND, tr1, tr2);
+        Translation.Add(languageSection, Constants.RUN, tr1, tr2);
+        Translation.Add(languageSection, Constants.SET, tr1, tr2);
+        Translation.Add(languageSection, Constants.SETENV, tr1, tr2);
+        Translation.Add(languageSection, Constants.SHOW, tr1, tr2);
+        Translation.Add(languageSection, Constants.SIGNAL, tr1, tr2);
+        Translation.Add(languageSection, Constants.SIZE, tr1, tr2);
+        Translation.Add(languageSection, Constants.SLEEP, tr1, tr2);
+        Translation.Add(languageSection, Constants.STOPWATCH_ELAPSED, tr1, tr2);
+        Translation.Add(languageSection, Constants.STOPWATCH_START, tr1, tr2);
+        Translation.Add(languageSection, Constants.STOPWATCH_STOP, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_BETWEEN, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_BETWEEN_ANY, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_CONTAINS, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_ENDS_WITH, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_EQUALS, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_INDEX_OF, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_LOWER, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_REPLACE, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_STARTS_WITH, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_SUBSTR, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_TRIM, tr1, tr2);
+        Translation.Add(languageSection, Constants.STR_UPPER, tr1, tr2);
+        Translation.Add(languageSection, Constants.SUBSTR, tr1, tr2);
+        Translation.Add(languageSection, Constants.TAIL, tr1, tr2);
+        Translation.Add(languageSection, Constants.THREAD, tr1, tr2);
+        Translation.Add(languageSection, Constants.THREAD_ID, tr1, tr2);
+        Translation.Add(languageSection, Constants.TIMESTAMP, tr1, tr2);
+        Translation.Add(languageSection, Constants.TOKENIZE, tr1, tr2);
+        Translation.Add(languageSection, Constants.TOKENIZE_LINES, tr1, tr2);
+        Translation.Add(languageSection, Constants.TOKEN_COUNTER, tr1, tr2);
+        Translation.Add(languageSection, Constants.TOLOWER, tr1, tr2);
+        Translation.Add(languageSection, Constants.TOUPPER, tr1, tr2);
+        Translation.Add(languageSection, Constants.TO_BOOL, tr1, tr2);
+        Translation.Add(languageSection, Constants.TO_DECIMAL, tr1, tr2);
+        Translation.Add(languageSection, Constants.TO_DOUBLE, tr1, tr2);
+        Translation.Add(languageSection, Constants.TO_INT, tr1, tr2);
+        Translation.Add(languageSection, Constants.TO_STRING, tr1, tr2);
+        Translation.Add(languageSection, Constants.TRANSLATE, tr1, tr2);
+        Translation.Add(languageSection, Constants.WAIT, tr1, tr2);
+        Translation.Add(languageSection, Constants.WRITE, tr1, tr2);
+        Translation.Add(languageSection, Constants.WRITELINE, tr1, tr2);
+        Translation.Add(languageSection, Constants.WRITELINES, tr1, tr2);
+        Translation.Add(languageSection, Constants.WRITE_CONSOLE, tr1, tr2);
 
-                // Special dealing for else, elif since they are not separate
-                // functions but are part of the if statement block.
-                // Same for and, or, not.
-                Translation.AddSubstatement(languageSection, Constants.ELSE,    Constants.ELSE_LIST, tr1, tr2);
-                Translation.AddSubstatement(languageSection, Constants.ELSE_IF, Constants.ELSE_IF_LIST, tr1, tr2);
-                Translation.AddSubstatement(languageSection, Constants.CATCH,   Constants.CATCH_LIST, tr1, tr2);
+        // Special dealing for else, elif since they are not separate
+        // functions but are part of the if statement block.
+        // Same for and, or, not.
+        Translation.AddSubstatement(languageSection, Constants.ELSE,    Constants.ELSE_LIST, tr1, tr2);
+        Translation.AddSubstatement(languageSection, Constants.ELSE_IF, Constants.ELSE_IF_LIST, tr1, tr2);
+        Translation.AddSubstatement(languageSection, Constants.CATCH,   Constants.CATCH_LIST, tr1, tr2);
       }
 #endif
     }
@@ -536,7 +552,7 @@ namespace SplitAndMerge
 
       try {
         result = ProcessBlock(script);
-      } catch (ArgumentException exc) {
+      } catch (Exception exc) {
         exception = exc;
       }
 
@@ -564,8 +580,10 @@ namespace SplitAndMerge
         string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
         ParserFunction.InvalidateStacksAfterLevel(currentStackLevel);
 
-        GetVarFunction excFunc = new GetVarFunction(new Variable(exception.Message + excStack));
-        ParserFunction.AddGlobalOrLocalVariable(exceptionName, excFunc);
+        GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
+        ParserFunction.AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+        GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
+        ParserFunction.AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
 
         result = ProcessBlock(script);
         ParserFunction.PopLocalVariable(exceptionName);
@@ -630,6 +648,8 @@ namespace SplitAndMerge
       int blockStart = script.Pointer;
       int startCount = 0;
       int endCount = 0;
+      bool inQuotes = false;
+      char previous = Constants.EMPTY;
       while (startCount == 0 || startCount > endCount) {
         if (!script.StillValid()) {
           throw new ArgumentException("Couldn't skip block [" +
@@ -637,9 +657,11 @@ namespace SplitAndMerge
         }
         char currentChar = script.CurrentAndForward();
         switch (currentChar) {
-          case Constants.START_GROUP: startCount++; break;
-          case Constants.END_GROUP: endCount++; break;
+          case Constants.QUOTE: if (previous != '\\') inQuotes = !inQuotes; break;
+          case Constants.START_GROUP: if (!inQuotes) startCount++; break;
+          case Constants.END_GROUP: if (!inQuotes) endCount++; break;
         }
+        previous = currentChar;
       }
 
       if (startCount != endCount) {

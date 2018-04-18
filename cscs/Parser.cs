@@ -46,9 +46,9 @@ namespace SplitAndMerge
       int negated = 0;
 
       string rest = script.Rest;
-      if (rest == "b[a[0]];") {
-        int stop = 1;
-      }
+      //if (rest == "b[a[0]];") {
+      //  int stop = 1;
+      //}
 
       do { // Main processing cycle of the first part.
         string negateSymbol = Utils.IsNotSign(script.Rest);
@@ -78,7 +78,14 @@ namespace SplitAndMerge
         if (SkipOrAppendIfNecessary(item, ch, to)) {
           continue;
         }
+
         string token = item.ToString();
+
+        bool ternary = UpdateIfTernary(script, token, ch, ref listToMerge);
+        if (ternary) {
+          return listToMerge;
+        }
+
         CheckConsistency(token, listToMerge, script);
 
         script.MoveForwardIf(Constants.SPACE);
@@ -92,6 +99,7 @@ namespace SplitAndMerge
         // item is a function or if the next item is starting with a START_ARG '('.
         ParserFunction func = new ParserFunction(script, token, ch, ref action);
         Variable current = func.GetValue(script);
+        current.ParsingToken = token;
 
         if (negated > 0 && current.Type == Variable.VarType.NUMBER) {
           // If there has been a NOT sign, this is a boolean.
@@ -196,8 +204,8 @@ namespace SplitAndMerge
       return false;
     }
 
-    private static bool StillCollecting(string item, char[] to, ParsingScript script,
-                                        ref string action)
+    static bool StillCollecting(string item, char[] to, ParsingScript script,
+                                ref string action)
     {
       char prev = script.TryPrevPrev();
       char ch = script.TryPrev();
@@ -230,10 +238,36 @@ namespace SplitAndMerge
         return false;
       }
 
+      if (ch == Constants.TERNARY_OPERATOR) {
+        script.Backward();
+        return false;
+      }
       return true;
     }
 
-    private static bool UpdateIfBool(ParsingScript script, ref Variable current, ref List<Variable> listToMerge)
+    static bool UpdateIfTernary(ParsingScript script, string token, char ch, ref List<Variable> listToMerge)
+    {
+      if (listToMerge.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0) {
+        return false;
+      }
+
+      Variable arg1 = MergeList(listToMerge);
+      script.MoveForwardIf(Constants.TERNARY_OPERATOR);
+      Variable arg2 = script.Execute(Constants.TERNARY_SEPARATOR);
+      script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+      Variable arg3 = script.Execute(Constants.NEXT_OR_END_ARRAY);
+      script.MoveForwardIf(Constants.NEXT_OR_END_ARRAY);
+
+      double condition = arg1.AsDouble();
+      Variable result = condition != 0 ? arg2 : arg3;
+
+      listToMerge.Clear();
+      listToMerge.Add(result);
+
+      return true;
+     }
+
+    static bool UpdateIfBool(ParsingScript script, ref Variable current, ref List<Variable> listToMerge)
     {
       // Short-circuit evaluation: check if don't need to evaluate more.
       bool needToAdd = true;
@@ -348,9 +382,6 @@ namespace SplitAndMerge
         rightCell.Value = rightCell.AsDouble();
       }
       switch (leftCell.Action) {
-        case "^":
-          leftCell.Value = Math.Pow(leftCell.Value, rightCell.Value);
-          break;
         case "%":
           leftCell.Value %= rightCell.Value;
           break;
@@ -390,6 +421,15 @@ namespace SplitAndMerge
           break;
         case "!=":
           leftCell.Value = Convert.ToDouble(leftCell.Value != rightCell.Value);
+          break;
+        case "&":
+          leftCell.Value = (int)leftCell.Value & (int)rightCell.Value;
+          break;
+        case "^":
+          leftCell.Value = (int)leftCell.Value ^ (int)rightCell.Value;
+          break;
+        case "|":
+          leftCell.Value = (int)leftCell.Value | (int)rightCell.Value;
           break;
         case "&&":
           leftCell.Value = Convert.ToDouble(
@@ -450,29 +490,31 @@ namespace SplitAndMerge
     {
       switch (action) {
         case "++":
-        case "--": return 10;
-        case "^": return 9;
+        case "--": return 11;
         case "%":
         case "*":
-        case "/": return 8;
+        case "/":  return 10;
         case "+":
-        case "-": return 7;
+        case "-":  return 9;
         case "<":
         case ">":
         case ">=":
-        case "<=": return 6;
+        case "<=": return 8;
         case "==":
-        case "!=": return 5;
-        case "&&": return 4;
-        case "||": return 3;
+        case "!=": return 7;
+        case "&":  return 6;
+        case "|":  return 5;
+        case "^":  return 4;
+        case "&&": return 3;
+        case "||": return 2;
         case "+=":
         case "-=":
         case "*=":
         case "/=":
         case "%=":
-        case "=": return 2;
+        case "=":  return 1;
       }
-      return 0;
+      return 0; // NULL action has priority 0.
     }
   }
 }

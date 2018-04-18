@@ -23,7 +23,8 @@ namespace SplitAndMerge
     public const char FOR_EACH = ':';
     public const char CONTINUE_LINE = '\\';
     public const char EMPTY = '\0';
-
+    public const char TERNARY_OPERATOR  = '?';
+ 
     public const string ASSIGNMENT = "=";
     public const string AND = "&&";
     public const string OR = "||";
@@ -127,6 +128,8 @@ namespace SplitAndMerge
     public const string STOPWATCH_ELAPSED = "StopWatchElapsed";
     public const string STOPWATCH_START = "StartStopWatch";
     public const string STOPWATCH_STOP = "StopStopWatch";
+    public const string STR_BETWEEN = "StrBetween";
+    public const string STR_BETWEEN_ANY = "StrBetweenAny";
     public const string STR_CONTAINS = "StrContains";
     public const string STR_ENDS_WITH = "StrEndsWith";
     public const string STR_EQUALS = "StrEqual";
@@ -141,11 +144,17 @@ namespace SplitAndMerge
     public const string TAIL = "tail";
     public const string THREAD = "thread";
     public const string THREAD_ID = "threadid";
+    public const string TIMESTAMP = "Timestamp";
     public const string TOKENIZE = "tokenize";
     public const string TOKENIZE_LINES = "TokenizeLines";
     public const string TOKEN_COUNTER = "CountTokens";
     public const string TOLOWER = "tolower";
     public const string TOUPPER = "toupper";
+    public const string TO_BOOL = "bool";
+    public const string TO_DECIMAL = "decimal";
+    public const string TO_DOUBLE = "double";
+    public const string TO_INT = "int";
+    public const string TO_STRING = "string";
     public const string TRANSLATE = "translate";
     public const string WAIT = "wait";
     public const string WRITE = "write";
@@ -159,11 +168,11 @@ namespace SplitAndMerge
 
     public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=" };
     public static string[] MATH_ACTIONS = { "&&", "||", "==", "!=", "<=", ">=", "++", "--",
-                                                  "%", "*", "/", "+", "-", "^", "<", ">", "="};
-
+                                            "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
     // Actions: always decreasing by the number of characters.
     public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
 
+    public static char[] TERNARY_SEPARATOR = { ':' };
     public static char[] NEXT_ARG_ARRAY = NEXT_ARG.ToString().ToCharArray();
     public static char[] END_ARG_ARRAY = END_ARG.ToString().ToCharArray();
     public static char[] END_ARRAY_ARRAY = END_ARRAY.ToString().ToCharArray();

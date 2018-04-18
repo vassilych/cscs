@@ -37,8 +37,9 @@ namespace SplitAndMerge
     }
     public virtual Variable Clone()
     {
-      Variable newVar = new Variable();
-      newVar.Copy(this);
+      //Variable newVar = new Variable();
+      //newVar.Copy(this);
+      Variable newVar = (Variable)this.MemberwiseClone();
       return newVar;
     }
     public virtual Variable DeepClone()
@@ -142,9 +143,6 @@ namespace SplitAndMerge
       }
 
       if (results.Count == 0 && m_tuple != null) {
-        /*foreach (var keyVar in m_tuple) {
-          results
-        }*/
         results = m_tuple;
       }
 
@@ -237,6 +235,17 @@ namespace SplitAndMerge
 
       return result;
     }
+    public long AsLong()
+    {
+      long result = 0;
+      if (Type == VarType.NUMBER || Value != 0.0) {
+        return (long)m_value;
+      }
+      if (Type == VarType.STRING) {
+        long.TryParse(m_string, out result);
+      }
+      return result;
+    }
     public double AsDouble()
     {
       double result = 0.0;
@@ -250,7 +259,7 @@ namespace SplitAndMerge
       return result;
     }
 
-    public virtual string AsString(bool isList = true,
+    public virtual string   AsString(bool isList = true,
                                bool sameLine = true)
     {
       if (Type == VarType.NUMBER) {
@@ -328,6 +337,7 @@ namespace SplitAndMerge
     public string Action { get; set; }
     public VarType Type { get; set; }
     public bool IsReturn { get; set; }
+    public string ParsingToken { get; set; }
 
     public static Variable EmptyInstance = new Variable();
 
