@@ -7,221 +7,221 @@ namespace SplitAndMerge
 {
   public partial class Utils
   {
-    public static Variable GetItem(ParsingScript script, bool eatLast = true)
+    public static Variable GetItem (ParsingScript script, bool eatLast = true)
     {
-      script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
-      Utils.CheckNotEnd(script);
+      script.MoveForwardIf (Constants.NEXT_ARG, Constants.SPACE);
+      Utils.CheckNotEnd (script);
 
       bool inQuotes = script.Current == Constants.QUOTE;
 
       if (script.Current == Constants.START_GROUP) {
         // We are extracting a list between curly braces.
-        script.Forward(); // Skip the first brace.
+        script.Forward (); // Skip the first brace.
         bool isList = true;
-        Variable value = new Variable();
-        value.Tuple = GetArgs(script,
+        Variable value = new Variable ();
+        value.Tuple = GetArgs (script,
               Constants.START_GROUP, Constants.END_GROUP, out isList);
         return value;
       }
 
       // A variable, a function, or a number.
-      Variable var = script.Execute(Constants.NEXT_OR_END_ARRAY);
+      Variable var = script.Execute (Constants.NEXT_OR_END_ARRAY);
       //value = var.Clone();
 
       if (inQuotes) {
-        script.MoveForwardIf(Constants.QUOTE);
+        script.MoveForwardIf (Constants.QUOTE);
       }
       if (eatLast) {
-        script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+        script.MoveForwardIf (Constants.END_ARG, Constants.SPACE);
       }
       return var;
     }
 
-    public static string GetToken(ParsingScript script, char[] to)
+    public static string GetToken (ParsingScript script, char [] to)
 
     {
-      char curr = script.TryCurrent();
-      char prev = script.TryPrev();
+      char curr = script.TryCurrent ();
+      char prev = script.TryPrev ();
 
-      if (!to.Contains(Constants.SPACE)) {
+      if (!to.Contains (Constants.SPACE)) {
         // Skip a leading space unless we are inside of quotes
         while (curr == Constants.SPACE && prev != Constants.QUOTE) {
-          script.Forward();
-          curr = script.TryCurrent();
-          prev = script.TryPrev();
+          script.Forward ();
+          curr = script.TryCurrent ();
+          prev = script.TryPrev ();
         }
       }
 
       // String in quotes
       bool inQuotes = curr == Constants.QUOTE;
       if (inQuotes) {
-        int qend = script.Find(Constants.QUOTE, script.Pointer + 1);
+        int qend = script.Find (Constants.QUOTE, script.Pointer + 1);
         if (qend == -1) {
-          throw new ArgumentException("Unmatched quotes in [" +
-                                 script.FromPrev() + "]");
+          throw new ArgumentException ("Unmatched quotes in [" +
+                                 script.FromPrev () + "]");
         }
-        string result = script.Substr(script.Pointer + 1, qend - script.Pointer - 1);
+        string result = script.Substr (script.Pointer + 1, qend - script.Pointer - 1);
         script.Pointer = qend + 1;
         return result;
       }
 
-      script.MoveForwardIf(Constants.QUOTE);
+      script.MoveForwardIf (Constants.QUOTE);
 
-      int end = script.FindFirstOf(to);
-      end = end < 0 ? script.Size() : end;
+      int end = script.FindFirstOf (to);
+      end = end < 0 ? script.Size () : end;
 
       // Skip found characters that have a backslash before.
-      while (end > 0 && end + 1 < script.Size() &&
-             script.String[end - 1] == '\\') {
-        end = script.FindFirstOf(to, end + 1);
+      while (end > 0 && end + 1 < script.Size () &&
+             script.String [end - 1] == '\\') {
+        end = script.FindFirstOf (to, end + 1);
       }
 
-      end = end < 0 ? script.Size() : end;
+      end = end < 0 ? script.Size () : end;
 
-      if (script.At(end - 1) == Constants.QUOTE) {
+      if (script.At (end - 1) == Constants.QUOTE) {
         end--;
       }
 
-      string var = script.Substr(script.Pointer, end - script.Pointer);
+      string var = script.Substr (script.Pointer, end - script.Pointer);
       // \"yes\" --> "yes"
-      var = var.Replace("\\\"", "\"");
+      var = var.Replace ("\\\"", "\"");
       script.Pointer = end;
 
-      script.MoveForwardIf(Constants.QUOTE, Constants.SPACE);
+      script.MoveForwardIf (Constants.QUOTE, Constants.SPACE);
 
       return var;
     }
 
-    public static string GetNextToken(ParsingScript script)
+    public static string GetNextToken (ParsingScript script)
     {
-      if (!script.StillValid()) {
+      if (!script.StillValid ()) {
         return "";
       }
-      int end = script.FindFirstOf(Constants.TOKEN_SEPARATION);
+      int end = script.FindFirstOf (Constants.TOKEN_SEPARATION);
 
       if (end < 0) {
         return "";
       }
 
-      string var = script.Substr(script.Pointer, end - script.Pointer);
+      string var = script.Substr (script.Pointer, end - script.Pointer);
       script.Pointer = end;
       return var;
     }
 
-    public static void SkipRestExpr(ParsingScript script)
+    public static void SkipRestExpr (ParsingScript script)
     {
       int argRead = 0;
       bool inQuotes = false;
       char previous = Constants.EMPTY;
 
-      while (script.StillValid()) {
+      while (script.StillValid ()) {
         char currentChar = script.Current;
         if (inQuotes && currentChar != Constants.QUOTE) {
-          script.Forward();
+          script.Forward ();
           continue;
         }
 
         switch (currentChar) {
-          case Constants.QUOTE:
-            if (previous != '\\') {
-              inQuotes = !inQuotes;
-            }
-            break;
-          case Constants.START_ARG:
-            argRead++;
-            break;
-          case Constants.END_ARG:
-            argRead--;
-            if (argRead < 0) {
-              return;
-            }
-            break;
-          case Constants.END_STATEMENT:
+        case Constants.QUOTE:
+          if (previous != '\\') {
+            inQuotes = !inQuotes;
+          }
+          break;
+        case Constants.START_ARG:
+          argRead++;
+          break;
+        case Constants.END_ARG:
+          argRead--;
+          if (argRead < 0) {
             return;
-          case Constants.TERNARY_OPERATOR:
-          case Constants.NEXT_ARG:
-            if (argRead <= 0) {
-              return;
-            }
-            break;
-          default:
-            break;
+          }
+          break;
+        case Constants.END_STATEMENT:
+          return;
+        case Constants.TERNARY_OPERATOR:
+        case Constants.NEXT_ARG:
+          if (argRead <= 0) {
+            return;
+          }
+          break;
+        default:
+          break;
         }
 
-        script.Forward();
+        script.Forward ();
         previous = currentChar;
       }
     }
 
-    public static string GetStringOrVarValue(ParsingScript script)
+    public static string GetStringOrVarValue (ParsingScript script)
     {
-      script.MoveForwardIf(Constants.SPACE);
+      script.MoveForwardIf (Constants.SPACE);
 
       // If this token starts with a quote then it is a string constant.
       // Otherwide we treat it as a variable, but if the variable doesn't exist then it
       // will be still treated as a string constant.
-      bool stringConstant = script.Rest.StartsWith(Constants.QUOTE.ToString());
+      bool stringConstant = script.Rest.StartsWith (Constants.QUOTE.ToString ());
 
-      string token = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+      string token = Utils.GetToken (script, Constants.NEXT_OR_END_ARRAY);
       // Check if this is a variable definition:
-      stringConstant = stringConstant || !ParserFunction.FunctionExists(token);
+      stringConstant = stringConstant || !ParserFunction.FunctionExists (token);
       if (!stringConstant) {
-        Variable sourceValue = ParserFunction.GetFunction(token).GetValue(script);
+        Variable sourceValue = ParserFunction.GetFunction (token).GetValue (script);
         token = sourceValue.String;
       }
 
       return token;
     }
 
-    public static bool IsCompareSign(char ch)
+    public static bool IsCompareSign (char ch)
     {
       return ch == '<' || ch == '>' || ch == '=';
     }
 
-    public static bool IsAndOrSign(char ch)
+    public static bool IsAndOrSign (char ch)
     {
       return ch == '&' || ch == '|';
     }
 
     // Checks whether there is an argument separator (e.g.  ',') before the end of the
     // function call. E.g. returns true for "a,b)" and "a(b,c),d)" and false for "b),c".
-    public static bool SeparatorExists(ParsingScript script)
+    public static bool SeparatorExists (ParsingScript script)
     {
-      if (!script.StillValid()) {
+      if (!script.StillValid ()) {
         return false;
       }
 
       int argumentList = 0;
-      for (int i = script.Pointer; i < script.Size(); i++) {
-        char ch = script.At(i);
+      for (int i = script.Pointer; i < script.Size (); i++) {
+        char ch = script.At (i);
         switch (ch) {
-          case Constants.NEXT_ARG:
-            return true;
-          case Constants.START_ARG:
-            argumentList++;
-            break;
-          case Constants.END_STATEMENT:
-          case Constants.END_GROUP:
-          case Constants.END_ARG:
-            if (--argumentList < 0) {
-              return false;
-            }
-            break;
+        case Constants.NEXT_ARG:
+          return true;
+        case Constants.START_ARG:
+          argumentList++;
+          break;
+        case Constants.END_STATEMENT:
+        case Constants.END_GROUP:
+        case Constants.END_ARG:
+          if (--argumentList < 0) {
+            return false;
+          }
+          break;
         }
       }
 
       return false;
     }
 
-    public static List<string> GetFunctionArgs(ParsingScript script)
+    public static List<string> GetFunctionArgs (ParsingScript script)
     {
       bool isList;
       List<Variable> args = Utils.GetArgs(script,
           Constants.START_ARG, Constants.END_ARG, out isList);
 
-      List<string> result = new List<string>();
+      List<string> result = new List<string> ();
       for (int i = 0; i < args.Count; i++) {
-        result.Add(args[i].AsString());
+        result.Add (args [i].AsString ());
       }
       return result;
     }
@@ -229,33 +229,33 @@ namespace SplitAndMerge
     public static List<Variable> GetArgs(ParsingScript script,
         char start, char end, out bool isList)
     {
-      List<Variable> args = new List<Variable>();
-      isList = script.StillValid() && script.Current == Constants.START_GROUP;
+      List<Variable> args = new List<Variable> ();
+      isList = script.StillValid () && script.Current == Constants.START_GROUP;
 
-      if (!script.StillValid() || script.Current == Constants.END_STATEMENT) {
+      if (!script.StillValid () || script.Current == Constants.END_STATEMENT) {
         return args;
       }
 
-      ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
-      string body = Utils.GetBodyBetween(tempScript, start, end);
+      ParsingScript tempScript = new ParsingScript (script.String, script.Pointer);
+      string body = Utils.GetBodyBetween (tempScript, start, end);
       // After the statement above tempScript.Parent will point to the last
       // character belonging to the body between start and end characters. 
 
       while (script.Pointer < tempScript.Pointer) {
-        Variable item = Utils.GetItem(script, false);
-        args.Add(item);
+        Variable item = Utils.GetItem (script, false);
+        args.Add (item);
         if (script.Pointer < tempScript.Pointer) {
-          script.MoveForwardIf(Constants.NEXT_ARG);
+          script.MoveForwardIf (Constants.NEXT_ARG);
         }
       }
 
       if (script.Pointer <= tempScript.Pointer) {
         // Eat closing parenthesis, if there is one, but only if it closes
         // the current argument list, not one after it. 
-        script.MoveForwardIf(Constants.END_ARG);
+        script.MoveForwardIf (Constants.END_ARG);
       }
 
-      script.MoveForwardIf(Constants.SPACE);
+      script.MoveForwardIf (Constants.SPACE);
       //script.MoveForwardIf(Constants.SPACE, Constants.END_STATEMENT);
       return args;
     }
@@ -270,23 +270,49 @@ namespace SplitAndMerge
       }
 
       string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
-      string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY);
+      string [] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
 
-      var result = args.Select(element => element.Trim()).ToArray();
-
+      args = args.Select(element => element.Trim()).ToArray ();
       script.Pointer = endArgs + 1;
 
-      return result;
+      return args;
     }
 
-    public static bool EndsWithFunction(string buffer, List<string> functions)
+    public static string[] GetCompiledFunctionSignature(ParsingScript script, out Dictionary<string, Variable> dict)
+    {
+      script.MoveForwardIf (Constants.START_ARG, Constants.SPACE);
+
+      int endArgs = script.FindFirstOf (Constants.END_ARG.ToString ());
+      if (endArgs < 0) {
+        throw new ArgumentException ("Couldn't extract function signature");
+      }
+
+      string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
+      string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
+
+      dict = new Dictionary<string, Variable>(args.Length);
+      var sep = new char [] { ' ' };
+      for (int i = 0; i < args.Length; i ++) {
+        string[] pair = args[i].Trim().Split(sep, StringSplitOptions.RemoveEmptyEntries);
+        Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair[0]) : Variable.VarType.STRING;
+        dict.Add(pair[pair.Length - 1], new Variable(type));
+        args[i] = pair[pair.Length - 1];
+      }
+
+      args = args.Select (element => element.Trim ()).ToArray ();
+      script.Pointer = endArgs + 1;
+
+      return args;
+    }
+
+    public static bool EndsWithFunction (string buffer, List<string> functions)
     {
       foreach (string key in functions) {
-        if (buffer.EndsWith(key, StringComparison.OrdinalIgnoreCase)) {
+        if (buffer.EndsWith (key, StringComparison.OrdinalIgnoreCase)) {
           char prev = key.Length >= buffer.Length ?
               Constants.END_STATEMENT :
-              buffer[buffer.Length - key.Length - 1];
-          if (Constants.TOKEN_SEPARATION.Contains(prev)) {
+              buffer [buffer.Length - key.Length - 1];
+          if (Constants.TOKEN_SEPARATION.Contains (prev)) {
             return true;
           }
         }
@@ -295,34 +321,34 @@ namespace SplitAndMerge
       return false;
     }
 
-    public static bool SpaceNotNeeded(char next)
+    public static bool SpaceNotNeeded (char next)
     {
       return (next == Constants.SPACE || next == Constants.START_ARG ||
               next == Constants.START_GROUP || next == Constants.START_ARRAY ||
               next == Constants.EMPTY);
     }
 
-    public static bool KeepSpace(StringBuilder sb, char next)
+    public static bool KeepSpace (StringBuilder sb, char next)
     {
-      if (SpaceNotNeeded(next)) {
+      if (SpaceNotNeeded (next)) {
         return false;
       }
 
-      return EndsWithFunction(sb.ToString(), Constants.FUNCT_WITH_SPACE);
+      return EndsWithFunction (sb.ToString (), Constants.FUNCT_WITH_SPACE);
     }
-    public static bool KeepSpaceOnce(StringBuilder sb, char next)
+    public static bool KeepSpaceOnce (StringBuilder sb, char next)
     {
-      if (SpaceNotNeeded(next)) {
+      if (SpaceNotNeeded (next)) {
         return false;
       }
 
-      return EndsWithFunction(sb.ToString(), Constants.FUNCT_WITH_SPACE_ONCE);
+      return EndsWithFunction (sb.ToString (), Constants.FUNCT_WITH_SPACE_ONCE);
     }
 
-    public static string ConvertToScript(string source, out Dictionary<int, int> char2Line)
+    public static string ConvertToScript (string source, out Dictionary<int, int> char2Line)
     {
-      StringBuilder sb = new StringBuilder(source.Length);
-      char2Line = new Dictionary<int, int>();
+      StringBuilder sb = new StringBuilder (source.Length);
+      char2Line = new Dictionary<int, int> ();
 
       bool inQuotes = false;
       bool spaceOK = false;
@@ -336,12 +362,12 @@ namespace SplitAndMerge
       int lastScriptLength = 0;
 
       for (int i = 0; i < source.Length; i++) {
-        char ch = source[i];
-        char next = i + 1 < source.Length ? source[i + 1] : Constants.EMPTY;
+        char ch = source [i];
+        char next = i + 1 < source.Length ? source [i + 1] : Constants.EMPTY;
 
         if (ch == '\n') {
           if (sb.Length > lastScriptLength) {
-            char2Line[sb.Length - 1] = lineNumber;
+            char2Line [sb.Length - 1] = lineNumber;
             lastScriptLength = sb.Length;
           }
           lineNumber++;
@@ -353,158 +379,159 @@ namespace SplitAndMerge
         }
 
         switch (ch) {
-          case '/':
-            if (!inQuotes && (inComments || next == '/' || next == '*')) {
-              inComments = true;
-              simpleComments = simpleComments || next == '/';
-              continue;
-            }
-            break;
-          case '*':
-            if (!inQuotes && (inComments && next == '/')) {
-              i++; // skip next character
-              inComments = false;
-              continue;
-            }
-            break;
-          case '“':
-          case '”':
-          case '„':
-          case '"':
-            ch = '"';
-            if (!inComments) {
-              if (previous != '\\') inQuotes = !inQuotes;
-            }
-            break;
-          case ' ':
-            if (inQuotes) {
-              sb.Append(ch);
-            } else {
-              bool keepSpace = KeepSpace(sb, next);
-              spaceOK = keepSpace ||
-                   (previous != Constants.EMPTY && previous != Constants.NEXT_ARG && spaceOK);
-              bool spaceOKonce = KeepSpaceOnce(sb, next);
-              if (spaceOK || spaceOKonce) {
-                sb.Append(ch);
-              }
-            }
+        case '/':
+          if (!inQuotes && (inComments || next == '/' || next == '*')) {
+            inComments = true;
+            simpleComments = simpleComments || next == '/';
             continue;
-          case '\t':
-          case '\r':
-            if (inQuotes) sb.Append(ch);
+          }
+          break;
+        case '*':
+          if (!inQuotes && (inComments && next == '/')) {
+            i++; // skip next character
+            inComments = false;
             continue;
-          case '\n':
-            if (simpleComments) {
-              inComments = simpleComments = false;
+          }
+          break;
+        case '“':
+        case '”':
+        case '„':
+        case '"':
+          ch = '"';
+          if (!inComments) {
+            if (previous != '\\') inQuotes = !inQuotes;
+          }
+          break;
+        case ' ':
+          if (inQuotes) {
+            sb.Append (ch);
+          } else {
+            bool keepSpace = KeepSpace (sb, next);
+            bool usedSpace = spaceOK;
+            spaceOK = keepSpace ||
+                 (previous != Constants.EMPTY && previous != Constants.NEXT_ARG && spaceOK);
+            if (spaceOK || KeepSpaceOnce (sb, next)) {
+              sb.Append (ch);
             }
+            spaceOK = spaceOK || (usedSpace && previous == Constants.NEXT_ARG);
+          }
+          continue;
+        case '\t':
+        case '\r':
+          if (inQuotes) sb.Append (ch);
+          continue;
+        case '\n':
+          if (simpleComments) {
+            inComments = simpleComments = false;
+          }
+          spaceOK = false;
+          continue;
+        case Constants.END_ARG:
+          if (!inQuotes) {
+            parentheses--;
             spaceOK = false;
-            continue;
-          case Constants.END_ARG:
-            if (!inQuotes) {
-              parentheses--;
-              spaceOK = false;
-            }
-            break;
-          case Constants.START_ARG:
-            if (!inQuotes) {
-              parentheses++;
-            }
-            break;
-          case Constants.END_GROUP:
-            if (!inQuotes) {
-              groups--;
-              spaceOK = false;
-            }
-            break;
-          case Constants.START_GROUP:
-            if (!inQuotes) {
-              groups++;
-            }
-            break;
-          case Constants.END_STATEMENT:
-            if (!inQuotes) {
-              spaceOK = false;
-            }
-            break;
-          default: break;
+          }
+          break;
+        case Constants.START_ARG:
+          if (!inQuotes) {
+            parentheses++;
+          }
+          break;
+        case Constants.END_GROUP:
+          if (!inQuotes) {
+            groups--;
+            spaceOK = false;
+          }
+          break;
+        case Constants.START_GROUP:
+          if (!inQuotes) {
+            groups++;
+          }
+          break;
+        case Constants.END_STATEMENT:
+          if (!inQuotes) {
+            spaceOK = false;
+          }
+          break;
+        default: break;
         }
         if (!inComments) {
-          sb.Append(ch);
+          sb.Append (ch);
         }
         previous = ch;
       }
 
-      return sb.ToString();
+      return sb.ToString ();
     }
 
-    public static string BeautifyScript(string script, string header)
+    public static string BeautifyScript (string script, string header)
     {
-      StringBuilder result = new StringBuilder();
-      char[] extraSpace = ("<>=&|+-*/%").ToCharArray();
+      StringBuilder result = new StringBuilder ();
+      char [] extraSpace = ("<>=&|+-*/%").ToCharArray ();
 
       int indent = Constants.INDENT;
-      result.AppendLine(header);
+      result.AppendLine (header);
 
       bool inQuotes = false;
       bool lineStart = true;
 
       for (int i = 0; i < script.Length; i++) {
-        char ch = script[i];
+        char ch = script [i];
         inQuotes = ch == Constants.QUOTE ? !inQuotes : inQuotes;
 
         if (inQuotes) {
-          result.Append(ch);
+          result.Append (ch);
           continue;
         }
 
-        bool needExtra = extraSpace.Contains(ch) && i > 0 && i < script.Length - 1;
-        if (needExtra && !extraSpace.Contains(script[i - 1])) {
-          result.Append(" ");
+        bool needExtra = extraSpace.Contains (ch) && i > 0 && i < script.Length - 1;
+        if (needExtra && !extraSpace.Contains (script [i - 1])) {
+          result.Append (" ");
         }
 
         switch (ch) {
-          case Constants.START_GROUP:
-            result.AppendLine(" " + Constants.START_GROUP);
-            indent += Constants.INDENT;
-            lineStart = true;
-            break;
-          case Constants.END_GROUP:
-            indent -= Constants.INDENT;
-            result.AppendLine(new String(' ', indent) + Constants.END_GROUP);
-            lineStart = true;
-            break;
-          case Constants.END_STATEMENT:
-            result.AppendLine(ch.ToString());
-            lineStart = true;
-            break;
-          default:
-            if (lineStart) {
-              result.Append(new String(' ', indent));
-              lineStart = false;
-            }
-            result.Append(ch.ToString());
-            break;
+        case Constants.START_GROUP:
+          result.AppendLine (" " + Constants.START_GROUP);
+          indent += Constants.INDENT;
+          lineStart = true;
+          break;
+        case Constants.END_GROUP:
+          indent -= Constants.INDENT;
+          result.AppendLine (new String (' ', indent) + Constants.END_GROUP);
+          lineStart = true;
+          break;
+        case Constants.END_STATEMENT:
+          result.AppendLine (ch.ToString ());
+          lineStart = true;
+          break;
+        default:
+          if (lineStart) {
+            result.Append (new String (' ', indent));
+            lineStart = false;
+          }
+          result.Append (ch.ToString ());
+          break;
         }
-        if (needExtra && !extraSpace.Contains(script[i + 1])) {
-          result.Append(" ");
+        if (needExtra && !extraSpace.Contains (script [i + 1])) {
+          result.Append (" ");
         }
       }
 
-      result.AppendLine(Constants.END_GROUP.ToString());
-      return result.ToString();
+      result.AppendLine (Constants.END_GROUP.ToString ());
+      return result.ToString ();
     }
 
-    public static string GetBodyBetween(ParsingScript script, char open, char close)
+    public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG, char close = Constants.END_ARG)
     {
       // We are supposed to be one char after the beginning of the string, i.e.
       // we must not have the opening char as the first one.
-      StringBuilder sb = new StringBuilder(script.Size());
+      StringBuilder sb = new StringBuilder (script.Size ());
       int braces = 0;
       bool inQuotes = false;
       bool checkBraces = true;
       char previous = Constants.EMPTY;
 
-      for (; script.StillValid(); script.Forward()) {
+      for (; script.StillValid (); script.Forward ()) {
         char ch = script.Current;
 
         if (close != Constants.QUOTE) {
@@ -514,7 +541,7 @@ namespace SplitAndMerge
           }
         }
 
-        if (string.IsNullOrWhiteSpace(ch.ToString()) && sb.Length == 0) {
+        if (string.IsNullOrWhiteSpace (ch.ToString ()) && sb.Length == 0) {
           continue;
         } else if (checkBraces && ch == open) {
           braces++;
@@ -522,123 +549,185 @@ namespace SplitAndMerge
           braces--;
         }
 
-        sb.Append(ch);
+        sb.Append (ch);
         previous = ch;
         if (braces == -1) {
           if (ch == close) {
-            sb.Remove(sb.Length - 1, 1);
+            sb.Remove (sb.Length - 1, 1);
           }
           break;
         }
       }
 
-      return sb.ToString();
+      return sb.ToString ();
     }
 
-    public static string IsNotSign(string data)
+    public static string IsNotSign (string data)
     {
       //return data.StartsWith(Constants.NOT) ? Constants.NOT : null;
-      return data.StartsWith(Constants.NOT) && !data.StartsWith(Constants.NOT_EQUAL) ? Constants.NOT : null;
+      return data.StartsWith (Constants.NOT) && !data.StartsWith (Constants.NOT_EQUAL) ? Constants.NOT : null;
     }
 
-    public static string ValidAction(string rest)
+    public static string ValidAction (string rest)
     {
-      string action = Utils.StartsWith(rest, Constants.ACTIONS);
+      string action = Utils.StartsWith (rest, Constants.ACTIONS);
       return action;
     }
 
-    public static string StartsWith(string data, string[] items)
+    public static string StartsWith (string data, string [] items)
     {
       foreach (string item in items) {
-        if (data.StartsWith(item)) {
+        if (data.StartsWith (item)) {
           return item;
         }
       }
       return null;
     }
 
-    public static List<Variable> GetArrayIndices(ref string varName)
+    public static List<Variable> GetArrayIndices (ref string varName)
     {
       int end = 0;
-      return GetArrayIndices(ref varName, ref end);
+      return GetArrayIndices (ref varName, ref end);
     }
 
-    public static List<Variable> GetArrayIndices(ref string varName, ref int end)
+    public static List<Variable> GetArrayIndices (ref string varName, ref int end)
     {
-      List<Variable> indices = new List<Variable>();
+      List<Variable> indices = new List<Variable> ();
 
-      int argStart = varName.IndexOf(Constants.START_ARRAY);
+      int argStart = varName.IndexOf (Constants.START_ARRAY);
       if (argStart < 0) {
         return indices;
       }
       int firstIndexStart = argStart;
 
       while (argStart < varName.Length &&
-             varName[argStart] == Constants.START_ARRAY) {
-        int argEnd = varName.IndexOf(Constants.END_ARRAY, argStart + 1);
+             varName [argStart] == Constants.START_ARRAY) {
+        int argEnd = varName.IndexOf (Constants.END_ARRAY, argStart + 1);
         if (argEnd == -1 || argEnd <= argStart + 1) {
           break;
         }
 
-        ParsingScript tempScript = new ParsingScript(varName, argStart);
-        tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
+        ParsingScript tempScript = new ParsingScript (varName, argStart);
+        tempScript.MoveForwardIf (Constants.START_ARG, Constants.START_ARRAY);
 
-        Variable index = tempScript.ExecuteTo(Constants.END_ARRAY);
+        Variable index = tempScript.ExecuteTo (Constants.END_ARRAY);
 
-        indices.Add(index);
+        indices.Add (index);
         argStart = argEnd + 1;
       }
 
       if (indices.Count > 0) {
-        varName = varName.Substring(0, firstIndexStart);
+        varName = varName.Substring (0, firstIndexStart);
         end = argStart - 1;
       }
 
       return indices;
     }
 
-    public static Variable ExtractArrayElement(Variable array,
+    public static Variable ExtractArrayElement (Variable array,
                                                List<Variable> indices)
     {
       Variable currLevel = array;
 
       for (int i = 0; i < indices.Count; i++) {
-        Variable index = indices[i];
-        int arrayIndex = currLevel.GetArrayIndex(index);
+        Variable index = indices [i];
+        int arrayIndex = currLevel.GetArrayIndex (index);
 
         int tupleSize = currLevel.Tuple != null ? currLevel.Tuple.Count : 0;
         if (arrayIndex < 0 || arrayIndex >= tupleSize) {
-          throw new ArgumentException("Unknown index [" + index.AsString() +
+          throw new ArgumentException ("Unknown index [" + index.AsString () +
                              "] for tuple of size " + tupleSize);
         }
-        currLevel = currLevel.Tuple[arrayIndex];
+        currLevel = currLevel.Tuple [arrayIndex];
       }
       return currLevel;
     }
 
-    public static string GetLinesFromList(ParsingScript script)
+    public static string GetLinesFromList (ParsingScript script)
     {
-      Variable lines = Utils.GetItem(script);
+      Variable lines = Utils.GetItem (script);
       if (lines.Tuple == null) {
-        throw new ArgumentException("Expected a list argument");
+        throw new ArgumentException ("Expected a list argument");
       }
 
-      StringBuilder sb = new StringBuilder(80 * lines.Tuple.Count);
+      StringBuilder sb = new StringBuilder (80 * lines.Tuple.Count);
       foreach (Variable line in lines.Tuple) {
-        sb.AppendLine(line.String);
+        sb.AppendLine (line.String);
       }
 
-      return sb.ToString();
+      return sb.ToString ();
     }
 
-    public static string ProcessString(string text)
+    public static string ProcessString (string text)
     {
-      text = text.Replace("\\\"", "\"");
-      text = text.Replace("\\t", "\t");
-      text = text.Replace("\\n", "\n");
+      text = text.Replace ("\\\"", "\"");
+      text = text.Replace ("\\t", "\t");
+      text = text.Replace ("\\n", "\n");
 
       return text;
     }
+    public static Variable GetVar (string paramName, ParsingScript script = null)
+    {
+      if (script == null) {
+        script = new ParsingScript ("");
+      }
+      ParserFunction function = ParserFunction.GetFunction (paramName);
+      if (function == null) {
+        throw new ArgumentException ("Variable [" + paramName + "] not found.");
+      }
+      Variable result = function.GetValue (script);
+      return result;
+    }
+    public static string GetString (string paramName, ParsingScript script = null)
+    {
+      Variable result = GetVar (paramName, script);
+      return result.AsString ();
+    }
+    public static double GetDouble (string paramName, ParsingScript script = null)
+    {
+      Variable result = GetVar (paramName, script);
+      return result.AsDouble ();
+    }
+    public static string PrepareArgs (string argsStr, bool validateQuotes = false)
+    {
+      argsStr = argsStr.Trim ();
+      if (!string.IsNullOrEmpty (argsStr) && argsStr [0] == Constants.START_ARG) {
+        argsStr = argsStr.Substring (1);
+      }
+      if (!string.IsNullOrEmpty (argsStr) && argsStr [argsStr.Length - 1] == Constants.END_ARG) {
+        argsStr = argsStr.Substring (0, argsStr.Length - 1);
+      }
+      string src = validateQuotes ? "\\\"" : "\"";
+      string dst = validateQuotes ? "\"" : "\\\"";
+      argsStr    = argsStr.Replace (src, dst);
+      return argsStr;
+    }
+    //public static Variable RunCompiled (ParsingScript script, string functionName, string argsStr)
+    public static Variable RunCompiled (string functionName, string argsString)
+    {
+      string adjArgs = PrepareArgs(argsString, true);
+      ParsingScript argScript = new ParsingScript (adjArgs);
+      List<Variable> args = argScript.GetFunctionArgs ();
+
+      ParserFunction function = ParserFunction.GetFunction(functionName);
+      if (function is CustomCompiledFunction) {
+        CustomCompiledFunction customFunction = function as CustomCompiledFunction;
+        Variable result = customFunction.Run(args);
+        if (result != null) {
+          return result;
+        }
+      }
+      return Calculate(functionName, argsString);
+    }
+
+    public static Variable Calculate(string functionName, string argsStr)
+    {
+      ParsingScript script = new ParsingScript (argsStr);
+      string action = "";
+      ParserFunction func = new ParserFunction (script, functionName, Constants.EMPTY, ref action);
+      Variable current = func.GetValue (script);
+
+      return current;
+    }
   }
 }
-

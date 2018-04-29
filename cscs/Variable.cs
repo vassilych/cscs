@@ -35,6 +35,10 @@ namespace SplitAndMerge
     {
       this.Tuple = a;
     }
+    public Variable(Variable other)
+    {
+      Copy(other);
+    }
     public virtual Variable Clone()
     {
       //Variable newVar = new Variable();
@@ -259,8 +263,8 @@ namespace SplitAndMerge
       return result;
     }
 
-    public virtual string   AsString(bool isList = true,
-                               bool sameLine = true)
+    public virtual string AsString(bool isList = true,
+                                   bool sameLine = true)
     {
       if (Type == VarType.NUMBER) {
         return Value.ToString();

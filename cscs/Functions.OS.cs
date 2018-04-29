@@ -12,7 +12,7 @@ using System.Threading;
 namespace SplitAndMerge
 {
   // Returns process info
-  class PsInfoFunction : ParserFunction
+  class PsInfoFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -81,7 +81,7 @@ namespace SplitAndMerge
   }
 
   // Starts running a new process, returning its ID
-  class RunFunction : ParserFunction
+  class RunFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -210,7 +210,7 @@ namespace SplitAndMerge
   }
 
   // Returns an environment variable
-  class GetEnvFunction : ParserFunction
+  class GetEnvFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -319,7 +319,7 @@ namespace SplitAndMerge
   }
 
   // Returns how much processor time has been spent on the current process
-  class ProcessorTimeFunction : ParserFunction
+  class ProcessorTimeFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -331,7 +331,7 @@ namespace SplitAndMerge
   }
 
   // Returns current directory name
-  class PwdFunction : ParserFunction
+  class PwdFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -343,7 +343,7 @@ namespace SplitAndMerge
   }
 
   // Equivalent to cd.. on Windows: one directory up
-  class Cd__Function : ParserFunction
+  class Cd__Function : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -366,7 +366,7 @@ namespace SplitAndMerge
   }
 
   // Changes directory to the passed one
-  class CdFunction : ParserFunction
+  class CdFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -399,7 +399,7 @@ namespace SplitAndMerge
   }
 
   // Reads a file and returns all lines of that file as a "tuple" (list)
-  class ReadCSCSFileFunction : ParserFunction
+  class ReadCSCSFileFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -413,7 +413,7 @@ namespace SplitAndMerge
     }
   }
 
-  class TokenizeFunction : ParserFunction
+  class TokenizeFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -519,7 +519,7 @@ namespace SplitAndMerge
   }
 
   // View the contents of a text file
-  class MoreFunction : ParserFunction
+  class MoreFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -541,7 +541,7 @@ namespace SplitAndMerge
   }
 
   // View the last Constants.DEFAULT_FILE_LINES lines of a file
-  class TailFunction : ParserFunction
+  class TailFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -616,7 +616,7 @@ namespace SplitAndMerge
   }
 
   // Find a string in files
-  class FindstrFunction : ParserFunction
+  class FindstrFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -647,7 +647,7 @@ namespace SplitAndMerge
   }
 
   // Find files having a given pattern
-  class FindfilesFunction : ParserFunction
+  class FindfilesFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -788,7 +788,7 @@ namespace SplitAndMerge
   }
 
   // Checks if a directory or a file exists
-  class ExistsFunction : ParserFunction
+  class ExistsFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -815,7 +815,7 @@ namespace SplitAndMerge
   }
 
   // List files in a directory
-  class DirFunction : ParserFunction
+  class DirFunction : ParserFunction, IArrayFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -894,7 +894,7 @@ namespace SplitAndMerge
   }
 
   // Append a string to another string
-  class AppendFunction : ParserFunction
+  class AppendFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -925,7 +925,7 @@ namespace SplitAndMerge
   }
 
   // Convert a string to the upper case
-  class ToUpperFunction : ParserFunction
+  class ToUpperFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -947,7 +947,7 @@ namespace SplitAndMerge
   }
 
   // Convert a string to the lower case
-  class ToLowerFunction : ParserFunction
+  class ToLowerFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -969,7 +969,7 @@ namespace SplitAndMerge
   }
 
   // Get a substring of a string
-  class SubstrFunction : ParserFunction
+  class SubstrFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -1010,7 +1010,7 @@ namespace SplitAndMerge
   }
 
   // Get an index of a substring in a string. Return -1 if not found.
-  class IndexOfFunction : ParserFunction
+  class IndexOfFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -1034,7 +1034,7 @@ namespace SplitAndMerge
     }
   }
 
-  class ThreadFunction : ParserFunction
+  class ThreadFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -1054,7 +1054,7 @@ namespace SplitAndMerge
       threadScript.ExecuteAll();
     }
   }
-  class ThreadIDFunction : ParserFunction
+  class ThreadIDFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -1091,7 +1091,7 @@ namespace SplitAndMerge
     }
   }
 
-  class TimestampFunction : ParserFunction
+  class TimestampFunction : ParserFunction, IStringFunction
   {
     bool m_millis = false;
     public TimestampFunction(bool millis = false)
@@ -1119,7 +1119,7 @@ namespace SplitAndMerge
       return new Variable(when);
     }
   }
-  class DateTimeFunction : ParserFunction
+  class DateTimeFunction : ParserFunction, IStringFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -1132,7 +1132,7 @@ namespace SplitAndMerge
       return new Variable(when);
     }
   }
-  class StopWatchFunction : ParserFunction
+  class StopWatchFunction : ParserFunction, IStringFunction
   {
     static System.Diagnostics.Stopwatch m_stopwatch = new System.Diagnostics.Stopwatch();
     public enum Mode { START, STOP, ELAPSED, TOTAL_SECS, TOTAL_MS };
@@ -1179,7 +1179,7 @@ namespace SplitAndMerge
       return elapsed >= 0 ? new Variable(elapsed) : new Variable(elapsedStr);
     }
   }
-  class SignalWaitFunction : ParserFunction
+  class SignalWaitFunction : ParserFunction, INumericFunction
   {
     static AutoResetEvent waitEvent = new AutoResetEvent(false);
     bool m_isSignal;

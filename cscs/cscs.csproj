@@ -44,6 +44,8 @@
     <Compile Include="Variable.cs" />
     <Compile Include="ParsingScript.cs" />
     <Compile Include="Translation.cs" />
+    <Compile Include="Precompiler.cs" />
+    <Compile Include="Trie.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

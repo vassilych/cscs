@@ -306,6 +306,12 @@ namespace SplitAndMerge
     // Global actions - function:
     static Dictionary<string, ActionFunction> s_actions = new Dictionary<string, ActionFunction>();
 
+    public static bool IsNumericFunction(string paramName, ParsingScript script = null)
+    {
+      ParserFunction function = ParserFunction.GetFunction(paramName);
+      return function is INumericFunction;
+    }
+
     public class StackLevel
     {
       public StackLevel(string name = null)

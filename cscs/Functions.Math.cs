@@ -4,7 +4,11 @@ using System.Linq;
 
 namespace SplitAndMerge
 {
-  class PiFunction : ParserFunction
+  interface INumericFunction { }
+  interface IArrayFunction { }
+  interface IStringFunction { }
+
+  class PiFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -12,7 +16,7 @@ namespace SplitAndMerge
     }
   }
 
-  class ExpFunction : ParserFunction
+  class ExpFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -24,7 +28,7 @@ namespace SplitAndMerge
     }
   }
 
-  class PowFunction : ParserFunction
+  class PowFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -38,7 +42,7 @@ namespace SplitAndMerge
     }
   }
 
-  class SinFunction : ParserFunction
+  class SinFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -50,7 +54,7 @@ namespace SplitAndMerge
     }
   }
 
-  class CosFunction : ParserFunction
+  class CosFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -62,7 +66,7 @@ namespace SplitAndMerge
     }
   }
 
-  class AsinFunction : ParserFunction
+  class AsinFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -74,7 +78,7 @@ namespace SplitAndMerge
     }
   }
 
-  class AcosFunction : ParserFunction
+  class AcosFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -86,7 +90,7 @@ namespace SplitAndMerge
     }
   }
 
-  class SqrtFunction : ParserFunction
+  class SqrtFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -98,7 +102,7 @@ namespace SplitAndMerge
     }
   }
 
-  class AbsFunction : ParserFunction
+  class AbsFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -110,7 +114,7 @@ namespace SplitAndMerge
     }
   }
 
-  class CeilFunction : ParserFunction
+  class CeilFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -122,7 +126,7 @@ namespace SplitAndMerge
     }
   }
 
-  class FloorFunction : ParserFunction
+  class FloorFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -134,7 +138,7 @@ namespace SplitAndMerge
     }
   }
 
-  class RoundFunction : ParserFunction
+  class RoundFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -147,7 +151,7 @@ namespace SplitAndMerge
     }
   }
 
-  class LogFunction : ParserFunction
+  class LogFunction : ParserFunction, INumericFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
@@ -158,7 +162,7 @@ namespace SplitAndMerge
       return arg;
     }
   }
-  class GetRandomFunction : ParserFunction
+  class GetRandomFunction : ParserFunction, INumericFunction
   {
     static Random m_random = new Random();
 

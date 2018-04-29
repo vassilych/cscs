@@ -50,6 +50,7 @@ namespace SplitAndMerge
     public const string ELSE_IF = "elif";
     public const string FOR = "for";
     public const string FUNCTION = "function";
+    public const string COMPILED_FUNCTION = "cfunction";
     public const string IF = "if";
     public const string INCLUDE = "include";
     public const string RETURN = "return";
@@ -190,10 +191,10 @@ namespace SplitAndMerge
     // Functions that allow a space separator after them, on top of parentheses. The
     // function arguments may have spaces as well, e.g. copy a.txt b.txt
     public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            APPENDLINE, CD, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, MKDIR, MORE, MOVE, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
-            TRANSLATE, WRITE, WRITELINE, WRITENL
-        };
+      APPENDLINE, CD, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
+      FUNCTION, COMPILED_FUNCTION, MKDIR, MORE, MOVE, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
+      TRANSLATE, WRITE, WRITELINE, WRITENL
+    };
 
     // Functions that allow a space separator after them, on top of parentheses but
     // only once, i.e. function arguments are not allowed to have spaces
@@ -205,8 +206,19 @@ namespace SplitAndMerge
     // The Control Flow Functions. It doesn't make sense to merge them or
     // use in calculation of a result.
     public static List<string> CONTROL_FLOW = new List<string> {
-          BREAK, CONTINUE, FUNCTION, IF, INCLUDE, FOR, WHILE, RETURN, THROW, TRY
-        };
+      BREAK, CONTINUE, FUNCTION, COMPILED_FUNCTION, IF, INCLUDE, FOR, WHILE, RETURN, THROW, TRY
+    };
+
+    public static List<string> RESERVED = new List<string> {
+      BREAK, CONTINUE, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE, RETURN, THROW, TRY, CATCH, COMMENT,
+      ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
+      ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
+      NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString()
+    };
+
+    public static string STATEMENT_SEPARATOR = ";{}";
+    public static string STATEMENT_TOKENS = " ";
+    public static string NUMBER_OPERATORS = "+-*/%";
 
     public static List<string> ELSE_LIST = new List<string>();
     public static List<string> ELSE_IF_LIST = new List<string>();
@@ -218,10 +230,10 @@ namespace SplitAndMerge
     public const int DEFAULT_FILE_LINES = 20;
     public const int MAX_CHARS_TO_SHOW = 45;
 
-    public const string ENGLISH = "en";
-    public const string GERMAN = "de";
-    public const string RUSSIAN = "ru";
-    public const string SPANISH = "es";
+    public const string ENGLISH  = "en";
+    public const string GERMAN   = "de";
+    public const string RUSSIAN  = "ru";
+    public const string SPANISH  = "es";
     public const string SYNONYMS = "sy";
 
     public static string Language(string lang)
@@ -238,12 +250,31 @@ namespace SplitAndMerge
     public static string TypeToString(Variable.VarType type)
     {
       switch (type) {
-        case Variable.VarType.NUMBER: return "NUMBER";
-        case Variable.VarType.STRING: return "STRING";
-        case Variable.VarType.ARRAY: return "ARRAY";
-        case Variable.VarType.BREAK: return "BREAK";
+        case Variable.VarType.NUMBER:   return "NUMBER";
+        case Variable.VarType.STRING:   return "STRING";
+        case Variable.VarType.ARRAY:    return "ARRAY";
+        case Variable.VarType.BREAK:    return "BREAK";
         case Variable.VarType.CONTINUE: return "CONTINUE";
-        default: return "NONE";
+        default:                        return "NONE";
+      }
+    }
+    public static Variable.VarType StringToType(string type)
+    {
+      type = type.ToUpper();
+      switch (type) {
+        case "BOOL":
+        case "INT":
+        case "FLOAT":
+        case "DOUBLE":
+        case "NUMBER":   return Variable.VarType.NUMBER;
+        case "CHAR":
+        case "STRING":   return Variable.VarType.STRING;
+        case "LIST":
+        case "TUPLE":
+        case "ARRAY":    return Variable.VarType.ARRAY;
+        case "BREAK":    return Variable.VarType.BREAK;
+        case "CONTINUE": return Variable.VarType.CONTINUE;
+        default:         return Variable.VarType.NONE;
       }
     }
   }
