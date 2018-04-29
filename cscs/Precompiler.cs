@@ -31,21 +31,24 @@ namespace SplitAndMerge
 
     HashSet<string> m_newVariables = new HashSet<string>();
     List<string> m_statements;
+    Variable.VarType m_returnType;
     int m_statementId;
     string m_currentStatement;
     string m_nextStatement;
     string m_depth;
+    bool m_numericExpression;
+    bool m_assigmentExpression;
 
     Func<List<string>, List<double>, Variable> m_compiledFunc;
 
     public static void RegisterReturnType (string functionName, string functionType)
     {
-      string adjType = Constants.TypeToString (Constants.StringToType (functionType));
+      string adjType = Constants.TypeToString (Constants.StringToType(functionType));
       m_returnTypes[functionName] = adjType;
     }
     public static string GetReturnType(string functionName)
     {
-      string adjType = null;
+      string adjType = "NONE";
       m_returnTypes.TryGetValue(functionName, out adjType);
       return adjType;
     }
@@ -56,6 +59,7 @@ namespace SplitAndMerge
       m_defArgs = args;
       m_argsMap = argsMap;
       m_cscsCode = cscsCode;
+      m_returnType = Constants.StringToType(GetReturnType(m_functionName));
     }
 
     public void Compile()
@@ -214,11 +218,10 @@ namespace SplitAndMerge
     string ProcessStatement(string statement, string nextStatement, bool addNewVars = true)
     {
       if (statement == ";") {
-        // don't need this - will be added from previous statement.
+        // don't need this - will be added from the previous statement.
         return "";
       }
       List<string> tokens = TokenizeStatement(statement);
-      ParsingScript script = new ParsingScript (statement);
       List<string> statementVars = new List<string> ();
 
       string result = "";
@@ -229,15 +232,14 @@ namespace SplitAndMerge
         return result;
       }
 
-      bool isNumber = IsArithmeticExpression(tokens);
-      bool standAlone = false;
+      GetExpressionType(tokens);
       for (int i = 0; i < tokens.Count; i++) {
         bool newVarAdded = false;
-        string converted = ProcessToken(tokens, i, isNumber, ref newVarAdded, ref standAlone);
+        string converted = ProcessToken(tokens, i, ref newVarAdded);
         if (addNewVars && newVarAdded) {
           statementVars.Add (tokens [i]);
-          if (isNumber) {
-            m_numericVars.Add (tokens [i]);
+          if (m_numericExpression) {
+            m_numericVars.Add (tokens[i]);
           }
         }
         result += converted;
@@ -268,24 +270,30 @@ namespace SplitAndMerge
     bool ProcessReturnStatement(List<string> tokens, List<string> statementVars,
                                 ref string converted)
     {
-      if (tokens[0] != Constants.RETURN) {
+      string suffix = "";
+      string paramName = GetFunctionName(tokens[0], ref suffix);
+      if (paramName != Constants.RETURN) {
         return false;
       }
       if (tokens.Count <= 2) {
         converted = m_depth + "return Variable.EmptyInstance;\n";
         return true;
       }
-
+      if (!string.IsNullOrWhiteSpace(suffix)) {
+        // Converting the case "return(..." to the normal case "return (..".
+        tokens [2] = suffix + tokens [1] + tokens [2];
+      }
       if (tokens.Count == 3) {
-        string token = tokens[2];
+        bool newVarAdded = false;
+        string token = ProcessToken(tokens, 2, ref newVarAdded);
         converted += m_depth + "return new Variable(" + token + ");\n";
         return true;
       }
 
       string remaining = string.Join("", tokens.GetRange (2, tokens.Count - 2));
-      string returnToken = ProcessStatement(remaining, "", false) + ";\n";
+      string returnToken = ProcessStatement(remaining, "", false);
 
-      converted = m_depth + "return new Variable(" + converted + ");\n";
+      converted = m_depth + "return new Variable(" + returnToken + ");\n";
 
       return true;
     }
@@ -306,7 +314,7 @@ namespace SplitAndMerge
       }
 
       string rest = "";
-      string varName = GetFunctionName (suffix.Substring(1), ref rest);
+      string varName = GetFunctionName(suffix.Substring(1), ref rest);
 
       converted = "";
       if (!m_newVariables.Contains (varName)) {
@@ -325,8 +333,7 @@ namespace SplitAndMerge
 
       return true;
     }
-    string ProcessToken(List<string> tokens, int id, bool isNumber,
-                        ref bool newVarAdded, ref bool standAlone)
+    string ProcessToken(List<string> tokens, int id, ref bool newVarAdded)
     {
       string token = tokens[id].Trim();
       string suffix = "";
@@ -336,8 +343,7 @@ namespace SplitAndMerge
       }
 
       bool reservedWord = Constants.RESERVED.Contains(functionName);
-      standAlone = standAlone || reservedWord;
-      if (IsString(token) || IsNumber(token) || reservedWord) {
+      if (IsString(functionName) || IsNumber(functionName) || reservedWord) {
         return token;
       }
       if (Array.IndexOf (Constants.ACTIONS, token) >= 0) {
@@ -365,7 +371,7 @@ namespace SplitAndMerge
         string actualName = m_paramMap[functionName];
         return " " + actualName + suffix;
       }
-      return ProcessFunction(tokens, id, isNumber, ref newVarAdded, ref standAlone);
+      return ProcessFunction(tokens, id, ref newVarAdded);
     }
 
     static string GetFunctionName(string token, ref string suffix)
@@ -385,14 +391,17 @@ namespace SplitAndMerge
       return functionName;
     }
 
-    string ProcessFunction(List<string> tokens, int id, bool isNumber, ref bool newVarAdded, ref bool standAlone)
+    string ProcessFunction(List<string> tokens, int id, ref bool newVarAdded)
     {
       string restStr = string.Join("", tokens.GetRange(id, tokens.Count - id).ToArray());
-      int paramStart = restStr.IndexOf (Constants.START_ARG);
-      int paramEnd = paramStart < 0 ? restStr.Length : restStr.LastIndexOf(Constants.END_ARG);
+      int paramStart = restStr.IndexOf("(");
+      int paramEnd = paramStart < 0 ? restStr.Length : restStr.IndexOf(")", paramStart + 1);
       string functionName = paramStart < 0 ? restStr : restStr.Substring(0, paramStart);
       string argsStr = "";
       if (paramStart >= 0) {
+        if (paramEnd <= paramStart) {
+          paramEnd = restStr.Length;
+        }
         ParsingScript script = new ParsingScript(restStr.Substring(paramStart, paramEnd - paramStart));
         argsStr = Utils.PrepareArgs(Utils.GetBodyBetween(script));
       }
@@ -407,40 +416,41 @@ namespace SplitAndMerge
       return result;
     }
 
-    bool IsArithmeticExpression(List<string> tokens)
+    void GetExpressionType(List<string> tokens)
     {
+      m_assigmentExpression = false;
+      m_numericExpression   = false;
+      Variable arg;
       for (int i = 0; i < tokens.Count; i++) {
         string token = tokens[i];
         if (token[0] == Constants.QUOTE) {
           continue;
         }
-        int paramStart = token.IndexOf("(");
-        string paramName = paramStart < 0 ? token : token.Substring(0, paramStart);
-
-        if (Constants.RESERVED.Contains(token)) {
-          continue;
-        }
-        if (token == "*" || token == "*=" || token == "-" || token == "-=" || token == "/" || token == "/=") {
-          return true;
-        }
-        Variable arg;
-        if (m_argsMap.TryGetValue(token, out arg)) {
-          return arg.Type == Variable.VarType.NUMBER;
-        }
-        if (m_numericVars.Contains(paramName)) {
-          return true;
-        }
-        string functionReturnType = GetReturnType (paramName);
-        if (functionReturnType != null) {
-          return functionReturnType == "NUMBER";
-        }
+        string suffix = "";
+        string paramName = GetFunctionName(token, ref suffix);
 
         var type = GetVariableType(paramName);
         if (type == Variable.VarType.NUMBER) {
-          return true;
+          m_numericExpression = true;
+        } else if (m_argsMap.TryGetValue(token, out arg)) {
+          m_numericExpression = m_numericExpression || arg.Type == Variable.VarType.NUMBER;
+        } else if (m_numericVars.Contains (paramName)) {
+          m_numericExpression = true;
+        } else if (Constants.ARITHMETIC_EXPR.Contains (paramName)) {
+          m_numericExpression = true;
+        } else if (Constants.RESERVED.Contains (paramName)) {
+          continue;
+        } else {
+          string functionReturnType = GetReturnType (paramName);
+          if (functionReturnType != null) {
+            m_numericExpression = functionReturnType == "NUMBER";
+          }
         }
+        if (token.Contains("=")) {
+          m_assigmentExpression = true;
+        }
+
       }
-      return false;
     }
     static bool IsNumber (string text)
     {
@@ -489,13 +499,13 @@ namespace SplitAndMerge
           inQuotes = !inQuotes;
         } else if (inQuotes) {
         } else {
-           string candidate = Utils.ValidAction (statement.Substring (i));
+          string candidate = Utils.ValidAction (statement.Substring (i));
           if (candidate == null && (Constants.STATEMENT_TOKENS.IndexOf (statement [i]) >= 0)) {
-            candidate = statement [i].ToString ();
+            candidate = statement[i].ToString ();
           }
           if (candidate != null) {
             if (i > startIndex) {
-              string token = statement.Substring (startIndex, i - startIndex);
+              string token = statement.Substring(startIndex, i - startIndex);
               tokens.Add (token);
             }
             tokens.Add (candidate);

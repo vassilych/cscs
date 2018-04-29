@@ -21,12 +21,13 @@ namespace SplitAndMerge
 
   class ReturnStatement : ParserFunction
   {
-    
     protected override Variable Evaluate(ParsingScript script)
     {
       script.MoveForwardIf(Constants.SPACE);
-
-      Variable result = Utils.GetItem(script);
+      if (!script.FromPrev(Constants.RETURN.Length).Contains(Constants.RETURN)) {
+        script.Backward ();
+      }
+      Variable result = Utils.GetItem (script);
 
       // If we are in Return, we are done:
       script.SetDone();
@@ -219,10 +220,10 @@ namespace SplitAndMerge
     protected override Variable Evaluate (ParsingScript script)
     {
       string funcReturn = Utils.GetToken (script, Constants.TOKEN_SEPARATION);
-      string funcName = Utils.GetToken (script, Constants.TOKEN_SEPARATION);
+      string funcName   = Utils.GetToken (script, Constants.TOKEN_SEPARATION);
       //Interpreter.Instance.AppendOutput("Registering function [" + funcName + "] ...");
 
-      Precompiler.RegisterReturnType (funcName, funcReturn);
+      Precompiler.RegisterReturnType(funcName, funcReturn);
 
       Dictionary<string, Variable> argsMap;
       string [] args = Utils.GetCompiledFunctionSignature (script, out argsMap);
@@ -232,7 +233,7 @@ namespace SplitAndMerge
 
       string body = Utils.GetBodyBetween (script, Constants.START_GROUP, Constants.END_GROUP);
 
-      Precompiler precompiler = new Precompiler (funcName, args, argsMap, body);
+      Precompiler precompiler = new Precompiler(funcName, args, argsMap, body);
       precompiler.Compile();
 
       CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap);

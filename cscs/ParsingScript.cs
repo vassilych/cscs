@@ -157,7 +157,10 @@ namespace SplitAndMerge
   
     public string FromPrev(int backChars = 1, int maxChars = Constants.MAX_CHARS_TO_SHOW)
     {
-      return Substr(m_from - backChars, maxChars);
+      int from = Math.Max(0, m_from - backChars);
+      int max  = Math.Min(m_data.Length  - from, maxChars);
+      string result = m_data.Substring (from, max);
+      return result;
     }
   
     public void Forward(int delta = 1)  { m_from += delta; }

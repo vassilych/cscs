@@ -551,7 +551,7 @@ namespace SplitAndMerge
 
         sb.Append (ch);
         previous = ch;
-        if (braces == -1) {
+        if (braces < 0) {
           if (ch == close) {
             sb.Remove (sb.Length - 1, 1);
           }
