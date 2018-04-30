@@ -33,11 +33,13 @@ namespace SplitAndMerge
     List<string> m_statements;
     Variable.VarType m_returnType;
     int m_statementId;
+    int m_tokenId;
     string m_currentStatement;
     string m_nextStatement;
     string m_depth;
     bool m_numericExpression;
     bool m_assigmentExpression;
+    bool m_lastStatementReturn;
 
     Func<List<string>, List<double>, Variable> m_compiledFunc;
 
@@ -148,6 +150,16 @@ namespace SplitAndMerge
         return Variable.VarType.STRING;
       }
 
+      if (Constants.RESERVED.Contains(paramName) ||
+          Constants.TOKEN_SEPARATION_STR.Contains(paramName)) {
+        return Variable.VarType.NONE;
+      }
+
+      string functionReturnType = GetReturnType(paramName);
+      if (functionReturnType != null) {
+        return Constants.StringToType(functionReturnType);
+      }
+
       ParserFunction function = ParserFunction.GetFunction(paramName);
       if (function == null) {
         return Variable.VarType.NONE;
@@ -161,18 +173,16 @@ namespace SplitAndMerge
         return Variable.VarType.ARRAY;
       }
 
-      string functionReturnType = GetReturnType(paramName);
-      if (functionReturnType != null) {
-        return Constants.StringToType (functionReturnType);
-      }
-
       return Variable.VarType.NONE;
     }
 
-    public string RegisterVariableString(string paramName)
+    public string RegisterVariableString(string paramName, string paramValue = "")
     {
+      if (string.IsNullOrEmpty(paramValue)) {
+        paramValue = paramName;
+      }
       return m_depth + "ParserFunction.AddGlobalOrLocalVariable(\"" + paramName +
-             "\", new GetVarFunction(new Variable(" + paramName + ")));\n";
+        "\", new GetVarFunction(new Variable(" + paramValue + ")));\n";
     }
 
     public string ConvertScript()
@@ -211,6 +221,10 @@ namespace SplitAndMerge
         m_statementId++;
       }
 
+      if (!m_lastStatementReturn) {
+        sb.AppendLine(m_depth + "return Variable.EmptyInstance;");
+      }
+
       sb.AppendLine("\n    }\n  }\n}");
       return sb.ToString();
     }
@@ -225,7 +239,8 @@ namespace SplitAndMerge
       List<string> statementVars = new List<string> ();
 
       string result = "";
-      if (ProcessReturnStatement(tokens, statementVars, ref result)) {
+      m_lastStatementReturn = ProcessReturnStatement(tokens, statementVars, ref result);
+      if (m_lastStatementReturn) {
         return result;
       }
       if (ProcessForStatement(statement, tokens, statementVars, ref result)) {
@@ -233,23 +248,26 @@ namespace SplitAndMerge
       }
 
       GetExpressionType(tokens);
-      for (int i = 0; i < tokens.Count; i++) {
+      m_tokenId = 0;
+      while (m_tokenId < tokens.Count) {
         bool newVarAdded = false;
-        string converted = ProcessToken(tokens, i, ref newVarAdded);
+        string token = tokens[m_tokenId];
+        string converted = ProcessToken(tokens, m_tokenId, ref newVarAdded);
         if (addNewVars && newVarAdded) {
-          statementVars.Add (tokens [i]);
+          statementVars.Add (token);
           if (m_numericExpression) {
-            m_numericVars.Add (tokens[i]);
+            m_numericVars.Add(token);
           }
         }
         result += converted;
+        m_tokenId++;
       }
 
       if (result == "{") {
         m_depth += "  ";
       } else if (result == "}") {
         if (m_depth.Length <= 4) {
-          throw new ArgumentException ("Mismatch of { } parentheses in " + m_functionName);
+          throw new ArgumentException("Mismatch of { } parentheses in " + m_functionName);
         }
         m_depth = m_depth.Substring(0, m_depth.Length - 2);
       }
@@ -285,7 +303,8 @@ namespace SplitAndMerge
       }
       if (tokens.Count == 3) {
         bool newVarAdded = false;
-        string token = ProcessToken(tokens, 2, ref newVarAdded);
+        m_tokenId = 2;
+        string token = ProcessToken(tokens, m_tokenId, ref newVarAdded);
         converted += m_depth + "return new Variable(" + token + ");\n";
         return true;
       }
@@ -333,6 +352,17 @@ namespace SplitAndMerge
 
       return true;
     }
+    string ProcessCatch(string exceptionVar)
+    {
+      string suffix = "";
+      string varName = GetFunctionName(exceptionVar.Substring(1), ref suffix);
+
+      string result =  "catch(Exception " + varName + ") {\n";
+      result += RegisterVariableString(varName, varName + ".ToString()");
+      m_statementId++;
+      return result;
+    }
+
     string ProcessToken(List<string> tokens, int id, ref bool newVarAdded)
     {
       string token = tokens[id].Trim();
@@ -344,6 +374,9 @@ namespace SplitAndMerge
 
       bool reservedWord = Constants.RESERVED.Contains(functionName);
       if (IsString(functionName) || IsNumber(functionName) || reservedWord) {
+        if (functionName == Constants.CATCH) {
+          token = ProcessCatch(suffix);
+        }
         return token;
       }
       if (Array.IndexOf (Constants.ACTIONS, token) >= 0) {
@@ -393,9 +426,14 @@ namespace SplitAndMerge
 
     string ProcessFunction(List<string> tokens, int id, ref bool newVarAdded)
     {
-      string restStr = string.Join("", tokens.GetRange(id, tokens.Count - id).ToArray());
-      int paramStart = restStr.IndexOf("(");
-      int paramEnd = paramStart < 0 ? restStr.Length : restStr.IndexOf(")", paramStart + 1);
+      //string restStr = string.Join("", tokens.GetRange(m_tokenId, tokens.Count - m_tokenId).ToArray());
+      string restStr = tokens[m_tokenId];
+      int paramStart = restStr.IndexOf ("(");
+      int paramEnd   =   paramStart < 0 ? restStr.Length : restStr.IndexOf (")", paramStart + 1);
+      while (paramEnd < 0 && ++m_tokenId < tokens.Count) {
+        paramEnd = tokens[m_tokenId].IndexOf (")");
+        restStr += tokens[m_tokenId];
+      }
       string functionName = paramStart < 0 ? restStr : restStr.Substring(0, paramStart);
       string argsStr = "";
       if (paramStart >= 0) {

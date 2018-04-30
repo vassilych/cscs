@@ -186,7 +186,8 @@ namespace SplitAndMerge
     public static char[] END_PARSE_ARRAY = { SPACE, END_STATEMENT, END_ARG, END_GROUP, '\n' };
     public static char[] NEXT_OR_END_ARRAY = { NEXT_ARG, END_ARG, END_GROUP, END_STATEMENT, SPACE };
 
-    public static char[] TOKEN_SEPARATION = ("<>=+-*/%&|^,!()[]{}\t\n; ").ToCharArray();
+    public static string TOKEN_SEPARATION_STR = "<>=+-*/%&|^,!()[]{}\t\n; ";
+    public static char [] TOKEN_SEPARATION = TOKEN_SEPARATION_STR.ToCharArray ();
 
     // Functions that allow a space separator after them, on top of parentheses. The
     // function arguments may have spaces as well, e.g. copy a.txt b.txt
