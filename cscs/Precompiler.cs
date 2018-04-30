@@ -217,6 +217,9 @@ namespace SplitAndMerge
         m_currentStatement = m_statements[m_statementId];
         m_nextStatement = m_statementId < m_statements.Count - 1 ? m_statements [m_statementId+1] : "";
         string converted = ProcessStatement(m_currentStatement, m_nextStatement);
+        if (!converted.StartsWith(m_depth)) {
+          sb.Append(m_depth);
+        }
         sb.Append(converted);
         m_statementId++;
       }
@@ -362,6 +365,11 @@ namespace SplitAndMerge
       m_statementId++;
       return result;
     }
+    string ProcessElIf(string elif)
+    {
+      string result = elif.Replace(Constants.ELSE_IF, "else if");
+      return result;
+    }
 
     string ProcessToken(List<string> tokens, int id, ref bool newVarAdded)
     {
@@ -376,6 +384,8 @@ namespace SplitAndMerge
       if (IsString(functionName) || IsNumber(functionName) || reservedWord) {
         if (functionName == Constants.CATCH) {
           token = ProcessCatch(suffix);
+        } else if (functionName == Constants.ELSE_IF) {
+          token = ProcessElIf(token);
         }
         return token;
       }
