@@ -11,7 +11,6 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq.Expressions;
-using static SplitAndMerge.ParserFunction;
 
 namespace SplitAndMerge
 {
