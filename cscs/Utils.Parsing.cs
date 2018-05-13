@@ -213,6 +213,14 @@ namespace SplitAndMerge
       return false;
     }
 
+    public static void GetCompiledArgs (ParsingScript script, out string funcReturn, out string funcName)
+    {
+      string body = Utils.GetBodyBetween(script, Constants.END_ARG, Constants.START_ARG);
+      var parts = body.Split();
+      funcReturn = parts.Length > 1 ? parts[0] : "void";
+      funcName = parts.Last();
+    }
+
     public static List<string> GetFunctionArgs (ParsingScript script)
     {
       bool isList;
@@ -288,21 +296,22 @@ namespace SplitAndMerge
       }
 
       string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
-      string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
+      List<string> args = GetCompiledArgs(argStr);
+      //string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
 
-      dict = new Dictionary<string, Variable>(args.Length);
+      dict = new Dictionary<string, Variable>(args.Count);
       var sep = new char [] { ' ' };
-      for (int i = 0; i < args.Length; i ++) {
+      for (int i = 0; i < args.Count; i ++) {
         string[] pair = args[i].Trim().Split(sep, StringSplitOptions.RemoveEmptyEntries);
         Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair[0]) : Variable.VarType.STRING;
         dict.Add(pair[pair.Length - 1], new Variable(type));
         args[i] = pair[pair.Length - 1];
       }
 
-      args = args.Select (element => element.Trim ()).ToArray ();
+      string[] result = args.Select (element => element.Trim ()).ToArray();
       script.Pointer = endArgs + 1;
 
-      return args;
+      return result;
     }
 
     public static bool EndsWithFunction (string buffer, List<string> functions)
@@ -343,6 +352,50 @@ namespace SplitAndMerge
       }
 
       return EndsWithFunction (sb.ToString (), Constants.FUNCT_WITH_SPACE_ONCE);
+    }
+
+    public static List<string> GetCompiledArgs(string source)
+    {
+      StringBuilder sb = new StringBuilder(source.Length);
+      List<string> args = new List<string> ();
+
+      bool inQuotes = false;
+      char previous = Constants.EMPTY;
+      int angleBrackets = 0;
+
+      for (int i = 0; i < source.Length; i++) {
+        char ch = source [i];
+        switch (ch) {
+        case '“':
+        case '”':
+        case '„':
+        case '"':
+          ch = '"';
+          if (previous != '\\') {
+            inQuotes = !inQuotes;
+          }
+          break;
+        case '<': if (!inQuotes) angleBrackets++;
+          break;
+        case '>':
+          if (!inQuotes) angleBrackets--;
+          break;
+        case ',':
+          if (inQuotes || angleBrackets > 0) {
+            break;
+          }
+          args.Add (sb.ToString ());
+          sb.Clear ();
+          previous = ch;
+          continue;
+        }
+        sb.Append (ch);
+        previous = ch;
+      }
+      if (sb.Length > 0) {
+        args.Add (sb.ToString ());
+      }
+      return args;
     }
 
     public static string ConvertToScript (string source, out Dictionary<int, int> char2Line)

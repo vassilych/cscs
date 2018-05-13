@@ -18,15 +18,17 @@ namespace SplitAndMerge
   {
     //static Dictionary<string, Func<ParsingScript, Variable>> m_compiledCode =
     //   new Dictionary<string, Func<ParsingScript, Variable>> ();
-    static Dictionary<string, string> m_returnTypes = new Dictionary<string, string> ();
+    static Dictionary<string, Variable.VarType> m_returnTypes = new Dictionary<string, Variable.VarType> ();
 
     string m_functionName;
     string m_cscsCode;
     string m_csCode;
     string [] m_defArgs;
+    StringBuilder m_converted = new StringBuilder ();
     Dictionary<string, Variable> m_argsMap;
     HashSet<string> m_numericVars = new HashSet<string> ();
     Dictionary<string, string> m_paramMap    = new Dictionary<string, string> ();
+    Dictionary<string, int> m_definitionsMap = new Dictionary<string, int> ();
 
     HashSet<string> m_newVariables = new HashSet<string>();
     List<string> m_statements;
@@ -37,21 +39,21 @@ namespace SplitAndMerge
     string m_nextStatement;
     string m_depth;
     bool m_numericExpression;
-    bool m_assigmentExpression;
+    //bool m_assigmentExpression;
     bool m_lastStatementReturn;
 
-    Func<List<string>, List<double>, Variable> m_compiledFunc;
+    Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+         List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable> m_compiledFunc;
 
     public static void RegisterReturnType (string functionName, string functionType)
     {
-      string adjType = Constants.TypeToString (Constants.StringToType(functionType));
-      m_returnTypes[functionName] = adjType;
+      m_returnTypes[functionName] = Constants.StringToType (functionType);
     }
-    public static string GetReturnType(string functionName)
+    public static Variable.VarType GetReturnType(string functionName)
     {
-      string adjType = "NONE";
-      m_returnTypes.TryGetValue(functionName, out adjType);
-      return adjType;
+      Variable.VarType retType = Variable.VarType.NONE;
+      m_returnTypes.TryGetValue(functionName, out retType);
+      return retType;
     }
 
     public Precompiler(string functionName, string [] args, Dictionary<string, Variable> argsMap, string cscsCode)
@@ -60,7 +62,7 @@ namespace SplitAndMerge
       m_defArgs = args;
       m_argsMap = argsMap;
       m_cscsCode = cscsCode;
-      m_returnType = Constants.StringToType(GetReturnType(m_functionName));
+      m_returnType = GetReturnType(m_functionName);
     }
 
     public void Compile()
@@ -71,7 +73,7 @@ namespace SplitAndMerge
       CompilerParams.GenerateInMemory = true;
       CompilerParams.TreatWarningsAsErrors = false;
       CompilerParams.GenerateExecutable = false;
-      //CompilerParams.CompilerOptions = "/optimize";
+      CompilerParams.CompilerOptions = "/optimize";
 
       Assembly [] assemblies = AppDomain.CurrentDomain.GetAssemblies();
       foreach (Assembly asm in assemblies) {
@@ -98,50 +100,59 @@ namespace SplitAndMerge
       }
       m_compiledFunc = CompileAndCache(compile, m_functionName, m_defArgs, m_argsMap);
     }
-    public static Func<List<string>, List<double>, Variable> CompileAndCache(CompilerResults compile, string functionName,
+    public static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+                       List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable>
+                        CompileAndCache(CompilerResults compile, string functionName,
                                        string [] args, Dictionary<string, Variable> argsMap)
     {
       Module module = compile.CompiledAssembly.GetModules()[0];
       Type mt = module.GetType("SplitAndMerge.Precompiler");
 
-      //ParameterExpression param1 = Expression.Parameter (typeof (ParsingScript), "__script");
-      ParameterExpression param1 = Expression.Parameter (typeof (List<string>), "__variableStr");
-      ParameterExpression param2 = Expression.Parameter (typeof (List<double>), "__variableNum");
       List<ParameterExpression> paramTypes = new List<ParameterExpression> ();
-      paramTypes.Add (param1);
-      paramTypes.Add (param2);
-      List<Type> argTypes = new List<Type> ();
-      argTypes.Add (typeof (List<string>));
+      //paramTypes.Add (typeof (ParsingScript), "__script");
+      paramTypes.Add (Expression.Parameter (typeof (List<string>), "__varStr"));
+      paramTypes.Add (Expression.Parameter (typeof (List<double>), "__varNum"));
+      paramTypes.Add (Expression.Parameter (typeof (List<List<string>>), "__varArrStr"));
+      paramTypes.Add (Expression.Parameter (typeof (List<List<double>>), "__varArrNum"));
+      paramTypes.Add (Expression.Parameter (typeof (List<Dictionary<string, string>>), "__varMapStr"));
+      paramTypes.Add (Expression.Parameter (typeof (List<Dictionary<string, double>>), "__varMapNum"));
+      List<Type> argTypes = new List<Type>();
+      for (int i = 0; i < paramTypes.Count; i++) {
+        argTypes.Add(paramTypes[i].Type);
+      }
+      /*argTypes.Add (typeof (List<string>));
       argTypes.Add (typeof (List<double>));
+      argTypes.Add (typeof (List<List<string>>));
+      argTypes.Add (typeof (List<List<double>>));
+      argTypes.Add (typeof (List<Dictionary<string, string>>));
+      argTypes.Add (typeof (List<Dictionary<string, double>>));*/
 
-      //MethodInfo methodInfo = mt.GetMethod (functionName, new Type [] { typeof (ParsingScript) });
       MethodInfo methodInfo = mt.GetMethod (functionName, argTypes.ToArray());
+      MethodCallExpression methodCall = Expression.Call (methodInfo, paramTypes);
 
-      MethodCallExpression methodCall = Expression.Call (methodInfo, param1, param2);
-      //MethodCallExpression methodCall = Expression.Call (methodInfo, param2);
-
-      //Expression<Func<ParsingScript, List<Variable>, Variable>> lambda =
-      //  Expression.Lambda<Func<ParsingScript, List< Variable >, Variable>> (methodCall, paramTypes.ToArray());
       var lambda =
-        Expression.Lambda<Func<List<string>, List<double>, Variable>> (methodCall, paramTypes.ToArray());
+        Expression.Lambda<Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+                               List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable>> (
+          methodCall, paramTypes.ToArray());
       var func = lambda.Compile ();
 
       return func;
     }
 
-    //public static Variable Run (string functionName, ParsingScript script, List<Variable> args, bool throwExc = true)
-    public Variable Run(List<string> argsStr, List<double> argsNum, bool throwExc = true)
+    public Variable Run(List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
+                        List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
+                        List<Dictionary<string, double>> argsMapNum, bool throwExc = true)
     {
       if (m_compiledFunc == null) {
         // For "late bindings"...
         Compile();
       }
 
-      Variable result = m_compiledFunc.Invoke(argsStr, argsNum);
+      Variable result = m_compiledFunc.Invoke(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum);
       return result;
     }
 
-    public static Variable.VarType GetVariableType(string paramName)
+    public Variable.VarType GetVariableType(string paramName)
     {
       if (IsNumber(paramName)) {
         return Variable.VarType.NUMBER;
@@ -154,9 +165,14 @@ namespace SplitAndMerge
         return Variable.VarType.NONE;
       }
 
-      string functionReturnType = GetReturnType(paramName);
-      if (functionReturnType != null) {
-        return Constants.StringToType(functionReturnType);
+      var functionReturnType = GetReturnType(paramName);
+      if (functionReturnType != Variable.VarType.NONE) {
+        return functionReturnType;
+      }
+
+      Variable arg;
+      if (m_argsMap.TryGetValue (paramName, out arg)) {
+        return arg.Type;
       }
 
       ParserFunction function = ParserFunction.GetFunction(paramName);
@@ -190,24 +206,34 @@ namespace SplitAndMerge
       m_cscsCode = Utils.ConvertToScript(m_cscsCode, out char2Line);
 
       ParsingScript script = new ParsingScript (m_cscsCode);
-      StringBuilder sb = new StringBuilder ();
+      m_converted.Clear();
 
-      //string argStr = ", List<Variable> __variable";
-      int numIndex = 0;
-      int strIndex = 0;
+      int numIndex    = 0;
+      int strIndex    = 0;
+      int arrNumIndex = 0;
+      int arrStrIndex = 0;
+      int mapNumIndex = 0;
+      int mapStrIndex = 0;
+      // Create a mapping from the original function argument to the element array it is in.
       for (int i = 0; i < m_defArgs.Length; i++) {
         Variable typeVar = m_argsMap[m_defArgs[i]];
-        //argStr += ", " + TypeToCSString (typeVar.Type) + " " + args [i];
-        m_paramMap[m_defArgs[i]] = typeVar.Type == Variable.VarType.NUMBER ?
-                                     "__variableNum[" + (numIndex++) + "]" :
-                                     "__variableStr[" + (strIndex++) + "]";
+        m_paramMap[m_defArgs[i]] = 
+          typeVar.Type == Variable.VarType.STRING    ? "__varStr[" + (strIndex++) + "]" :
+          typeVar.Type == Variable.VarType.NUMBER    ? "__varNum[" + (numIndex++) + "]" :
+          typeVar.Type == Variable.VarType.ARRAY_STR ? "__varArrStr[" + (arrStrIndex++) + "]" :
+          typeVar.Type == Variable.VarType.ARRAY_NUM ? "__varArrNum[" + (arrNumIndex++) + "]" :
+          typeVar.Type == Variable.VarType.MAP_STR   ? "__varMapStr[" + (mapStrIndex++) + "]" :
+          typeVar.Type == Variable.VarType.MAP_NUM   ? "__varMapNum[" + (mapNumIndex++) + "]" :
+                    "";
       }
-      //string argStr = args.Length == 0 ? "" : "," + string.Join(",", args);
 
-      sb.AppendLine ("using System; using System.Collections; using System.Collections.Generic;\n\n" +
+      m_converted.AppendLine ("using System; using System.Collections; using System.Collections.Generic;\n\n" +
                      "namespace SplitAndMerge {\n" +
                      "  public partial class Precompiler {\n" +
-                     "    public static Variable " + m_functionName + "(List<string> __variableStr, List<double> __variableNum) {");
+                     "    public static Variable " + m_functionName +
+                     "(List<string> __varStr, List<double> __varNum," +
+                     " List<List<string>> __varArrStr, List<List<double>> __varArrNum," +
+                     " List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum) {");
       m_depth      = "      ";
 
       m_statements = TokenizeScript(m_cscsCode);
@@ -216,25 +242,39 @@ namespace SplitAndMerge
         m_currentStatement = m_statements[m_statementId];
         m_nextStatement = m_statementId < m_statements.Count - 1 ? m_statements [m_statementId+1] : "";
         string converted = ProcessStatement(m_currentStatement, m_nextStatement);
-        if (!converted.StartsWith(m_depth)) {
-          sb.Append(m_depth);
+        if (!string.IsNullOrWhiteSpace(converted) && !converted.StartsWith(m_depth)) {
+          m_converted.Append(m_depth);
         }
-        sb.Append(converted);
+        m_converted.Append(converted);
         m_statementId++;
       }
 
       if (!m_lastStatementReturn) {
-        sb.AppendLine(m_depth + "return Variable.EmptyInstance;");
+        m_converted.AppendLine(m_depth + "return Variable.EmptyInstance;");
       }
 
-      sb.AppendLine("\n    }\n  }\n}");
-      return sb.ToString();
+      m_converted.AppendLine("\n    }\n  }\n}");
+      return m_converted.ToString();
+    }
+
+    bool ProcessSpecialCases(string statement)
+    {
+      if (statement == ";") {
+        // don't need end of statement - will be added from the previous statement.
+        return true;
+      }
+      int specialIndex = statement.IndexOf ("={};");
+      if (specialIndex > 0) {
+        string varName = statement.Substring (0, specialIndex);
+        m_definitionsMap[varName] = m_converted.Length;
+        return true;
+      }
+      return false;
     }
 
     string ProcessStatement(string statement, string nextStatement, bool addNewVars = true)
     {
-      if (statement == ";") {
-        // don't need this - will be added from the previous statement.
+      if (ProcessSpecialCases(statement)) {
         return "";
       }
       List<string> tokens = TokenizeStatement(statement);
@@ -291,7 +331,8 @@ namespace SplitAndMerge
                                 ref string converted)
     {
       string suffix = "";
-      string paramName = GetFunctionName(tokens[0], ref suffix);
+      bool isArray = false;
+      string paramName = GetFunctionName(tokens[0], ref suffix, ref isArray);
       if (paramName != Constants.RETURN) {
         return false;
       }
@@ -323,7 +364,8 @@ namespace SplitAndMerge
                              ref string converted)
     {
       string suffix = "";
-      string functionName = GetFunctionName(statement, ref suffix);
+      bool isArray = false;
+      string functionName = GetFunctionName(statement, ref suffix, ref isArray);
       if (functionName != Constants.FOR) {
         return false;
       }
@@ -335,7 +377,7 @@ namespace SplitAndMerge
       }
 
       string rest = "";
-      string varName = GetFunctionName(suffix.Substring(1), ref rest);
+      string varName = GetFunctionName(suffix.Substring(1), ref rest, ref isArray);
 
       converted = "";
       if (!m_newVariables.Contains (varName)) {
@@ -357,7 +399,8 @@ namespace SplitAndMerge
     string ProcessCatch(string exceptionVar)
     {
       string suffix = "";
-      string varName = GetFunctionName(exceptionVar.Substring(1), ref suffix);
+      bool isArray = false;
+      string varName = GetFunctionName(exceptionVar.Substring(1), ref suffix, ref isArray);
 
       string result =  "catch(Exception " + varName + ") {\n";
       result += RegisterVariableString(varName, varName + ".ToString()");
@@ -370,11 +413,54 @@ namespace SplitAndMerge
       return result;
     }
 
+    public string GetExpressionType(List<string> tokens, string functionName, ref bool addNewVarDef)
+    {
+      if (!tokens[0].Contains("[")) {
+        return m_depth + "var " + functionName;
+      }
+      bool firstString = tokens [0].Contains ("\"");
+      bool secondString = true;
+      for (int i = 1; i < tokens.Count; i++) {
+        string token = tokens [i];
+        Variable.VarType type = GetVariableType (token);
+        if (type != Variable.VarType.NONE) {
+          secondString = type != Variable.VarType.NUMBER;
+          break;
+        } 
+      }
+      string expr = m_depth;
+      string param1 = firstString  ? "string" : "double";
+      string param2 = secondString ? "string" : "double";
+      if (!firstString) {
+        expr += "List<" + param2 +"> "+ functionName + " = new List<" + param2 + "> ();\n";
+      } else {
+        expr += "Dictionary<string," + param2 + "> " + functionName + " = new Dictionary<string," + param2 + "> ();\n";
+      }
+
+      int position = -1;
+      if (m_definitionsMap.TryGetValue(functionName, out position)) {
+        // There was a definition like m={}; sometime before. Now we know what it meant,
+        // so we can insert it:
+        m_converted.Insert (position, expr);
+        expr = "";
+      }
+      expr += m_depth + tokens[m_tokenId];
+      while (++m_tokenId < tokens.Count) {
+        string token = tokens [m_tokenId];
+        string converted = ProcessToken (tokens, m_tokenId, ref addNewVarDef);
+        expr += converted;
+      }
+      m_tokenId = tokens.Count;
+      addNewVarDef = false;
+      return expr;
+    }
+
     string ProcessToken(List<string> tokens, int id, ref bool newVarAdded)
     {
       string token = tokens[id].Trim();
       string suffix = "";
-      string functionName = GetFunctionName(token, ref suffix);
+      bool isArray = false;
+      string functionName = GetFunctionName(token, ref suffix, ref isArray);
       if (string.IsNullOrEmpty (functionName)) {
         return suffix;
       }
@@ -396,7 +482,7 @@ namespace SplitAndMerge
       }
       if (m_newVariables.Contains(functionName)) {
         if (id == 0) {
-          newVarAdded = true;
+          newVarAdded = !isArray;
         }
         return token;
       }
@@ -404,7 +490,8 @@ namespace SplitAndMerge
       if (id == 0 && tokens.Count > id + 1 && tokens[id + 1] == "=") {
         m_newVariables.Add(functionName);
         newVarAdded = true;
-        return m_depth + "var " + functionName;
+        string expr = GetExpressionType(tokens, functionName, ref newVarAdded);
+        return expr;
       }
 
       Variable arg;
@@ -416,7 +503,7 @@ namespace SplitAndMerge
       return ProcessFunction(tokens, id, ref newVarAdded);
     }
 
-    static string GetFunctionName(string token, ref string suffix)
+    string GetFunctionName(string token, ref string suffix, ref bool isArray)
     {
       token = token.Trim();
       int paramStart = token.IndexOf(Constants.START_ARG);
@@ -430,6 +517,14 @@ namespace SplitAndMerge
         suffix = functionName.Substring(paramEnd);
         functionName = functionName.Substring (0, paramEnd);
       }
+
+      string arrayName, arrayArg;
+      isArray = IsArray(functionName, out arrayName, out arrayArg);
+      if (isArray) {
+        functionName = arrayName;
+        suffix = arrayArg;
+      }
+
       return functionName;
     }
 
@@ -449,8 +544,14 @@ namespace SplitAndMerge
         if (paramEnd <= paramStart) {
           paramEnd = restStr.Length;
         }
-        ParsingScript script = new ParsingScript(restStr.Substring(paramStart, paramEnd - paramStart));
+        //ParsingScript script = new ParsingScript (restStr.Substring (paramStart, paramEnd - paramStart));
+        ParsingScript script = new ParsingScript (restStr.Substring (paramStart, restStr.Length - paramStart));
         argsStr = Utils.PrepareArgs(Utils.GetBodyBetween(script));
+      }
+
+      string result = "";
+      if (ProcessArray(argsStr, functionName, ref result)) {
+        return result;
       }
 
       string conversion = "";
@@ -459,13 +560,57 @@ namespace SplitAndMerge
         conversion = type == Variable.VarType.NUMBER ? ".AsDouble()" : ".AsString()";
       }
 
-      string result = "Utils.RunCompiled(\"" + functionName + "\", \"" + argsStr + "\")" + conversion;
+      result = "Utils.RunCompiled(\"" + functionName + "\", \"" + argsStr + "\")" + conversion;
       return result;
     }
 
+    bool ProcessArray (string paramName, string functionName, ref string result)
+    {
+      string arrayName, arrayArg, mappingName;
+      if (!IsDefinedAsArray(paramName, out arrayName, out arrayArg, out mappingName)) {
+        return false;
+      }
+      if (functionName == "size") {
+        result = mappingName + ".Count";
+        return true;
+      }
+      return false;
+    }
+    bool IsArray(string paramName, out string arrayName, out string arrayArg)
+    {
+      arrayName = paramName;
+      arrayArg = "";
+      int paramStart = paramName.IndexOf ("[");
+      if (paramStart > 0) {
+        arrayName = paramName.Substring (0, paramStart);
+        arrayArg = paramName.Substring (paramStart);
+        return true;
+      }
+      return false;
+    }
+    bool IsDefinedAsArray(string paramName, out string arrayName, out string arrayArg, out string mappingName)
+    {
+      arrayName = mappingName = paramName;
+      arrayArg = "";
+      int paramStart = paramName.IndexOf ("[");
+      if (paramStart > 0) {
+        arrayName = paramName.Substring (0, paramStart);
+        arrayArg = paramName.Substring (paramStart);
+      }
+      Variable arg;
+      if (!m_argsMap.TryGetValue(arrayName, out arg)) {
+        return false;
+      }
+      mappingName = m_paramMap [arrayName];
+      return arg.Type == Variable.VarType.ARRAY ||
+             arg.Type == Variable.VarType.ARRAY_STR ||
+             arg.Type == Variable.VarType.ARRAY_NUM ||
+             arg.Type == Variable.VarType.MAP_STR ||
+             arg.Type == Variable.VarType.MAP_NUM ;
+    }
     void GetExpressionType(List<string> tokens)
     {
-      m_assigmentExpression = false;
+      //m_assigmentExpression = false;
       m_numericExpression   = false;
       Variable arg;
       for (int i = 0; i < tokens.Count; i++) {
@@ -474,7 +619,8 @@ namespace SplitAndMerge
           continue;
         }
         string suffix = "";
-        string paramName = GetFunctionName(token, ref suffix);
+        bool isArray = false;
+        string paramName = GetFunctionName(token, ref suffix, ref isArray);
 
         var type = GetVariableType(paramName);
         if (type == Variable.VarType.NUMBER) {
@@ -488,14 +634,14 @@ namespace SplitAndMerge
         } else if (Constants.RESERVED.Contains (paramName)) {
           continue;
         } else {
-          string functionReturnType = GetReturnType (paramName);
-          if (functionReturnType != null) {
-            m_numericExpression = functionReturnType == "NUMBER";
+          var functionReturnType = GetReturnType(paramName);
+          if (functionReturnType != Variable.VarType.NONE) {
+            m_numericExpression = functionReturnType == Variable.VarType.NUMBER;
           }
         }
-        if (token.Contains("=")) {
-          m_assigmentExpression = true;
-        }
+        //if (token.Contains("=")) {
+        //  m_assigmentExpression = true;
+        //}
 
       }
     }
@@ -517,16 +663,24 @@ namespace SplitAndMerge
       List<string> tokens = new List<string>();
 
       int startIndex = 0;
-      for (int i = 0; i < scriptText.Length; i++) {
+      int i = 0;
+      while (i < scriptText.Length) {
         char ch = scriptText[i];
         if (Constants.STATEMENT_SEPARATOR.IndexOf(ch) >= 0) {
           if (i > startIndex) {
             string token = scriptText.Substring(startIndex, i - startIndex);
+            if (token.EndsWith("=") && scriptText.Substring(i).StartsWith("{};")) {
+              tokens.Add (token + "{};");
+              i += 3;
+              startIndex = i;
+              continue;
+            }
             tokens.Add(token);
           }
           tokens.Add(ch.ToString());
           startIndex = i + 1;
         }
+        i++;
       }
       if (scriptText.Length > startIndex + 1) {
         tokens.Add (scriptText.Substring(startIndex));

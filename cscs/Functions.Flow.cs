@@ -219,9 +219,8 @@ namespace SplitAndMerge
   {
     protected override Variable Evaluate (ParsingScript script)
     {
-      string funcReturn = Utils.GetToken (script, Constants.TOKEN_SEPARATION);
-      string funcName   = Utils.GetToken (script, Constants.TOKEN_SEPARATION);
-      //Interpreter.Instance.AppendOutput("Registering function [" + funcName + "] ...");
+      string funcReturn, funcName;
+      Utils.GetCompiledArgs(script, out funcReturn, out funcName);
 
       Precompiler.RegisterReturnType(funcName, funcReturn);
 
@@ -277,16 +276,51 @@ namespace SplitAndMerge
 
       List<string> argsStr = new List<string> ();
       List<double> argsNum = new List<double> ();
+      List<List<string>> argsArrStr = new List<List<string>> ();
+      List<List<double>> argsArrNum = new List<List<double>> ();
+      List<Dictionary<string, string>> argsMapStr = new List<Dictionary<string, string>> ();
+      List<Dictionary<string, double>> argsMapNum = new List<Dictionary<string, double>> ();
+
       for (int i = 0; i < m_args.Length; i++) {
         Variable typeVar = m_argsMap [m_args [i]];
         if (typeVar.Type == Variable.VarType.STRING) {
           argsStr.Add (args [i].AsString ());
         } else if (typeVar.Type == Variable.VarType.NUMBER) {
           argsNum.Add (args [i].AsDouble ());
+        } else if (typeVar.Type == Variable.VarType.ARRAY_STR) {
+          List<string> subArrayStr = new List<string> ();
+          var tuple = args [i].Tuple;
+          for (int j = 0; j < tuple.Count; j++) {
+            subArrayStr.Add (tuple [j].AsString ());
+          }
+          argsArrStr.Add (subArrayStr);
+        } else if (typeVar.Type == Variable.VarType.ARRAY_NUM) {
+          List<double> subArrayNum = new List<double> ();
+          var tuple = args [i].Tuple;
+          for (int j = 0; j < tuple.Count; j++) {
+            subArrayNum.Add (tuple [j].AsDouble ());
+          }
+          argsArrNum.Add (subArrayNum);
+        } else if (typeVar.Type == Variable.VarType.MAP_STR) {
+          Dictionary<string, string> subMapStr = new Dictionary<string, string> ();
+          var tuple = args [i].Tuple;
+          var keys = args [i].GetKeys ();
+          for (int j = 0; j < tuple.Count; j++) {
+            subMapStr.Add (keys[j], tuple[j].AsString());
+          }
+          argsMapStr.Add(subMapStr);
+        } else if (typeVar.Type == Variable.VarType.MAP_NUM) {
+          Dictionary<string, double> subMapNum = new Dictionary<string, double> ();
+          var tuple = args [i].Tuple;
+          var keys = args [i].GetKeys ();
+          for (int j = 0; j < tuple.Count; j++) {
+            subMapNum.Add (keys [j], tuple [j].AsDouble());
+          }
+          argsMapNum.Add(subMapNum);
         }
       }
 
-      Variable result = m_precompiler.Run(argsStr, argsNum, false);
+      Variable result = m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false);
       ParserFunction.PopLocalVariables ();
 
       return result;

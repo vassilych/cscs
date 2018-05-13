@@ -270,15 +270,23 @@ namespace SplitAndMerge
         case "INT":
         case "FLOAT":
         case "DOUBLE":
-        case "NUMBER":   return Variable.VarType.NUMBER;
+        case "NUMBER":       return Variable.VarType.NUMBER;
         case "CHAR":
-        case "STRING":   return Variable.VarType.STRING;
-        case "LIST":
+        case "STRING":       return Variable.VarType.STRING;
+        case "LIST<INT>":
+        case "LIST<DOUBLE>": return Variable.VarType.ARRAY_NUM;
+        case "LIST<STRING>": return Variable.VarType.ARRAY_STR;
+        case "MAP<INT>":
+        case "MAP<STRING,INT>":
+        case "MAP<DOUBLE>":
+        case "MAP<STRING,DOUBLE>": return Variable.VarType.MAP_NUM;
+        case "MAP<STRING>":
+        case "MAP<STRING,STRING>": return Variable.VarType.MAP_STR;
         case "TUPLE":
-        case "ARRAY":    return Variable.VarType.ARRAY;
-        case "BREAK":    return Variable.VarType.BREAK;
-        case "CONTINUE": return Variable.VarType.CONTINUE;
-        default:         return Variable.VarType.NONE;
+        case "ARRAY":        return Variable.VarType.ARRAY;
+        case "BREAK":        return Variable.VarType.BREAK;
+        case "CONTINUE":     return Variable.VarType.CONTINUE;
+        default:             return Variable.VarType.NONE;
       }
     }
   }

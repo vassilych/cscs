@@ -6,7 +6,9 @@ namespace SplitAndMerge
 {
   public class Variable
   {
-    public enum VarType { NONE, NUMBER, STRING, ARRAY, BREAK, CONTINUE };
+    public enum VarType { NONE, NUMBER, STRING, ARRAY,
+      ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
+      BREAK, CONTINUE };
 
     public Variable()
     {
@@ -38,6 +40,40 @@ namespace SplitAndMerge
     public Variable(Variable other)
     {
       Copy(other);
+    }
+    public Variable (List<string> a)
+    {
+      List<Variable> tuple = new List<Variable> (a.Count);
+      for (int i = 0; i < a.Count; i++) {
+        tuple.Add (new Variable(a[i]));
+      }
+      this.Tuple = tuple;
+    }
+    public Variable (List<double> a)
+    {
+      List<Variable> tuple = new List<Variable> (a.Count);
+      for (int i = 0; i < a.Count; i++) {
+        tuple.Add (new Variable(a[i]));
+      }
+      this.Tuple = tuple;
+    }
+    public Variable (Dictionary<string, string> a)
+    {
+      List<Variable> tuple = new List<Variable> (a.Count);
+      foreach (string key in a.Keys) {
+        m_dictionary [key] = tuple.Count;
+        tuple.Add(new Variable(a[key]));
+      }
+      this.Tuple = tuple;
+    }
+    public Variable (Dictionary<string, double> a)
+    {
+      List<Variable> tuple = new List<Variable> (a.Count);
+      foreach (string key in a.Keys) {
+        m_dictionary [key] = tuple.Count;
+        tuple.Add (new Variable(a[key]));
+      }
+      this.Tuple = tuple;
     }
     public virtual Variable Clone()
     {
@@ -150,6 +186,15 @@ namespace SplitAndMerge
         results = m_tuple;
       }
 
+      return results;
+    }
+
+    public List<string> GetKeys() {
+      List<string> results = new List<string> ();
+      var keys = m_dictionary.Keys;
+      foreach (var key in keys) {
+        results.Add (key);
+      }
       return results;
     }
 

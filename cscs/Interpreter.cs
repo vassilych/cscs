@@ -193,7 +193,7 @@ namespace SplitAndMerge
     private void ReadConfig()
     {
       MAX_LOOPS = ReadConfig("maxLoops", 256000);
-#if !__MOBILE__
+#if !__MOBILE__ && __MOBILE__
       if (ConfigurationManager.GetSection("Languages") == null) {
         return;
       }
@@ -337,7 +337,7 @@ namespace SplitAndMerge
     public int ReadConfig(string configName, int defaultValue = 0)
     {
       int value = defaultValue;
-#if !__MOBILE__
+#if !__MOBILE__ && __MOBILE__
             string config = ConfigurationManager.AppSettings[configName];
             if (string.IsNullOrWhiteSpace(config) || !Int32.TryParse(config, out value))
             {
