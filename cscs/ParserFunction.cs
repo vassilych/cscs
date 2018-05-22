@@ -25,6 +25,12 @@ namespace SplitAndMerge
         m_impl = s_idFunction;
         return;
       }
+      if (item.Length > 1 && item[0] == '"' && item[item.Length - 1] == '"') {
+        // We are dealing with a string.
+        s_strOrNumFunction.Item = item.Replace("\\\"", "\"");
+        m_impl = s_strOrNumFunction;
+        return;
+      }
 
       m_impl = GetRegisteredAction(item, ref action);
       if (m_impl != null) {
