@@ -3,13 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Net;
+using System.Net.Sockets;
 
 
 namespace SplitAndMerge
 {
 	public class Program
 	{
-		private static string EXT = "cscs";
+	  const string EXT = "cscs";
 
     enum NEXT_CMD {
       NONE = 0,
@@ -35,8 +37,13 @@ namespace SplitAndMerge
       Interpreter.Instance.GetOutput += Print;
 
       ProcessScript("include(\"scripts/functions.cscs\");");
-      string script = null;
-      //script = GetFileContents("/Users/vk/Documents/github/cscscpp/bin/Debug/scripts/temp.cscs");
+
+      if (args.Length < 1 || args [1] == "debugger") {
+        DebuggerServer.StartServer();
+        return;
+      }
+
+      string script = Utils.GetFileContents("scripts/temp.cscs");
 
       if (args.Length >= 3) {
         Translation.TranslateScript(args);
@@ -46,7 +53,7 @@ namespace SplitAndMerge
         if (args[0].EndsWith(EXT)) {
           string filename = args[0];
           Console.WriteLine("Reading script from " + filename);
-          script = GetFileContents(filename);
+          script = Utils.GetFileContents(filename);
         } else {
           script = args[0];
         }
@@ -146,7 +153,7 @@ namespace SplitAndMerge
     	}
     }
 
-    private static string GetConsoleLine(ref NEXT_CMD cmd, string init = "",
+    static string GetConsoleLine(ref NEXT_CMD cmd, string init = "",
                                          bool enhancedMode = true)
     {
       //string line = init;
@@ -274,18 +281,6 @@ namespace SplitAndMerge
       Console.Write("{0}{1}\r{2}{3}", 
         prompt, line, prompt, line.Substring(0, pos));
     }
-
-    private static string GetFileContents(string filename)
-		{
-      try {
-        string[] readText = Utils.GetFileLines(filename);
-        return string.Join ("\n", readText);
-      } catch(ArgumentException exc) {
-        Console.WriteLine(exc.Message);
-        Environment.Exit(1);
-        return "";
-      }
-		}
 
 		static void Print(object sender, OutputAvailableEventArgs e)
 		{

@@ -152,7 +152,9 @@ namespace SplitAndMerge
     {
       StackLevel stackLevel = new StackLevel (m_name);
       for (int i = 0; i < m_args.Length; i++) {
-        stackLevel.Variables[m_args [i]] = new GetVarFunction (args [i]);
+        var arg = new GetVarFunction(args [i]);
+        arg.Name = m_args [i];
+        stackLevel.Variables[m_args[i]] = arg;
       }
 
       ParserFunction.AddLocalVariables(stackLevel);
@@ -180,21 +182,33 @@ namespace SplitAndMerge
         tempScript.Filename       = m_parentScript.Filename;
         tempScript.OriginalScript = m_parentScript.OriginalScript;
       }
+      tempScript.ParentScript = script;
 
-      while (tempScript.Pointer < m_body.Length - 1 && 
+      if (script != null && script.Debugger != null) {
+        result = script.Debugger.StepInIfNeeded(tempScript);
+      }
+      /*if (m_parentScript != null && m_parentScript.Debugger != null) {
+        tempScript.Debugger = m_parentScript.Debugger;
+        if (m_parentScript.Debugger.SteppingIn) {
+          result = m_parentScript.Debugger.StepIn (tempScript);
+        }
+      }*/
+      while (tempScript.Pointer < m_body.Length - 1 &&
             (result == null || !result.IsReturn)) {
-        result = tempScript.ExecuteTo();
-        tempScript.GoToNextStatement();
+        result = tempScript.ExecuteTo ();
+        tempScript.GoToNextStatement ();
       }
 
       ParserFunction.PopLocalVariables();
-      //script.MoveForwardIf(Constants.END_ARG);
-      //script.MoveForwardIf(Constants.END_STATEMENT);
 
       if (result == null) {
         result = Variable.EmptyInstance;
       } else {
         result.IsReturn = false;
+      }
+
+      if (script != null && script.Debugger != null) {
+        script.Debugger.PostProcessCustomFunction(tempScript);
       }
 
       return result;
@@ -434,7 +448,7 @@ namespace SplitAndMerge
       Utils.CheckNotEnd(script, m_name);
 
       // 2. Get the current value of the variable.
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref varName);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref varName);
 
       ParserFunction func = ParserFunction.GetFunction(varName);
       Utils.CheckNotNull(varName, func);
@@ -578,6 +592,7 @@ namespace SplitAndMerge
       ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
       tempScript.Filename = filename;
       tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
+      tempScript.ParentScript = script;
 
       while (tempScript.Pointer < includeScript.Length) {
         tempScript.ExecuteTo();
@@ -607,7 +622,7 @@ namespace SplitAndMerge
 
         if (m_arrayIndices == null) {
           string startName = script.Substr(script.Pointer - 1);
-          m_arrayIndices = Utils.GetArrayIndices(ref startName, ref m_delta);
+          m_arrayIndices = Utils.GetArrayIndices(script, ref startName, ref m_delta);
         }
 
         script.Forward(m_delta);
@@ -624,6 +639,9 @@ namespace SplitAndMerge
 
     public int Delta {
       set { m_delta = value; }
+    }
+    public Variable Value {
+      get { return m_value; }
     }
     public List<Variable> Indices {
       set { m_arrayIndices = value; }
@@ -649,7 +667,7 @@ namespace SplitAndMerge
       // Check if the variable to be set has the form of x[a][b],
       // meaning that this is an array element.
       double newValue = 0;
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref m_name);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref m_name);
 
       ParserFunction func = ParserFunction.GetFunction(m_name);
       Utils.CheckNotNull(m_name, func);
@@ -660,7 +678,7 @@ namespace SplitAndMerge
         if (prefix) {
           string tmpName = m_name + script.Rest;
           int delta = 0;
-          arrayIndices = Utils.GetArrayIndices(ref tmpName, ref delta);
+          arrayIndices = Utils.GetArrayIndices(script, ref tmpName, ref delta);
           script.Forward(Math.Max(0, delta - tmpName.Length));
         }
 
@@ -692,7 +710,7 @@ namespace SplitAndMerge
       // Value to be added to the variable:
       Variable right  = Utils.GetItem(script);
 
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref m_name);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref m_name);
 
       ParserFunction func = ParserFunction.GetFunction(m_name);
       Utils.CheckNotNull(m_name, func);
@@ -781,7 +799,7 @@ namespace SplitAndMerge
 
       // Check if the variable to be set has the form of x[a][b]...,
       // meaning that this is an array element.
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref m_name);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref m_name);
 
       if (arrayIndices.Count == 0) {
         ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(varValue));
@@ -1056,7 +1074,7 @@ namespace SplitAndMerge
       string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
       Utils.CheckNotEnd(script, m_name);
 
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref varName);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref varName);
 
       // 2. Get the current value of the variable.
       ParserFunction func = ParserFunction.GetFunction(varName);
@@ -1087,7 +1105,7 @@ namespace SplitAndMerge
       string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
       Utils.CheckNotEnd(script, m_name);
 
-      List<Variable> arrayIndices = Utils.GetArrayIndices(ref varName);
+      List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref varName);
 
       // 2. Get the current value of the variable.
       ParserFunction func = ParserFunction.GetFunction(varName);

@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace SplitAndMerge
 {
-  
   public class ParsingScript
   {
     private string m_data;          // contains the whole script
     private int m_from;             // a pointer to the script
     private string m_filename;      // filename containing the script
     private string m_originalScript;// original raw script
-    private int m_scriptOffset = 0; // used in functiond defined in bigger scripts
+    private int m_scriptOffset = 0; // used in functions defined in bigger scripts
     private Dictionary<int, int> m_char2Line = null; // pointers to the original lines
 
     public int Pointer {
@@ -23,10 +23,10 @@ namespace SplitAndMerge
       get { return m_data; }
     }
     public string Rest {
-      get { return Substr(m_from, Constants.MAX_CHARS_TO_SHOW); }
+      get { return Substr (m_from, Constants.MAX_CHARS_TO_SHOW); }
     }
     public char Current {
-      get { return m_data[m_from]; }
+      get { return m_data [m_from]; }
     }
     public Dictionary<int, int> Char2Line {
       get { return m_char2Line; }
@@ -44,7 +44,11 @@ namespace SplitAndMerge
       set { m_originalScript = value; }
     }
 
-    public ParsingScript(string data, int from = 0,
+    public Debugger Debugger;
+    public bool InTryBlock;
+    public ParsingScript ParentScript;
+
+    public ParsingScript (string data, int from = 0,
                          Dictionary<int, int> char2Line = null)
     {
       m_data = data;
@@ -52,7 +56,7 @@ namespace SplitAndMerge
       m_char2Line = char2Line;
     }
 
-    public ParsingScript(ParsingScript other)
+    public ParsingScript (ParsingScript other)
     {
       m_data = other.String;
       m_from = other.Pointer;
@@ -61,49 +65,78 @@ namespace SplitAndMerge
       m_originalScript = other.OriginalScript;
     }
 
-    public int Size()        { return m_data.Length; }
-    public bool StillValid() { return m_from < m_data.Length; }
+    public int Size () { return m_data.Length; }
+    public bool StillValid () { return m_from < m_data.Length; }
 
-    public void SetDone()    { m_from = m_data.Length; }
+    public void SetDone () { m_from = m_data.Length; }
 
-    public int Find(char ch, int from = -1) 
-    { return m_data.IndexOf(ch, from < 0 ? m_from : from); }
-  
-    public int FindFirstOf(string str, int from = -1)
+    public int Find (char ch, int from = -1)
+    { return m_data.IndexOf (ch, from < 0 ? m_from : from); }
+
+    public int FindFirstOf (string str, int from = -1)
     { return FindFirstOf (str.ToCharArray (), from); }
 
-    public int FindFirstOf(char[] arr, int from = -1)
+    public int FindFirstOf (char [] arr, int from = -1)
     { return m_data.IndexOfAny (arr, from < 0 ? m_from : from); }
 
-    public string Substr(int fr = -2, int len = -1) 
+    public string Substr (int fr = -2, int len = -1)
     {
-      int from = Math.Min(Pointer, m_data.Length - 1);
+      int from = Math.Min (Pointer, m_data.Length - 1);
       fr = fr == -2 ? from : fr == -1 ? 0 : fr;
-      return len < 0 || len >= m_data.Length - fr ? m_data.Substring(fr) : m_data.Substring(fr, len);
+      return len < 0 || len >= m_data.Length - fr ? m_data.Substring (fr) : m_data.Substring (fr, len);
+    }
+
+    public string GetStack(int firstOffset = 0)
+    {
+      StringBuilder result = new StringBuilder();
+      ParsingScript script = this;
+
+      while(script != null) {
+        int pointer = script == this ? script.Pointer + firstOffset : script.Pointer;
+        int lineNumber = script.GetOriginalLineNumber(pointer);
+        string filename = Path.GetFullPath (script.Filename);
+        string line = File.ReadLines(filename).Skip(lineNumber).Take(1).First();
+        result.AppendLine ("" + lineNumber);
+        result.AppendLine(filename);
+        result.AppendLine(line.Trim());
+        script = script.ParentScript;
+      }
+
+      return result.ToString().Trim();
     }
 
     public string GetOriginalLine(out int lineNumber)
     {
-      lineNumber = GetOriginalLineNumber();
+      lineNumber = GetOriginalLineNumber ();
       if (lineNumber < 0) {
         return "";
       }
 
-      string[] lines = m_originalScript.Split(Constants.END_LINE);
+      string [] lines = m_originalScript.Split(Constants.END_LINE);
       if (lineNumber < lines.Length) {
-        return lines[lineNumber];
+        return lines [lineNumber];
       }
 
       return "";
     }
 
+    public int OriginalLineNumber { get { return GetOriginalLineNumber (); } }
+    public string OriginalLine { get {
+        int lineNumber;
+        return GetOriginalLine (out lineNumber); 
+      } }
+    
     public int GetOriginalLineNumber()
+    {
+      return GetOriginalLineNumber(m_from);
+    }
+    public int GetOriginalLineNumber(int charNumber)
     {
       if (m_char2Line == null || m_char2Line.Count == 0) {
         return -1;
       }
 
-      int pos = m_scriptOffset + m_from;
+      int pos = m_scriptOffset + charNumber;
       List<int> lineStart = m_char2Line.Keys.ToList();
       int lower = 0;
       int index = lower;
@@ -252,7 +285,19 @@ namespace SplitAndMerge
       if (!m_data.EndsWith(Constants.END_STATEMENT.ToString())) {
         m_data += Constants.END_STATEMENT;
       }
-      return Parser.SplitAndMerge(this, toArray);
+
+      Variable result = null;
+      if (InTryBlock) {
+        result = Parser.SplitAndMerge (this, toArray);
+        return result;
+      }
+      try {
+        result = Parser.SplitAndMerge(this, toArray);
+      } catch(Exception exc) {
+        ParsingException parseExc = new ParsingException (exc.Message, this, exc);
+        throw parseExc;
+      }
+      return result;
     }
     public void ExecuteAll()
     {
@@ -260,6 +305,25 @@ namespace SplitAndMerge
         ExecuteTo(Constants.END_LINE);
         GoToNextStatement();
       }
+    }
+  }
+  public class ParsingException : Exception
+  {
+    public ParsingScript ExceptionScript;
+
+    public ParsingException(string message, ParsingScript script)
+        : base (message)
+    {
+      ExceptionScript = script;
+    }
+    public ParsingException (string message, ParsingScript script, Exception inner)
+        : base (message, inner)
+    {
+      ExceptionScript = script;
+    }
+    public string GetStack()
+    {
+      return ExceptionScript.GetStack(-1);
     }
   }
 }

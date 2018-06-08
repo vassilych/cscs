@@ -253,6 +253,8 @@ namespace SplitAndMerge
         m_converted.AppendLine(m_depth + "return Variable.EmptyInstance;");
       }
 
+      //Debugger.Break ();
+
       m_converted.AppendLine("\n    }\n  }\n}");
       return m_converted.ToString();
     }

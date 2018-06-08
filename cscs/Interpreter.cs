@@ -392,6 +392,7 @@ namespace SplitAndMerge
       string varName = forString.Substring(0, index);
 
       ParsingScript forScript = new ParsingScript(forString);
+      forScript.ParentScript = script;
       Variable arrayValue = forScript.ExecuteFrom(index + 1);
 
       int cycles = arrayValue.TotalElements();
@@ -429,6 +430,10 @@ namespace SplitAndMerge
       ParsingScript initScript = new ParsingScript(forTokens[0] + Constants.END_STATEMENT);
       ParsingScript condScript = new ParsingScript(forTokens[1] + Constants.END_STATEMENT);
       ParsingScript loopScript = new ParsingScript(forTokens[2] + Constants.END_STATEMENT);
+
+      initScript.ParentScript = script;
+      condScript.ParentScript = script;
+      loopScript.ParentScript = script;
 
       initScript.ExecuteFrom(0);
 
@@ -526,6 +531,7 @@ namespace SplitAndMerge
       SkipBlock(script);
 
       ParsingScript nextData = new ParsingScript(script);
+      nextData.ParentScript = script;
 
       string nextToken = Utils.GetNextToken(nextData);
 
@@ -617,12 +623,32 @@ namespace SplitAndMerge
 
       return result;
     }
+    public static string GetStack(int lowestStackLevel = 0)
+    {
+      string result = "";
+      Stack<ParserFunction.StackLevel> stack = ParserFunction.ExecutionStack;
+      int level = stack.Count;
+      foreach (ParserFunction.StackLevel stackLevel in stack) {
+        if (level-- < lowestStackLevel) {
+          break;
+        }
+        if (string.IsNullOrWhiteSpace (stackLevel.Name)) {
+          continue;
+        }
+        result += Environment.NewLine + "  " + stackLevel.Name + "()";
+      }
+
+      return result;
+    }
 
     private Variable ProcessBlock(ParsingScript script)
     {
       int blockStart = script.Pointer;
       Variable result = null;
 
+      if (script.Debugger != null) {
+        result = script.Debugger.DebugBlockIfNeeded(script);
+      }
       while (script.StillValid()) {
         int endGroupRead = script.GoToNextStatement();
         if (endGroupRead > 0) {

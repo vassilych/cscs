@@ -267,6 +267,10 @@ namespace SplitAndMerge
         Interpreter.Instance.AppendOutput(output);
       }
 
+      if (script.Debugger != null) {
+        script.Debugger.AddOutput(output);      
+      }
+
       return Variable.EmptyInstance;
     }
 

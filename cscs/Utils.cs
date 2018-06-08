@@ -744,6 +744,18 @@ namespace SplitAndMerge
       }
       return ms;
     }
+    public static string GetFileContents(string filename)
+    {
+      try {
+        string [] readText = Utils.GetFileLines (filename);
+        return string.Join ("\n", readText);
+      } catch (ArgumentException exc) {
+        Console.WriteLine (exc.Message);
+        Environment.Exit (1);
+        return "";
+      }
+    }
+
     public static string RemovePrefix(string text)
     {
       string candidate = text.Trim().ToLower();

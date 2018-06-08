@@ -245,6 +245,8 @@ namespace SplitAndMerge
       }
 
       ParsingScript tempScript = new ParsingScript (script.String, script.Pointer);
+      tempScript.ParentScript = script;
+
       string body = Utils.GetBodyBetween (tempScript, start, end);
       // After the statement above tempScript.Parent will point to the last
       // character belonging to the body between start and end characters. 
@@ -514,6 +516,10 @@ namespace SplitAndMerge
         previous = ch;
       }
 
+      if (sb.Length > lastScriptLength) {
+        char2Line [sb.Length - 1] = lineNumber;
+        lastScriptLength = sb.Length;
+      }
       return sb.ToString ();
     }
 
@@ -637,13 +643,13 @@ namespace SplitAndMerge
       return null;
     }
 
-    public static List<Variable> GetArrayIndices (ref string varName)
+    public static List<Variable> GetArrayIndices(ParsingScript script, ref string varName)
     {
       int end = 0;
-      return GetArrayIndices (ref varName, ref end);
+      return GetArrayIndices (script, ref varName, ref end);
     }
 
-    public static List<Variable> GetArrayIndices (ref string varName, ref int end)
+    public static List<Variable> GetArrayIndices(ParsingScript script, ref string varName, ref int end)
     {
       List<Variable> indices = new List<Variable> ();
 
@@ -661,6 +667,7 @@ namespace SplitAndMerge
         }
 
         ParsingScript tempScript = new ParsingScript (varName, argStart);
+        tempScript.ParentScript = script;
         tempScript.MoveForwardIf (Constants.START_ARG, Constants.START_ARRAY);
 
         Variable index = tempScript.ExecuteTo (Constants.END_ARRAY);

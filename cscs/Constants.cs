@@ -256,7 +256,11 @@ namespace SplitAndMerge
       switch (type) {
         case Variable.VarType.NUMBER:   return "NUMBER";
         case Variable.VarType.STRING:   return "STRING";
+        case Variable.VarType.ARRAY_STR:
+        case Variable.VarType.ARRAY_NUM:
         case Variable.VarType.ARRAY:    return "ARRAY";
+        case Variable.VarType.MAP_STR:
+        case Variable.VarType.MAP_NUM:  return "MAP";
         case Variable.VarType.BREAK:    return "BREAK";
         case Variable.VarType.CONTINUE: return "CONTINUE";
         default:                        return "NONE";
