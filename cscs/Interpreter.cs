@@ -60,6 +60,9 @@ namespace SplitAndMerge
 
     public void Init()
     {
+
+      ParserFunction.CleanUp ();
+
       ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
       ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
       ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());

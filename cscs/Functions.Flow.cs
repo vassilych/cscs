@@ -187,12 +187,7 @@ namespace SplitAndMerge
       if (script != null && script.Debugger != null) {
         result = script.Debugger.StepInIfNeeded(tempScript);
       }
-      /*if (m_parentScript != null && m_parentScript.Debugger != null) {
-        tempScript.Debugger = m_parentScript.Debugger;
-        if (m_parentScript.Debugger.SteppingIn) {
-          result = m_parentScript.Debugger.StepIn (tempScript);
-        }
-      }*/
+
       while (tempScript.Pointer < m_body.Length - 1 &&
             (result == null || !result.IsReturn)) {
         result = tempScript.ExecuteTo ();
@@ -594,11 +589,16 @@ namespace SplitAndMerge
       tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
       tempScript.ParentScript = script;
 
+      Variable result = null;
+      if (script != null && script.Debugger != null) {
+        result = script.Debugger.StepInIfNeeded (tempScript);
+      }
+
       while (tempScript.Pointer < includeScript.Length) {
-        tempScript.ExecuteTo();
+        result = tempScript.ExecuteTo();
         tempScript.GoToNextStatement();
       }
-      return Variable.EmptyInstance;
+      return result;
     }
   }
 

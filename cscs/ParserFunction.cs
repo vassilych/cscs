@@ -329,6 +329,13 @@ namespace SplitAndMerge
       return this;
     }
 
+    public static void CleanUp()
+    {
+      s_functions.Clear ();
+      s_actions.Clear ();
+      s_locals.Clear ();
+    }
+
     protected string m_name;
     public string Name { get { return m_name; } set { m_name = value; } }
 
@@ -341,9 +348,6 @@ namespace SplitAndMerge
     ParserFunction m_impl;
     // Global functions and variables:
     static Dictionary<string, ParserFunction> s_functions = new Dictionary<string, ParserFunction>();
-
-    // Global variables:
-    //private static Dictionary<string, ParserFunction> s_globals = new Dictionary<string, ParserFunction> ();
 
     // Global actions - function:
     static Dictionary<string, ActionFunction> s_actions = new Dictionary<string, ActionFunction>();

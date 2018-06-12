@@ -48,7 +48,7 @@ namespace SplitAndMerge
       output = output.Trim().Replace('\n', '_');
       msg = msg.Trim().Replace ('\n', '_');
       if (msg.Length > 50) {
-        msg = msg.Substring(0, 50);
+        //msg = msg.Substring(0, 50);
       }
       Console.WriteLine("==> {0}: In={1} Out={2} Cont={3} SB={4} PB={5} Stack={6} End={7} [{8}] {9}",
                         Id, SteppingIn, SteppingOut, Continue, ProcessingBlock, SendBackResult,
@@ -136,8 +136,6 @@ namespace SplitAndMerge
     }
     string CreateResult(string filename, int lineNumber, string output, string processed = "")
     {
-      //Console.WriteLine ("  {0}:{1} --> [{2}]", lineNumber, processed, output);
-      //string filename = 
       int outputCount = output.Split ('\n').Length;
       string result = filename + "\n";
       result += lineNumber + "\n";
@@ -149,10 +147,8 @@ namespace SplitAndMerge
       result += varsCount + "\n";
       result += vars + "\n";
 
-      if (!Continue) {
-        string stack = GetStack();
-        result += stack + "\n";
-      }
+      string stack = GetStack();
+      result += stack + "\n";
 
       return result;
     }
@@ -225,9 +221,15 @@ namespace SplitAndMerge
         return m_lastResult;
 
       } catch (ParsingException exc) {
-        string stack = exc.GetStack();
-        int levels = stack.IndexOf ('\n');
-        string result = "exc\n" + exc.Message + "\n" + stack;
+        string stack = exc.ExceptionStack;
+        string vars = GetVariables ();
+        int varsCount = vars.Split ('\n').Length;
+
+        string result = "exc\n" + exc.Message + "\n";
+        result += varsCount + "\n";
+        result += vars + "\n";
+        result += stack + "\n";
+
         SendBack(result);
 
         ParserFunction.InvalidateStacksAfterLevel(0);
@@ -287,7 +289,8 @@ namespace SplitAndMerge
 
     public Variable DebugBlockIfNeeded(ParsingScript stepInScript)
     {
-      if (SteppingOut) {
+      if (SteppingOut || Continue) {
+        Continue = true;
         return null;
       }
       ProcessingBlock = true;
@@ -304,6 +307,7 @@ namespace SplitAndMerge
     {
       stepInScript.Debugger = this;
       if (!SteppingIn) {
+        Continue = true;
         return null;
       }
 

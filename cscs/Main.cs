@@ -36,9 +36,9 @@ namespace SplitAndMerge
       // execution. On error an exception will be thrown.
       Interpreter.Instance.GetOutput += Print;
 
-      ProcessScript("include(\"scripts/functions.cscs\");");
+      //ProcessScript("include(\"scripts/functions.cscs\");");
 
-      if (args.Length < 1 || args [1] == "debugger") {
+      if (args.Length < 1 || args[1] == "debugger") {
         DebuggerServer.StartServer();
         return;
       }

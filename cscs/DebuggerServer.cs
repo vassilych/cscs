@@ -36,6 +36,8 @@ namespace SplitAndMerge
       string data = null;
       Console.WriteLine ("Starting client {0}", m_client.Client.RemoteEndPoint);
 
+      Interpreter.Instance.Init();
+
       m_debugger = new Debugger ();
       Debugger.OnResult += SendBack;
 
@@ -49,13 +51,15 @@ namespace SplitAndMerge
         Console.Write ("Client disconnected: {0}", exc.Message);
       }
 
+      Debugger.OnResult -= SendBack;
+
       // Shutdown and end connection
       Console.Write ("Closed connection.");
-      m_client.Close ();
+      m_client.Close();
     }
 
     static void ThreadPoolCallback(Object threadContext)  
-    {  
+    {
       m_debugger.ProcessClientCommands((string)threadContext);
     }
     static void SendBack (string str)
