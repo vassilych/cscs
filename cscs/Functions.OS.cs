@@ -268,7 +268,7 @@ namespace SplitAndMerge
       }
 
       if (script.Debugger != null) {
-        script.Debugger.AddOutput(output);      
+        script.Debugger.AddOutput(output, script);      
       }
 
       return Variable.EmptyInstance;

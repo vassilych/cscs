@@ -51,7 +51,7 @@ namespace SplitAndMerge
       if (msg.Length > 50) {
         //msg = msg.Substring(0, 50);
       }
-      Console.WriteLine("==> {0}: In={1} Out={2} Cont={3} SB={4} PB={5} Stack={6} End={7} [{8}] {9}",
+      Console.WriteLine("==> {0}: In={1} Out={2} Cont={3} PB={4} SB={5} Stack={6} End={7} [{8}] {9}",
                         Id, SteppingIn, SteppingOut, Continue, ProcessingBlock, SendBackResult,
                         m_steppingIns.Count, End, output, msg);
     }
@@ -117,7 +117,7 @@ namespace SplitAndMerge
           string processedStr;
           Variable res = ProcessNext(out processedStr);
           Trace("MAIN Ret:" + (m_lastResult != null && m_lastResult.IsReturn)+
-                " NULL:" + (m_lastResult == null)+" db.sb="+m_debugging.Debugger.SendBackResult+
+                " NULL:" + (res == null)+" db.sb="+m_debugging.Debugger.SendBackResult+
                 " PTR:" + m_debugging.Pointer + "/" + m_script.Length);
           if (End) {
             cmd = "end";
@@ -137,7 +137,7 @@ namespace SplitAndMerge
     }
     string CreateResult(string filename, int lineNumber, string output, string processed = "")
     {
-      int outputCount = output.Split ('\n').Length;
+      int outputCount = output.Split('\n').Length;
       string result = filename + "\n";
       result += lineNumber + "\n";
       result += outputCount + "\n";
@@ -204,16 +204,17 @@ namespace SplitAndMerge
           }
           stepIn.SteppingIn = SteppingIn;
           stepIn.SteppingOut = SteppingOut;
-          bool done = stepIn.ProcessNextSteppedIn (out processed);
+          bool done = stepIn.ExecuteNext(out processed);
           m_lastResult = stepIn.m_lastResult;
           Output = stepIn.Output;
           stepIn.Output = "";
           if (done) {
-            SendBackResult = m_lastResult != null && m_lastResult.IsReturn;
-            stepIn.SendBackResult = !SendBackResult;
+            //SendBackResult = m_lastResult != null && m_lastResult.IsReturn;
+            //stepIn.SendBackResult = !SendBackResult;
             Trace ("Done Processing. Result Done: " + (m_lastResult != null && m_lastResult.IsReturn));
             stepIn.m_completedStepIn.Set ();
             m_mainInstance.m_steppingIns.Pop ();
+            return null;
           }
           return m_lastResult;
         }
@@ -237,7 +238,7 @@ namespace SplitAndMerge
         return null;
       }
     }
-    bool ExecuteNext (out string processed)
+    bool ExecuteNext(out string processed)
     {
       string rest = m_debugging.Rest;
       processed = Output = "";
@@ -275,17 +276,6 @@ namespace SplitAndMerge
     {
       return (m_lastResult != null && m_lastResult.IsReturn) ||
              !debugging.StillValid();
-    }
-
-    bool ProcessNextSteppedIn(out string processed)
-    {
-      processed = "";
-
-      bool done = ExecuteNext(out processed);
-      if (done) {
-        return true; // done.
-      }
-      return false;
     }
 
     public Variable DebugBlockIfNeeded(ParsingScript stepInScript)
@@ -337,11 +327,14 @@ namespace SplitAndMerge
     {
       Output = customScript.Debugger.Output;
     }
-    public void AddOutput(string output)
+    public void AddOutput(string output, ParsingScript script)
     {
       if (!string.IsNullOrEmpty(Output) && !Output.EndsWith("\n")) {
         Output += "\n";
       }
+      int origLineNumber = script.GetOriginalLineNumber ();
+      string filename = Path.GetFullPath(script.Filename);
+      Output += origLineNumber + "\t" + filename + "\n";
       Output += output;//.Replace('\n', ' ');
     }
 
