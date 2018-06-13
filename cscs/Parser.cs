@@ -99,6 +99,9 @@ namespace SplitAndMerge
         // item is a function or if the next item is starting with a START_ARG '('.
         ParserFunction func = new ParserFunction(script, token, ch, ref action);
         Variable current = func.GetValue(script);
+        if (current == null) {
+          current = Variable.EmptyInstance;
+        }
         current.ParsingToken = token;
 
         if (negated > 0 && current.Type == Variable.VarType.NUMBER) {

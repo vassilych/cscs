@@ -29,7 +29,7 @@ namespace SplitAndMerge
         Console.WriteLine("Goodbye! ¡Adiós! Ciao! Adieu! Adeus! Tschüss! Пока! 再见 さようなら הֱיה שלום وداعا");
       };
 
-      ClearLine ();
+      ClearLine();
 
       // Subscribe to the printing events from the interpreter.
       // A printing event will be triggered after each successful statement

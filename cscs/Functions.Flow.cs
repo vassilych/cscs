@@ -591,14 +591,14 @@ namespace SplitAndMerge
 
       Variable result = null;
       if (script != null && script.Debugger != null) {
-        result = script.Debugger.StepInIfNeeded (tempScript);
+        result = script.Debugger.StepInIncludeIfNeeded(tempScript);
       }
 
       while (tempScript.Pointer < includeScript.Length) {
         result = tempScript.ExecuteTo();
         tempScript.GoToNextStatement();
       }
-      return result;
+      return result == null ? Variable.EmptyInstance : result;
     }
   }
 

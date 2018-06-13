@@ -21,6 +21,7 @@ namespace SplitAndMerge
     string m_script;
 
     public bool Continue        { get; private set; }
+    public bool InInclude       { get; private set; }
     public bool SteppingIn      { get; private set; }
     public bool SteppingOut     { get; private set; }
     public int  Id              { get; private set; }
@@ -317,6 +318,21 @@ namespace SplitAndMerge
       Trace ("Finished StepIn");
       return m_lastResult;
     }
+    public Variable StepInIncludeIfNeeded(ParsingScript stepInScript)
+    {
+      stepInScript.Debugger = this;
+      if (!SteppingIn) {
+        Continue = true;
+        return null;
+      }
+
+      Trace ("Starting StepInInclude");
+      StepIn(stepInScript);
+
+      Trace ("Finished StepInInclude");
+      SendBackResult = true;
+      return m_lastResult;
+    }
     public void PostProcessCustomFunction(ParsingScript customScript)
     {
       Output = customScript.Debugger.Output;
@@ -344,10 +360,10 @@ namespace SplitAndMerge
 
       string result = CreateResult(filename, origLineNumber, Output);
       result = "next" + "\n" + result;
-      stepIn.Trace ("Started StepIn, this: " + Id);
+      stepIn.Trace("Started StepIn, this: " + Id);
       SendBack(result);
 
-      stepIn.m_completedStepIn.WaitOne ();
+      stepIn.m_completedStepIn.WaitOne();
       stepIn.Continue = m_mainInstance.Continue;
       stepIn.SteppingOut = m_mainInstance.SteppingOut;
       stepIn.Trace ("Finished StepIn, this: " + Id);
