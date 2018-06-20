@@ -27,6 +27,7 @@ namespace SplitAndMerge
     public int  Id              { get; private set; }
     public bool ProcessingBlock { get; set; }
     public bool End             { get; set; }
+    public bool ReplMode        { get; set; }
     public bool SendBackResult  { get; set; } = true;
     public string Output        { get; set; } = "";
 
@@ -69,7 +70,7 @@ namespace SplitAndMerge
     void ProcessClientCommand(string data)
     {
       string [] parts = data.Split(new char [] { '|' });
-      string cmd = parts[0];
+      string cmd = parts[0].ToLower();
       string result = "N/A";
       SteppingIn = SteppingOut = false;
       SendBackResult = true;
@@ -89,6 +90,11 @@ namespace SplitAndMerge
       } else if (cmd == "vars") {
         result = GetVariables ();
 
+      } else if (cmd == "repl") {
+        result = ProcessRepl(data.Substring (cmd.Length + 1));
+        SendBack(result);
+        return;
+
       } else if (cmd == "all") {
         result = DebugScript();
 
@@ -106,6 +112,10 @@ namespace SplitAndMerge
       } else if (cmd == "stepout") {
         SteppingOut = true;
         cmd = "next";
+
+      } else if (cmd != "next") {
+        Console.WriteLine("UNKNOWN CMD: {0}", cmd);
+        return;
       }
 
       if (cmd == "next") {
@@ -187,6 +197,33 @@ namespace SplitAndMerge
       ParsingScript debugging = m_steppingIns.Count > 0 ? m_steppingIns.Peek ().m_debugging : m_debugging;
       string stack = debugging.GetStack();
       return stack.Trim();
+    }
+
+    string ProcessRepl(string repl)
+    {
+      ReplMode = true;
+
+      Dictionary<int, int> char2Line;
+      string script = Utils.ConvertToScript(repl, out char2Line);
+      ParsingScript tempScript = new ParsingScript (script, 0, char2Line);
+      tempScript.OriginalScript = repl;
+      tempScript.Debugger = this;
+
+      Variable result = null;
+
+      try {
+        while (tempScript.Pointer < script.Length) {
+          result = tempScript.ExecuteTo();
+          tempScript.GoToNextStatement();
+        }
+      } catch (Exception exc) {
+        return "Exception thrown: " + exc.Message;
+      }
+
+      string stringRes = Output + "\n";
+      stringRes += result == null ? "" : result.AsString();
+
+      return stringRes;    
     }
 
     Variable ProcessNext(out string processed)
@@ -280,7 +317,7 @@ namespace SplitAndMerge
 
     public Variable DebugBlockIfNeeded(ParsingScript stepInScript)
     {
-      if (SteppingOut || Continue) {
+      if (SteppingOut || Continue || ReplMode) {
         Continue = true;
         return null;
       }
@@ -297,7 +334,7 @@ namespace SplitAndMerge
     public Variable StepInIfNeeded(ParsingScript stepInScript)
     {
       stepInScript.Debugger = this;
-      if (!SteppingIn) {
+      if (!SteppingIn || ReplMode) {
         Continue = true;
         return null;
       }
@@ -311,7 +348,7 @@ namespace SplitAndMerge
     public Variable StepInIncludeIfNeeded(ParsingScript stepInScript)
     {
       stepInScript.Debugger = this;
-      if (!SteppingIn) {
+      if (!SteppingIn || ReplMode) {
         Continue = true;
         return null;
       }
@@ -331,6 +368,10 @@ namespace SplitAndMerge
     {
       if (!string.IsNullOrEmpty(Output) && !Output.EndsWith("\n")) {
         Output += "\n";
+      }
+      if (ReplMode) {
+        Output += output;
+        return;
       }
       int origLineNumber = script.GetOriginalLineNumber ();
       string filename = Path.GetFullPath(script.Filename);

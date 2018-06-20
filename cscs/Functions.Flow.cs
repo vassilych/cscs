@@ -134,7 +134,7 @@ namespace SplitAndMerge
 
       ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
 
-      return new Variable(funcName);
+      return Variable.EmptyInstance;
     }
   }
 

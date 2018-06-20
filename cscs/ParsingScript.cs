@@ -94,8 +94,8 @@ namespace SplitAndMerge
       while(script != null) {
         int pointer = script == this ? script.Pointer + firstOffset : script.Pointer;
         int lineNumber = script.GetOriginalLineNumber(pointer);
-        string filename = Path.GetFullPath (script.Filename);
-        string line = File.ReadLines(filename).Skip(lineNumber).Take(1).First();
+        string filename = string.IsNullOrWhiteSpace(script.Filename) ? "" : Path.GetFullPath(script.Filename);
+        string line = string.IsNullOrWhiteSpace(filename) ? "" : File.ReadLines(filename).Skip(lineNumber).Take(1).First();
         result.AppendLine ("" + lineNumber);
         result.AppendLine(filename);
         result.AppendLine(line.Trim());
