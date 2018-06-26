@@ -164,6 +164,8 @@ namespace SplitAndMerge
     public const string WRITENL = "writenl";
     public const string WRITE_CONSOLE = "WriteConsole";
 
+    public const string START_DEBUGGER = "StartDebugger";
+
     public static string END_ARG_STR = END_ARG.ToString();
     public static string NULL_ACTION = END_ARG.ToString();
 

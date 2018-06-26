@@ -60,8 +60,9 @@ namespace SplitAndMerge
 
     public void Init()
     {
-
-      ParserFunction.CleanUp ();
+      #if UNITY_EDITOR == false && __ANDROID__ == false && __IOS__ == false
+      ParserFunction.CleanUp();
+      #endif
 
       ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
       ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
