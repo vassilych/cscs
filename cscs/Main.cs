@@ -39,7 +39,7 @@ namespace SplitAndMerge
       //ProcessScript("include(\"scripts/functions.cscs\");");
 
       if (args.Length < 1 || args[1] == "debugger") {
-        DebuggerServer.StartServer();
+        DebuggerServer.StartServerBlocked(13337);
         return;
       }
 

@@ -21,10 +21,10 @@ namespace SplitAndMerge
 
     public static void StartServer(int port = 13337)
     {
-      ThreadPool.QueueUserWorkItem(StartServer, port);
+      ThreadPool.QueueUserWorkItem(StartServerBlocked, port);
     }
 
-    static void StartServer(Object threadContext)
+    public static void StartServerBlocked(Object threadContext)
     {
       int port = (int)threadContext;
       IPAddress localAddr = IPAddress.Parse("127.0.0.1");
