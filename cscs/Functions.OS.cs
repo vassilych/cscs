@@ -1207,4 +1207,25 @@ namespace SplitAndMerge
       return Variable.EmptyInstance;
     }
   }
+
+  class DebuggerFunction : ParserFunction
+  {
+    public bool DebuggerAttached { private set; get; }
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      List<Variable> args = script.GetFunctionArgs();
+      int port = Utils.GetSafeInt(args, 0, 13337);
+      DebuggerServer.StartServer(port);
+
+      DebuggerServer.OnRequest += ProcessRequest;
+      DebuggerAttached = true;
+
+      return Variable.EmptyInstance;
+    }
+    public void ProcessRequest(Debugger debugger, string request)
+    {
+      debugger.ProcessClientCommands(request);
+    }
+  }
 }

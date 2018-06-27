@@ -62,6 +62,7 @@ namespace SplitAndMerge
     {
       #if UNITY_EDITOR == false && __ANDROID__ == false && __IOS__ == false
       ParserFunction.CleanUp();
+      ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
       #endif
 
       ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
