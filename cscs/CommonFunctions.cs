@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using SplitAndMerge;
 
 #if __ANDROID__
 using scripting.Droid;
-#endif
-#if __IOS__
+#elif __IOS__
 using scripting.iOS;
 #endif
 
@@ -23,7 +24,9 @@ namespace scripting
       ParserFunction.RegisterFunction("AddLabel", new AddWidgetFunction("Label"));
       ParserFunction.RegisterFunction("AddTextEdit", new AddWidgetFunction("TextEdit"));
       ParserFunction.RegisterFunction("AddTextView", new AddWidgetFunction("TextView"));
+      ParserFunction.RegisterFunction("AddTextEditView", new AddWidgetFunction("TextEditView"));
       ParserFunction.RegisterFunction("AddImageView", new AddWidgetFunction("ImageView"));
+      ParserFunction.RegisterFunction("AddPickerView", new AddWidgetFunction("Picker"));
       ParserFunction.RegisterFunction("AddTypePickerView", new AddWidgetFunction("TypePicker"));
       ParserFunction.RegisterFunction("AddSwitch", new AddWidgetFunction("Switch"));
       ParserFunction.RegisterFunction("AddSlider", new AddWidgetFunction("Slider"));
@@ -36,7 +39,8 @@ namespace scripting
 
       ParserFunction.RegisterFunction("AddWidgetData", new AddWidgetDataFunction());
       ParserFunction.RegisterFunction("AddWidgetImages", new AddWidgetImagesFunction());
-      ParserFunction.RegisterFunction("AddTab", new AddTabFunction());
+      ParserFunction.RegisterFunction("AddTab", new AddTabFunction(true));
+      ParserFunction.RegisterFunction("AddOrSelectTab", new AddTabFunction(false));
       ParserFunction.RegisterFunction("GetSelectedTab", new GetSelectedTabFunction());
       ParserFunction.RegisterFunction("SelectTab", new SelectTabFunction());
       ParserFunction.RegisterFunction("OnTabSelected", new OnTabSelectedFunction());
@@ -51,9 +55,14 @@ namespace scripting
       ParserFunction.RegisterFunction("SetVisible", new ShowHideFunction(true));
       ParserFunction.RegisterFunction("RemoveView", new RemoveViewFunction());
       ParserFunction.RegisterFunction("RemoveAllViews", new RemoveAllViewsFunction());
-      ParserFunction.RegisterFunction("MoveView", new MoveViewFunction());
+      ParserFunction.RegisterFunction("RemoveTabViews", new RemoveAllViewsFunction());
+      ParserFunction.RegisterFunction("GetX", new GetCoordinateFunction(true));
+      ParserFunction.RegisterFunction("GetY", new GetCoordinateFunction(false));
+      ParserFunction.RegisterFunction("MoveView", new MoveViewFunction(false));
+      ParserFunction.RegisterFunction("MoveViewTo", new MoveViewFunction(true));
       ParserFunction.RegisterFunction("SetBackgroundColor", new SetBackgroundColorFunction());
       ParserFunction.RegisterFunction("SetBackground", new SetBackgroundImageFunction());
+      ParserFunction.RegisterFunction("AddText", new AddTextFunction());
       ParserFunction.RegisterFunction("SetText", new SetTextFunction());
       ParserFunction.RegisterFunction("GetText", new GetTextFunction());
       ParserFunction.RegisterFunction("SetValue", new SetValueFunction());
@@ -61,11 +70,22 @@ namespace scripting
       ParserFunction.RegisterFunction("SetImage", new SetImageFunction());
       ParserFunction.RegisterFunction("SetFontColor", new SetFontColorFunction());
       ParserFunction.RegisterFunction("SetFontSize", new SetFontSizeFunction());
+      ParserFunction.RegisterFunction("SetFont", new SetFontFunction());
+      ParserFunction.RegisterFunction("SetBold", new SetFontTypeFunction(SetFontTypeFunction.FontType.BOLD));
+      ParserFunction.RegisterFunction("SetItalic", new SetFontTypeFunction(SetFontTypeFunction.FontType.ITALIC));
+      ParserFunction.RegisterFunction("SetNormalFont", new SetFontTypeFunction(SetFontTypeFunction.FontType.NORMAL));
       ParserFunction.RegisterFunction("AlignText", new AlignTitleFunction());
       ParserFunction.RegisterFunction("SetSize", new SetSizeFunction());
+      ParserFunction.RegisterFunction("Relative", new RelativeSizeFunction());
+      ParserFunction.RegisterFunction("ShowHideKeyboard", new ShowHideKeyboardFunction());
+      ParserFunction.RegisterFunction("IsKeyboard", new IsKeyboardFunction());
 
       ParserFunction.RegisterFunction("AddAction", new AddActionFunction());
+      ParserFunction.RegisterFunction("AllowedOrientation", new AllowedOrientationFunction());
       ParserFunction.RegisterFunction("OnOrientationChange", new OrientationChangeFunction());
+      ParserFunction.RegisterFunction("RegisterOrientationChange", new RegisterOrientationChangeFunction());
+      ParserFunction.RegisterFunction("OnEnterBackground", new OnEnterBackgroundFunction());
+      ParserFunction.RegisterFunction("KillMe", new KillMeFunction());
       ParserFunction.RegisterFunction("ShowToast", new ShowToastFunction());
       ParserFunction.RegisterFunction("AlertDialog", new AlertDialogFunction());
       ParserFunction.RegisterFunction("CallNative", new InvokeNativeFunction());
@@ -75,21 +95,20 @@ namespace scripting
       ParserFunction.RegisterFunction("StopVoiceRecognition", new StopVoiceFunction());
       ParserFunction.RegisterFunction("Localize", new LocalizedFunction());
       ParserFunction.RegisterFunction("TranslateTabBar", new TranslateTabBar());
-      ParserFunction.RegisterFunction("InitAds", new InitAds());
-      ParserFunction.RegisterFunction("ShowInterstitial", new ShowInterstitial());
-      ParserFunction.RegisterFunction("AddBanner", new AddWidgetFunction("AdMobBanner"));
       ParserFunction.RegisterFunction("InitIAP", new InitIAPFunction());
       ParserFunction.RegisterFunction("InitTTS", new InitTTSFunction());
       ParserFunction.RegisterFunction("Purchase", new PurchaseFunction());
       ParserFunction.RegisterFunction("Restore", new RestoreFunction());
       ParserFunction.RegisterFunction("ProductIdDescription", new ProductIdDescriptionFunction());
       ParserFunction.RegisterFunction("ReadFile", new ReadFileFunction());
+      ParserFunction.RegisterFunction("ReadFileAsString", new ReadFileFunction(true));
       ParserFunction.RegisterFunction("Schedule", new PauseFunction(true));
       ParserFunction.RegisterFunction("CancelSchedule", new PauseFunction(false));
       ParserFunction.RegisterFunction("GetDeviceLocale", new GetDeviceLocale());
       ParserFunction.RegisterFunction("SetAppLocale", new SetAppLocale());
       ParserFunction.RegisterFunction("GetSetting", new GetSettingFunction());
       ParserFunction.RegisterFunction("SetSetting", new SetSettingFunction());
+      ParserFunction.RegisterFunction("SetStyle", new SetStyleFunction());
       ParserFunction.RegisterFunction("DisplayWidth", new GadgetSizeFunction(true));
       ParserFunction.RegisterFunction("DisplayHeight", new GadgetSizeFunction(false));
       ParserFunction.RegisterFunction("Orientation", new OrientationFunction());
@@ -97,16 +116,75 @@ namespace scripting
       ParserFunction.RegisterFunction("SearchTrie", new SearchTrieFunction());
       ParserFunction.RegisterFunction("ImportFile", new ImportFileFunction());
       ParserFunction.RegisterFunction("OpenUrl", new OpenURLFunction());
+      ParserFunction.RegisterFunction("WebRequest", new WebRequestFunction());
 
       ParserFunction.RegisterFunction("_ANDROID_", new CheckOSFunction(CheckOSFunction.OS.ANDROID));
       ParserFunction.RegisterFunction("_IOS_", new CheckOSFunction(CheckOSFunction.OS.IOS));
-      ParserFunction.RegisterFunction("_VERSION_", new GetVersionFunction());
+      ParserFunction.RegisterFunction("_DEVICE_INFO_", new GetDeviceInfoFunction());
+      ParserFunction.RegisterFunction("_VERSION_INFO_", new GetVersionInfoFunction());
       ParserFunction.RegisterFunction("_VERSION_NUMBER_", new GetVersionNumberFunction());
       ParserFunction.RegisterFunction("CompareVersions", new CompareVersionsFunction());
 
+      ParserFunction.RegisterFunction("Run", new RunScriptFunction());
       ParserFunction.RegisterFunction("SetOptions", new SetOptionsFunction());
+      ParserFunction.RegisterFunction("StartDebugger", new DebuggerFunction());
+    }
+    public static void RunScript(string fileName)
+    {
+      RegisterFunctions();
 
+#if __ANDROID__
+      UIVariable.WidgetTypes.Add(new DroidVariable());
+#elif __IOS__
+      UIVariable.WidgetTypes.Add(new iOSVariable());
+#endif
 
+      string script = FileToString(fileName);
+      Run(script);
+    }
+
+    public static Variable Run(string script)
+    {
+      Variable result = null;
+      try {
+        result = Interpreter.Instance.Process(script);
+      } catch (Exception exc) {
+        Console.WriteLine("Exception: " + exc.Message);
+        Console.WriteLine(exc.StackTrace);
+        ParserFunction.InvalidateStacksAfterLevel(0);
+        throw;
+      }
+      return result;
+    }
+    public static string FileToString(string filename)
+    {
+      string contents = "";
+#if __ANDROID__
+      Android.Content.Res.AssetManager assets = MainActivity.TheView.Assets;
+      using (StreamReader sr = new StreamReader(assets.Open(filename))) {
+        contents = sr.ReadToEnd();
+      }
+#elif __IOS__
+      string[] lines = System.IO.File.ReadAllLines(filename);
+      contents = string.Join("\n", lines);
+#endif
+      return contents;
+    }
+  }
+
+  public class RelativeSizeFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name);
+
+      double original   = Utils.GetSafeDouble(args, 0);
+      double multiplier = Utils.GetSafeDouble(args, 1);
+      double relative   = AutoScaleFunction.TransformSize(original,
+                          AutoScaleFunction.GetRealScreenSize(), multiplier);
+      
+      return new Variable(relative);
     }
   }
 
@@ -119,12 +197,9 @@ namespace scripting
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-          Constants.START_ARG, Constants.END_ARG, out isList);
-      Utils.CheckArgs(args.Count, 1, m_name);
+      List<Variable> args = script.GetFunctionArgs();
 
-      ScaleX = Utils.GetSafeDouble(args, 0);
+      ScaleX = Utils.GetSafeDouble(args, 0, 1.0);
       ScaleY = Utils.GetSafeDouble(args, 1, ScaleX);
 
       return Variable.EmptyInstance;
@@ -137,50 +212,122 @@ namespace scripting
       }
       return isWidth ? ScaleX : ScaleY;
     }
-    public static void TransformSizes(ref int width, ref int height, int screenWidth, string option, double extra = 0.0)
+    public static void TransformSizes(ref int width, ref int height,
+                                      int screenWidth, double extra = 0.0)
     {
-      if (!string.IsNullOrWhiteSpace(option) && option != "auto") {
-        return;
-      }
-      /*if (extra == 0.0) {
-        extra = ScaleX;
-        if (extra == 0.0) {
-          return;
-        }
-      }*/
-
-      int newWidth = TransformSize(width, screenWidth, extra);
+      int newWidth = (int)TransformSize(width, screenWidth, extra);
       if (width != 0) {
         double ratio = (double)newWidth / (double)width;
         height = (int)(height * ratio);
       } else {
-        height = TransformSize(height, screenWidth, extra);
+        height = (int)TransformSize(height, screenWidth, extra);
       }
       width = newWidth;
 
       return;
     }
-    public static int TransformSize(int size, int screenWidth, double extra)
+    public static double TransformSize(double size, int screenWidth, double extra = 0.0)
     {
-      //if (screenWidth <= BASE_WIDTH) {
-      //  return size;
-      //}
       if (extra == 0.0) {
         extra = ScaleX;
         if (extra == 0.0) {
           return size;
         }
       }
-      return (int)(size * screenWidth * extra / BASE_WIDTH);
-    }  }
-  public class SetBaseWidthFunction : ParserFunction
-  {
+      //int oldSize = (int)(size * screenWidth * extra / BASE_WIDTH);
+      double newSize = (size * screenWidth / BASE_WIDTH);
+      double delta = (newSize - size) * extra;
+      size = (size + delta);
 
+      return size;
+    }
+    public static int GetRealScreenSize(bool width = true)
+    {
+#if __ANDROID__
+      var size = UtilsDroid.GetScreenSize();
+      return width ? size.Width : size.Height;
+#elif __IOS__
+      return width ? (int)UtilsiOS.GetRealScreenWidth() : (int)UtilsiOS.GetRealScreenHeight();
+#endif
+    }
+
+    public static float ConvertFontSize(float original, int widgetWidth)
+    {
+      float newSize = original;
+      if (widgetWidth <= 480) {
+        newSize -= 2.5f;
+      } else if (widgetWidth <= 540) {
+        newSize -= 2.0f;
+      } else if (widgetWidth <= 600) {
+        newSize -= 1.0f;
+      } else if (widgetWidth <= 640) {
+        newSize -= 0f;
+      } else if (widgetWidth <= 720) {
+        newSize += 0.5f;
+      } else if (widgetWidth <= 800) {
+        newSize += 1.0f;
+      } else if (widgetWidth <= 900) {
+        newSize += 1.5f;
+      } else if (widgetWidth <= 960) {
+        newSize += 2.0f;
+      } else if (widgetWidth <= 1024) {
+        newSize += 2.5f; 
+      } else if (widgetWidth <= 1200) {
+        newSize += 3.0f;
+      } else if (widgetWidth <= 1300) {
+        newSize += 3.5f;
+      } else if (widgetWidth <= 1400) {
+        newSize += 4.0f;
+      } else {
+        newSize += 4.0f;
+      }
+
+      return newSize;
+    }
+  }
+  public class RunScriptFunction : ParserFunction
+  {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
+      Utils.CheckArgs(args.Count, 1, m_name);
+
+      string strScript = Utils.GetSafeString(args, 0);
+      Variable result = null;
+
+      ParserFunction.StackLevelDelta++;
+      try {
+        result = Execute(strScript);
+      } finally {
+        ParserFunction.StackLevelDelta--;
+      }
+
+      return result != null ? result : Variable.EmptyInstance;
+    }
+
+    public static Variable Execute(string text, string filename = "")
+    {
+      string[] lines = text.Split(new char[] { '\n' });
+
+      Dictionary<int, int> char2Line;
+      string includeScript = Utils.ConvertToScript(text, out char2Line);
+      ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
+      tempScript.Filename = filename;
+      tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
+
+      Variable result = null;
+      while (tempScript.Pointer < includeScript.Length) {
+        result = tempScript.ExecuteTo();
+        tempScript.GoToNextStatement();
+      }
+      return result;
+    }
+  }
+  public class SetBaseWidthFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
 
       int baseWidth = Utils.GetSafeInt(args, 0);
@@ -218,9 +365,7 @@ namespace scripting
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
       int limit = args[0].AsInt();
       Utils.CheckPosInt(args[0]);
@@ -248,9 +393,7 @@ namespace scripting
 
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
 
       string id = Utils.GetSafeString(args, 0);
@@ -277,15 +420,13 @@ namespace scripting
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 2, m_name);
 
       Trie trie = Utils.GetSafeVariable(args, 0, null) as Trie;
       Utils.CheckNotNull(trie, m_name);
       string text = args[1].AsString();
-      int max = Utils.GetSafeInt(args, 2, 7);
+      int max = Utils.GetSafeInt(args, 2, 10);
 
       List<WordHint> words = new List<WordHint>();
 
@@ -299,22 +440,28 @@ namespace scripting
       return new Variable(results);
     }
   }
-  public class ProductIdDescriptionFunction : ParserFunction
+  public class WebRequestFunction : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 1, m_name);
-      string productId = args[0].AsString();
+      string uri = args[0].AsString();
 
-      string description = IAP.GetDescription(productId);
+      string responseFromServer = "";
+      WebRequest request = WebRequest.Create(uri);
 
-      return new Variable(description);
+      using (WebResponse response = request.GetResponse()) {
+        Console.WriteLine("{0} status: {1}", uri,
+                          ((HttpWebResponse)response).StatusDescription);
+        using (StreamReader sr = new StreamReader(response.GetResponseStream())) {
+            responseFromServer = sr.ReadToEnd();
+        }
+      }
+
+      return new Variable(responseFromServer);
     }
   }
-
   class CheckOSFunction : ParserFunction
   {
     public enum OS { NONE, IOS, ANDROID, WINDOWS_PHONE, MAC, WINDOWS };
@@ -331,28 +478,44 @@ namespace scripting
 
 #if __ANDROID__
             isTheOS = m_os == OS.ANDROID;
-#endif
-#if __IOS__
+#elif __IOS__
       isTheOS = m_os == OS.IOS;
-#endif
-#if SILVERLIGHT
+#elif SILVERLIGHT
             isTheOS = m_os == OS.WINDOWS_PHONE;
 #endif
 
       return new Variable(isTheOS);
     }
   }
-  class GetVersionFunction : ParserFunction
+  class GetDeviceInfoFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      string deviceName = "";
+
+#if __ANDROID__
+      deviceName   = Android.OS.Build.Brand;
+      string model = Android.OS.Build.Model;
+      if (!model.Contains("Android")) {
+        // Simulators have "Android" in both, Brand and Model.
+        deviceName += " " + model;
+      }
+#elif __IOS__
+      deviceName = UtilsiOS.GetDeviceName();
+#endif
+      return new Variable(deviceName);
+    }
+  }
+  class GetVersionInfoFunction : ParserFunction
   {
     protected override Variable Evaluate(ParsingScript script)
     {
       string version = "";
 
 #if __ANDROID__
-      version = Android.OS.Build.Brand + " " + Android.OS.Build.VERSION.Release +
-                " - " + Android.OS.Build.VERSION.Sdk;
-#endif
-#if __IOS__
+      version = Android.OS.Build.VERSION.Release + " - " + 
+                Android.OS.Build.VERSION.Sdk;
+#elif __IOS__
       version = UIKit.UIDevice.CurrentDevice.SystemName + " " +
                 UIKit.UIDevice.CurrentDevice.SystemVersion;
 #endif
@@ -365,8 +528,7 @@ namespace scripting
     {
 #if __ANDROID__
       string strVersion = Android.OS.Build.VERSION.Release;
-#endif
-#if __IOS__
+#elif __IOS__
       string strVersion = UIKit.UIDevice.CurrentDevice.SystemVersion;
 #endif
 
@@ -377,9 +539,7 @@ namespace scripting
   {
     protected override Variable Evaluate(ParsingScript script)
     {
-      bool isList = false;
-      List<Variable> args = Utils.GetArgs(script,
-                            Constants.START_ARG, Constants.END_ARG, out isList);
+      List<Variable> args = script.GetFunctionArgs();
       Utils.CheckArgs(args.Count, 2, m_name);
 
       string version1 = Utils.GetSafeString(args, 0);
@@ -412,6 +572,32 @@ namespace scripting
         return string.Compare(part1, part2);
       }
       return part1.Length < part2.Length ? -1 : 1;
+    }
+  }
+  class DebuggerFunction : ParserFunction
+  {
+    protected override Variable Evaluate(ParsingScript script)
+    {
+      List<Variable> args = script.GetFunctionArgs();
+      int port = Utils.GetSafeInt(args, 0, 13337);
+      DebuggerServer.StartServer(port);
+
+      DebuggerServer.OnRequest += ProcessRequest;
+      return Variable.EmptyInstance;
+    }
+    public void ProcessRequest(Debugger debugger, string request)
+    {
+#if __ANDROID__
+      MainActivity.TheView.RunOnUiThread(() => {
+        debugger.ProcessClientCommands(request);
+      });
+#elif __IOS__
+      AppDelegate.GetCurrentController().InvokeOnMainThread(() => {
+        debugger.ProcessClientCommands(request);
+      });
+#else
+      debugger.ProcessClientCommands(request);
+#endif
     }
   }
 }

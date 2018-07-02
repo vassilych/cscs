@@ -60,9 +60,9 @@ namespace SplitAndMerge
     public void ProcessClientCommands(string data)
     {
       string [] commands = data.Split (new char [] { '\n' });
-      foreach (string cmd in commands) {
-        if (!string.IsNullOrWhiteSpace(cmd)) {
-          ProcessClientCommand(cmd);
+      foreach (string dataCmd in commands) {
+        if (!string.IsNullOrWhiteSpace(dataCmd)) {
+          ProcessClientCommand(dataCmd);
         }
       }
     }
