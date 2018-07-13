@@ -66,10 +66,7 @@ namespace SplitAndMerge
 
         public void Init()
         {
-#if __ANDROID__ == false && __IOS__ == false
-            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
-#endif
-#if UNITY_EDITOR == false && __ANDROID__ == false && __IOS__ == false
+#if UNITY_EDITOR == false && UNITY_STANDALONE== false && __ANDROID__ == false && __IOS__ == false
             ParserFunction.CleanUp();
             ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
@@ -78,7 +75,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CD, new CdFunction());
             ParserFunction.RegisterFunction(Constants.CD__, new Cd__Function());
             ParserFunction.RegisterFunction(Constants.CONNECTSRV, new ClientSocket());
-            ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COPY, new CopyFunction());
             ParserFunction.RegisterFunction(Constants.DELETE, new DeleteFunction());
             ParserFunction.RegisterFunction(Constants.DIR, new DirFunction());
@@ -102,7 +98,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TAIL, new TailFunction());
             ParserFunction.RegisterFunction(Constants.TIMESTAMP, new TimestampFunction());
             ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
-            ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
             ParserFunction.RegisterFunction(Constants.WRITELINE, new WriteLineFunction());
             ParserFunction.RegisterFunction(Constants.WRITELINES, new WriteLinesFunction());
 #endif
@@ -130,6 +125,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
             ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
             ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
+            ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
@@ -163,6 +159,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
             ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
             ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());
+            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
             ParserFunction.RegisterFunction(Constants.STR_CONTAINS, new StringManipulationFunction(StringManipulationFunction.Mode.CONTAINS));
             ParserFunction.RegisterFunction(Constants.STR_LOWER, new StringManipulationFunction(StringManipulationFunction.Mode.LOWER));
             ParserFunction.RegisterFunction(Constants.STR_ENDS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.ENDS_WITH));
@@ -187,6 +184,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+            ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
             ParserFunction.RegisterFunction(Constants.WRITE_CONSOLE, new WriteToConsole());
 
             ParserFunction.AddAction(Constants.ASSIGNMENT, new AssignFunction());
@@ -208,7 +206,7 @@ namespace SplitAndMerge
         private void ReadConfig()
         {
             MAX_LOOPS = ReadConfig("maxLoops", 256000);
-#if UNITY_EDITOR == false && __ANDROID__ == false && __IOS__ == false
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             if (ConfigurationManager.GetSection("Languages") == null)
             {
                 return;
@@ -355,7 +353,7 @@ namespace SplitAndMerge
         public int ReadConfig(string configName, int defaultValue = 0)
         {
             int value = defaultValue;
-#if UNITY_EDITOR == false && __ANDROID__ == false && __IOS__ == false
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             string config = ConfigurationManager.AppSettings[configName];
             if (string.IsNullOrWhiteSpace(config) || !Int32.TryParse(config, out value))
             {
@@ -599,6 +597,8 @@ namespace SplitAndMerge
 
             Variable result = null;
 
+            bool alreadyInTryBlock = script.InTryBlock;
+            script.InTryBlock = true;
             try
             {
                 result = ProcessBlock(script);
@@ -606,6 +606,10 @@ namespace SplitAndMerge
             catch (Exception exc)
             {
                 exception = exc;
+            }
+            finally
+            {
+                script.InTryBlock = alreadyInTryBlock;
             }
 
             if (exception != null || result.IsReturn ||
@@ -710,16 +714,16 @@ namespace SplitAndMerge
             while (script.StillValid())
             {
                 int endGroupRead = script.GoToNextStatement();
-                if (endGroupRead > 0)
+                if (endGroupRead > 0 || !script.StillValid())
                 {
                     return result != null ? result : new Variable();
                 }
 
-                if (!script.StillValid())
+                /*if (!script.StillValid())
                 {
                     throw new ArgumentException("Couldn't process block [" +
                     script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
-                }
+                }*/
                 result = script.ExecuteTo();
 
                 if (result.IsReturn ||
