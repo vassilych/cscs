@@ -338,6 +338,9 @@ namespace SplitAndMerge
                 return null;
             }
 
+            m_startFilename = m_debugging.Filename;
+            m_startLine     = m_debugging.OriginalLineNumber;
+
             ExecuteNext(out processed);
             return LastResult;
         }
@@ -356,8 +359,11 @@ namespace SplitAndMerge
             }
 
             int startPointer = m_debugging.Pointer;
-            m_startFilename  = m_debugging.Filename;
-            m_startLine      = m_debugging.OriginalLineNumber;
+            if (string.IsNullOrWhiteSpace(m_startFilename))
+            {
+                m_startFilename = m_debugging.Filename;
+                m_startLine = m_debugging.OriginalLineNumber;
+            }
 
             bool done = false;
             if (ProcessingBlock)
@@ -591,6 +597,7 @@ namespace SplitAndMerge
                     break;
                 }
                 stepIn.Output = "";
+                m_startFilename = null;
                 done = stepIn.ExecuteNext(out processed);
 
                 if (stepIn.LastResult == null)
@@ -608,8 +615,8 @@ namespace SplitAndMerge
                 }
             }
 
-            m_startFilename = stepIn.m_debugging.Filename;
-            m_startLine = stepIn.m_debugging.OriginalLineNumber;
+            //m_startFilename = stepIn.m_debugging.Filename;
+            //m_startLine = stepIn.m_debugging.OriginalLineNumber;
 
             MainInstance?.m_steppingIns.Pop();
             stepIn.Trace("Finished StepIn, this: " + Id);
