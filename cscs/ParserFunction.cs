@@ -211,6 +211,7 @@ namespace SplitAndMerge
                              Constants.TypeToString(gvf.Value.Type).ToLower() + ":" + value;
             return varData.Trim();
         }
+
         public static string GetVariables()
         {
             StringBuilder sb = new StringBuilder();

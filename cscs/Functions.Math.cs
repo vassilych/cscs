@@ -4,191 +4,193 @@ using System.Linq;
 
 namespace SplitAndMerge
 {
-  interface INumericFunction { }
-  interface IArrayFunction { }
-  interface IStringFunction { }
+    interface INumericFunction { }
+    interface IArrayFunction { }
+    interface IStringFunction { }
 
-  class PiFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class PiFunction : ParserFunction, INumericFunction
     {
-      return new Variable(Math.PI);
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return new Variable(Math.PI);
+        }
     }
-  }
 
-  class ExpFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class ExpFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Exp(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Exp(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class PowFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class PowFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 2, m_name, true);
-      Variable arg1 = args[0];
-      Variable arg2 = args[1];
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name, true);
+            Variable arg1 = args[0];
+            Variable arg2 = args[1];
 
-      arg1.Value = Math.Pow(arg1.Value, arg2.Value);
-      return arg1;
+            arg1.Value = Math.Pow(arg1.Value, arg2.Value);
+            return arg1;
+        }
     }
-  }
 
-  class SinFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class SinFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Sin(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Sin(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class CosFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class CosFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Cos(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Cos(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class AsinFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class AsinFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Asin(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Asin(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class AcosFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class AcosFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Acos(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Acos(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class SqrtFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class SqrtFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Sqrt(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Sqrt(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class AbsFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class AbsFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Abs(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Abs(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class CeilFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class CeilFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Ceiling(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Ceiling(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class FloorFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class FloorFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Floor(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Floor(arg.Value);
+            return arg;
+        }
     }
-  }
 
-  class RoundFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class RoundFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name);
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
 
-      int numberDigits = Utils.GetSafeInt(args, 1, 0);
-      args[0].Value = Math.Round(args[0].Value, numberDigits);
-      return args[0];
+            int numberDigits = Utils.GetSafeInt(args, 1, 0);
+            args[0].Value = Math.Round(args[0].Value, numberDigits);
+            return args[0];
+        }
     }
-  }
 
-  class LogFunction : ParserFunction, INumericFunction
-  {
-    protected override Variable Evaluate(ParsingScript script)
+    class LogFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name, true);
-      Variable arg = args[0];
-      arg.Value = Math.Log(arg.Value);
-      return arg;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            Variable arg = args[0];
+            arg.Value = Math.Log(arg.Value);
+            return arg;
+        }
     }
-  }
-  class GetRandomFunction : ParserFunction, INumericFunction
-  {
-    static Random m_random = new Random();
-
-    protected override Variable Evaluate(ParsingScript script)
+    class GetRandomFunction : ParserFunction, INumericFunction
     {
-      List<Variable> args = script.GetFunctionArgs();
-      Utils.CheckArgs(args.Count, 1, m_name);
-      int limit = args[0].AsInt();
-      Utils.CheckPosInt(args[0]);
-      int numberRandoms = Utils.GetSafeInt(args, 1, 1);
+        static Random m_random = new Random();
 
-      if (numberRandoms <= 1) {
-        return new Variable(m_random.Next(0, limit));
-      }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            int limit = args[0].AsInt();
+            Utils.CheckPosInt(args[0]);
+            int numberRandoms = Utils.GetSafeInt(args, 1, 1);
 
-      List<int> available = Enumerable.Range(0, limit).ToList();
-      List<Variable> result = new List<Variable>();
+            if (numberRandoms <= 1)
+            {
+                return new Variable(m_random.Next(0, limit));
+            }
 
-      for (int i = 0; i < numberRandoms && available.Count > 0; i++) {
-        int nextRandom = m_random.Next(0, available.Count);
-        result.Add(new Variable(available[nextRandom]));
-        available.RemoveAt(nextRandom);
-      }
+            List<int> available = Enumerable.Range(0, limit).ToList();
+            List<Variable> result = new List<Variable>();
 
-      return new Variable(result);
+            for (int i = 0; i < numberRandoms && available.Count > 0; i++)
+            {
+                int nextRandom = m_random.Next(0, available.Count);
+                result.Add(new Variable(available[nextRandom]));
+                available.RemoveAt(nextRandom);
+            }
+
+            return new Variable(result);
+        }
     }
-  }
 
 }

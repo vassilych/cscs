@@ -361,48 +361,6 @@ namespace SplitAndMerge
             return result;
         }
 
-        public Variable __Execute()
-        {
-            char[] toArray = Constants.END_PARSE_ARRAY;
-            Variable result = null;
-            Exception exception = null;
-#if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
-            // Do nothing: already on the main thread
-#elif __ANDROID__
-            scripting.Droid.MainActivity.TheView.RunOnUiThread(() => {
-#elif __IOS__
-            scripting.iOS.AppDelegate.GetCurrentController().InvokeOnMainThread(() =>
-            {
-#else
-#endif
-                try
-                {
-                    result = Parser.SplitAndMerge(this, toArray);
-                }
-                catch (ParsingException exc)
-                {
-                    exception = exc;
-                }
-                catch (Exception exc)
-                {
-                    if (InTryBlock)
-                    {
-                        exception = exc;
-                    }
-                    exception = new ParsingException(exc.Message, this, exc);
-                }
-#if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
-            // Do nothing: already on the main thread
-#elif __ANDROID__ || __IOS__
-            });
-#endif
-
-            if (exception != null)
-            {
-                throw exception;
-            }
-            return result;
-        }
         public void ExecuteAll()
         {
             while (StillValid())

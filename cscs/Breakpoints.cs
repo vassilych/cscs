@@ -53,7 +53,8 @@ namespace SplitAndMerge
         public void AddBreakpoint(string filename, int lineNr)
         {
             HashSet<int> bps;
-            if (!m_breakpoints.TryGetValue(filename, out bps)) {
+            if (!m_breakpoints.TryGetValue(filename, out bps))
+            {
                 bps = new HashSet<int>();
             }
             bps.Add(lineNr);
@@ -78,12 +79,13 @@ namespace SplitAndMerge
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(script.Filename)) {
+            if (string.IsNullOrWhiteSpace(script.Filename))
+            {
                 return false;
             }
 
             string filename = Path.GetFileName(script.Filename);
-           
+
             HashSet<int> bps;
             if (!m_breakpoints.TryGetValue(filename, out bps))
             {

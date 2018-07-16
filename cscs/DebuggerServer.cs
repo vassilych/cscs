@@ -71,11 +71,14 @@ namespace SplitAndMerge
 #elif UNITY_EDITOR || UNITY_STANDALONE
       // Do nothing: ProcessQueue() will be called from the Unity Main Thread
 #else
-      try {
-        ProcessQueue ();
-      } catch (Exception exc) {
-        Console.Write ("Exception while waiting for requests: {0}", exc);
-      }
+            try
+            {
+                ProcessQueue();
+            }
+            catch (Exception exc)
+            {
+                Console.Write("Exception while waiting for requests: {0}", exc);
+            }
 #endif
         }
 
@@ -87,10 +90,11 @@ namespace SplitAndMerge
             { // Exit as soon as done processing.
                 Debugger.MainInstance?.ProcessClientCommands(data);
 #else
-      while (true) { // A blocking call.
-        data = m_queue.Take();
+            while (true)
+            { // A blocking call.
+                data = m_queue.Take();
 
-        ThreadPool.QueueUserWorkItem (RunRequestBlocked, data);
+                ThreadPool.QueueUserWorkItem(RunRequestBlocked, data);
 #endif
             }
         }

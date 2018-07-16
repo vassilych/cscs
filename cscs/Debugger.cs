@@ -15,7 +15,7 @@ namespace SplitAndMerge
     {
         public enum Action { NONE, FILE, NEXT, CONTINUE, STEP_IN, STEP_OUT, SET_BP, UNSET_BP };
 
-        public static Debugger MainInstance { get; set;  }
+        public static Debugger MainInstance { get; set; }
         public static Action<string> OnResult;
 
         static int m_id;
@@ -71,7 +71,7 @@ namespace SplitAndMerge
                                   Id, SteppingIn, SteppingOut, Continue, ProcessingBlock, SendBackResult,
                                   m_steppingIns.Count, End, output, msg);
             }
-            catch(Exception exc)
+            catch (Exception exc)
             {
                 Console.WriteLine(exc);
             }
@@ -110,7 +110,7 @@ namespace SplitAndMerge
                 TheBreakpoints.AddBreakpoints(this, data);
                 return;
             }
- 
+
             Action action = StringToAction(cmd);
 
             if (cmd == "file")
@@ -206,7 +206,7 @@ namespace SplitAndMerge
             }
 
             string filename = GetCurrentFilename(script);
-            int lineNumber  = GetCurrentLineNumber(script);
+            int lineNumber = GetCurrentLineNumber(script);
 
             int outputCount = output.Split('\n').Length;
             string result = filename + "\n";
@@ -339,7 +339,7 @@ namespace SplitAndMerge
             }
 
             m_startFilename = m_debugging.Filename;
-            m_startLine     = m_debugging.OriginalLineNumber;
+            m_startLine = m_debugging.OriginalLineNumber;
 
             ExecuteNext(out processed);
             return LastResult;
@@ -414,14 +414,14 @@ namespace SplitAndMerge
             {
 #else
 #endif
-            try
-            {
-                result = script.Execute(toArray);
-            }
-            catch (ParsingException exc)
-            {
-                exception = exc;
-            }
+                try
+                {
+                    result = script.Execute(toArray);
+                }
+                catch (ParsingException exc)
+                {
+                    exception = exc;
+                }
 
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
             // Do nothing: already on the main thread
@@ -439,7 +439,8 @@ namespace SplitAndMerge
         public static void ProcessException(ParsingScript script, ParsingException exc)
         {
             Debugger debugger = script.Debugger != null ? script.Debugger : MainInstance;
-            if (debugger == null) {
+            if (debugger == null)
+            {
                 return;
             }
 
@@ -535,7 +536,8 @@ namespace SplitAndMerge
             SendBackResult = true;
             return LastResult;
         }
-       public Variable StepInIncludeIfNeeded(ParsingScript stepInScript)
+
+        public Variable StepInIncludeIfNeeded(ParsingScript stepInScript)
         {
             stepInScript.Debugger = this;
             if (ReplMode || !SteppingIn)
@@ -551,6 +553,7 @@ namespace SplitAndMerge
             SendBackResult = true;
             return LastResult;
         }
+
         public void PostProcessCustomFunction(ParsingScript customScript)
         {
             Output = customScript.Debugger.Output;
@@ -591,7 +594,7 @@ namespace SplitAndMerge
             {
                 stepIn.m_completedStepIn.WaitOne();
 
-                stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut +", this: " + Id);
+                stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
                 if (Debugger.SteppingOut)
                 {
                     break;
@@ -645,7 +648,7 @@ namespace SplitAndMerge
 
         public static Action StringToAction(string str)
         {
-            switch(str)
+            switch (str)
             {
                 case "next": return Action.NEXT;
                 case "continue": return Action.CONTINUE;
