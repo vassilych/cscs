@@ -10,7 +10,7 @@ namespace SplitAndMerge
         {
             NONE, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
-            BREAK, CONTINUE
+            BREAK, CONTINUE, OBJECT
         };
 
         public Variable()
@@ -133,6 +133,8 @@ namespace SplitAndMerge
         {
             return new Variable();
         }
+
+        public Object Object { get { return AsString(); } }
 
         public void Reset()
         {
@@ -371,7 +373,7 @@ namespace SplitAndMerge
                 sb.Append(Constants.START_GROUP.ToString() +
                          (sameLine ? "" : Environment.NewLine));
             }
-            int count = maxCount < -1 ? m_tuple.Count : Math.Min(maxCount, m_tuple.Count);
+            int count = maxCount < 0 ? m_tuple.Count : Math.Min(maxCount, m_tuple.Count);
             for (int i = 0; i < count; i++)
             {
                 Variable arg = m_tuple[i];
@@ -388,7 +390,7 @@ namespace SplitAndMerge
             if (isList)
             {
                 sb.Append(Constants.END_GROUP.ToString() +
-                         (sameLine ? " " : Environment.NewLine));
+                         (sameLine ? "" : Environment.NewLine));
             }
 
             return sb.ToString();
