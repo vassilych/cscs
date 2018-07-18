@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 //using SignalR.Hubs;
 
@@ -18,6 +19,8 @@ namespace SplitAndMerge
 
         static BlockingCollection<string> m_queue = new BlockingCollection<string>();
         public static BlockingCollection<string> Queue { get { return m_queue; } }
+
+        static List<DebuggerClient> m_clients = new List<DebuggerClient>();
 
         public static void StartServer(int port = 13337)
         {
@@ -34,6 +37,7 @@ namespace SplitAndMerge
             server.Start();
             DebuggerAttached = true;
 
+            Debugger.OnResult += SendBack;
             ThreadPool.QueueUserWorkItem(StartProcessing, null);
 
             while (true)
@@ -44,8 +48,26 @@ namespace SplitAndMerge
                 TcpClient socket = server.AcceptTcpClient();
 
                 DebuggerClient client = new DebuggerClient();
+                m_clients.Add(client);
+
                 ThreadPool.QueueUserWorkItem(o => client.RunClient(socket));
                 Thread.Sleep(1000);
+            }
+        }
+
+        static void SendBack(string str)
+        {
+            int i = 0;
+            while (i < m_clients.Count)
+            {
+                DebuggerClient client = m_clients[i];
+                if (!client.Connected)
+                {
+                    m_clients.RemoveAt(i);
+                    continue;
+                }
+                client.SendBack(str);
+                i++;
             }
         }
 
@@ -108,20 +130,20 @@ namespace SplitAndMerge
 
     public class DebuggerClient
     {
-        public static Action<Debugger, string> OnRequest;
-        public static bool DebuggerAttached { set; get; }
-        bool m_connected = true;
+        public bool Connected { private set; get; }
+        bool m_isRepl;
 
-        static Debugger m_debugger;
-        static TcpClient m_client;
-        static NetworkStream m_stream;
+        Debugger m_debugger;
+        TcpClient m_client;
+        NetworkStream m_stream;
 
         public void RunClient(Object threadContext)
         {
             m_client = (TcpClient)threadContext;
             m_stream = m_client.GetStream();
+            Connected = true;
 
-            Byte[] bytes = new Byte[2048];
+            Byte[] bytes = new Byte[4096];
             string data = null;
             Console.WriteLine("Starting client {0}", m_client.Client.RemoteEndPoint);
 
@@ -130,17 +152,21 @@ namespace SplitAndMerge
 #endif
 
             m_debugger = new Debugger();
-            Debugger.OnResult += SendBack;
 
             int i;
             try
             {
-                while ((i = m_stream.Read(bytes, 0, bytes.Length)) != 0 && m_connected)
+                while ((i = m_stream.Read(bytes, 0, bytes.Length)) != 0 && Connected)
                 {
                     data = System.Text.Encoding.UTF8.GetString(bytes, 0, i);
                     if (data.StartsWith("bye|"))
                     {
                         break;
+                    }
+                    else if (data.StartsWith("repl|"))
+                    {
+                        m_isRepl = true;
+                        DebuggerServer.Queue.Add(data);
                     }
                     else if (m_debugger.CanProcess(data))
                     {
@@ -150,18 +176,12 @@ namespace SplitAndMerge
                     {
                         DebuggerServer.Queue.Add(data);
                     }
-                    if (m_debugger != Debugger.MainInstance)
-                    {
-                        break;
-                    }
                 }
             }
             catch (Exception exc)
             {
                 Console.Write("Client disconnected: {0}", exc.Message);
             }
-
-            Debugger.OnResult -= SendBack;
 
             if (m_debugger == Debugger.MainInstance)
             {
@@ -170,10 +190,19 @@ namespace SplitAndMerge
 
             // Shutdown and end connection
             Console.Write("Closed connection.");
-            m_client.Close();
+            Disconnect();
         }
 
-        void SendBack(string str)
+        void Disconnect()
+        {
+            Connected = false;
+            m_stream.Close();
+            m_client.Close();
+            m_stream.Dispose();
+            m_client.Dispose();
+        }
+
+        public void SendBack(string str)
         {
             byte[] msg = System.Text.Encoding.UTF8.GetBytes(str);
             try
@@ -184,7 +213,12 @@ namespace SplitAndMerge
             catch (Exception exc)
             {
                 Console.Write("Client disconnected: {0}", exc.Message);
-                m_connected = false;
+                Disconnect();
+            }
+
+            if (m_isRepl)
+            {
+                Disconnect();
             }
         }
     }
