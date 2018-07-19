@@ -199,7 +199,6 @@ namespace SplitAndMerge
             m_stream.Close();
             m_client.Close();
             m_stream.Dispose();
-            m_client.Dispose();
         }
 
         public void SendBack(string str)

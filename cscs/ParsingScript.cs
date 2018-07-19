@@ -189,7 +189,8 @@ namespace SplitAndMerge
                 }
             }
 
-            return m_char2Line[lineStart[index]];
+            int charIndex = lineStart[index];
+            return m_char2Line[charIndex];
         }
 
         public char At(int i) { return m_data[i]; }

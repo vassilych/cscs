@@ -192,7 +192,7 @@ namespace SplitAndMerge
 
             if (script != null && script.Debugger != null)
             {
-                result = script.Debugger.StepInIfNeeded(tempScript);
+                result = script.Debugger.StepInFunctionIfNeeded(tempScript);
             }
 
             while (tempScript.Pointer < m_body.Length - 1 &&

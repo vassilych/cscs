@@ -101,7 +101,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.WRITELINE, new WriteLineFunction());
             ParserFunction.RegisterFunction(Constants.WRITELINES, new WriteLinesFunction());
 #endif
-
             ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
             ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
             ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());
@@ -709,7 +708,12 @@ namespace SplitAndMerge
 
             if (script.Debugger != null)
             {
-                result = script.Debugger.DebugBlockIfNeeded(script);
+                bool done = false;
+                result = script.Debugger.DebugBlockIfNeeded(script, ref done);
+                if (done)
+                {
+                    return result;
+                }
             }
             while (script.StillValid())
             {

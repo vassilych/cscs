@@ -21,6 +21,7 @@ namespace SplitAndMerge
         static int m_id;
         static int m_startLine;
         static string m_startFilename;
+        static bool m_firstBlock;
 
         public static bool CheckBreakpointsNeeded { get; private set; }
         public static bool Continue { get; private set; }
@@ -28,9 +29,6 @@ namespace SplitAndMerge
         public static bool SteppingOut { get; private set; }
         public static bool Executing { get; private set; }
         public static Breakpoints TheBreakpoints { get { return MainInstance.m_breakpoints; } }
-
-        ParsingScript m_debugging;
-        string m_script;
 
         public bool ContinueLocal { get; private set; }
         public bool InInclude { get; private set; }
@@ -42,6 +40,9 @@ namespace SplitAndMerge
         public string Output { get; set; } = "";
         public ParsingScript Script { get { return m_debugging; } }
         public Variable LastResult { get; set; }
+
+        ParsingScript m_debugging;
+        string m_script;
 
         Stack<Debugger> m_steppingIns = new Stack<Debugger>();
         AutoResetEvent m_completedStepIn = new AutoResetEvent(false);
@@ -96,6 +97,7 @@ namespace SplitAndMerge
             string result = "N/A";
             SteppingIn = SteppingOut = false;
             SendBackResult = true;
+            m_firstBlock = true;
 
             CheckBreakpointsNeeded = cmd == "continue" || cmd == "stepout";
             Trace("REQUEST: " + data);
@@ -347,6 +349,7 @@ namespace SplitAndMerge
         public bool ExecuteNext(out string processed)
         {
             processed = Output = "";
+            int endGroupRead = 0;
 
             if (m_debugging.Pointer >= m_script.Length - 1)
             {
@@ -365,15 +368,13 @@ namespace SplitAndMerge
                 m_startLine = m_debugging.OriginalLineNumber;
             }
 
-            bool done = false;
             if (ProcessingBlock)
             {
-                int endGroupRead = m_debugging.GoToNextStatement();
-                done = endGroupRead > 0;
-            }
-            if (done)
-            {
-                return true;
+                endGroupRead = m_debugging.GoToNextStatement();
+                if (ProcessingBlock && endGroupRead > 0)
+                {
+                    return true;
+                }
             }
 
             Executing = true;
@@ -392,12 +393,12 @@ namespace SplitAndMerge
                 Executing = false;
             }
 
-            m_debugging.GoToNextStatement();
+            endGroupRead = m_debugging.GoToNextStatement();
 
             //int endPointer = m_debugging.Pointer;
             //processed = m_debugging.Substr(startPointer, endPointer - startPointer);
 
-            return done || Completed(m_debugging);
+            return Completed(m_debugging) || (ProcessingBlock && endGroupRead > 0);
         }
 
         public Variable Execute(ParsingScript script)
@@ -475,26 +476,39 @@ namespace SplitAndMerge
             return debugger.StepInBreakpointIfNeeded(stepInScript);
         }
 
-        public Variable DebugBlockIfNeeded(ParsingScript stepInScript)
+        public Variable DebugBlockIfNeeded(ParsingScript stepInScript, ref bool done)
         {
-            if (SteppingOut || Continue || ReplMode)
+            if (SteppingOut || Continue || ReplMode || !m_firstBlock)
             {
                 ContinueLocal = true;
                 return null;
             }
+            m_firstBlock = false;
+            done = stepInScript.GoToNextStatement() > 0;
+            if (done) {
+                return Variable.EmptyInstance;
+            }
+
             ProcessingBlock = true;
-            stepInScript.GoToNextStatement();
+
+            ParsingScript tempScript = new ParsingScript(stepInScript.String, stepInScript.Pointer);
+            tempScript.ParentScript = stepInScript;
+            tempScript.InTryBlock = stepInScript.InTryBlock;
+            string body = Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
 
             Trace("Started ProcessBlock");
             StepIn(stepInScript);
 
             ProcessingBlock = false;
+            done = stepInScript.Pointer >= tempScript.Pointer;
+
             Trace("Finished ProcessBlock");
             return LastResult;
         }
-        public Variable StepInIfNeeded(ParsingScript stepInScript)
+        public Variable StepInFunctionIfNeeded(ParsingScript stepInScript)
         {
             stepInScript.Debugger = this;
+            m_firstBlock = false;
             if (ReplMode || !SteppingIn)
             {
                 ContinueLocal = true;
@@ -529,6 +543,9 @@ namespace SplitAndMerge
                 return null;
             }
 
+            m_startFilename = filename;
+            m_startLine = line;
+
             Trace("Starting StepInBreakpoint");
             StepIn(stepInScript);
 
@@ -545,6 +562,7 @@ namespace SplitAndMerge
                 ContinueLocal = true;
                 return null;
             }
+            m_firstBlock = false;
 
             Trace("Starting StepInInclude");
             StepIn(stepInScript);
