@@ -213,11 +213,6 @@ namespace SplitAndMerge
                 result.IsReturn = false;
             }
 
-            /*if (script.Debugger != null)
-            {
-                script.Debugger.PostProcessCustomFunction(tempScript);
-            }*/
-
             return result;
         }
 

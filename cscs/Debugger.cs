@@ -256,8 +256,9 @@ namespace SplitAndMerge
             {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
                 return -1;
-#endif
+#else
                 return -2;
+#endif
             }
             return script.GetOriginalLineNumber();
         }
@@ -514,10 +515,6 @@ namespace SplitAndMerge
             return LastResult;
         }
 
-        /*public void PostProcessCustomFunction(ParsingScript customScript)
-        {
-            Output = customScript.Debugger.Output;
-        }*/
         public void AddOutput(string output, ParsingScript script)
         {
             if (!string.IsNullOrEmpty(Output) && !Output.EndsWith("\n"))
@@ -558,7 +555,6 @@ namespace SplitAndMerge
                 {
                     break;
                 }
-                //stepIn.Output = "";
                 m_startFilename = null;
                 done = stepIn.ExecuteNextStatement();
 
@@ -568,7 +564,6 @@ namespace SplitAndMerge
                 }
 
                 LastResult = stepIn.LastResult;
-                //Output = stepIn.Output;
 
                 if (!done)
                 {
