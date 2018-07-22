@@ -34,15 +34,12 @@ namespace SplitAndMerge
         {
             m_debugger = debugger;
             string[] parts = data.Split(new char[] { '|' });
-            if (parts.Length < 2)
-            {
-                return;
-            }
-            string filename = Path.GetFileName(parts[1]);
+
+            string filename = Path.GetFileName(parts[0]);
 
             HashSet<int> bps = new HashSet<int>();
             int lineNr;
-            for (int i = 2; i < parts.Length; i++)
+            for (int i = 1; i < parts.Length; i++)
             {
                 Int32.TryParse(parts[i], out lineNr);
                 bps.Add(lineNr);

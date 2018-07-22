@@ -159,16 +159,19 @@ namespace SplitAndMerge
                 while ((i = m_stream.Read(bytes, 0, bytes.Length)) != 0 && Connected)
                 {
                     data = System.Text.Encoding.UTF8.GetString(bytes, 0, i);
-                    if (data.StartsWith("bye|"))
+                    string rest = "";
+                    DebuggerUtils.DebugAction action = DebuggerUtils.StringToAction(data, ref rest);
+
+                    if (action == DebuggerUtils.DebugAction.BYE)
                     {
                         break;
                     }
-                    else if (data.StartsWith("repl|"))
+                    else if (action == DebuggerUtils.DebugAction.REPL)
                     {
                         m_isRepl = true;
                         DebuggerServer.Queue.Add(data);
                     }
-                    else if (m_debugger.CanProcess(data))
+                    else if (m_debugger.CanProcess(action))
                     {
                         ThreadPool.QueueUserWorkItem(DebuggerServer.RunRequestBlocked, data);
                     }
@@ -220,5 +223,93 @@ namespace SplitAndMerge
                 Disconnect();
             }
         }
+    }
+
+    public class DebuggerUtils
+    {
+        public enum DebugAction { NONE, FILE, NEXT, CONTINUE, STEP_IN, STEP_OUT,
+            SET_BP, VARS, STACK, ALL, REPL, _REPL, END, BYE };
+
+        public static DebugAction StringToAction(string str, ref string rest)
+        {
+            int index = str.IndexOf('|');
+            if (index >= 0)
+            {
+                rest = index < str.Length - 1 ? str.Substring(index + 1) : "";
+                str = str.Substring(0, index);
+            }
+
+            switch (str)
+            {
+                case "next": return DebugAction.NEXT;
+                case "continue": return DebugAction.CONTINUE;
+                case "stepin": return DebugAction.STEP_IN;
+                case "stepout": return DebugAction.STEP_OUT;
+                case "file": return DebugAction.FILE;
+                case "setbp": return DebugAction.SET_BP;
+                case "vars": return DebugAction.VARS;
+                case "stack": return DebugAction.STACK;
+                case "all": return DebugAction.ALL;
+                case "repl": return DebugAction.REPL;
+                case "_repl": return DebugAction._REPL;
+                case "bye": return DebugAction.BYE;
+            }
+
+            return DebugAction.NONE;
+        }
+        public static string ResponseMainToken(DebugAction action)
+        {
+            switch (action)
+            {
+                case DebugAction.NEXT:
+                case DebugAction.CONTINUE:
+                case DebugAction.STEP_IN:
+                case DebugAction.STEP_OUT: return "next\n";
+                case DebugAction.REPL: return "";
+                case DebugAction._REPL: return "repl\n";
+                case DebugAction.FILE: return "file\n";
+                case DebugAction.SET_BP: return "set_bp\n";
+                case DebugAction.END: return "end\n";
+            }
+
+            return "none\n";
+        }
+
+        public static Variable Execute(ParsingScript script)
+        {
+            char[] toArray = Constants.END_PARSE_ARRAY;
+            Variable result = null;
+            Exception exception = null;
+#if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
+            // Do nothing: already on the main thread
+#elif __ANDROID__
+            scripting.Droid.MainActivity.TheView.RunOnUiThread(() => {
+#elif __IOS__
+            scripting.iOS.AppDelegate.GetCurrentController().InvokeOnMainThread(() =>
+            {
+#else
+#endif
+                try
+                {
+                    result = script.Execute(toArray);
+                }
+                catch (ParsingException exc)
+                {
+                    exception = exc;
+                }
+
+#if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
+            // Do nothing: already on the main thread
+#elif __ANDROID__ || __IOS__
+            });
+#endif
+
+            if (exception != null)
+            {
+                throw exception;
+            }
+            return result;
+        }
+
     }
 }

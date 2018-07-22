@@ -200,7 +200,7 @@ namespace SplitAndMerge
 
         static string CreateVariableEntry(ParserFunction variable, bool isLocal = false)
         {
-            if (!(variable is GetVarFunction))
+            if (!(variable is GetVarFunction) || string.IsNullOrWhiteSpace(variable.Name))
             {
                 return null;
             }

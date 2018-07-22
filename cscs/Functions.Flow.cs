@@ -190,7 +190,7 @@ namespace SplitAndMerge
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script.InTryBlock;
 
-            if (script != null && script.Debugger != null)
+            if (script.Debugger != null)
             {
                 result = script.Debugger.StepInFunctionIfNeeded(tempScript);
             }
@@ -213,10 +213,10 @@ namespace SplitAndMerge
                 result.IsReturn = false;
             }
 
-            if (script != null && script.Debugger != null)
+            /*if (script.Debugger != null)
             {
                 script.Debugger.PostProcessCustomFunction(tempScript);
-            }
+            }*/
 
             return result;
         }
@@ -626,7 +626,7 @@ namespace SplitAndMerge
             tempScript.InTryBlock = script.InTryBlock;
 
             Variable result = null;
-            if (script != null && script.Debugger != null)
+            if (script.Debugger != null)
             {
                 result = script.Debugger.StepInIncludeIfNeeded(tempScript);
             }

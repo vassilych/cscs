@@ -48,15 +48,14 @@
     <Compile Include="Trie.cs" />
     <Compile Include="Debugger.cs" />
     <Compile Include="DebuggerServer.cs" />
+    <Compile Include="Breakpoints.cs" />
+    <Compile Include="Interpreter.Standalone.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
-    <None Include="O2_Interfaces\O2Tools\ISearchEngine.cs.txt" />
-    <None Include="O2_DotNetWrappers\Windows\RemoteThreadInjection.cs.txt" />
-    <None Include="O2_DotNetWrappers\Windows\Mdi.cs.txt" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="WindowsBase" />

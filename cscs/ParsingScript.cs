@@ -71,6 +71,7 @@ namespace SplitAndMerge
             m_char2Line = other.Char2Line;
             m_filename = other.Filename;
             m_originalScript = other.OriginalScript;
+            Debugger = other.Debugger;
         }
 
         public int Size() { return m_data.Length; }

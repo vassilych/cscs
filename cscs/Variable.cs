@@ -373,14 +373,39 @@ namespace SplitAndMerge
                 sb.Append(Constants.START_GROUP.ToString() +
                          (sameLine ? "" : Environment.NewLine));
             }
+
             int count = maxCount < 0 ? m_tuple.Count : Math.Min(maxCount, m_tuple.Count);
-            for (int i = 0; i < count; i++)
+            int i = 0;
+            if (m_dictionary.Count > 0)
             {
-                Variable arg = m_tuple[i];
-                sb.Append(arg.AsString(isList, sameLine, maxCount));
-                if (i != m_tuple.Count - 1)
+                count = maxCount < 0 ? m_dictionary.Count : Math.Min(maxCount, m_dictionary.Count);
+                foreach (KeyValuePair<string, int> entry in m_dictionary)
                 {
-                    sb.Append(sameLine ? " " : Environment.NewLine);
+                    if (entry.Value >= 0 || entry.Value < m_tuple.Count)
+                    {
+                        string value = m_tuple[entry.Value].AsString(isList, sameLine, maxCount);
+                        sb.Append("\"" + entry.Key + "\" : " + value);
+                        if (i++ < count - 1)
+                        {
+                            sb.Append(sameLine ? ", " : Environment.NewLine);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (; i < count; i++)
+                {
+                    Variable arg = m_tuple[i];
+                    sb.Append(arg.AsString(isList, sameLine, maxCount));
+                    if (i != count - 1)
+                    {
+                        sb.Append(sameLine ? ", " : Environment.NewLine);
+                    }
                 }
             }
             if (count < m_tuple.Count)
