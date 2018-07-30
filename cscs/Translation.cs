@@ -221,7 +221,7 @@ namespace SplitAndMerge
                 throw new ArgumentException("Translation of [" + translation + "] contains white spaces");
             }
 
-            ParserFunction origFunction = ParserFunction.GetFunction(origName);
+            ParserFunction origFunction = ParserFunction.GetFunction(origName, null);
             Utils.CheckNotNull(origName, origFunction);
             ParserFunction.RegisterFunction(translation, origFunction);
 
@@ -265,7 +265,7 @@ namespace SplitAndMerge
             s_nativeWords.Add(translation);
         }
 
-        public static void PrintScript(string script)
+        public static void PrintScript(string script, ParsingScript parentSript)
         {
             StringBuilder item = new StringBuilder();
 
@@ -289,7 +289,7 @@ namespace SplitAndMerge
                 if (item.Length > 0)
                 {
                     string token = item.ToString();
-                    ParserFunction func = ParserFunction.GetFunction(token);
+                    ParserFunction func = ParserFunction.GetFunction(token, parentSript);
                     bool isNative = s_nativeWords.Contains(token);
                     if (func != null || isNative)
                     {
@@ -318,23 +318,26 @@ namespace SplitAndMerge
             string toLang = args[1];
             string script = Utils.GetFileText(args[2]);
 
-            string result = TranslateScript(script, fromLang, toLang);
+            ParsingScript parentScript = new ParsingScript(script);
+            parentScript.Filename = args[2];
+
+            string result = TranslateScript(script, fromLang, toLang, parentScript);
             Console.WriteLine(result);
         }
 
-        public static string TranslateScript(string script, string toLang)
+        public static string TranslateScript(string script, string toLang, ParsingScript parentScript)
         {
-            string tempScript = TranslateScript(script, Constants.ENGLISH, Constants.ENGLISH);
+            string tempScript = TranslateScript(script, Constants.ENGLISH, Constants.ENGLISH, parentScript);
             if (toLang == Constants.ENGLISH)
             {
                 return tempScript;
             }
 
-            string result = TranslateScript(tempScript, Constants.ENGLISH, toLang);
+            string result = TranslateScript(tempScript, Constants.ENGLISH, toLang, parentScript);
             return result;
         }
 
-        public static string TranslateScript(string script, string fromLang, string toLang)
+        static string TranslateScript(string script, string fromLang, string toLang, ParsingScript parentScript)
         {
             StringBuilder result = new StringBuilder();
             StringBuilder item = new StringBuilder();
@@ -364,7 +367,7 @@ namespace SplitAndMerge
                     string translation = string.Empty;
                     if (toLang == Constants.ENGLISH)
                     {
-                        ParserFunction func = ParserFunction.GetFunction(token);
+                        ParserFunction func = ParserFunction.GetFunction(token, parentScript);
                         if (func != null)
                         {
                             translation = func.Name;

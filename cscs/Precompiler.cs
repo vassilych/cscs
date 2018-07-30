@@ -40,6 +40,8 @@ namespace SplitAndMerge
         //bool m_assigmentExpression;
         bool m_lastStatementReturn;
 
+        ParsingScript m_parentScript;
+
         Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable> m_compiledFunc;
 
@@ -54,13 +56,15 @@ namespace SplitAndMerge
             return retType;
         }
 
-        public Precompiler(string functionName, string[] args, Dictionary<string, Variable> argsMap, string cscsCode)
+        public Precompiler(string functionName, string[] args, Dictionary<string, Variable> argsMap,
+                           string cscsCode, ParsingScript parentScript)
         {
             m_functionName = functionName;
             m_defArgs = args;
             m_argsMap = argsMap;
             m_cscsCode = cscsCode;
             m_returnType = GetReturnType(m_functionName);
+            m_parentScript = parentScript;
         }
 
         public void Compile()
@@ -155,7 +159,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        public Variable.VarType GetVariableType(string paramName)
+        Variable.VarType GetVariableType(string paramName)
         {
             if (IsNumber(paramName))
             {
@@ -184,7 +188,7 @@ namespace SplitAndMerge
                 return arg.Type;
             }
 
-            ParserFunction function = ParserFunction.GetFunction(paramName);
+            ParserFunction function = ParserFunction.GetFunction(paramName, m_parentScript);
             if (function == null)
             {
                 return Variable.VarType.NONE;
@@ -216,7 +220,7 @@ namespace SplitAndMerge
               "\", new GetVarFunction(new Variable(" + paramValue + ")));\n";
         }
 
-        public string ConvertScript()
+        string ConvertScript()
         {
             Dictionary<int, int> char2Line = null;
             m_cscsCode = Utils.ConvertToScript(m_cscsCode, out char2Line);
@@ -614,7 +618,6 @@ namespace SplitAndMerge
                 {
                     paramEnd = restStr.Length;
                 }
-                //ParsingScript script = new ParsingScript (restStr.Substring (paramStart, paramEnd - paramStart));
                 ParsingScript script = new ParsingScript(restStr.Substring(paramStart, restStr.Length - paramStart));
                 argsStr = Utils.PrepareArgs(Utils.GetBodyBetween(script));
             }

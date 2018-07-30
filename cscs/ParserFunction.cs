@@ -46,7 +46,7 @@ namespace SplitAndMerge
                 return;
             }
 
-            m_impl = GetFunction(item);
+            m_impl = GetFunction(item, script);
             if (m_impl != null)
             {
                 return;
@@ -82,7 +82,7 @@ namespace SplitAndMerge
                 return null;
             }
 
-            ParserFunction pf = ParserFunction.GetFunction(arrayName);
+            ParserFunction pf = ParserFunction.GetFunction(arrayName, script);
             GetVarFunction varFunc = pf as GetVarFunction;
             if (varFunc == null)
             {
@@ -119,7 +119,7 @@ namespace SplitAndMerge
             return theAction;
         }
 
-        public static ParserFunction GetFunction(string name)
+        public static ParserFunction GetFunction(string name, ParsingScript script)
         {
             ParserFunction impl;
             // First search among local variables.
@@ -132,6 +132,15 @@ namespace SplitAndMerge
                     return impl;
                 }
             }
+
+            string scopeName = script == null || script.Filename == null ? "" : script.Filename;
+            impl = GetLocalScopeVariable(name, scopeName);
+            if (impl != null)
+            {
+                // Local scope variable exists
+                return impl;
+            }
+
             if (s_functions.TryGetValue(name, out impl))
             {
                 // Global function exists and is registered (e.g. pi, exp, or a variable)
@@ -212,31 +221,42 @@ namespace SplitAndMerge
             return varData.Trim();
         }
 
-        public static string GetVariables()
+        static void GetVariables(Dictionary<string, ParserFunction> variablesScope,
+                                 StringBuilder sb, bool isLocal = false)
         {
-            StringBuilder sb = new StringBuilder();
-            // Locals, if any:
-            if (s_locals.Count > 0)
+            foreach (var variable in variablesScope.Values.ToList())
             {
-                Dictionary<string, ParserFunction> local = s_locals.Peek().Variables;
-                foreach (var variable in local.Values.ToList())
-                {
-                    string varData = CreateVariableEntry(variable, true);
-                    if (!string.IsNullOrWhiteSpace(varData))
-                    {
-                        sb.AppendLine(varData);
-                    }
-                }
-            }
-            // Globals:
-            foreach (var entry in s_functions.Values.ToList())
-            {
-                string varData = CreateVariableEntry(entry);
+                string varData = CreateVariableEntry(variable, isLocal);
                 if (!string.IsNullOrWhiteSpace(varData))
                 {
                     sb.AppendLine(varData);
                 }
             }
+        }
+
+        public static string GetVariables(ParsingScript script)
+        {
+            StringBuilder sb = new StringBuilder();
+            // Locals, if any:
+            if (s_locals.Count > 0)
+            {
+                Dictionary<string, ParserFunction> locals = s_locals.Peek().Variables;
+                GetVariables(locals, sb, true);
+            }
+
+            // Variables in the local file scope:
+            if (script != null && script.Filename != null)
+            {
+                Dictionary<string, ParserFunction> localScope;
+                string scopeName = Path.GetFileName(script.Filename);
+                if (s_localScope.TryGetValue(scopeName, out localScope))
+                {
+                    GetVariables(localScope, sb, true);
+                }
+            }
+
+            // Globals:
+            GetVariables(s_functions, sb, false);
 
             return sb.ToString().Trim();
         }
@@ -280,7 +300,39 @@ namespace SplitAndMerge
             {
                 Translation.AddTempKeyword(name);
             }
-            //Console.WriteLine("Registered function " + name);
+        }
+
+        public static void AddLocalScopeVariable(string name, string scopeName, ParserFunction variable)
+        {
+            variable.isNative = false;
+            variable.Name = name;
+
+            if (scopeName == null)
+            {
+                scopeName = "";
+            }
+
+            Dictionary<string, ParserFunction> localScope;
+            if (!s_localScope.TryGetValue(scopeName, out localScope))
+            {
+                localScope = new Dictionary<string, ParserFunction>();
+            }
+            localScope[name] = variable;
+            s_localScope[scopeName] = localScope;
+        }
+
+        static ParserFunction GetLocalScopeVariable(string name, string scopeName)
+        {
+            scopeName = Path.GetFileName(scopeName);
+            Dictionary<string, ParserFunction> localScope;
+            if (!s_localScope.TryGetValue(scopeName, out localScope))
+            {
+                return null;
+            }
+
+            ParserFunction function = null;
+            localScope.TryGetValue(name, out function);
+            return function;
         }
 
         public static void AddAction(string name, ActionFunction action)
@@ -370,6 +422,7 @@ namespace SplitAndMerge
             s_functions.Clear();
             s_actions.Clear();
             s_locals.Clear();
+            s_localScope.Clear();
         }
 
         protected string m_name;
@@ -388,9 +441,13 @@ namespace SplitAndMerge
         // Global actions - function:
         static Dictionary<string, ActionFunction> s_actions = new Dictionary<string, ActionFunction>();
 
+        // Local scope variables- defined only in the current file:
+        static Dictionary<string, Dictionary<string, ParserFunction>> s_localScope =
+           new Dictionary<string, Dictionary<string, ParserFunction>>();
+
         public static bool IsNumericFunction(string paramName, ParsingScript script = null)
         {
-            ParserFunction function = ParserFunction.GetFunction(paramName);
+            ParserFunction function = ParserFunction.GetFunction(paramName, script);
             return function is INumericFunction;
         }
 

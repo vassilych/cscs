@@ -92,6 +92,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
+            ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
             ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
             ParserFunction.RegisterFunction(Constants.EXIT, new ExitFunction());
             ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());

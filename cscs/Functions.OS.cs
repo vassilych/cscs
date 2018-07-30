@@ -1016,7 +1016,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Get the value to be added or appended.
@@ -1047,7 +1047,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Take either the string part if it is defined,
@@ -1069,7 +1069,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Take either the string part if it is defined,
@@ -1093,7 +1093,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Take either the string part if it is defined,
@@ -1136,7 +1136,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Get the value to be looked for.

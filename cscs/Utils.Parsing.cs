@@ -184,7 +184,7 @@ namespace SplitAndMerge
             stringConstant = stringConstant || !ParserFunction.FunctionExists(token);
             if (!stringConstant)
             {
-                Variable sourceValue = ParserFunction.GetFunction(token).GetValue(script);
+                Variable sourceValue = ParserFunction.GetFunction(token, script).GetValue(script);
                 token = sourceValue.String;
             }
 
@@ -283,6 +283,10 @@ namespace SplitAndMerge
                 if (script.Pointer < tempScript.Pointer)
                 {
                     script.MoveForwardIf(Constants.NEXT_ARG);
+                }
+                if (script.Pointer == tempScript.Pointer - 1)
+                {
+                    script.MoveForwardIf(Constants.END_ARG);
                 }
             }
 
@@ -751,8 +755,12 @@ namespace SplitAndMerge
 
                 ParsingScript tempScript = new ParsingScript(varName, argStart);
                 tempScript.ParentScript = script;
-                tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
+                tempScript.Char2Line = script.Char2Line;
+                tempScript.Filename = script.Filename;
+                tempScript.OriginalScript = script.OriginalScript;
                 tempScript.InTryBlock = script.InTryBlock;
+
+                tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
                 Variable index = tempScript.ExecuteTo(Constants.END_ARRAY);
 
@@ -815,13 +823,13 @@ namespace SplitAndMerge
 
             return text;
         }
-        public static Variable GetVar(string paramName, ParsingScript script = null)
+        public static Variable GetVar(string paramName, ParsingScript script)
         {
             if (script == null)
             {
                 script = new ParsingScript("");
             }
-            ParserFunction function = ParserFunction.GetFunction(paramName);
+            ParserFunction function = ParserFunction.GetFunction(paramName, script);
             if (function == null)
             {
                 throw new ArgumentException("Variable [" + paramName + "] not found.");
@@ -855,14 +863,14 @@ namespace SplitAndMerge
             argsStr = argsStr.Replace(src, dst);
             return argsStr;
         }
-        //public static Variable RunCompiled (ParsingScript script, string functionName, string argsStr)
+
         public static Variable RunCompiled(string functionName, string argsString)
         {
             string adjArgs = PrepareArgs(argsString, true);
             ParsingScript argScript = new ParsingScript(adjArgs);
             List<Variable> args = argScript.GetFunctionArgs();
 
-            ParserFunction function = ParserFunction.GetFunction(functionName);
+            ParserFunction function = ParserFunction.GetFunction(functionName, null);
             if (function is CustomCompiledFunction)
             {
                 CustomCompiledFunction customFunction = function as CustomCompiledFunction;

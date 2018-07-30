@@ -80,6 +80,7 @@ namespace SplitAndMerge
         public const string CONSOLE_CLR = "clr";
         public const string COS = "cos";
         public const string DEEP_COPY = "DeepCopy";
+        public const string DEFINE_LOCAL = "DefineLocal";
         public const string DIR = "dir";
         public const string DELETE = "del";
         public const string ENV = "env";

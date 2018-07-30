@@ -124,7 +124,7 @@ namespace SplitAndMerge
             }
             else if (action == DebuggerUtils.DebugAction.VARS)
             {
-                result = GetVariables();
+                result = GetAllVariables(m_debugging);
             }
             else if (action == DebuggerUtils.DebugAction.ALL)
             {
@@ -209,7 +209,7 @@ namespace SplitAndMerge
             result += outputCount + "\n";
             result += output + "\n";
 
-            string vars = GetVariables();
+            string vars = GetAllVariables(script);
             int varsCount = vars.Split('\n').Length;
             result += varsCount + "\n";
             result += vars + "\n";
@@ -244,9 +244,9 @@ namespace SplitAndMerge
             SendBack(result);
         }
 
-        string GetVariables()
+        string GetAllVariables(ParsingScript script)
         {
-            string vars = ParserFunction.GetVariables();
+            string vars = ParserFunction.GetVariables(script);
             return vars;
         }
 
@@ -392,7 +392,7 @@ namespace SplitAndMerge
             }
 
             string stack = exc.ExceptionStack;
-            string vars = debugger.GetVariables();
+            string vars = debugger.GetAllVariables(script);
             int varsCount = vars.Split('\n').Length;
 
             string result = "exc\n" + exc.Message + "\n";

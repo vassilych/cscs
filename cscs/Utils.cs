@@ -662,7 +662,7 @@ namespace SplitAndMerge
 
         public static Variable GetVariable(string varName, ParsingScript script)
         {
-            ParserFunction func = ParserFunction.GetFunction(varName);
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
             Utils.CheckNotNull(varName, func);
             Variable varValue = func.GetValue(script);
             Utils.CheckNotNull(varValue, varName);
