@@ -15,8 +15,8 @@ namespace SplitAndMerge
         public static Action<string> OnResult;
 
         static int m_id;
-        static int m_startLine;
         static string m_startFilename;
+        static int m_startLine;
         static bool m_firstBlock;
 
         public static bool CheckBreakpointsNeeded { get; private set; }
@@ -24,6 +24,7 @@ namespace SplitAndMerge
         public static bool SteppingIn { get; private set; }
         public static bool SteppingOut { get; private set; }
         public static bool Executing { get; private set; }
+        public static bool ProcessingClientRequest { get; private set; }
         public static Breakpoints TheBreakpoints { get { return MainInstance.m_breakpoints; } }
 
         public bool InInclude { get; private set; }
@@ -236,6 +237,9 @@ namespace SplitAndMerge
             OnResult?.Invoke(str);
 
             Output = "";
+            m_startFilename = null;
+            m_startLine = 0;
+            ProcessingClientRequest = false;
         }
         public void CreateResultAndSendBack(string cmd, string output, ParsingScript script = null)
         {
@@ -316,9 +320,12 @@ namespace SplitAndMerge
 
         Variable ProcessNext()
         {
+            ProcessingClientRequest = true;
             if (MainInstance != null && MainInstance.m_steppingIns.Count > 0)
             {
                 Debugger stepIn = MainInstance.m_steppingIns.Peek();
+                m_startFilename = stepIn.m_debugging.Filename;
+                m_startLine     = stepIn.m_debugging.OriginalLineNumber;
                 stepIn.m_completedStepIn.Set();
                 return null;
             }
@@ -344,13 +351,7 @@ namespace SplitAndMerge
                 return true;
             }
 
-            int startPointer = m_debugging.Pointer;
-            if (string.IsNullOrWhiteSpace(m_startFilename))
-            {
-                m_startFilename = m_debugging.Filename;
-                m_startLine = m_debugging.OriginalLineNumber;
-            }
-
+            //int startPointer = m_debugging.Pointer;
             if (ProcessingBlock)
             {
                 endGroupRead = m_debugging.GoToNextStatement();
@@ -419,6 +420,11 @@ namespace SplitAndMerge
             {
                 return null;
             }
+            if (!ProcessingClientRequest)
+            {
+                m_startFilename = null;
+                m_startLine = 0;
+            }
             return debugger.StepInBreakpointIfNeeded(stepInScript);
         }
 
@@ -430,7 +436,8 @@ namespace SplitAndMerge
             }
             m_firstBlock = false;
             done = stepInScript.GoToNextStatement() > 0;
-            if (done) {
+            if (done)
+            {
                 return Variable.EmptyInstance;
             }
 
@@ -555,7 +562,6 @@ namespace SplitAndMerge
                 {
                     break;
                 }
-                m_startFilename = null;
                 done = stepIn.ExecuteNextStatement();
 
                 if (stepIn.LastResult == null)
@@ -572,11 +578,9 @@ namespace SplitAndMerge
                 }
             }
 
-            //m_startFilename = stepIn.m_debugging.Filename;
-            //m_startLine = stepIn.m_debugging.OriginalLineNumber;
-
             MainInstance?.m_steppingIns.Pop();
             stepIn.Trace("Finished StepIn, this: " + Id);
+            ProcessingClientRequest = false;
         }
 
         string DebugScript()
