@@ -87,6 +87,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
             ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
             ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
+            ParserFunction.RegisterFunction(Constants.CALL_NATIVE, new InvokeNativeFunction());
             ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
             ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
@@ -99,6 +100,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
+            ParserFunction.RegisterFunction(Constants.GET_NATIVE, new GetNativeFunction());
             ParserFunction.RegisterFunction(Constants.INDEX_OF, new IndexOfFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
@@ -119,6 +121,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
+            ParserFunction.RegisterFunction(Constants.SET_NATIVE, new SetNativeFunction());
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
             ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());

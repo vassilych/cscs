@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CSharp;
-using System.CodeDom.Compiler;
 
 namespace SplitAndMerge
 {
@@ -669,32 +664,6 @@ namespace SplitAndMerge
             return varValue;
         }
 
-        static Dictionary<string, Func<string, string>> m_compiledCode =
-           new Dictionary<string, Func<string, string>>();
-
-        public static Variable InvokeCall(Type type, string methodName, string paramName,
-                                          string paramValue, object master = null)
-        {
-            string key = type + "_" + methodName + "_" + paramName;
-            Func<string, string> func = null;
-
-            // Cache compiled function:
-            if (!m_compiledCode.TryGetValue(key, out func))
-            {
-                MethodInfo methodInfo = type.GetMethod(methodName, new Type[] { typeof(string) });
-                ParameterExpression param = Expression.Parameter(typeof(string), paramName);
-
-                MethodCallExpression methodCall = master == null ? Expression.Call(methodInfo, param) :
-                                                             Expression.Call(Expression.Constant(master), methodInfo, param);
-                Expression<Func<string, string>> lambda =
-                    Expression.Lambda<Func<string, string>>(methodCall, new ParameterExpression[] { param });
-                func = lambda.Compile();
-                m_compiledCode[key] = func;
-            }
-
-            string result = func(paramValue);
-            return new Variable(result);
-        }
         public static double ConvertToDouble(object obj, string errorOrigin = "")
         {
             string str = obj.ToString();

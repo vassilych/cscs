@@ -88,7 +88,6 @@ namespace scripting
             ParserFunction.RegisterFunction("KillMe", new KillMeFunction());
             ParserFunction.RegisterFunction("ShowToast", new ShowToastFunction());
             ParserFunction.RegisterFunction("AlertDialog", new AlertDialogFunction());
-            ParserFunction.RegisterFunction("CallNative", new InvokeNativeFunction());
             ParserFunction.RegisterFunction("Speak", new SpeakFunction());
             ParserFunction.RegisterFunction("SetupSpeech", new SpeechOptionsFunction());
             ParserFunction.RegisterFunction("VoiceRecognition", new VoiceFunction());
@@ -370,26 +369,6 @@ namespace scripting
             AutoScaleFunction.BASE_WIDTH = baseWidth;
 
             return new Variable(baseWidth);
-        }
-    }
-    public class InvokeNativeFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            string methodName = Utils.GetItem(script).AsString();
-            Utils.CheckNotEmpty(script, methodName, m_name);
-            script.MoveForwardIf(Constants.NEXT_ARG);
-
-            string paramName = Utils.GetToken(script, Constants.NEXT_ARG_ARRAY);
-            Utils.CheckNotEmpty(script, paramName, m_name);
-            script.MoveForwardIf(Constants.NEXT_ARG);
-
-            Variable paramValueVar = Utils.GetItem(script);
-            string paramValue = paramValueVar.AsString();
-
-            var result = Utils.InvokeCall(typeof(Statics),
-                                          methodName, paramName, paramValue);
-            return result;
         }
     }
     public class GetRandomFunction : ParserFunction

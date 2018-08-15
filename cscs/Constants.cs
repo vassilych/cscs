@@ -71,6 +71,7 @@ namespace SplitAndMerge
         public const string APPENDLINE = "appendline";
         public const string APPENDLINES = "appendlines";
         public const string ASIN = "asin";
+        public const string CALL_NATIVE = "CallNative";
         public const string CD = "cd";
         public const string CD__ = "cd..";
         public const string COPY = "copy";
@@ -92,6 +93,7 @@ namespace SplitAndMerge
         public const string FLOOR = "floor";
         public const string GET_COLUMN = "getcolumn";
         public const string GET_KEYS = "getkeys";
+        public const string GET_NATIVE = "GetNative";
         public const string INDEX_OF = "indexof";
         public const string KILL = "kill";
         public const string LOCK = "lock";
@@ -119,8 +121,9 @@ namespace SplitAndMerge
         public const string ROUND = "round";
         public const string RUN = "run";
         public const string SIGNAL = "signal";
-        public const string SETENV = "setenv";
         public const string SET = "set";
+        public const string SETENV = "setenv";
+        public const string SET_NATIVE = "SetNative";
         public const string SHOW = "show";
         public const string SIN = "sin";
         public const string SIZE = "size";
