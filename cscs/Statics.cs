@@ -10,8 +10,10 @@ namespace SplitAndMerge
 {
     public class Statics
     {
-        public static double DoubleVar = 0;
-        public static string StringVar = "x";
+        public static string StringVar = "";
+        public static double DoubleVar = 0.0;
+        public static bool   BoolVar   = false;
+        public static int    IntVar    = 0;
 
         static Dictionary<string, Func<string, string>> m_compiledCode =
            new Dictionary<string, Func<string, string>>();
@@ -50,11 +52,12 @@ namespace SplitAndMerge
 
         public static bool SetVariableValue(string name, Object value)
         {
-            /*var props = typeof(Statics).GetProperties();
-            var members = typeof(Statics).GetMembers();
-            var methods = typeof(Statics).GetMethods();
-            var fields = typeof(Statics).GetFields();*/
-            var field = typeof(Statics).GetField(name);
+            Type type   = typeof(Statics);
+            var props   = type.GetProperties();
+            var members = type.GetMembers();
+            var methods = type.GetMethods();
+            var fields  = type.GetFields();
+            var field   = type.GetField(name);
             Utils.CheckNotNull(field, name);
             field.SetValue(null, Convert.ChangeType(value, field.FieldType));
             return true;
