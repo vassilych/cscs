@@ -69,8 +69,9 @@ namespace SplitAndMerge
 
         public void Compile()
         {
+#if  __ANDROID__ == false && __IOS__ == false
             m_csCode = ConvertScript();
-            CompilerParameters CompilerParams = new CompilerParameters();
+            var CompilerParams = new CompilerParameters();
 
             CompilerParams.GenerateInMemory = true;
             CompilerParams.TreatWarningsAsErrors = false;
@@ -90,13 +91,13 @@ namespace SplitAndMerge
                 CompilerParams.ReferencedAssemblies.Add(asmName.Name + suffix);
             }
 
-            CSharpCodeProvider provider = new CSharpCodeProvider();
-            CompilerResults compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
+            var provider = new CSharpCodeProvider();
+            var compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
 
             if (compile.Errors.HasErrors)
             {
                 string text = "Compile error: ";
-                foreach (CompilerError ce in compile.Errors)
+                foreach (var ce in compile.Errors)
                 {
                     text += ce.ToString() + " -- ";
                 }
@@ -104,8 +105,10 @@ namespace SplitAndMerge
                 throw new ArgumentException(text);
             }
             m_compiledFunc = CompileAndCache(compile, m_functionName, m_defArgs, m_argsMap);
+#endif
         }
-        public static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+#if __ANDROID__ == false && __IOS__ == false
+        static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
                            List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable>
                             CompileAndCache(CompilerResults compile, string functionName,
                                            string[] args, Dictionary<string, Variable> argsMap)
@@ -126,12 +129,6 @@ namespace SplitAndMerge
             {
                 argTypes.Add(paramTypes[i].Type);
             }
-            /*argTypes.Add (typeof (List<string>));
-            argTypes.Add (typeof (List<double>));
-            argTypes.Add (typeof (List<List<string>>));
-            argTypes.Add (typeof (List<List<double>>));
-            argTypes.Add (typeof (List<Dictionary<string, string>>));
-            argTypes.Add (typeof (List<Dictionary<string, double>>));*/
 
             MethodInfo methodInfo = mt.GetMethod(functionName, argTypes.ToArray());
             MethodCallExpression methodCall = Expression.Call(methodInfo, paramTypes);
@@ -144,6 +141,7 @@ namespace SplitAndMerge
 
             return func;
         }
+#endif
 
         public Variable Run(List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
                             List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
