@@ -33,6 +33,7 @@
   <ItemGroup>
     <Compile Include="Interpreter.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Statics.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Main.cs" />

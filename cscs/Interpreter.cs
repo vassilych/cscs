@@ -283,7 +283,7 @@ namespace SplitAndMerge
                 stillValid = Convert.ToBoolean(condResult.Value);
                 if (!stillValid)
                 {
-                    return;
+                    break;
                 }
 
                 if (MAX_LOOPS > 0 && ++cycles >= MAX_LOOPS)
