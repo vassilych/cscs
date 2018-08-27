@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
-    public class Constants
+    public partial class Constants
     {
         public const char START_ARG = '(';
         public const char END_ARG = ')';
@@ -45,6 +45,7 @@ namespace SplitAndMerge
         public const string BREAK = "break";
         public const string CATCH = "catch";
         public const string COMMENT = "//";
+        public const string CONTAINS = "contains";
         public const string CONTINUE = "continue";
         public const string ELSE = "else";
         public const string ELSE_IF = "elif";
@@ -67,72 +68,32 @@ namespace SplitAndMerge
         public const string ADD = "add";
         public const string ADD_TO_HASH = "AddToHash";
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
-        public const string APPEND = "append";
-        public const string APPENDLINE = "appendline";
-        public const string APPENDLINES = "appendlines";
         public const string ASIN = "asin";
-        public const string CALL_NATIVE = "CallNative";
-        public const string CD = "cd";
-        public const string CD__ = "cd..";
-        public const string COPY = "copy";
         public const string CEIL = "ceil";
-        public const string CONNECTSRV = "connectsrv";
-        public const string CONTAINS = "contains";
-        public const string CONSOLE_CLR = "clr";
         public const string COS = "cos";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
-        public const string DIR = "dir";
-        public const string DELETE = "del";
         public const string ENV = "env";
-        public const string EXISTS = "exists";
         public const string EXIT = "exit";
         public const string EXP = "exp";
-        public const string FINDFILES = "findfiles";
-        public const string FINDSTR = "findstr";
         public const string FLOOR = "floor";
-        public const string GET_COLUMN = "getcolumn";
-        public const string GET_KEYS = "getkeys";
-        public const string GET_NATIVE = "GetNative";
         public const string INDEX_OF = "indexof";
-        public const string KILL = "kill";
         public const string LOCK = "lock";
         public const string LOG = "log";
-        public const string MKDIR = "mkdir";
-        public const string MORE = "more";
-        public const string MOVE = "move";
         public const string NOW = "Now";
         public const string PI = "pi";
         public const string POW = "pow";
-        public const string PRINT = "print";
-        public const string PRINT_BLACK = "printblack";
-        public const string PRINT_GRAY = "printgray";
-        public const string PRINT_GREEN = "printgreen";
-        public const string PRINT_RED = "printred";
-        public const string PSINFO = "psinfo";
         public const string PSTIME = "pstime";
-        public const string PWD = "pwd";
         public const string RANDOM = "GetRandom";
-        public const string READ = "read";
-        public const string READFILE = "readfile";
-        public const string READNUMBER = "readnum";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string ROUND = "round";
-        public const string RUN = "run";
-        public const string SIGNAL = "signal";
         public const string SET = "set";
-        public const string SETENV = "setenv";
-        public const string SET_NATIVE = "SetNative";
         public const string SHOW = "show";
         public const string SIN = "sin";
         public const string SIZE = "size";
         public const string SLEEP = "sleep";
         public const string SQRT = "sqrt";
-        public const string STARTSRV = "startsrv";
-        public const string STOPWATCH_ELAPSED = "StopWatchElapsed";
-        public const string STOPWATCH_START = "StartStopWatch";
-        public const string STOPWATCH_STOP = "StopStopWatch";
         public const string STR_BETWEEN = "StrBetween";
         public const string STR_BETWEEN_ANY = "StrBetweenAny";
         public const string STR_CONTAINS = "StrContains";
@@ -146,10 +107,8 @@ namespace SplitAndMerge
         public const string STR_TRIM = "StrTrim";
         public const string STR_UPPER = "StrUpper";
         public const string SUBSTR = "substr";
-        public const string TAIL = "tail";
         public const string THREAD = "thread";
         public const string THREAD_ID = "threadid";
-        public const string TIMESTAMP = "Timestamp";
         public const string TOKENIZE = "tokenize";
         public const string TOKENIZE_LINES = "TokenizeLines";
         public const string TOKEN_COUNTER = "CountTokens";
@@ -160,13 +119,6 @@ namespace SplitAndMerge
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";
         public const string TO_STRING = "string";
-        public const string TRANSLATE = "translate";
-        public const string WAIT = "wait";
-        public const string WRITE = "write";
-        public const string WRITELINE = "writeline";
-        public const string WRITELINES = "writelines";
-        public const string WRITENL = "writenl";
-        public const string WRITE_CONSOLE = "WriteConsole";
 
         public const string START_DEBUGGER = "StartDebugger";
 
@@ -197,13 +149,18 @@ namespace SplitAndMerge
 
         // Functions that allow a space separator after them, on top of parentheses. The
         // function arguments may have spaces as well, e.g. copy a.txt b.txt
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
             FUNCTION, COMPILED_FUNCTION, MKDIR, MORE, MOVE, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
             TRANSLATE, WRITE, WRITELINE, WRITENL
         };
-
+#else
+       public static List<string> FUNCT_WITH_SPACE = new List<string> {
+            FUNCTION, SHOW
+       };
+#endif
         // Functions that allow a space separator after them, on top of parentheses but
         // only once, i.e. function arguments are not allowed to have spaces
         // between them e.g. return a*b;
@@ -245,24 +202,6 @@ namespace SplitAndMerge
         public const int DEFAULT_FILE_LINES = 20;
         public const int MAX_CHARS_TO_SHOW = 45;
 
-        public const string ENGLISH = "en";
-        public const string GERMAN = "de";
-        public const string RUSSIAN = "ru";
-        public const string SPANISH = "es";
-        public const string SYNONYMS = "sy";
-
-        public static string Language(string lang)
-        {
-            switch (lang)
-            {
-                case "English": return ENGLISH;
-                case "German": return GERMAN;
-                case "Russian": return RUSSIAN;
-                case "Spanish": return SPANISH;
-                case "Synonyms": return SYNONYMS;
-                default: return ENGLISH;
-            }
-        }
         public static string TypeToString(Variable.VarType type)
         {
             switch (type)

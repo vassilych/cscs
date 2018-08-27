@@ -272,7 +272,10 @@ namespace SplitAndMerge
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script.InTryBlock;
 
+            // ScriptingEngine - body is unsed (used in Debugging) but GetBodyBetween has sideeffects			
+#pragma warning disable 219
             string body = Utils.GetBodyBetween(tempScript, start, end);
+#pragma warning restore 219
             // After the statement above tempScript.Parent will point to the last
             // character belonging to the body between start and end characters. 
 
@@ -862,25 +865,6 @@ namespace SplitAndMerge
             string dst = validateQuotes ? "\"" : "\\\"";
             argsStr = argsStr.Replace(src, dst);
             return argsStr;
-        }
-
-        public static Variable RunCompiled(string functionName, string argsString)
-        {
-            string adjArgs = PrepareArgs(argsString, true);
-            ParsingScript argScript = new ParsingScript(adjArgs);
-            List<Variable> args = argScript.GetFunctionArgs();
-
-            ParserFunction function = ParserFunction.GetFunction(functionName, null);
-            if (function is CustomCompiledFunction)
-            {
-                CustomCompiledFunction customFunction = function as CustomCompiledFunction;
-                Variable result = customFunction.Run(args);
-                if (result != null)
-                {
-                    return result;
-                }
-            }
-            return Calculate(functionName, argsString);
         }
 
         public static Variable Calculate(string functionName, string argsStr)

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-
 namespace SplitAndMerge
 {
     public class Translation
@@ -43,6 +42,10 @@ namespace SplitAndMerge
         {
             s_tempWords.Add(word);
             AddSpellError(word);
+        }
+        public static bool IsNativeWord(string word)
+        {
+            return s_nativeWords.Contains(word);
         }
         public static void AddSpellError(string word)
         {
@@ -263,49 +266,6 @@ namespace SplitAndMerge
             keywordsArray.Add(translation);
             s_nativeWords.Add(origName);
             s_nativeWords.Add(translation);
-        }
-
-        public static void PrintScript(string script, ParsingScript parentSript)
-        {
-            StringBuilder item = new StringBuilder();
-
-            bool inQuotes = false;
-
-            for (int i = 0; i < script.Length; i++)
-            {
-                char ch = script[i];
-                inQuotes = ch == Constants.QUOTE ? !inQuotes : inQuotes;
-
-                if (inQuotes)
-                {
-                    Interpreter.Instance.AppendOutput(ch.ToString());
-                    continue;
-                }
-                if (!Constants.TOKEN_SEPARATION.Contains(ch))
-                {
-                    item.Append(ch);
-                    continue;
-                }
-                if (item.Length > 0)
-                {
-                    string token = item.ToString();
-                    ParserFunction func = ParserFunction.GetFunction(token, parentSript);
-                    bool isNative = s_nativeWords.Contains(token);
-                    if (func != null || isNative)
-                    {
-                        ConsoleColor col = isNative || func.isNative ? ConsoleColor.Green :
-                                                       func.isGlobal ? ConsoleColor.Magenta :
-                                                           ConsoleColor.Gray;
-                        Utils.PrintColor(token, col);
-                    }
-                    else
-                    {
-                        Interpreter.Instance.AppendOutput(token);
-                    }
-                    item.Clear();
-                }
-                Interpreter.Instance.AppendOutput(ch.ToString());
-            }
         }
 
         public static void TranslateScript(string[] args)

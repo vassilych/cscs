@@ -6,7 +6,6 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 
-
 namespace SplitAndMerge
 {
     public class Program
@@ -40,13 +39,13 @@ namespace SplitAndMerge
 
             //ProcessScript("include(\"scripts/functions.cscs\");");
 
-            if (args.Length < 1 || args[1] == "debugger")
+            string script = Utils.GetFileContents("scripts/temp.cscs");
+
+            if (string.IsNullOrWhiteSpace(script) && (args.Length < 1 || args[1] == "debugger"))
             {
                 DebuggerServer.StartServerBlocked(13337);
                 return;
             }
-
-            string script = Utils.GetFileContents("scripts/temp.cscs");
 
             if (args.Length >= 3)
             {

@@ -31,12 +31,17 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
+    <Compile Include="Constants.Extra.cs" />
+    <Compile Include="Functions.Utils.cs" />
+    <Compile Include="Functions.Standalone.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Precompiler.cs" />
     <Compile Include="Statics.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="Utils.Extra.cs" />
     <Compile Include="Utils.Parsing.cs" />
     <Compile Include="ParserFunction.cs" />
     <Compile Include="Functions.Flow.cs" />
@@ -45,7 +50,6 @@
     <Compile Include="Variable.cs" />
     <Compile Include="ParsingScript.cs" />
     <Compile Include="Translation.cs" />
-    <Compile Include="Precompiler.cs" />
     <Compile Include="Trie.cs" />
     <Compile Include="Debugger.cs" />
     <Compile Include="DebuggerServer.cs" />

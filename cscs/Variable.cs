@@ -83,6 +83,12 @@ namespace SplitAndMerge
             }
             this.Tuple = tuple;
         }
+
+        public Variable(object o)
+        {
+            Object = o;
+        }
+
         public virtual Variable Clone()
         {
             //Variable newVar = new Variable();
@@ -126,6 +132,9 @@ namespace SplitAndMerge
                 case VarType.ARRAY:
                     this.Tuple = other.Tuple;
                     break;
+                case VarType.OBJECT:
+                    Object = other.Object;
+                    break;
             }
         }
 
@@ -134,12 +143,11 @@ namespace SplitAndMerge
             return new Variable();
         }
 
-        public Object Object { get { return AsString(); } }
-
         public void Reset()
         {
             m_value = Double.NaN;
             m_string = null;
+            m_object = null;
             m_tuple = null;
             Action = null;
             IsReturn = false;
@@ -307,6 +315,21 @@ namespace SplitAndMerge
             return Exists(hash);
         }
 
+        public bool AsBool()
+        {
+            if (Type == VarType.NUMBER && m_value != 0.0)
+            {
+                return true;
+            }
+            if (Type == VarType.STRING)
+            {
+                if (String.Compare(m_string, "true", true) == 0)
+                    return true;
+            }
+
+            return false;
+        }
+
         public int AsInt()
         {
             int result = 0;
@@ -360,6 +383,10 @@ namespace SplitAndMerge
             if (Type == VarType.STRING)
             {
                 return m_string == null ? "" : m_string;
+            }
+            if (Type == VarType.OBJECT)
+            {
+                return m_object == null ? "null" : m_object.ToString();
             }
             if (Type == VarType.NONE || m_tuple == null)
             {
@@ -462,6 +489,12 @@ namespace SplitAndMerge
             set { m_string = value; Type = VarType.STRING; }
         }
 
+        public object Object
+        {
+            get { return m_object; }
+            set { m_object = value; Type = VarType.OBJECT; }
+        }
+
         public List<Variable> Tuple
         {
             get { return m_tuple; }
@@ -477,6 +510,7 @@ namespace SplitAndMerge
 
         private double m_value;
         private string m_string;
+        private object m_object;
         private List<Variable> m_tuple;
         private Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
     }

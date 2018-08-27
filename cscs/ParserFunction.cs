@@ -296,10 +296,12 @@ namespace SplitAndMerge
             {
                 function.Name = name;
             }
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             if (!isNative)
             {
                 Translation.AddTempKeyword(name);
             }
+#endif
         }
 
         public static void AddLocalScopeVariable(string name, string scopeName, ParserFunction variable)
@@ -365,7 +367,9 @@ namespace SplitAndMerge
             }
 
             locals.Variables[local.Name] = local;
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             Translation.AddTempKeyword(local.Name);
+#endif
         }
 
         public static void PopLocalVariables()

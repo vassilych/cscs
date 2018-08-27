@@ -6,7 +6,6 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.IO;
 using Microsoft.CSharp;
-//using Mono.CSharp;
 using System.Reflection;
 using System.Diagnostics;
 using System.Globalization;
@@ -14,8 +13,9 @@ using System.Linq.Expressions;
 
 namespace SplitAndMerge
 {
-    public partial class Precompiler
+    public class Precompiler
     {
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
         static Dictionary<string, Variable.VarType> m_returnTypes = new Dictionary<string, Variable.VarType>();
 
         string m_functionName;
@@ -69,7 +69,6 @@ namespace SplitAndMerge
 
         public void Compile()
         {
-#if  __ANDROID__ == false && __IOS__ == false
             m_csCode = ConvertScript();
             var CompilerParams = new CompilerParameters();
 
@@ -105,9 +104,7 @@ namespace SplitAndMerge
                 throw new ArgumentException(text);
             }
             m_compiledFunc = CompileAndCache(compile, m_functionName, m_defArgs, m_argsMap);
-#endif
         }
-#if __ANDROID__ == false && __IOS__ == false
         static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
                            List<Dictionary<string, string>>, List<Dictionary<string, double>>, Variable>
                             CompileAndCache(CompilerResults compile, string functionName,
@@ -141,7 +138,6 @@ namespace SplitAndMerge
 
             return func;
         }
-#endif
 
         public Variable Run(List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
                             List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
@@ -873,5 +869,6 @@ namespace SplitAndMerge
                 default: return typeof(string);
             }
         }
+#endif
     }
 }

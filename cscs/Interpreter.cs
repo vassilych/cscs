@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Configuration;
 using System.Text;
 
-
 namespace SplitAndMerge
 {
     public class OutputAvailableEventArgs : EventArgs
@@ -73,7 +72,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
             ParserFunction.RegisterFunction(Constants.FUNCTION, new FunctionCreator());
-            ParserFunction.RegisterFunction(Constants.COMPILED_FUNCTION, new CompiledFunctionCreator());
             ParserFunction.RegisterFunction(Constants.INCLUDE, new IncludeFile());
             ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
             ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
@@ -87,41 +85,25 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
             ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
             ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
-            ParserFunction.RegisterFunction(Constants.CALL_NATIVE, new InvokeNativeFunction());
             ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
-            ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
-            ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
             ParserFunction.RegisterFunction(Constants.EXIT, new ExitFunction());
             ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
-            ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
-            ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
-            ParserFunction.RegisterFunction(Constants.GET_NATIVE, new GetNativeFunction());
             ParserFunction.RegisterFunction(Constants.INDEX_OF, new IndexOfFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
             ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
             ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
             ParserFunction.RegisterFunction(Constants.POW, new PowFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintFunction(ConsoleColor.Black));
-            ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintFunction(ConsoleColor.DarkGray));
-            ParserFunction.RegisterFunction(Constants.PRINT_GREEN, new PrintFunction(ConsoleColor.Green));
-            ParserFunction.RegisterFunction(Constants.PRINT_RED, new PrintFunction(ConsoleColor.Red));
             ParserFunction.RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
             ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
-            ParserFunction.RegisterFunction(Constants.READ, new ReadConsole());
-            ParserFunction.RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
-            ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
-            ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
-            ParserFunction.RegisterFunction(Constants.SET_NATIVE, new SetNativeFunction());
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
             ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
@@ -151,9 +133,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
             ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
-            ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
-            ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
-            ParserFunction.RegisterFunction(Constants.WRITE_CONSOLE, new WriteToConsole());
 
             ParserFunction.AddAction(Constants.ASSIGNMENT, new AssignFunction());
             ParserFunction.AddAction(Constants.INCREMENT, new IncrementDecrementFunction());
