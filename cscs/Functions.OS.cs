@@ -11,6 +11,45 @@ using System.Threading;
 
 namespace SplitAndMerge
 {
+    // Prints passed list of arguments
+    class PrintFunction : ParserFunction
+    {
+        internal PrintFunction(bool newLine = true)
+        {
+            m_newLine = newLine;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            AddOutput(args, script, m_newLine);
+
+            return Variable.EmptyInstance;
+        }
+
+        public static void AddOutput(List<Variable> args, ParsingScript script = null,
+                                     bool addLine = true, bool addSpace = true, string start = "")
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(start);
+            foreach (var arg in args)
+            {
+                sb.Append(arg.AsString() + (addSpace ? " ": ""));
+            }
+
+            string output = sb.ToString() + (addLine ? Environment.NewLine : string.Empty);
+            Interpreter.Instance.AppendOutput(output);
+
+            Debugger debugger = script != null && script.Debugger != null ?
+                                script.Debugger : Debugger.MainInstance;
+            if (debugger != null)
+            {
+                debugger.AddOutput(output, script);
+            }
+        }
+
+        private bool m_newLine = true;
+    }
+
     // Returns how much processor time has been spent on the current process
     class ProcessorTimeFunction : ParserFunction, INumericFunction
     {

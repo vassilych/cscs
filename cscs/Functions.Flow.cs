@@ -520,6 +520,16 @@ namespace SplitAndMerge
                 return result;
             }
 
+            // Now check that this is an object:
+            if (!string.IsNullOrWhiteSpace(m_propName))
+            {
+                Variable propValue = m_value.GetProperty(m_propName, script);
+                string temp = m_propName;
+                m_propName = null; // Need this trick in case the below statement throws
+                Utils.CheckNotNull(propValue, temp);
+                return propValue;
+            }
+
             // Otherwise just return the stored value.
             return m_value;
         }
@@ -536,10 +546,15 @@ namespace SplitAndMerge
         {
             set { m_arrayIndices = value; }
         }
+        public string PropertyName
+        {
+            set { m_propName = value; }
+        }
 
-        private Variable m_value;
-        private int m_delta = 0;
-        private List<Variable> m_arrayIndices = null;
+        Variable m_value;
+        int m_delta = 0;
+        List<Variable> m_arrayIndices = null;
+        string m_propName;
     }
     class IncrementDecrementFunction : ActionFunction, INumericFunction
     {
@@ -701,12 +716,13 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            if (m_name.Contains("."))
-            {
-                return ProcessObject(script);
-            }
-
             Variable varValue = Utils.GetItem(script);
+            // First try processing as an object (with a dot notation):
+            Variable result = ProcessObject(script, varValue);
+            if (result != null)
+            {
+                return result;
+            }
 
             // Check if the variable to be set has the form of x[a][b]...,
             // meaning that this is an array element.
@@ -736,16 +752,22 @@ namespace SplitAndMerge
             return array;
         }
 
-        Variable ProcessObject(ParsingScript script)
+        Variable ProcessObject(ParsingScript script, Variable varValue)
         {
-            Variable varValue = Utils.GetItem(script);
-
             int ind = m_name.IndexOf(".");
+            if (ind <= 0)
+            {
+                return null;
+            }
             string name = m_name.Substring(0, ind);
+            string prop = m_name.Substring(ind + 1);
 
             ParserFunction existing = ParserFunction.GetFunction(name, script);
+            Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
+            baseValue.SetProperty(prop, varValue);
 
-            return Variable.EmptyInstance;
+            ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
+            return varValue.DeepClone();
         }
 
         override public ParserFunction NewInstance()
@@ -1001,7 +1023,7 @@ namespace SplitAndMerge
             }
 
             // 3. Convert type to string.
-            string type = Constants.TypeToString(element.Type);
+            string type = element.GetTypeString();
             script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
 
             Variable newValue = new Variable(type);
@@ -1066,6 +1088,81 @@ namespace SplitAndMerge
                                                  new GetVarFunction(currentValue));
 
             return currentValue;
+        }
+    }
+
+    class GetPropertiesFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+
+            Variable baseValue = args[0];
+            List<Variable> props = baseValue.GetProperties();
+            return new Variable(props);
+        }
+    }
+
+    class GetPropertyFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name, true);
+
+            Variable baseValue = args[0];
+            string propName = Utils.GetSafeString(args, 1);
+
+            Variable propValue = baseValue.GetProperty(propName, script);
+            Utils.CheckNotNull(propValue, propName);
+
+            return new Variable(propValue);
+        }
+        public static Variable GetProperty(ParsingScript script, string sPropertyName)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, "GetProperty", true);
+
+            Variable baseValue = args[0];
+
+            Variable propValue = baseValue.GetProperty(sPropertyName, script);
+            Utils.CheckNotNull(propValue, sPropertyName);
+
+            return new Variable(propValue);
+        }
+    }
+
+    class SetPropertyFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 3, m_name, true);
+
+            Variable baseValue = args[0];
+            string propName    = Utils.GetSafeString(args, 1);
+            Variable propValue = Utils.GetSafeVariable(args, 2);
+
+            Variable result = baseValue.SetProperty(propName, propValue);
+
+            ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
+                                                    new GetVarFunction(baseValue));
+            return result;
+        }
+        public static Variable SetProperty(ParsingScript script, string sPropertyName)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, "SetProperty", true);
+
+            Variable baseValue = args[0];
+            Variable propValue = Utils.GetSafeVariable(args, 1);
+
+            Variable result = baseValue.SetProperty(sPropertyName, propValue);
+
+            ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
+                                                    new GetVarFunction(baseValue));
+            return result;
         }
     }
 }

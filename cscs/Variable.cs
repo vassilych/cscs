@@ -120,6 +120,8 @@ namespace SplitAndMerge
             Type = other.Type;
             IsReturn = other.IsReturn;
             m_dictionary = other.m_dictionary;
+            m_propertyMap = other.m_propertyMap;
+            //bug todo
 
             switch (other.Type)
             {
@@ -153,6 +155,7 @@ namespace SplitAndMerge
             IsReturn = false;
             Type = VarType.NONE;
             m_dictionary.Clear();
+            m_propertyMap.Clear();
         }
 
         public bool Equals(Variable other)
@@ -179,6 +182,10 @@ namespace SplitAndMerge
                 return false;
             }
             if (this.Tuple != null && !this.Tuple.Equals(other.Tuple))
+            {
+                return false;
+            }
+            if (!m_propertyMap.Equals(other.m_propertyMap))
             {
                 return false;
             }
@@ -386,7 +393,7 @@ namespace SplitAndMerge
             }
             if (Type == VarType.OBJECT)
             {
-                return m_object == null ? "null" : m_object.ToString();
+                return ObjectToString();
             }
             if (Type == VarType.NONE || m_tuple == null)
             {
@@ -448,6 +455,40 @@ namespace SplitAndMerge
             return sb.ToString();
         }
 
+        string ObjectToString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append((m_object !=null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
+
+            List<string> allProps = GetAllProperties();
+            foreach (string prop in allProps)
+            {
+                if (prop == Constants.OBJECT_PROPERTIES)
+                {
+                    sb.Append(prop);
+                    continue;
+                }
+                Variable propValue = GetProperty(prop);
+                string value = "";
+                if (propValue != null && propValue != Variable.EmptyInstance)
+                {
+                    value = propValue.AsString();
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        if (propValue.Type == VarType.STRING && prop != Constants.OBJECT_TYPE)
+                        {
+                            value = "\"" + value + "\"";
+                        }
+                        value = ": " + value;
+                    }
+                }
+                sb.Append(prop + value + ", ");
+            }
+
+            sb.Append(Constants.END_GROUP.ToString());
+            return sb.ToString();
+        }
+
         public void SetAsArray()
         {
             Type = VarType.ARRAY;
@@ -460,6 +501,113 @@ namespace SplitAndMerge
         public int TotalElements()
         {
             return Type == VarType.ARRAY ? m_tuple.Count : 1;
+        }
+
+        public Variable SetProperty(string name, Variable value)
+        {
+            Variable result = Variable.EmptyInstance;
+            m_propertyMap[name] = value;
+            Type = VarType.OBJECT;
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
+                result = obj.SetProperty(name, value);
+            }
+            return result;
+        }
+
+        public Variable GetProperty(string name, ParsingScript script = null)
+        {
+            Variable result = Variable.EmptyInstance;
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
+                var supported = obj.GetProperties();
+                if (supported.Contains(name))
+                {
+                    List<Variable> args = null;
+                    if (script != null && script.TryPrev() == Constants.START_ARG)
+                    {
+                        args = script.GetFunctionArgs();
+                    }
+                    result = obj.GetProperty(name, args);
+                    if (result != null)
+                    {
+                        return result;
+                    }
+                }
+            }
+
+            if (m_propertyMap.TryGetValue(name, out result))
+            {
+                return result;
+            }
+            else if (name.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetProperties());
+            }
+            else if (name.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetTypeString());
+            }
+
+            return result;
+        }
+
+        public List<Variable> GetProperties()
+        {
+            List<string> all = GetAllProperties();
+            List <Variable> allVars = new List<Variable>(all.Count);
+            foreach (string key in all)
+            {
+                allVars.Add(new Variable(key));
+            }
+
+            return allVars;
+        }
+
+        public List<string> GetAllProperties()
+        {
+            HashSet<string> allSet = new HashSet<string>();
+            foreach (string key in m_propertyMap.Keys)
+            {
+                allSet.Add(key);
+            }
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
+                List<string> objProps = obj.GetProperties();
+                foreach (string key in objProps)
+                {
+                    allSet.Add(key);
+                }
+            }
+
+            List<string> all = new List<string>(allSet);
+            all.Sort();
+
+            if (!allSet.Contains(Constants.OBJECT_TYPE))
+            {
+                all.Insert(0, Constants.OBJECT_TYPE);
+            }
+            if (!allSet.Contains(Constants.OBJECT_PROPERTIES))
+            {
+                all.Add(Constants.OBJECT_PROPERTIES);
+            }
+
+            return all;
+        }
+
+        public string GetTypeString()
+        {
+            if (Type == VarType.OBJECT && Object != null)
+            {
+                return Object.GetType().ToString();
+            }
+            return Constants.TypeToString(Type);
         }
 
         public Variable GetValue(int index)
@@ -508,11 +656,152 @@ namespace SplitAndMerge
 
         public static Variable EmptyInstance = new Variable();
 
-        private double m_value;
-        private string m_string;
-        private object m_object;
-        private List<Variable> m_tuple;
-        private Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
+        double m_value;
+        string m_string;
+        object m_object;
+        List<Variable> m_tuple;
+        Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
+
+        Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
+    }
+
+    public interface ScriptObject
+    {
+        Variable SetProperty(string name, Variable value);
+        Variable GetProperty(string name, List<Variable> args = null);
+        List<string> GetProperties();
+    }
+
+    public class EntityObject : ScriptObject
+    {
+        public string Name { get; set; } = "myname";
+        public string Color { get; set; } = "mycolor";
+        public bool Visible { get; set; } = false;
+
+        protected static List<string> s_properties = new List<string> { "name", "color", "visible", "fire" };
+
+        public override string ToString()
+        {
+            string myString = string.Format("<{0}@(0.0 0.0 0.0) (0.0 0.0 0.0) ID: {1}>",
+               Name, GetHashCode());
+            return myString;
+        }
+        public virtual List<string> GetProperties()
+        {
+            return s_properties;
+        }
+        public Variable GetNameProperty()
+        {
+            return new Variable(Name);
+        }
+        public Variable GetColorProperty()
+        {
+            return new Variable(Color);
+        }
+        public Variable GetVisibleProperty()
+        {
+            return new Variable(Visible);
+        }
+        public Variable GetFireProperty(List<Variable> args)
+        {
+            if (args == null || Debugger.MainInstance == null)
+            {
+                return Variable.EmptyInstance;
+            }
+
+            PrintFunction.AddOutput(args, null, true, true, "FIRE: ");
+            return Variable.EmptyInstance;
+        }
+        public virtual Variable GetProperty(string sPropertyName, List<Variable> args = null)
+        {
+            switch (sPropertyName)
+            {
+                case "name": return GetNameProperty();
+                case "color": return GetColorProperty();
+                case "visible": return GetVisibleProperty();
+                case "fire": return GetFireProperty(args);
+                default: return Variable.EmptyInstance;
+            }
+        }
+        // ------------------------------------------------------------------------------------
+        public Variable SetNameProperty(string sValue)
+        {
+            Name = sValue;
+            return Variable.EmptyInstance;
+        }
+        public Variable SetColorProperty(string aColor)
+        {
+            Color = aColor;
+            return Variable.EmptyInstance;
+        }
+        public Variable SetVisibleProperty(bool aBool)
+        {
+            Visible = aBool;
+            return Variable.EmptyInstance;
+        }
+        public virtual Variable SetProperty(string sPropertyName, Variable argValue)
+        {
+            switch (sPropertyName)
+            {
+                case "name": return SetNameProperty(argValue.AsString());
+                case "color": return SetColorProperty(argValue.AsString());
+                case "visible": return SetVisibleProperty(argValue.AsBool());
+                default: return Variable.EmptyInstance;
+            }
+        }
+    }
+    public class TextEntityObject : EntityObject
+    {
+        static List<string> s_textProperties = new List<string> { "text" };
+        public override List<string> GetProperties()
+        {
+            if (s_textProperties.Count < base.GetProperties().Count + 1)
+            {
+                s_textProperties.AddRange(base.GetProperties());
+            }
+            return s_textProperties;
+        }
+        public Variable GetTextProperty()
+        {
+            return new Variable(Name);
+        }
+        public override Variable GetProperty(string sPropertyName, List<Variable> args = null)
+        {
+            switch (sPropertyName)
+            {
+                case "text": return GetTextProperty();
+                default: return base.GetProperty(sPropertyName, args);
+            }
+        }
+        public Variable SetTextProperty(string sValue)
+        {
+            Name = sValue;
+            return Variable.EmptyInstance;
+        }
+        public override Variable SetProperty(string sPropertyName, Variable argValue)
+        {
+            switch (sPropertyName)
+            {
+                case "text": return SetTextProperty(argValue.AsString());
+                default: return base.SetProperty(sPropertyName, argValue);
+            }
+        }
+    }
+    class CreateTextFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            if (args.Count > 1)
+                return Variable.EmptyInstance;
+
+            string sText = args.Count > 0 ? args[0].AsString() : "";
+
+            TextEntityObject myObject = new TextEntityObject();
+            Variable newValue = new Variable(myObject);
+
+            return newValue;
+        }
     }
 }
 

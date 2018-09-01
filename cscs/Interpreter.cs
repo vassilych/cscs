@@ -72,7 +72,10 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
             ParserFunction.RegisterFunction(Constants.FUNCTION, new FunctionCreator());
+            ParserFunction.RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
+            ParserFunction.RegisterFunction(Constants.GET_PROPERTY, new GetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.INCLUDE, new IncludeFile());
+            ParserFunction.RegisterFunction(Constants.SET_PROPERTY, new SetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
             ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
             ParserFunction.RegisterFunction(Constants.TYPE, new TypeFunction());
@@ -99,6 +102,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
             ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
             ParserFunction.RegisterFunction(Constants.POW, new PowFunction());
+            ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
             ParserFunction.RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
             ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());

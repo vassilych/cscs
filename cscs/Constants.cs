@@ -77,18 +77,23 @@ namespace SplitAndMerge
         public const string EXIT = "exit";
         public const string EXP = "exp";
         public const string FLOOR = "floor";
+        public const string GET_PROPERTIES = "GetPropertyStrings";
+        public const string GET_PROPERTY = "GetProperty";
         public const string INDEX_OF = "indexof";
         public const string LOCK = "lock";
         public const string LOG = "log";
         public const string NOW = "Now";
+        public const string OBJECT_PROPERTIES = "properties";
+        public const string OBJECT_TYPE = "type";
         public const string PI = "pi";
         public const string POW = "pow";
-        public const string PSTIME = "pstime";
+         public const string PSTIME = "pstime";
         public const string RANDOM = "GetRandom";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string ROUND = "round";
         public const string SET = "set";
+        public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
         public const string SIN = "sin";
         public const string SIZE = "size";
@@ -206,14 +211,15 @@ namespace SplitAndMerge
         {
             switch (type)
             {
-                case Variable.VarType.NUMBER: return "NUMBER";
-                case Variable.VarType.STRING: return "STRING";
+                case Variable.VarType.NUMBER:   return "NUMBER";
+                case Variable.VarType.STRING:   return "STRING";
                 case Variable.VarType.ARRAY_STR:
                 case Variable.VarType.ARRAY_NUM:
-                case Variable.VarType.ARRAY: return "ARRAY";
+                case Variable.VarType.ARRAY:    return "ARRAY";
                 case Variable.VarType.MAP_STR:
-                case Variable.VarType.MAP_NUM: return "MAP";
-                case Variable.VarType.BREAK: return "BREAK";
+                case Variable.VarType.MAP_NUM:  return "MAP";
+                case Variable.VarType.OBJECT:   return "OBJECT";
+                case Variable.VarType.BREAK:    return "BREAK";
                 case Variable.VarType.CONTINUE: return "CONTINUE";
                 default: return "NONE";
             }

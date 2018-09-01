@@ -121,7 +121,6 @@ namespace SplitAndMerge
                 m_debugging.Filename = filename;
                 m_debugging.OriginalScript = m_script;
                 m_debugging.Debugger = this;
-
             }
             else if (action == DebuggerUtils.DebugAction.VARS)
             {
@@ -301,8 +300,10 @@ namespace SplitAndMerge
                 ReplMode = false;
             }
 
-            string stringRes = Output + "\n";
+            string stringRes = string.IsNullOrEmpty(Output) ? "" : Output + (Output.EndsWith("\n") ? "" : "\n");
+            
             stringRes += result == null ? "" : result.AsString();
+            stringRes += (stringRes.EndsWith("\n") ? "" : "\n");
 
             return stringRes;
         }
@@ -522,7 +523,7 @@ namespace SplitAndMerge
             return LastResult;
         }
 
-        public void AddOutput(string output, ParsingScript script)
+        public void AddOutput(string output, ParsingScript script = null)
         {
             if (!string.IsNullOrEmpty(Output) && !Output.EndsWith("\n"))
             {
@@ -533,10 +534,10 @@ namespace SplitAndMerge
                 Output += output;
                 return;
             }
-            int origLineNumber = script.GetOriginalLineNumber();
-            string filename = Path.GetFullPath(script.Filename);
+            int origLineNumber = script == null ? 0 : script.GetOriginalLineNumber();
+            string filename = script == null ? "" : Path.GetFullPath(script.Filename);
             Output += origLineNumber + "\t" + filename + "\n";
-            Output += output;//.Replace('\n', ' ');
+            Output += output;
         }
 
         void StepIn(ParsingScript stepInScript)

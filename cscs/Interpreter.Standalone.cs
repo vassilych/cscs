@@ -11,6 +11,7 @@ namespace SplitAndMerge
         {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
             //ParserFunction.CleanUp();
+            ParserFunction.RegisterFunction("CreateText", new CreateTextFunction());
             ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINE, new AppendLineFunction());
@@ -35,11 +36,10 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MKDIR, new MkdirFunction());
             ParserFunction.RegisterFunction(Constants.MORE, new MoreFunction());
             ParserFunction.RegisterFunction(Constants.MOVE, new MoveFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintFunction(ConsoleColor.Black));
-            ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintFunction(ConsoleColor.DarkGray));
-            ParserFunction.RegisterFunction(Constants.PRINT_GREEN, new PrintFunction(ConsoleColor.Green));
-            ParserFunction.RegisterFunction(Constants.PRINT_RED, new PrintFunction(ConsoleColor.Red));
+            ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));
+            ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintColorFunction(ConsoleColor.DarkGray));
+            ParserFunction.RegisterFunction(Constants.PRINT_GREEN, new PrintColorFunction(ConsoleColor.Green));
+            ParserFunction.RegisterFunction(Constants.PRINT_RED, new PrintColorFunction(ConsoleColor.Red));
             ParserFunction.RegisterFunction(Constants.PSINFO, new PsInfoFunction());
             ParserFunction.RegisterFunction(Constants.PWD, new PwdFunction());
             ParserFunction.RegisterFunction(Constants.READ, new ReadConsole());

@@ -40,6 +40,12 @@ namespace SplitAndMerge
                 return;
             }
 
+            m_impl = GetObjectFunction(item, script);
+            if (m_impl != null)
+            {
+                return;
+            }
+
             m_impl = GetArrayFunction(item, script, action);
             if (m_impl != null)
             {
@@ -98,6 +104,27 @@ namespace SplitAndMerge
 
             varFunc.Indices = arrayIndices;
             varFunc.Delta = delta;
+            return varFunc;
+        }
+
+        public static ParserFunction GetObjectFunction(string name, ParsingScript script)
+        {
+            int ind = name.IndexOf(".");
+            if (ind <= 0)
+            {
+                return null;
+            }
+            string baseName = name.Substring(0, ind);
+            string prop     = name.Substring(ind + 1);
+
+            ParserFunction pf = ParserFunction.GetFunction(baseName, script);
+            GetVarFunction varFunc = pf as GetVarFunction;
+            if (varFunc == null)
+            {
+                return null;
+            }
+
+            varFunc.PropertyName = prop;
             return varFunc;
         }
 
@@ -214,10 +241,15 @@ namespace SplitAndMerge
                 return null;
             }
             GetVarFunction gvf = variable as GetVarFunction;
-            string value = gvf.Value.AsString(true, true, 16);
+            return CreateVariableEntry(gvf.Value, variable.Name, isLocal);
+        }
+
+        static string CreateVariableEntry(Variable var, string name, bool isLocal = false)
+        {
+            string value = var.AsString(true, true, 16);
             string localGlobal = isLocal ? "0" : "1";
-            string varData = variable.Name + ":" + localGlobal + ":" +
-                             Constants.TypeToString(gvf.Value.Type).ToLower() + ":" + value;
+            string varData = name + ":" + localGlobal + ":" +
+                             Constants.TypeToString(var.Type).ToLower() + ":" + value;
             return varData.Trim();
         }
 
@@ -230,6 +262,17 @@ namespace SplitAndMerge
                 if (!string.IsNullOrWhiteSpace(varData))
                 {
                     sb.AppendLine(varData);
+                    GetVarFunction gvf = variable as GetVarFunction;
+                    if (gvf != null && gvf.Value.Type == Variable.VarType.OBJECT)
+                    {
+                        var props = gvf.Value.GetProperties();
+                        foreach (Variable var in props)
+                        {
+                            var val = gvf.Value.GetProperty(var.AsString());
+                            varData = CreateVariableEntry(val, variable.Name + "." + var.AsString(), isLocal);
+                            sb.AppendLine(varData);
+                        }
+                    }
                 }
             }
         }

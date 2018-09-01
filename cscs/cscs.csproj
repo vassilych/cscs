@@ -60,7 +60,6 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="WindowsBase" />
@@ -75,29 +74,5 @@
     <Reference Include="System.Windows" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Windows.Forms.DataVisualization" />
-    <Reference Include="Ionic.Zip">
-      <HintPath>packages\DotNetZip.1.0\lib\Net35\Ionic.Zip.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.AST">
-      <HintPath>packages\FluentSharp.AST.5.5.156\lib\net35\FluentSharp.AST.dll</HintPath>
-    </Reference>
-    <Reference Include="O2_FluentSharp_CoreLib">
-      <HintPath>packages\FluentSharp.CoreLib.4.0.0.0\lib\net40\O2_FluentSharp_CoreLib.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.Web_3_5">
-      <HintPath>packages\FluentSharp.Web_3_5.5.4.146\lib\net35\FluentSharp.Web_3_5.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.WinForms">
-      <HintPath>packages\FluentSharp.WinForms.5.3.109\lib\net35\FluentSharp.WinForms.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.SharpDevelopEditor">
-      <HintPath>packages\FluentSharp.SharpDevelopEditor.5.3.111\lib\net35\FluentSharp.SharpDevelopEditor.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.Zip">
-      <HintPath>packages\FluentSharp.Zip.5.5.156\lib\net35\FluentSharp.Zip.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentSharp.REPL">
-      <HintPath>packages\FluentSharp.REPL.5.5.172\lib\net35\FluentSharp.REPL.exe</HintPath>
-    </Reference>
   </ItemGroup>
 </Project>
