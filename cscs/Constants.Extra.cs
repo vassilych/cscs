@@ -29,7 +29,6 @@ namespace SplitAndMerge
         public const string MKDIR = "mkdir";
         public const string MORE = "more";
         public const string MOVE = "move";
-        public const string PRINT = "print";
         public const string PRINT_BLACK = "printblack";
         public const string PRINT_GRAY = "printgray";
         public const string PRINT_GREEN = "printgreen";

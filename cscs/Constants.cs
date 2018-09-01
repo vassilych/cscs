@@ -87,7 +87,8 @@ namespace SplitAndMerge
         public const string OBJECT_TYPE = "type";
         public const string PI = "pi";
         public const string POW = "pow";
-         public const string PSTIME = "pstime";
+        public const string PRINT = "print";
+        public const string PSTIME = "pstime";
         public const string RANDOM = "GetRandom";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
