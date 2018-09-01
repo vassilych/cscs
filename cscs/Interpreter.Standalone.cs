@@ -11,7 +11,6 @@ namespace SplitAndMerge
         {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
             //ParserFunction.CleanUp();
-            ParserFunction.RegisterFunction("CreateText", new CreateTextFunction());
             ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINE, new AppendLineFunction());
