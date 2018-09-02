@@ -1,3 +1,35 @@
+myText = CreateText( "khm" );
+myText.visible = true;
+myText.name = "kiborg";
+myText.color = "blue";
+props = GetPropertyStrings(myText);
+myText.color(1);
+
+print("props: ", props);
+print("name: ", myText.name);
+print("type: ", myText.type);
+print("text: ", myText.text);
+print("color: ", myText.color);
+print("visible: ", myText.visible);
+
+
+c.name  = "My Cube"; 
+c.value = 10;
+c.index = 6;
+
+SetProperty(c, "newOne", 40);
+SetProperty(c, "value", 11);
+props = GetProperties(c);
+print("props: ", props);
+print("name: ", c.name);
+print("value: ", c.value);
+print("index: ", c.index);
+print("newOne: ", c.newOne);
+print("newOne: ", GetProperty(c, "newOne"));
+print("name: ", GetProperty(c, "name"));
+print(c.nameX);
+
+/*      
 function getP(n) {
   bound = n;//round(sqrt(n));
   i = 0;
@@ -9,7 +41,7 @@ function getP(n) {
 }
 n=34;
 getP(n);
-/*      
+
 for (i = 10; i >= 0; i--) {
   write(i, " ");
   arr[i] = 2*i;
