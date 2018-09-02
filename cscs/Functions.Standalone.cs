@@ -7,7 +7,24 @@ using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false
+    class WriteToConsole : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            for (int i = 0; i < args.Count; i++)
+            {
+                Console.Write(args[i].AsString());
+            }
+            Console.WriteLine();
+
+            return Variable.EmptyInstance;
+        }
+    }
+
+#if __ANDROID__ == false && __IOS__ == false
     class TranslateFunction : ParserFunction, IStringFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -65,22 +82,6 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             Console.Clear();
-            return Variable.EmptyInstance;
-        }
-    }
-
-    class WriteToConsole : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-
-            for (int i = 0; i < args.Count; i++)
-            {
-                Console.Write(args[i].AsString());
-            }
-            Console.WriteLine();
-
             return Variable.EmptyInstance;
         }
     }
@@ -279,5 +280,6 @@ namespace SplitAndMerge
         Precompiler m_precompiler;
         Dictionary<string, Variable> m_argsMap;
     }
+#endif
 #endif
 }

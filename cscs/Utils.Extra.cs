@@ -469,6 +469,7 @@ namespace SplitAndMerge
             }
         }
 
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
         public static Variable RunCompiled(string functionName, string argsString)
         {
             string adjArgs = PrepareArgs(argsString, true);
@@ -487,6 +488,7 @@ namespace SplitAndMerge
             }
             return Calculate(functionName, argsString);
         }
+#endif
 
     }
 }
