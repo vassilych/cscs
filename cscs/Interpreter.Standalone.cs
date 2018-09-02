@@ -18,9 +18,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CALL_NATIVE, new InvokeNativeFunction());
             ParserFunction.RegisterFunction(Constants.CD, new CdFunction());
             ParserFunction.RegisterFunction(Constants.CD__, new Cd__Function());
-            ParserFunction.RegisterFunction(Constants.COMPILED_FUNCTION, new CompiledFunctionCreator());
             ParserFunction.RegisterFunction(Constants.CONNECTSRV, new ClientSocket());
-            ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             ParserFunction.RegisterFunction(Constants.COPY, new CopyFunction());
             ParserFunction.RegisterFunction(Constants.DELETE, new DeleteFunction());
             ParserFunction.RegisterFunction(Constants.DIR, new DirFunction());
@@ -35,19 +33,12 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MKDIR, new MkdirFunction());
             ParserFunction.RegisterFunction(Constants.MORE, new MoreFunction());
             ParserFunction.RegisterFunction(Constants.MOVE, new MoveFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));
-            ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintColorFunction(ConsoleColor.DarkGray));
-            ParserFunction.RegisterFunction(Constants.PRINT_GREEN, new PrintColorFunction(ConsoleColor.Green));
-            ParserFunction.RegisterFunction(Constants.PRINT_RED, new PrintColorFunction(ConsoleColor.Red));
             ParserFunction.RegisterFunction(Constants.PSINFO, new PsInfoFunction());
             ParserFunction.RegisterFunction(Constants.PWD, new PwdFunction());
-            ParserFunction.RegisterFunction(Constants.READ, new ReadConsole());
-            ParserFunction.RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             ParserFunction.RegisterFunction(Constants.READFILE, new ReadCSCSFileFunction());
             ParserFunction.RegisterFunction(Constants.RUN, new RunFunction());
             ParserFunction.RegisterFunction(Constants.SET_NATIVE, new SetNativeFunction());
             ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
-            ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.STARTSRV, new ServerSocket());
             ParserFunction.RegisterFunction(Constants.STOPWATCH_ELAPSED, new StopWatchFunction(StopWatchFunction.Mode.ELAPSED));
             ParserFunction.RegisterFunction(Constants.STOPWATCH_START, new StopWatchFunction(StopWatchFunction.Mode.START));
@@ -56,14 +47,24 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.STR_BETWEEN_ANY, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN_ANY));
             ParserFunction.RegisterFunction(Constants.TAIL, new TailFunction());
             ParserFunction.RegisterFunction(Constants.TIMESTAMP, new TimestampFunction());
-            ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
-            ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
             ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
-            ParserFunction.RegisterFunction(Constants.WRITE_CONSOLE, new WriteToConsole());
             ParserFunction.RegisterFunction(Constants.WRITELINE, new WriteLineFunction());
             ParserFunction.RegisterFunction(Constants.WRITELINES, new WriteLinesFunction());
+            ParserFunction.RegisterFunction(Constants.WRITE_CONSOLE, new WriteToConsole());
 
-            #endif
+#if __ANDROID__ == false && __IOS__ == false
+            ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
+            ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));
+            ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintColorFunction(ConsoleColor.DarkGray));
+            ParserFunction.RegisterFunction(Constants.PRINT_GREEN, new PrintColorFunction(ConsoleColor.Green));
+            ParserFunction.RegisterFunction(Constants.PRINT_RED, new PrintColorFunction(ConsoleColor.Red));
+            ParserFunction.RegisterFunction(Constants.READ, new ReadConsole());
+            ParserFunction.RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
+            ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
+            ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
+            ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+#endif
+#endif
             ReadConfig();
         }
 
