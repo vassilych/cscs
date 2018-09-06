@@ -132,7 +132,8 @@ namespace SplitAndMerge
         public void RegisterArguments(List<Variable> args)
         {
             StackLevel stackLevel = new StackLevel(m_name);
-            for (int i = 0; i < m_args.Length; i++)
+            int maxSize = Math.Min(args.Count, m_args.Length);
+            for (int i = 0; i < maxSize; i++)
             {
                 var arg = new GetVarFunction(args[i]);
                 arg.Name = m_args[i];
@@ -153,6 +154,12 @@ namespace SplitAndMerge
                                     m_args.Length + " declared, " + args.Count + " supplied");
             }
 
+            Variable result = Run(args, script);
+            return result;
+        }
+
+        public Variable Run(List<Variable> args, ParsingScript script = null)
+        {
             // 1. Add passed arguments as local variables to the Parser.
             RegisterArguments(args);
 
@@ -167,11 +174,12 @@ namespace SplitAndMerge
                 tempScript.OriginalScript = m_parentScript.OriginalScript;
             }
             tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;
+            tempScript.InTryBlock = script == null ? false: script.InTryBlock;
 
-            if (script.Debugger != null)
+            Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
+            if (debugger != null)
             {
-                result = script.Debugger.StepInFunctionIfNeeded(tempScript);
+                result = debugger.StepInFunctionIfNeeded(tempScript);
             }
 
             while (tempScript.Pointer < m_body.Length - 1 &&
@@ -192,6 +200,29 @@ namespace SplitAndMerge
                 result.IsReturn = false;
             }
 
+            return result;
+        }
+
+        public static Variable Run(string functionName, Variable arg1 = null, Variable arg2 = null)
+        {
+            CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
+
+            if (customFunction == null)
+            {
+                return null;
+            }
+
+            List<Variable> args = new List<Variable>();
+            if (arg1 != null)
+            {
+                args.Add(arg1);
+            }
+            if (arg2 != null)
+            {
+                args.Add(arg2);
+            }
+
+            Variable result = customFunction.Run(args);
             return result;
         }
 
