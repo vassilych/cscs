@@ -51,9 +51,11 @@ namespace SplitAndMerge
         public const string ELSE_IF = "elif";
         public const string FOR = "for";
         public const string FUNCTION = "function";
+        public const string CLASS = "class";
         public const string COMPILED_FUNCTION = "cfunction";
         public const string IF = "if";
         public const string INCLUDE = "include";
+        public const string NEW = "new";
         public const string RETURN = "return";
         public const string THROW = "throw";
         public const string TRY = "try";
@@ -158,13 +160,13 @@ namespace SplitAndMerge
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
-            APPENDLINE, CD, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, MKDIR, MORE, MOVE, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
+            APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
+            FUNCTION, COMPILED_FUNCTION, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
             TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else
        public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            FUNCTION, SHOW
+        CLASS, FUNCTION, NEW, SHOW
        };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but

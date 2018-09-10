@@ -1,3 +1,50 @@
+class Stuff1 {
+  x = 2;
+  Stuff1(a) {
+    x = a;
+  }
+ 
+  function addStuff1(n) {
+    return n + x;
+  }
+}
+
+class Stuff2 {
+  y = 3;
+  Stuff2(b) {
+    y = b;
+  }
+ 
+  function addStuff2(n) {
+    return n + y;
+  }
+}
+
+class CoolStuff : Stuff1, Stuff2 {
+  z = 3;
+  CoolStuff(a, b, c) {
+    x = a;
+    y = b;
+    z = c;
+  }
+ 
+  function addCoolStuff() {
+    return x + y + z;
+  }
+}
+
+addition = 100;
+obj1 = new Stuff1(10);
+print("х=", obj1.x, " addStuff1=", obj1.addStuff1(addition));
+
+obj2 = new Stuff2(20);
+print("y=", obj2.y, " addStuff2=", obj2.addStuff2(addition));
+
+newObj = new CoolStuff(11, 13, 17);
+print("х=", newObj.x, " y=", newObj.y, " z=", newObj.z, " addCoolStuff=", newObj.addCoolStuff());
+print("newObj.addStuff1=", newObj.addStuff1(addition), " newObj.addStuff2=", newObj.addStuff2(addition));
+
+/*      
 myText = CreateText( "khm" );
 myText.visible = true;
 myText.name = "kiborg";
@@ -29,7 +76,6 @@ print("newOne: ", GetProperty(c, "newOne"));
 print("name: ", GetProperty(c, "name"));
 print(c.nameX);
 
-/*      
 function getP(n) {
   bound = n;//round(sqrt(n));
   i = 0;

@@ -113,13 +113,241 @@ namespace SplitAndMerge
             customFunc.ParentScript = script;
             customFunc.ParentOffset = parentOffset;
 
-            ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
+            if (script.CurrentClass != null)
+            {
+                script.CurrentClass.AddMethod(funcName, args, customFunc);
+            }
+            else
+            {
+                ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
+            }
 
             return Variable.EmptyInstance;
         }
     }
 
-    class CustomFunction : ParserFunction
+    public class CSCSClass : ParserFunction
+    {
+        public CSCSClass(string className, string[] baseClasses)
+        {
+            m_name = className;
+            s_allClasses[className] = this;
+
+            foreach (string baseClass in baseClasses)
+            {
+                var bc = CSCSClass.GetClass(baseClass);
+                if (bc == null)
+                {
+                    throw new ArgumentException("Base Class [" + baseClass + "] not found.");
+                }
+
+                foreach (var entry in bc.m_classProperties)
+                {
+                    m_classProperties[entry.Key] = entry.Value;
+                }
+                foreach (var entry in bc.m_customFunctions)
+                {
+                    m_customFunctions[entry.Key] = entry.Value;
+                }
+            }
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            // TODO: Work in progress, currently not functional
+            return Variable.EmptyInstance;
+        }
+
+        public void AddMethod(string name, string[] args, CustomFunction method)
+        {
+            if (name == m_name)
+            {
+                m_constructors[args.Length] = method;
+            }
+            else
+            {
+                m_customFunctions[name] = method;
+            }
+        }
+
+        public void AddProperty(string name, Variable property)
+        {
+            m_classProperties[name] = property;
+        }
+
+        public static CSCSClass GetClass(string name)
+        {
+            CSCSClass theClass = null;
+            s_allClasses.TryGetValue(name, out theClass);
+            return theClass;
+        }
+
+        static Dictionary<string, CSCSClass> s_allClasses =
+            new Dictionary<string, CSCSClass>();
+
+        Dictionary<int, CustomFunction> m_constructors =
+            new Dictionary<int, CustomFunction>();
+        Dictionary<string, CustomFunction> m_customFunctions =
+            new Dictionary<string, CustomFunction>();
+        Dictionary<string, Variable> m_classProperties =
+            new Dictionary<string, Variable>();
+
+        public ParsingScript ParentScript = null;
+        public int ParentOffset = 0;
+
+        public class ClassInstance : ScriptObject
+        {
+            public ClassInstance(string instanceName, string className, List<Variable> args)
+            {
+                InstanceName = instanceName;
+                m_cscsClass = CSCSClass.GetClass(className);
+                if (m_cscsClass == null)
+                {
+                    throw new ArgumentException("Class [" + className + "] not found.");
+                }
+
+                // Copy over all the properties defined for this class.
+                foreach (var entry in m_cscsClass.m_classProperties)
+                {
+                    SetProperty(entry.Key, entry.Value);
+                }
+
+                // Run "constructor" if any is defined for this number of args.
+                CustomFunction constructor = null;
+                if (m_cscsClass.m_constructors.TryGetValue(args.Count, out constructor))
+                {
+                    constructor.Run(args, null, this);
+                }
+            }
+
+            public string InstanceName { get; set; }
+            CSCSClass m_cscsClass;
+
+            Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
+            HashSet<string> m_propSet = new HashSet<string>();
+
+            public Variable SetProperty(string name, Variable value)
+            {
+                m_properties[name] = value;
+                m_propSet.Add(name);
+                return Variable.EmptyInstance;
+            }
+
+            public Variable GetProperty(string name, List<Variable> args = null)
+            {
+                Variable value = null;
+                if (m_properties.TryGetValue(name, out value))
+                {
+                    return value;
+                }
+
+                CustomFunction customFunction = null;
+                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out customFunction))
+                {
+                    return null;
+                }
+                if (args == null)
+                {
+                    return Variable.EmptyInstance;
+                }
+
+                foreach (var entry in m_cscsClass.m_classProperties)
+                {
+                    args.Add(entry.Value);
+                }
+
+                Variable result = customFunction.Run(args, null, this);
+                return result;
+            }
+
+            public List<KeyValuePair<string, Variable>> GetPropList()
+            {
+                List<KeyValuePair<string, Variable>> props = new List<KeyValuePair<string, Variable>>();
+                foreach (var entry in m_properties)
+                {
+                    props.Add(new KeyValuePair<string, Variable>(entry.Key, entry.Value));
+                }
+                return props;
+            }
+
+            public List<string> GetProperties()
+            {
+                List<string> props = new List<string>(m_properties.Keys);
+                props.AddRange(m_cscsClass.m_customFunctions.Keys);
+
+                return props;
+            }
+            public bool PropertyExists(string name)
+            {
+                return m_propSet.Contains(name);
+            }
+        }
+    }
+
+    class NewObjectFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string className = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            script.MoveForwardIf(Constants.START_ARG);
+            List<Variable> args = script.GetFunctionArgs();
+
+            CSCSClass.ClassInstance instance = new 
+                CSCSClass.ClassInstance(script.CurrentAssign, className, args);
+
+            Variable value = new Variable(instance);
+
+            return value;
+        }
+    }
+
+
+    public class ClassCreator : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string className = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            string[] baseClasses = Utils.GetBaseClasses(script);
+            CSCSClass newClass = new CSCSClass(className, baseClasses);
+
+            script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
+
+            newClass.ParentOffset = script.Pointer;
+            newClass.ParentScript = script;
+
+            string body = Utils.GetBodyBetween(script, Constants.START_GROUP,
+                                               Constants.END_GROUP);
+
+            Variable result = null;
+            ParsingScript tempScript = new ParsingScript(body);
+            tempScript.ScriptOffset = script.Pointer;
+            tempScript.Char2Line = script.Char2Line;
+            tempScript.Filename = script.Filename;
+            tempScript.OriginalScript = script.OriginalScript;
+            tempScript.CurrentClass = newClass;
+            tempScript.ParentScript = script;
+            tempScript.InTryBlock = script == null ? false : script.InTryBlock;
+
+            Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
+            if (debugger != null)
+            {
+                result = debugger.StepInFunctionIfNeeded(tempScript);
+            }
+
+            while (tempScript.Pointer < body.Length - 1 &&
+                  (result == null || !result.IsReturn))
+            {
+                result = tempScript.ExecuteTo();
+                tempScript.GoToNextStatement();
+            }
+
+            return Variable.EmptyInstance;
+        }
+    }
+
+    public class CustomFunction : ParserFunction
     {
         internal CustomFunction(string funcName,
                                 string body, string[] args)
@@ -129,9 +357,21 @@ namespace SplitAndMerge
             m_args = args;
         }
 
-        public void RegisterArguments(List<Variable> args)
+        public void RegisterArguments(List<Variable> args,
+                                      List<KeyValuePair<string, Variable>> args2 = null)
         {
             StackLevel stackLevel = new StackLevel(m_name);
+
+            if (args2 != null)
+            {
+                foreach (var entry in args2)
+                {
+                    var arg = new GetVarFunction(entry.Value);
+                    arg.Name = entry.Key;
+                    stackLevel.Variables[entry.Key] = arg;
+                }
+            }
+
             int maxSize = Math.Min(args.Count, m_args.Length);
             for (int i = 0; i < maxSize; i++)
             {
@@ -158,10 +398,12 @@ namespace SplitAndMerge
             return result;
         }
 
-        public Variable Run(List<Variable> args, ParsingScript script = null)
+        public Variable Run(List<Variable> args, ParsingScript script = null,
+                            CSCSClass.ClassInstance instance = null)
         {
+            List<KeyValuePair<string, Variable>> args2 = instance == null ? null : instance.GetPropList();
             // 1. Add passed arguments as local variables to the Parser.
-            RegisterArguments(args);
+            RegisterArguments(args, args2);
 
             // 2. Execute the body of the function.
             Variable result = null;
@@ -175,6 +417,7 @@ namespace SplitAndMerge
             }
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false: script.InTryBlock;
+            tempScript.ClassInstance = instance;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
@@ -747,6 +990,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
             // First try processing as an object (with a dot notation):
             Variable result = ProcessObject(script, varValue);
@@ -785,19 +1029,34 @@ namespace SplitAndMerge
 
         Variable ProcessObject(ParsingScript script, Variable varValue)
         {
-            int ind = m_name.IndexOf(".");
+            if (script.CurrentClass != null)
+            {
+                script.CurrentClass.AddProperty(m_name, varValue);
+                return varValue.DeepClone();
+            }
+            string varName = m_name;
+            if (script.ClassInstance != null)
+            {
+                //varName = script.ClassInstance.InstanceName + "." + m_name;
+                script.ClassInstance.SetProperty(m_name, varValue);
+                return varValue.DeepClone();
+            }
+
+            int ind = varName.IndexOf(".");
             if (ind <= 0)
             {
                 return null;
             }
-            string name = m_name.Substring(0, ind);
-            string prop = m_name.Substring(ind + 1);
+            string name = varName.Substring(0, ind);
+            string prop = varName.Substring(ind + 1);
 
             ParserFunction existing = ParserFunction.GetFunction(name, script);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
             baseValue.SetProperty(prop, varValue);
 
             ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
+            //ParserFunction.AddGlobal(name, new GetVarFunction(baseValue), false);
+
             return varValue.DeepClone();
         }
 

@@ -324,6 +324,29 @@ namespace SplitAndMerge
             return args;
         }
 
+        public static string[] GetBaseClasses(ParsingScript script)
+        {
+            if (script.Current != ':')
+            {
+                return new string[0];
+            }
+            script.Forward();
+
+            int endArgs = script.FindFirstOf(Constants.START_GROUP.ToString());
+            if (endArgs < 0)
+            {
+                throw new ArgumentException("Couldn't extract base classes");
+            }
+
+            string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
+            string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
+
+            args = args.Select(element => element.Trim()).ToArray();
+            script.Pointer = endArgs + 1;
+
+            return args;
+        }
+
         public static string[] GetCompiledFunctionSignature(ParsingScript script, out Dictionary<string, Variable> dict)
         {
             script.MoveForwardIf(Constants.START_ARG, Constants.SPACE);

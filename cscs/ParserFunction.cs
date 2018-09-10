@@ -109,6 +109,15 @@ namespace SplitAndMerge
 
         public static ParserFunction GetObjectFunction(string name, ParsingScript script)
         {
+            if (script.CurrentClass != null && script.CurrentClass.Name == name)
+            {
+                script.Backward(name.Length + 1);
+                return new FunctionCreator();
+            }
+            if (script.ClassInstance != null && script.ClassInstance.PropertyExists(name))
+            {
+                name = script.ClassInstance.InstanceName + "." + name;
+            }
             int ind = name.IndexOf(".");
             if (ind <= 0)
             {
