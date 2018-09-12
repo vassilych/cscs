@@ -105,7 +105,16 @@ namespace SplitAndMerge
             }
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
+            int lineNumber = 0;
+            string line = script.GetOriginalLine(out lineNumber);
+
             int parentOffset = script.Pointer;
+            var parent = script.ParentScript;
+
+            if (script.CurrentClass != null)
+            {
+                parentOffset += script.CurrentClass.ParentOffset;
+            }
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
@@ -199,7 +208,8 @@ namespace SplitAndMerge
 
         public class ClassInstance : ScriptObject
         {
-            public ClassInstance(string instanceName, string className, List<Variable> args)
+            public ClassInstance(string instanceName, string className, List<Variable> args,
+                                 ParsingScript script = null)
             {
                 InstanceName = instanceName;
                 m_cscsClass = CSCSClass.GetClass(className);
@@ -218,7 +228,7 @@ namespace SplitAndMerge
                 CustomFunction constructor = null;
                 if (m_cscsClass.m_constructors.TryGetValue(args.Count, out constructor))
                 {
-                    constructor.Run(args, null, this);
+                    constructor.Run(args, script, this);
                 }
             }
 
@@ -235,7 +245,7 @@ namespace SplitAndMerge
                 return Variable.EmptyInstance;
             }
 
-            public Variable GetProperty(string name, List<Variable> args = null)
+            public Variable GetProperty(string name, List<Variable> args = null, ParsingScript script = null)
             {
                 Variable value = null;
                 if (m_properties.TryGetValue(name, out value))
@@ -258,7 +268,7 @@ namespace SplitAndMerge
                     args.Add(entry.Value);
                 }
 
-                Variable result = customFunction.Run(args, null, this);
+                Variable result = customFunction.Run(args, script, this);
                 return result;
             }
 
@@ -295,14 +305,13 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
 
             CSCSClass.ClassInstance instance = new 
-                CSCSClass.ClassInstance(script.CurrentAssign, className, args);
+                CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
             Variable value = new Variable(instance);
 
             return value;
         }
     }
-
 
     public class ClassCreator : ParserFunction
     {
@@ -316,25 +325,28 @@ namespace SplitAndMerge
 
             newClass.ParentOffset = script.Pointer;
             newClass.ParentScript = script;
+            int lineNumber = 0;
+            string line = script.GetOriginalLine(out lineNumber);
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP,
                                                Constants.END_GROUP);
 
             Variable result = null;
             ParsingScript tempScript = new ParsingScript(body);
-            tempScript.ScriptOffset = script.Pointer;
+            //tempScript.ScriptOffset = newClass.ParentOffset;
             tempScript.Char2Line = script.Char2Line;
             tempScript.Filename = script.Filename;
             tempScript.OriginalScript = script.OriginalScript;
             tempScript.CurrentClass = newClass;
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
+            tempScript.DisableBreakpoints = true;
 
-            Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
+            /*Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
             {
                 result = debugger.StepInFunctionIfNeeded(tempScript);
-            }
+            }*/
 
             while (tempScript.Pointer < body.Length - 1 &&
                   (result == null || !result.IsReturn))

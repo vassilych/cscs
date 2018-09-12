@@ -40,6 +40,7 @@ namespace SplitAndMerge
         }
         public int ScriptOffset
         {
+            get { return m_scriptOffset; }
             set { m_scriptOffset = value; }
         }
         public string Filename
@@ -59,6 +60,7 @@ namespace SplitAndMerge
         }
 
         public Debugger Debugger;
+        public bool DisableBreakpoints;
         public bool InTryBlock;
         public ParsingScript ParentScript;
 

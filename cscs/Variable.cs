@@ -532,7 +532,7 @@ namespace SplitAndMerge
                     {
                         args = script.GetFunctionArgs();
                     }
-                    result = obj.GetProperty(name, args);
+                    result = obj.GetProperty(name, args, script);
                     if (result != null)
                     {
                         return result;
@@ -673,7 +673,7 @@ namespace SplitAndMerge
 
         // GetProperty is triggered by the following scripting call: "x = a.name;"
         // If args are not null, it is triggered by a function call: "y = a.name(arg1, arg2, ...);"
-        Variable GetProperty(string name, List<Variable> args = null);
+        Variable GetProperty(string name, List<Variable> args = null, ParsingScript script = null);
 
         // Returns all of the properties that this object implements. Only these properties will be processed
         // by SetProperty() and GetProperty() methods above.
