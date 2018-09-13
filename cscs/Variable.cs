@@ -503,36 +503,58 @@ namespace SplitAndMerge
             return Type == VarType.ARRAY ? m_tuple.Count : 1;
         }
 
-        public Variable SetProperty(string name, Variable value)
+        public Variable SetProperty(string propName, Variable value)
         {
             Variable result = Variable.EmptyInstance;
-            m_propertyMap[name] = value;
+
+            int ind = propName.IndexOf(".");
+            if (ind > 0)
+            { // The case a.b.c = ... is dealt here recursively
+                string varName = propName.Substring(0, ind);
+                string actualPropName = propName.Substring(ind + 1);
+                Variable property = GetProperty(varName);
+                result = property.SetProperty(actualPropName, value);
+                return result;
+            }
+
+            m_propertyMap[propName] = value;
             Type = VarType.OBJECT;
 
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(name, value);
+                result = obj.SetProperty(propName, value);
             }
             return result;
         }
 
-        public Variable GetProperty(string name, ParsingScript script = null)
+        public Variable GetProperty(string propName, ParsingScript script = null)
         {
             Variable result = Variable.EmptyInstance;
+
+            int ind = propName.IndexOf(".");
+            if (ind > 0)
+            { // The case x = a.b.c ... is dealt here recursively
+                string varName = propName.Substring(0, ind);
+                string actualPropName = propName.Substring(ind + 1);
+                Variable property = GetProperty(varName, script);
+                result = string.IsNullOrEmpty(actualPropName)? property :
+                               property.GetProperty(actualPropName, script);
+                return result;
+            }
 
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
                 var supported = obj.GetProperties();
-                if (supported.Contains(name))
+                if (supported.Contains(propName))
                 {
                     List<Variable> args = null;
                     if (script != null && script.TryPrev() == Constants.START_ARG)
                     {
                         args = script.GetFunctionArgs();
                     }
-                    result = obj.GetProperty(name, args, script);
+                    result = obj.GetProperty(propName, args, script);
                     if (result != null)
                     {
                         return result;
@@ -540,15 +562,15 @@ namespace SplitAndMerge
                 }
             }
 
-            if (m_propertyMap.TryGetValue(name, out result))
+            if (m_propertyMap.TryGetValue(propName, out result))
             {
                 return result;
             }
-            else if (name.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
+            else if (propName.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
             {
                 return new Variable(GetProperties());
             }
-            else if (name.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
+            else if (propName.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
             {
                 return new Variable(GetTypeString());
             }
