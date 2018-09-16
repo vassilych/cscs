@@ -1150,7 +1150,7 @@ namespace SplitAndMerge
             }
             char[] sep = sepStr.ToCharArray();
 
-            var function = ParserFunction.GetFunction(varName, script);
+            /* var function = */ ParserFunction.GetFunction(varName, script);
             Variable allTokensVar = new Variable(Variable.VarType.ARRAY);
 
             for (int counter = fromLine; counter < lines.Tuple.Count; counter++)
@@ -1262,7 +1262,7 @@ namespace SplitAndMerge
             string varName = Utils.GetSafeString(args, 1);
             int index = Utils.GetSafeInt(args, 2);
 
-            var function = ParserFunction.GetFunction(varName, script);
+            /* var function = */ ParserFunction.GetFunction(varName, script);
             Variable mapVar = new Variable(Variable.VarType.ARRAY);
 
             if (all.Tuple == null)

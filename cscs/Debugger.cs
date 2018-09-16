@@ -447,7 +447,7 @@ namespace SplitAndMerge
             ParsingScript tempScript = new ParsingScript(stepInScript.String, stepInScript.Pointer);
             tempScript.ParentScript = stepInScript;
             tempScript.InTryBlock = stepInScript.InTryBlock;
-            string body = Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
+            /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
 
             Trace("Started ProcessBlock");
             StepIn(stepInScript);

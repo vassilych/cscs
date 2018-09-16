@@ -400,12 +400,7 @@ namespace SplitAndMerge
             int port = Utils.GetSafeInt(args, 0, 13337);
             DebuggerServer.StartServer(port);
 
-            DebuggerServer.OnRequest += ProcessRequest;
             return Variable.EmptyInstance;
-        }
-        public void ProcessRequest(Debugger debugger, string request)
-        {
-            debugger.ProcessClientCommands(request);
         }
     }
 }

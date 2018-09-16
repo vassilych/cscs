@@ -12,7 +12,6 @@ namespace SplitAndMerge
 {
     public class DebuggerServer
     {
-        public static Action<Debugger, string> OnRequest;
         public static bool DebuggerAttached { set; get; }
 
         static BlockingCollection<string> m_queue = new BlockingCollection<string>();
