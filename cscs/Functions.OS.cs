@@ -394,13 +394,26 @@ namespace SplitAndMerge
     }
     class DebuggerFunction : ParserFunction
     {
+        bool m_start = true;
+        public DebuggerFunction(bool start = true)
+        {
+            m_start = start;
+        }
         protected override Variable Evaluate(ParsingScript script)
         {
+            string res = "OK";
             List<Variable> args = script.GetFunctionArgs();
-            int port = Utils.GetSafeInt(args, 0, 13337);
-            DebuggerServer.StartServer(port);
+            if (m_start)
+            {
+                int port = Utils.GetSafeInt(args, 0, 13337);
+                res = DebuggerServer.StartServer(port);
+            }
+            else
+            {
+                DebuggerServer.StopServer();
+            }
 
-            return Variable.EmptyInstance;
+            return new Variable(res);
         }
     }
 }

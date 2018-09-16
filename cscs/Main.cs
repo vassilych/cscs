@@ -38,13 +38,13 @@ namespace SplitAndMerge
             Interpreter.Instance.GetOutput += Print;
 
             //ProcessScript("include(\"scripts/functions.cscs\");");
-            //string script = Utils.GetFileContents("scripts/temp.cscs");
             string script = "";
+            script = Utils.GetFileContents("scripts/temp.cscs");
 
             if (string.IsNullOrWhiteSpace(script) && (args.Length < 1 || args[1] == "debugger"))
             {
-                DebuggerServer.StartServerBlocked(13337);
-                return;
+                DebuggerServer.StartServer(13337);
+                //return;
             }
 
             if (args.Length >= 3)

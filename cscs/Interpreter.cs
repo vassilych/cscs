@@ -115,7 +115,8 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
             ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
             ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());
-            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
+            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction(true));
+            ParserFunction.RegisterFunction(Constants.STOP_DEBUGGER, new DebuggerFunction(false));
             ParserFunction.RegisterFunction(Constants.STR_CONTAINS, new StringManipulationFunction(StringManipulationFunction.Mode.CONTAINS));
             ParserFunction.RegisterFunction(Constants.STR_LOWER, new StringManipulationFunction(StringManipulationFunction.Mode.LOWER));
             ParserFunction.RegisterFunction(Constants.STR_ENDS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.ENDS_WITH));

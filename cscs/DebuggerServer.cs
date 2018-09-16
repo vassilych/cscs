@@ -14,42 +14,79 @@ namespace SplitAndMerge
     {
         public static bool DebuggerAttached { set; get; }
 
+        static TcpListener s_server;
+
+        static CancellationTokenSource s_cancelTokenSource = new CancellationTokenSource();
+
         static BlockingCollection<string> m_queue = new BlockingCollection<string>();
         public static BlockingCollection<string> Queue { get { return m_queue; } }
 
         static List<DebuggerClient> m_clients = new List<DebuggerClient>();
 
-        public static void StartServer(int port = 13337)
+        public static string StartServer(int port = 13337)
         {
-            ThreadPool.QueueUserWorkItem(StartServerBlocked, port);
+            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+            Console.Write("Starting a server on {0}... ", port);
+
+            s_server = new TcpListener(localAddr, port);
+            try
+            {
+                s_server.Start();
+            }
+            catch (Exception exc)
+            {
+                string err = string.Format("Exception starting server on port {0}: {1}", port, exc.Message);
+                Console.Write(err);
+                return err;
+            }
+            DebuggerAttached = true;
+            s_cancelTokenSource = new CancellationTokenSource();
+
+            ThreadPool.QueueUserWorkItem(StartServerBlocked);
+            return "OK";
+        }
+
+        public static void StopServer()
+        {
+            if (s_server != null)
+            {
+                s_server.Stop();
+            }
+
+            s_cancelTokenSource.Cancel();
+            DebuggerAttached = false;
         }
 
         public static void StartServerBlocked(Object threadContext)
         {
-            int port = (int)threadContext;
-
-            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
-
-            TcpListener server = new TcpListener(localAddr, port);
-            server.Start();
+            s_server.Start();
             DebuggerAttached = true;
 
             Debugger.OnResult += SendBack;
             ThreadPool.QueueUserWorkItem(StartProcessing, null);
 
-            while (true)
+            while (DebuggerAttached)
             {
-                Console.Write("Waiting for a connection on {0}... ", port);
+                Console.Write("Waiting for a connection... ");
 
-                // Perform a blocking call to accept requests.
-                TcpClient socket = server.AcceptTcpClient();
+                try
+                {
+                    // Perform a blocking call to accept requests.
+                    TcpClient socket = s_server.AcceptTcpClient();
+                    DebuggerClient client = new DebuggerClient();
+                    m_clients.Add(client);
 
-                DebuggerClient client = new DebuggerClient();
-                m_clients.Add(client);
+                    ThreadPool.QueueUserWorkItem(o => client.RunClient(socket));
+                }
+                catch (Exception exc)
+                {
+                    string err = string.Format("Exception running server: {0}", exc.Message);
+                    Console.Write(err);
+                }
 
-                ThreadPool.QueueUserWorkItem(o => client.RunClient(socket));
                 Thread.Sleep(1000);
             }
+            Console.Write("Stopped listening for requests");
         }
 
         static void SendBack(string str)
@@ -75,7 +112,7 @@ namespace SplitAndMerge
             bool processing = false;
             runTimer.Elapsed += (sender, e) =>
             {
-                if (processing)
+                if (processing || !DebuggerAttached)
                 {
                     return;
                 }
@@ -107,11 +144,19 @@ namespace SplitAndMerge
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
             while (m_queue.TryTake(out data))
             { // Exit as soon as done processing.
+                if (!DebuggerAttached)
+                {
+                    return;
+                }
                 Debugger.MainInstance?.ProcessClientCommands(data);
 #else
-            while (true)
+            while (DebuggerAttached)
             { // A blocking call.
-                data = m_queue.Take();
+                data = m_queue.Take(s_cancelTokenSource.Token);
+                if (!DebuggerAttached)
+                {
+                    return;
+                }
 
                 ThreadPool.QueueUserWorkItem(RunRequestBlocked, data);
 #endif
