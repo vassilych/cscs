@@ -276,7 +276,7 @@ namespace SplitAndMerge
                (script.Current == ' ' || script.TryPrev() == ' '))
             { // Allow functions with space separated arguments
                 start = ' ';
-                end   = Constants.END_STATEMENT;
+                end = Constants.END_STATEMENT;
             }
 
             // ScriptingEngine - body is unsed (used in Debugging) but GetBodyBetween has sideeffects			
@@ -312,11 +312,28 @@ namespace SplitAndMerge
             return args;
         }
 
+        public static List<Variable> GetFunctionArgsAsStrings(ParsingScript script)
+        {
+            string[] signature = GetFunctionSignature(script);
+            List<Variable> args = new List<Variable>(signature.Length);
+            for (int i = 0; i < signature.Length; i++)
+            {
+                args.Add(new Variable(signature[i]));
+            }
+
+            return args;
+        }
+    
         public static string[] GetFunctionSignature(ParsingScript script)
         {
             script.MoveForwardIf(Constants.START_ARG, Constants.SPACE);
 
             int endArgs = script.FindFirstOf(Constants.END_ARG.ToString());
+            if (endArgs < 0)
+            {
+                endArgs = script.FindFirstOf(Constants.END_STATEMENT.ToString());
+            }
+
             if (endArgs < 0)
             {
                 throw new ArgumentException("Couldn't extract function signature");

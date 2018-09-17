@@ -374,8 +374,8 @@ namespace SplitAndMerge
                 int ind = arg.IndexOf("=");
                 if (ind > 0)
                 {
-                    m_args[i] = arg.Substring(0, ind);
-                    m_defaultArgs.Add(new Variable(ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1)));
+                    m_args[i] = arg.Substring(0, ind).Trim();
+                    m_defaultArgs.Add(new Variable(ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim()));
                 }
             }
         }
@@ -417,7 +417,11 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            List<Variable> args = script.GetFunctionArgs();
+            List<Variable> args = Constants.FUNCT_WITH_SPACE.Contains(m_name) ?
+                // Special case of extracting args.
+                Utils.GetFunctionArgsAsStrings(script) :
+                script.GetFunctionArgs();
+
             script.MoveBackIf(Constants.START_GROUP);
 
             if (args.Count + m_defaultArgs.Count < m_args.Length)
