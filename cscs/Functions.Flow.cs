@@ -367,11 +367,31 @@ namespace SplitAndMerge
             m_name = funcName;
             m_body = body;
             m_args = args;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i];
+                int ind = arg.IndexOf("=");
+                if (ind > 0)
+                {
+                    m_args[i] = arg.Substring(0, ind);
+                    m_defaultArgs.Add(new Variable(ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1)));
+                }
+            }
         }
 
         public void RegisterArguments(List<Variable> args,
                                       List<KeyValuePair<string, Variable>> args2 = null)
         {
+            int missingArgs = m_args.Length - args.Count;
+            if (missingArgs > 0 && missingArgs <= m_defaultArgs.Count)
+            {
+                for (int i = m_defaultArgs.Count - missingArgs; i < m_defaultArgs.Count; i++)
+                {
+                    args.Add(m_defaultArgs[i]);
+                }
+            }
+
             StackLevel stackLevel = new StackLevel(m_name);
 
             if (args2 != null)
@@ -400,7 +420,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             script.MoveBackIf(Constants.START_GROUP);
 
-            if (args.Count != m_args.Length)
+            if (args.Count + m_defaultArgs.Count < m_args.Length)
             {
                 throw new ArgumentException("Function [" + m_name + "] arguments mismatch: " +
                                     m_args.Length + " declared, " + args.Count + " supplied");
@@ -500,6 +520,7 @@ namespace SplitAndMerge
 
         protected string m_body;
         protected string[] m_args;
+        List<Variable> m_defaultArgs = new List<Variable>();
         protected ParsingScript m_parentScript = null;
         protected int m_parentOffset = 0;
     }

@@ -187,14 +187,15 @@ namespace SplitAndMerge
 
         public static List<string> RESERVED = new List<string>
         {
-            BREAK, CONTINUE, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE, RETURN, THROW, TRY, CATCH, COMMENT,
+            BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
+            RETURN, THROW, TRY, CATCH, COMMENT,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
             NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString()
         };
         public static List<string> ARITHMETIC_EXPR = new List<string>
         {
-            "*", "*=" , "-", "-=", "/", "/="
+            "*", "*=" , "+", "+=" , "-", "-=", "/", "/="
         };
 
         public static string STATEMENT_SEPARATOR = ";{}";
