@@ -83,6 +83,7 @@ namespace SplitAndMerge
         public const string GET_PROPERTY = "GetProperty";
         public const string INDEX_OF = "indexof";
         public const string LOCK = "lock";
+        public const string HELP = "help";
         public const string LOG = "log";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "properties";
@@ -162,12 +163,12 @@ namespace SplitAndMerge
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
+            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
             TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else
        public static List<string> FUNCT_WITH_SPACE = new List<string> {
-        CLASS, FUNCTION, NEW, SHOW
+        CLASS, FUNCTION, HELP, NEW, SHOW
        };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but
