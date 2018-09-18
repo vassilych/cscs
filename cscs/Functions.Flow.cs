@@ -375,7 +375,16 @@ namespace SplitAndMerge
                 if (ind > 0)
                 {
                     m_args[i] = arg.Substring(0, ind).Trim();
-                    m_defaultArgs.Add(new Variable(ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim()));
+                    string defValue = ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim();
+                    if (defValue.StartsWith("\""))
+                    {
+                        defValue = defValue.Substring(1);
+                    }
+                    if (defValue.EndsWith("\""))
+                    {
+                        defValue = defValue.Substring(0, defValue.Length - 1);
+                    }
+                    m_defaultArgs.Add(new Variable(defValue));
                 }
             }
         }
