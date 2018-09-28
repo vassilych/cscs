@@ -25,7 +25,8 @@ namespace SplitAndMerge
         public static bool SteppingOut { get; private set; }
         public static bool Executing { get; private set; }
         public static bool ProcessingClientRequest { get; private set; }
-        public static Breakpoints TheBreakpoints { get { return MainInstance.m_breakpoints; } }
+        public static Breakpoints TheBreakpoints
+        { get { return (MainInstance == null ? Breakpoints.Instance : MainInstance.m_breakpoints); } }
 
         public bool InInclude { get; private set; }
         public int Id { get; private set; }
