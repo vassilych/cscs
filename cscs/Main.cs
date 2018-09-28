@@ -39,7 +39,7 @@ namespace SplitAndMerge
 
             //ProcessScript("include(\"scripts/functions.cscs\");");
             string script = "";
-            script = Utils.GetFileContents("scripts/temp.cscs");
+            //script = Utils.GetFileContents("scripts/temp.cscs");
 
             if (string.IsNullOrWhiteSpace(script) && (args.Length < 1 || args[1] == "debugger"))
             {
