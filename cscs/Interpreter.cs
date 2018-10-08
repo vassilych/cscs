@@ -91,12 +91,14 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
             ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
             ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
+            ParserFunction.RegisterFunction(Constants.CANCEL, new CancelFunction());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
             ParserFunction.RegisterFunction(Constants.EXIT, new ExitFunction());
             ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
+            ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
             ParserFunction.RegisterFunction(Constants.INDEX_OF, new IndexOfFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());

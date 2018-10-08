@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using SplitAndMerge;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 
 #if __ANDROID__
 using scripting.Droid;
@@ -35,6 +39,7 @@ namespace scripting
             ParserFunction.RegisterFunction("AddStepperRight", new AddWidgetFunction("Stepper", "right"));
             ParserFunction.RegisterFunction("AddListView", new AddWidgetFunction("ListView"));
             ParserFunction.RegisterFunction("AddCombobox", new AddWidgetFunction("Combobox"));
+            ParserFunction.RegisterFunction("AddIndicator", new AddWidgetFunction("Indicator"));
             ParserFunction.RegisterFunction("AddSegmentedControl", new AddWidgetFunction("SegmentedControl"));
 
             ParserFunction.RegisterFunction("AddWidgetData", new AddWidgetDataFunction());
@@ -126,6 +131,10 @@ namespace scripting
 
             ParserFunction.RegisterFunction("Run", new RunScriptFunction());
             ParserFunction.RegisterFunction("SetOptions", new SetOptionsFunction());
+
+            ParserFunction.RegisterFunction("GetLocalIps", new GetLocalIpsFunction());
+            ParserFunction.RegisterFunction("GetLocalIpPattern", new GetLocalIpFunction(true));
+            ParserFunction.RegisterFunction("GetDataFromServer", new GetDataFromServerFunction());
         }
 
         public static void RunScript(string fileName)
@@ -166,6 +175,21 @@ namespace scripting
             contents = string.Join("\n", lines);
 #endif
             return contents;
+        }
+
+        public static void RunOnMainThread(string strAction, string arg1, string arg2)
+        {
+#if  __ANDROID__
+            scripting.Droid.MainActivity.TheView.RunOnUiThread(() =>
+            {
+#elif __IOS__
+            scripting.iOS.AppDelegate.GetCurrentController().InvokeOnMainThread(() =>
+            {
+#endif
+                UIVariable.GetAction(strAction, arg1, arg2);
+#if __ANDROID__ || __IOS__
+            });
+#endif
         }
     }
 
@@ -481,6 +505,229 @@ namespace scripting
             return new Variable(responseFromServer);
         }
     }
+
+    public class GetLocalIpFunction : ParserFunction
+    {
+        bool m_usePattern;
+
+        public GetLocalIpFunction(bool usePattern = false)
+        {
+            m_usePattern = usePattern;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            /*List<Variable> args = */script.GetFunctionArgs();
+            string ip = GetIPAddress();
+
+            if (m_usePattern)
+            {
+                int ind = ip.LastIndexOf(".");
+                if (ind > 0)
+                {
+                    ip = ip.Substring(0, ind) + ".*";
+                }
+            }
+
+            return new Variable(ip);
+        }
+
+        public static string GetIPAddress()
+        {
+            IPHostEntry host;
+            string localIP = "";
+            host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (IPAddress ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    localIP = ip.ToString();
+                    break;
+                }
+            }
+            /* doesn't work:
+            foreach (System.Net.NetworkInformation.NetworkInterface f in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+            {
+                //if (f.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                {
+                    foreach (GatewayIPAddressInformation d in f.GetIPProperties().GatewayAddresses)
+                    {
+                        Console.WriteLine(d.Address);
+                    }
+                }
+            }*/
+            return localIP;
+        }
+    }
+
+    public class GetLocalIpsFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+
+            int port = args[0].AsInt();
+            string strAction = args[1].AsString();
+            string pattern = Utils.GetSafeString(args, 2, "192.168.0.*");
+
+            CancelFunction.Canceled = false;
+
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SearchConnections(strAction, port, pattern);
+            }, null);
+
+            return Variable.EmptyInstance;
+        }
+
+        static void SearchConnections(string strAction, int port, string pattern = "192.168.0.*")
+        {
+            Socket client = null;
+            string prefix = pattern.Substring(0, pattern.Length - 1);
+            string result = "";
+            for (int i = 1; i < 128 && !CancelFunction.Canceled; i++)
+            {
+                string host = prefix + i;
+                client = CheckConnection(host, port);
+                if (client != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        result += ";";
+                    }
+                    result += host;
+                    scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + host + "\"", "\"0\"");
+
+                    client.Dispose();
+                }
+                else if (i == 8 || i == 23 || i == 39 || i == 83 || i == 105 || i == 134 || i == 183 || i == 203 || i == 223)
+                { // Temp code to simulate found Maquettes
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        result += ";";
+                    }
+                    result += host;
+                    scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + host + "\"", "\"0\"");
+                }
+            }
+
+            scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + result + "\"", "\"1\"");
+        }
+
+        public static Socket CheckConnection(string host, int port, int timeout = 500)
+        {
+            try
+            {
+                IPAddress ipAddress = IPAddress.Parse(host);
+
+                Socket client = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                IAsyncResult result = client.BeginConnect(ipAddress, port, null, null);
+
+                bool success = result.AsyncWaitHandle.WaitOne(timeout, true);
+                if (!client.Connected)
+                {
+                    try
+                    {
+                        client.Dispose();
+                    }
+                    catch(Exception exc)
+                    {
+                        Console.WriteLine(exc);
+                    }
+                    return null;
+                }
+                client.EndConnect(result);
+
+                return client;
+            }
+            catch (Exception e)
+            {
+                var msg = e.Message;
+                Console.WriteLine(e.ToString());
+                return null;
+            }
+        }
+    }
+
+    public class GetDataFromServerFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 3, m_name);
+
+            string host = args[0].AsString();
+            int port = args[1].AsInt();
+            string request = args[2].AsString();
+
+            string varName = "socket_" + host;
+            Socket socket = null;
+            Variable socketVar = null;
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            if (func != null)
+            {
+                socketVar = func.GetValue(script);
+                socket = socketVar.Object as Socket;
+            }
+            if (socket == null)
+            {
+                socket = GetLocalIpsFunction.CheckConnection(host, port, 3000);
+            }
+
+            if (socket == null)
+            {
+                throw new ArgumentException("Couldn't connect to " + host + " on port " + port);
+            }
+
+            socketVar = new Variable(socket);
+            ParserFunction.AddGlobal(varName, new GetVarFunction(socketVar));
+
+            string received = GetData(socket, request);
+            return new Variable(received);
+        }
+
+        static string GetData(Socket client, string request)
+        {
+            byte[] bytes = new byte[4096];
+            string received = "";
+
+            //client.NoDelay = true; 
+            client.ReceiveTimeout = 5 * 1000;
+
+            // Connect to a remote device.  
+            try
+            {
+                // Encode the data string into a byte array.  
+                byte[] msg = Encoding.UTF8.GetBytes(request + "|");
+
+                if (client.Available > 0)
+                {
+                    int bytesAvail = client.Receive(bytes);
+                    received = Encoding.UTF8.GetString(bytes, 0, bytesAvail);
+                }
+
+                // Send the data through the socket. 
+                int bytesSent = client.Send(msg);
+
+                // Receive the response from the remote device.  
+                int bytesRec = client.Receive(bytes);
+                received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
+                Console.WriteLine("Received = {0}", received);
+
+                // Release the socket.  
+                //client.Shutdown(SocketShutdown.Both);
+                //client.Close();
+            }
+            catch (Exception e)
+            {
+                var msg = e.Message;
+                Console.WriteLine(e.ToString());
+                received = "Project A_|_Project B_|_Project C_|_\n\n";
+            }
+            return received;
+        }
+}
+
     class CheckOSFunction : ParserFunction
     {
         public enum OS { NONE, IOS, ANDROID, WINDOWS_PHONE, MAC, WINDOWS };

@@ -106,10 +106,9 @@ namespace SplitAndMerge
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
             int lineNumber = 0;
-            string line = script.GetOriginalLine(out lineNumber);
+            /*string line = */script.GetOriginalLine(out lineNumber);
 
             int parentOffset = script.Pointer;
-            var parent = script.ParentScript;
 
             if (script.CurrentClass != null)
             {
@@ -163,7 +162,7 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            List<Variable> args = script.GetFunctionArgs();
+            script.GetFunctionArgs();
 
             // TODO: Work in progress, currently not functional
             return Variable.EmptyInstance;
@@ -304,7 +303,7 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.START_ARG);
             List<Variable> args = script.GetFunctionArgs();
 
-            CSCSClass.ClassInstance instance = new 
+            CSCSClass.ClassInstance instance = new
                 CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
             Variable value = new Variable(instance);
@@ -326,7 +325,7 @@ namespace SplitAndMerge
             newClass.ParentOffset = script.Pointer;
             newClass.ParentScript = script;
             int lineNumber = 0;
-            string line = script.GetOriginalLine(out lineNumber);
+            /*string line = */script.GetOriginalLine(out lineNumber);
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP,
                                                Constants.END_GROUP);
@@ -461,7 +460,7 @@ namespace SplitAndMerge
                 tempScript.OriginalScript = m_parentScript.OriginalScript;
             }
             tempScript.ParentScript = script;
-            tempScript.InTryBlock = script == null ? false: script.InTryBlock;
+            tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
@@ -573,8 +572,9 @@ namespace SplitAndMerge
 
             Variable currentValue = Utils.GetSafeVariable(args, 0);
             Variable item = Utils.GetSafeVariable(args, 1);
+            int index = Utils.GetSafeInt(args, 2, -1);
 
-            currentValue.AddVariable(item);
+            currentValue.AddVariable(item, index);
             if (!currentValue.ParsingToken.Contains(Constants.START_ARRAY.ToString()))
             {
                 ParserFunction.AddGlobalOrLocalVariable(currentValue.ParsingToken,
@@ -664,6 +664,22 @@ namespace SplitAndMerge
 
             script.MoveBackIf(Constants.START_GROUP);
             return new Variable(exists);
+        }
+    }
+
+    class FindIndexFunction : ParserFunction, INumericFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+
+            Variable var = Utils.GetSafeVariable(args, 0);
+            string val = Utils.GetSafeString(args, 1);
+
+            int index = var.FindIndex(val);
+
+            return new Variable(index);
         }
     }
 
@@ -1184,7 +1200,7 @@ namespace SplitAndMerge
             }
             char[] sep = sepStr.ToCharArray();
 
-            /* var function = */ ParserFunction.GetFunction(varName, script);
+            // var function = ParserFunction.GetFunction(varName, script);
             Variable allTokensVar = new Variable(Variable.VarType.ARRAY);
 
             for (int counter = fromLine; counter < lines.Tuple.Count; counter++)
@@ -1296,7 +1312,7 @@ namespace SplitAndMerge
             string varName = Utils.GetSafeString(args, 1);
             int index = Utils.GetSafeInt(args, 2);
 
-            /* var function = */ ParserFunction.GetFunction(varName, script);
+            // var function = ParserFunction.GetFunction(varName, script);
             Variable mapVar = new Variable(Variable.VarType.ARRAY);
 
             if (all.Tuple == null)
@@ -1411,7 +1427,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
 
-            string varName  = Utils.GetSafeString(args, 0);
+            string varName = Utils.GetSafeString(args, 0);
             Variable currentValue = Utils.GetSafeVariable(args, 1);
 
             if (currentValue == null)
@@ -1477,7 +1493,7 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 3, m_name, true);
 
             Variable baseValue = args[0];
-            string propName    = Utils.GetSafeString(args, 1);
+            string propName = Utils.GetSafeString(args, 1);
             Variable propValue = Utils.GetSafeVariable(args, 2);
 
             Variable result = baseValue.SetProperty(propName, propValue);
@@ -1499,6 +1515,22 @@ namespace SplitAndMerge
             ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
                                                     new GetVarFunction(baseValue));
             return result;
+        }
+    }
+
+    class CancelFunction : ParserFunction
+    {
+        public static bool Canceled { get; set; }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 0, m_name, true);
+
+            bool mode = Utils.GetSafeInt(args, 0, 1) == 1;
+            Canceled = mode;
+
+            return new Variable(Canceled);
         }
     }
 }

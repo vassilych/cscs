@@ -286,15 +286,32 @@ namespace SplitAndMerge
             return -1;
         }
 
-        public void AddVariable(Variable v)
+        public void AddVariable(Variable v, int index = -1)
         {
             SetAsArray();
-            m_tuple.Add(v);
+            if (index < 0 || m_tuple.Count <= index)
+            {
+                m_tuple.Add(v);
+            }
+            else
+            {
+                m_tuple.Insert(index, v);
+            }
         }
 
         public bool Exists(string hash)
         {
             return m_dictionary.ContainsKey(hash);
+        }
+
+        public int FindIndex(string val)
+        {
+            if (this.Type != VarType.ARRAY)
+            {
+                return -1;
+            }
+            int result = m_tuple.FindIndex(item => item.AsString() == val);
+            return result;
         }
 
         public bool Exists(Variable indexVar, bool notEmpty = false)
@@ -347,6 +364,20 @@ namespace SplitAndMerge
             if (Type == VarType.STRING)
             {
                 Int32.TryParse(m_string, out result);
+            }
+
+            return result;
+        }
+        public float AsFloat()
+        {
+            float result = 0;
+            if (Type == VarType.NUMBER || Value != 0.0)
+            {
+                return (float)m_value;
+            }
+            if (Type == VarType.STRING)
+            {
+                float.TryParse(m_string, out result);
             }
 
             return result;
@@ -458,7 +489,7 @@ namespace SplitAndMerge
         string ObjectToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append((m_object !=null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
+            sb.Append((m_object != null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
 
             List<string> allProps = GetAllProperties();
             foreach (string prop in allProps)
@@ -538,7 +569,7 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = GetProperty(varName, script);
-                result = string.IsNullOrEmpty(actualPropName)? property :
+                result = string.IsNullOrEmpty(actualPropName) ? property :
                                property.GetProperty(actualPropName, script);
                 return result;
             }
@@ -553,6 +584,10 @@ namespace SplitAndMerge
                     if (script != null && script.TryPrev() == Constants.START_ARG)
                     {
                         args = script.GetFunctionArgs();
+                    }
+                    else if (script != null)
+                    {
+                        args = new List<Variable>();
                     }
                     result = obj.GetProperty(propName, args, script);
                     if (result != null)
@@ -581,7 +616,7 @@ namespace SplitAndMerge
         public List<Variable> GetProperties()
         {
             List<string> all = GetAllProperties();
-            List <Variable> allVars = new List<Variable>(all.Count);
+            List<Variable> allVars = new List<Variable>(all.Count);
             foreach (string key in all)
             {
                 allVars.Add(new Variable(key));
@@ -694,7 +729,8 @@ namespace SplitAndMerge
         Variable SetProperty(string name, Variable value);
 
         // GetProperty is triggered by the following scripting call: "x = a.name;"
-        // If args are not null, it is triggered by a function call: "y = a.name(arg1, arg2, ...);"
+        // If args are null, it is triggered by object.ToString() function"
+        // If args are not empty, it is triggered by a function call: "y = a.name(arg1, arg2, ...);"
         Variable GetProperty(string name, List<Variable> args = null, ParsingScript script = null);
 
         // Returns all of the properties that this object implements. Only these properties will be processed
@@ -702,4 +738,3 @@ namespace SplitAndMerge
         List<string> GetProperties();
     }
 }
-

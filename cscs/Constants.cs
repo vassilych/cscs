@@ -44,6 +44,7 @@ namespace SplitAndMerge
 
         public const string BREAK = "break";
         public const string CATCH = "catch";
+        public const string CANCEL = "cancel_operation";
         public const string COMMENT = "//";
         public const string CONTAINS = "contains";
         public const string CONTINUE = "continue";
@@ -78,12 +79,14 @@ namespace SplitAndMerge
         public const string ENV = "env";
         public const string EXIT = "exit";
         public const string EXP = "exp";
+        public const string FIND_INDEX = "find_index";
         public const string FLOOR = "floor";
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
         public const string INDEX_OF = "indexof";
         public const string LOCK = "lock";
         public const string HELP = "help";
+        public const string LOCAL_IP = "LocalIP";
         public const string LOG = "log";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "properties";
