@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -103,8 +104,10 @@ namespace SplitAndMerge
                     script.Forward(action.Length - 1);
                 }
 
-                // We are done getting the next token. The getValue() call below may
-                // recursively call loadAndCalculate(). This will happen if extracted
+                bool negSign = CheckNegativeSign(ref token);
+
+                // We are done getting the next token. The GetValue() call below may
+                // recursively call SplitAndMerge(). This will happen if extracted
                 // item is a function or if the next item is starting with a START_ARG '('.
                 ParserFunction func = new ParserFunction(script, token, ch, ref action);
                 Variable current = func.GetValue(script);
@@ -113,6 +116,11 @@ namespace SplitAndMerge
                     current = Variable.EmptyInstance;
                 }
                 current.ParsingToken = token;
+
+                if (negSign)
+                {
+                    current.Value *= -1;
+                }
 
                 if (negated > 0 && current.Type == Variable.VarType.NUMBER)
                 {
@@ -168,7 +176,7 @@ namespace SplitAndMerge
             return listToMerge;
         }
 
-        private static void CheckConsistency(string item, List<Variable> listToMerge,
+        static void CheckConsistency(string item, List<Variable> listToMerge,
                                              ParsingScript script)
         {
             if (Constants.CONTROL_FLOW.Contains(item) && listToMerge.Count > 0)
@@ -182,7 +190,7 @@ namespace SplitAndMerge
             }
         }
 
-        private static void CheckQuotesIndices(ParsingScript script,
+        static void CheckQuotesIndices(ParsingScript script,
                             char ch, ref bool inQuotes, ref int arrayIndexDepth)
         {
             switch (ch)
@@ -212,7 +220,26 @@ namespace SplitAndMerge
             }
         }
 
-        private static void AppendIfNecessary(StringBuilder item, char ch, char[] to)
+        static bool CheckNegativeSign(ref string token)
+        {
+            if (token.Length < 2 || token[0] != '-' || token[1] == Constants.QUOTE)
+            {
+                return false;
+            }
+            double num = 0;
+            if (Double.TryParse(token, NumberStyles.Number |
+                   NumberStyles.AllowExponent |
+                   NumberStyles.Float,
+                   CultureInfo.InvariantCulture, out num))
+            {
+                return false;
+            }
+
+            token = token.Substring(1);
+            return true;
+        }
+
+        static void AppendIfNecessary(StringBuilder item, char ch, char[] to)
         {
             if (ch == Constants.END_ARRAY && to.Length == 1 && to[0] == Constants.END_ARRAY &&
                 item.Length > 0 && item[item.Length - 1] != Constants.END_ARRAY)

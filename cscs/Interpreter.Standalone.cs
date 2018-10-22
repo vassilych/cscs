@@ -63,6 +63,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+            //ParserFunction.RegisterFunction("CreateCube", new CreateCubeFunction());
 #endif
 #endif
             ReadConfig();
