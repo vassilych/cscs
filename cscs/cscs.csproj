@@ -55,7 +55,6 @@
     <Compile Include="DebuggerServer.cs" />
     <Compile Include="Breakpoints.cs" />
     <Compile Include="Interpreter.Standalone.cs" />
-    <Compile Include="NetworkHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
