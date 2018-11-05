@@ -8,6 +8,7 @@ using SplitAndMerge;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 #if __ANDROID__
 using scripting.Droid;
@@ -81,9 +82,11 @@ namespace scripting
             ParserFunction.RegisterFunction("SetNormalFont", new SetFontTypeFunction(SetFontTypeFunction.FontType.NORMAL));
             ParserFunction.RegisterFunction("AlignText", new AlignTitleFunction());
             ParserFunction.RegisterFunction("SetSize", new SetSizeFunction());
+            ParserFunction.RegisterFunction("Enable", new EnableFunction());
             ParserFunction.RegisterFunction("Relative", new RelativeSizeFunction());
             ParserFunction.RegisterFunction("ShowHideKeyboard", new ShowHideKeyboardFunction());
             ParserFunction.RegisterFunction("IsKeyboard", new IsKeyboardFunction());
+            ParserFunction.RegisterFunction("SetSecure", new MakeSecureFunction());
 
             ParserFunction.RegisterFunction("AddAction", new AddActionFunction());
             ParserFunction.RegisterFunction("AllowedOrientation", new AllowedOrientationFunction());
@@ -516,7 +519,8 @@ namespace scripting
         }
         protected override Variable Evaluate(ParsingScript script)
         {
-            /*List<Variable> args = */script.GetFunctionArgs();
+            /*List<Variable> args = */
+            script.GetFunctionArgs();
             string ip = GetIPAddress();
 
             if (m_usePattern)
@@ -533,28 +537,28 @@ namespace scripting
 
         public static string GetIPAddress()
         {
-            IPHostEntry host;
             string localIP = "";
-            host = Dns.GetHostEntry(Dns.GetHostName());
-            foreach (IPAddress ip in host.AddressList)
+            string hostname = Dns.GetHostName();
+
+            foreach (var netInterface in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                //foreach (GatewayIPAddressInformation d in netInterface.GetIPProperties().GatewayAddresses)
+                //{
+                //    Console.WriteLine(d.Address);
+                //}
+                if (netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
+                    netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
                 {
-                    localIP = ip.ToString();
-                    break;
-                }
-            }
-            /* doesn't work:
-            foreach (System.Net.NetworkInformation.NetworkInterface f in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-            {
-                //if (f.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
-                {
-                    foreach (GatewayIPAddressInformation d in f.GetIPProperties().GatewayAddresses)
+                    foreach (var addrInfo in netInterface.GetIPProperties().UnicastAddresses)
                     {
-                        Console.WriteLine(d.Address);
+                        if (addrInfo.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            localIP = addrInfo.Address.ToString();
+                            break;
+                        }
                     }
                 }
-            }*/
+            }
             return localIP;
         }
     }
@@ -566,86 +570,24 @@ namespace scripting
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 2, m_name);
 
-            int port = args[0].AsInt();
+            //int port = args[0].AsInt();
+            string port = args[0].AsString();
             string strAction = args[1].AsString();
-            string pattern = Utils.GetSafeString(args, 2, "192.168.0.*");
+            string pattern = Utils.GetSafeString(args, 2);
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                pattern = "192.168.0.*";
+            }
 
             CancelFunction.Canceled = false;
 
             ThreadPool.QueueUserWorkItem(delegate
             {
-                SearchConnections(strAction, port, pattern);
+                //SearchConnections(strAction, port, pattern);
+                NetworkConnector.LookAround(port, strAction);
             }, null);
 
             return Variable.EmptyInstance;
-        }
-
-        static void SearchConnections(string strAction, int port, string pattern = "192.168.0.*")
-        {
-            Socket client = null;
-            string prefix = pattern.Substring(0, pattern.Length - 1);
-            string result = "";
-            for (int i = 1; i < 128 && !CancelFunction.Canceled; i++)
-            {
-                string host = prefix + i;
-                client = CheckConnection(host, port);
-                if (client != null)
-                {
-                    if (!string.IsNullOrWhiteSpace(result))
-                    {
-                        result += ";";
-                    }
-                    result += host;
-                    scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + host + "\"", "\"0\"");
-
-                    client.Dispose();
-                }
-                else if (i == 8 || i == 23 || i == 39 || i == 83 || i == 105 || i == 134 || i == 183 || i == 203 || i == 223)
-                { // Temp code to simulate found Maquettes
-                    if (!string.IsNullOrWhiteSpace(result))
-                    {
-                        result += ";";
-                    }
-                    result += host;
-                    scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + host + "\"", "\"0\"");
-                }
-            }
-
-            scripting.CommonFunctions.RunOnMainThread(strAction, "\"" + result + "\"", "\"1\"");
-        }
-
-        public static Socket CheckConnection(string host, int port, int timeout = 500)
-        {
-            try
-            {
-                IPAddress ipAddress = IPAddress.Parse(host);
-
-                Socket client = new Socket(SocketType.Stream, ProtocolType.Tcp);
-                IAsyncResult result = client.BeginConnect(ipAddress, port, null, null);
-
-                bool success = result.AsyncWaitHandle.WaitOne(timeout, true);
-                if (!client.Connected)
-                {
-                    try
-                    {
-                        client.Dispose();
-                    }
-                    catch(Exception exc)
-                    {
-                        Console.WriteLine(exc);
-                    }
-                    return null;
-                }
-                client.EndConnect(result);
-
-                return client;
-            }
-            catch (Exception e)
-            {
-                var msg = e.Message;
-                Console.WriteLine(e.ToString());
-                return null;
-            }
         }
     }
 
@@ -659,8 +601,10 @@ namespace scripting
             string host = args[0].AsString();
             int port = args[1].AsInt();
             string request = args[2].AsString();
+            string key = Utils.GetSafeString(args, 3);
+            bool force = Utils.GetSafeInt(args, 4, 0) == 1;
 
-            string varName = "socket_" + host;
+            string varName = "socket_" + host + "_" + port;
             Socket socket = null;
             Variable socketVar = null;
             ParserFunction func = ParserFunction.GetFunction(varName, script);
@@ -669,36 +613,40 @@ namespace scripting
                 socketVar = func.GetValue(script);
                 socket = socketVar.Object as Socket;
             }
-            if (socket == null)
+            if (socket == null || force)
             {
-                socket = GetLocalIpsFunction.CheckConnection(host, port, 3000);
+                socket = NetworkConnector.CheckConnection(host, port, 3000);
             }
 
             if (socket == null)
             {
-                throw new ArgumentException("Couldn't connect to " + host + " on port " + port);
+                throw new ArgumentException("Couldn't connect to " + host + ":" + port);
             }
 
             socketVar = new Variable(socket);
             ParserFunction.AddGlobal(varName, new GetVarFunction(socketVar));
 
-            string received = GetData(socket, request);
+            string received = GetData(socket, request, key);
+            if (string.IsNullOrWhiteSpace(received) ||
+                received.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+            {
+                socketVar.Object = null;
+                throw new ArgumentException(received);
+            }
             return new Variable(received);
         }
 
-        static string GetData(Socket client, string request)
+        static string GetData(Socket client, string request, string key)
         {
             byte[] bytes = new byte[4096];
             string received = "";
-
-            //client.NoDelay = true; 
-            client.ReceiveTimeout = 5 * 1000;
-
             // Connect to a remote device.  
             try
             {
+                //client.NoDelay = true;
+                client.ReceiveTimeout = 10 * 1000;
                 // Encode the data string into a byte array.  
-                byte[] msg = Encoding.UTF8.GetBytes(request + "|");
+                byte[] msg = Encoding.UTF8.GetBytes(request + "|" + key);
 
                 if (client.Available > 0)
                 {
@@ -709,7 +657,8 @@ namespace scripting
                 // Send the data through the socket. 
                 int bytesSent = client.Send(msg);
 
-                // Receive the response from the remote device.  
+                // Receive the response from the remote device.
+                //client.BeginReceive(bytes, SocketFlags.None, );
                 int bytesRec = client.Receive(bytes);
                 received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
                 Console.WriteLine("Received = {0}", received);
@@ -722,11 +671,21 @@ namespace scripting
             {
                 var msg = e.Message;
                 Console.WriteLine(e.ToString());
-                received = "Project A_|_Project B_|_Project C_|_\n\n";
+                if (msg.Contains("Operation on non-blocking socket would block"))
+                {
+                    msg = "Timeout waiting for data";
+                }
+                received = "Error: " + msg;
+            }
+
+            if (string.IsNullOrWhiteSpace(received))
+            {
+                received = "Error: no data received";
             }
             return received;
         }
-}
+
+    }
 
     class CheckOSFunction : ParserFunction
     {

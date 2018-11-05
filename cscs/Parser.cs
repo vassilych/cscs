@@ -119,7 +119,7 @@ namespace SplitAndMerge
 
                 if (negSign)
                 {
-                    current.Value *= -1;
+                    current = new Variable(-1 * current.Value);
                 }
 
                 if (negated > 0 && current.Type == Variable.VarType.NUMBER)

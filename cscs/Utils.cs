@@ -301,6 +301,10 @@ namespace SplitAndMerge
             Variable numberVar = args[index];
             if (numberVar.Type != Variable.VarType.NUMBER)
             {
+                if (string.IsNullOrWhiteSpace(numberVar.String))
+                {
+                    return defaultValue;
+                }
                 int num;
                 if (!Int32.TryParse(numberVar.String, NumberStyles.Number,
                                      CultureInfo.InvariantCulture, out num))
@@ -394,7 +398,7 @@ namespace SplitAndMerge
             return (int)num;
         }
         public static void Extract(string data, ref string str1, ref string str2,
-                                   ref string str3, ref string str4)
+                                   ref string str3, ref string str4, ref string str5)
         {
             string[] vals = data.Split(new char[] { ',', ':' });
             str1 = vals[0];
@@ -407,6 +411,10 @@ namespace SplitAndMerge
                     if (vals.Length > 3)
                     {
                         str4 = vals[3];
+                        if (vals.Length > 4)
+                        {
+                            str5 = vals[4];
+                        }
                     }
                 }
             }
