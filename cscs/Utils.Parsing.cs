@@ -292,11 +292,12 @@ namespace SplitAndMerge
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
+                    script.MoveForwardIf(Constants.END_GROUP);
                     script.MoveForwardIf(Constants.NEXT_ARG);
                 }
                 if (script.Pointer == tempScript.Pointer - 1)
                 {
-                    script.MoveForwardIf(Constants.END_ARG);
+                    script.MoveForwardIf(Constants.END_ARG, Constants.END_GROUP);
                 }
             }
 
