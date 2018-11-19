@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>{C5A6BA80-96D7-48E9-8847-D1B9F50F2938}</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>scripting</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Constants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Functions.Flow.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Functions.Math.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Functions.OS.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Interpreter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parser.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ParserFunction.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ParsingScript.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Translation.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils.Parsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Variable.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UIVariable.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Statics.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CommonFunctions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UIUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Trie.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CustomInit.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Constants.Extra.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Functions.Standalone.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Functions.Utils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Interpreter.Standalone.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils.Extra.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Breakpoints.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Debugger.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DebuggerServer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)NetworkHelper.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)App.config" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\start.cscs" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\remote.cscs" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\grayline.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\hotspot.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\hotspot2.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\info.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\learn.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\learn2.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\next.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\nextClick.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\prev.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\prevClick.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\settings.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\settings2.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\slides.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\slides2.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\test.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\test2.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\lookfor.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\connect.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\refresh.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\cancel.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\combobox.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\transparent.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\looking.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\drawable\about.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Resources\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Resources\drawable\" />
+  </ItemGroup>
+</Project>
