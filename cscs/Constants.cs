@@ -166,12 +166,12 @@ namespace SplitAndMerge
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV, TAIL,
-            TRANSLATE, WRITE, WRITELINE, WRITENL
+            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
+            TAIL, THREAD, TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else
         public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            CLASS, FUNCTION, HELP, NEW, SHOW
+            CLASS, FUNCTION, HELP, NEW, SHOW, THREAD
         };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but

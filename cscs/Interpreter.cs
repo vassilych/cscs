@@ -113,6 +113,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
+            ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
             ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
@@ -142,6 +143,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
             ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
+            ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
 
             ParserFunction.AddAction(Constants.ASSIGNMENT, new AssignFunction());
             ParserFunction.AddAction(Constants.INCREMENT, new IncrementDecrementFunction());
@@ -157,6 +159,7 @@ namespace SplitAndMerge
             Constants.CATCH_LIST.Add(Constants.CATCH);
 
             InitStandalone();
+            CompiledClass.Init();
         }
 
         public Variable Process(string script, string filename = "")

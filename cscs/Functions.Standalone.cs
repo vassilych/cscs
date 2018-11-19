@@ -133,22 +133,6 @@ namespace SplitAndMerge
         private ConsoleColor m_fgcolor;
     }
 
-    class SignalWaitFunction : ParserFunction, INumericFunction
-    {
-        static AutoResetEvent waitEvent = new AutoResetEvent(false);
-        bool m_isSignal;
-
-        public SignalWaitFunction(bool isSignal)
-        {
-            m_isSignal = isSignal;
-        }
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            bool result = m_isSignal ? waitEvent.Set() :
-                                       waitEvent.WaitOne();
-            return new Variable(result);
-        }
-    }
     class CompiledFunctionCreator : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
