@@ -489,34 +489,41 @@ namespace SplitAndMerge
         string ObjectToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append((m_object != null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
-
-            List<string> allProps = GetAllProperties();
-            foreach (string prop in allProps)
+            if (m_object != null)
             {
-                if (prop == Constants.OBJECT_PROPERTIES)
-                {
-                    sb.Append(prop);
-                    continue;
-                }
-                Variable propValue = GetProperty(prop);
-                string value = "";
-                if (propValue != null && propValue != Variable.EmptyInstance)
-                {
-                    value = propValue.AsString();
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        if (propValue.Type == VarType.STRING && prop != Constants.OBJECT_TYPE)
-                        {
-                            value = "\"" + value + "\"";
-                        }
-                        value = ": " + value;
-                    }
-                }
-                sb.Append(prop + value + ", ");
+                sb.Append(m_object.ToString());
             }
+            else
+            {
+                sb.Append((m_object != null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
 
-            sb.Append(Constants.END_GROUP.ToString());
+                List<string> allProps = GetAllProperties();
+                foreach (string prop in allProps)
+                {
+                    if (prop == Constants.OBJECT_PROPERTIES)
+                    {
+                        sb.Append(prop);
+                        continue;
+                    }
+                    Variable propValue = GetProperty(prop);
+                    string value = "";
+                    if (propValue != null && propValue != Variable.EmptyInstance)
+                    {
+                        value = propValue.AsString();
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            if (propValue.Type == VarType.STRING && prop != Constants.OBJECT_TYPE)
+                            {
+                                value = "\"" + value + "\"";
+                            }
+                            value = ": " + value;
+                        }
+                    }
+                    sb.Append(prop + value + ", ");
+                }
+
+                sb.Append(Constants.END_GROUP.ToString());
+            }
             return sb.ToString();
         }
 

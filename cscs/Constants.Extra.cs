@@ -39,7 +39,6 @@ namespace SplitAndMerge
         public const string READFILE = "readfile";
         public const string READNUMBER = "readnum";
         public const string RUN = "run";
-        public const string SIGNAL = "signal";
         public const string SETENV = "setenv";
         public const string SET_NATIVE = "SetNative";
         public const string STARTSRV = "startsrv";
@@ -53,7 +52,6 @@ namespace SplitAndMerge
         public const string WRITELINES = "writelines";
         public const string WRITENL = "writenl";
         public const string WRITE_CONSOLE = "WriteConsole";
-        public const string WAIT = "wait";
         public const string WRITE = "write";
 
         public const string ENGLISH = "en";

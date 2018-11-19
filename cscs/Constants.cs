@@ -102,6 +102,7 @@ namespace SplitAndMerge
         public const string SET = "set";
         public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
+        public const string SIGNAL = "signal";
         public const string SIN = "sin";
         public const string SIZE = "size";
         public const string SLEEP = "sleep";
@@ -131,6 +132,7 @@ namespace SplitAndMerge
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";
         public const string TO_STRING = "string";
+        public const string WAIT = "wait";
 
         public const string START_DEBUGGER = "StartDebugger";
         public const string STOP_DEBUGGER  = "StopDebugger";
