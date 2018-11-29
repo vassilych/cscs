@@ -124,6 +124,7 @@ namespace scripting
             ParserFunction.RegisterFunction("ImportFile", new ImportFileFunction());
             ParserFunction.RegisterFunction("OpenUrl", new OpenURLFunction());
             ParserFunction.RegisterFunction("WebRequest", new WebRequestFunction());
+            ParserFunction.RegisterFunction("SaveToPhotos", new SaveToPhotosFunction());
 
             ParserFunction.RegisterFunction("_ANDROID_", new CheckOSFunction(CheckOSFunction.OS.ANDROID));
             ParserFunction.RegisterFunction("_IOS_", new CheckOSFunction(CheckOSFunction.OS.IOS));
@@ -135,9 +136,7 @@ namespace scripting
             ParserFunction.RegisterFunction("Run", new RunScriptFunction());
             ParserFunction.RegisterFunction("SetOptions", new SetOptionsFunction());
 
-            ParserFunction.RegisterFunction("GetLocalIps", new GetLocalIpsFunction());
-            ParserFunction.RegisterFunction("GetLocalIpPattern", new GetLocalIpFunction(true));
-            ParserFunction.RegisterFunction("GetDataFromServer", new GetDataFromServerFunction());
+            ParserFunction.RegisterFunction("GetLocalIp", new GetLocalIpFunction(true));
         }
 
         public static void RunScript(string fileName)
@@ -542,10 +541,6 @@ namespace scripting
 
             foreach (var netInterface in NetworkInterface.GetAllNetworkInterfaces())
             {
-                //foreach (GatewayIPAddressInformation d in netInterface.GetIPProperties().GatewayAddresses)
-                //{
-                //    Console.WriteLine(d.Address);
-                //}
                 if (netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
                     netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
                 {
@@ -561,130 +556,6 @@ namespace scripting
             }
             return localIP;
         }
-    }
-
-    public class GetLocalIpsFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 2, m_name);
-
-            //int port = args[0].AsInt();
-            string port = args[0].AsString();
-            string strAction = args[1].AsString();
-            string pattern = Utils.GetSafeString(args, 2);
-            if (string.IsNullOrWhiteSpace(pattern))
-            {
-                pattern = "192.168.0.*";
-            }
-
-            CancelFunction.Canceled = false;
-
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                //SearchConnections(strAction, port, pattern);
-                NetworkConnector.LookAround(port, strAction);
-            }, null);
-
-            return Variable.EmptyInstance;
-        }
-    }
-
-    public class GetDataFromServerFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 3, m_name);
-
-            string host = args[0].AsString();
-            int port = args[1].AsInt();
-            string request = args[2].AsString();
-            string key = Utils.GetSafeString(args, 3);
-            bool force = Utils.GetSafeInt(args, 4, 0) == 1;
-
-            string varName = "socket_" + host + "_" + port;
-            Socket socket = null;
-            Variable socketVar = null;
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
-            if (func != null)
-            {
-                socketVar = func.GetValue(script);
-                socket = socketVar.Object as Socket;
-            }
-            if (socket == null || force)
-            {
-                socket = NetworkConnector.CheckConnection(host, port, 3000);
-            }
-
-            if (socket == null)
-            {
-                throw new ArgumentException("Couldn't connect to " + host + ":" + port);
-            }
-
-            socketVar = new Variable(socket);
-            ParserFunction.AddGlobal(varName, new GetVarFunction(socketVar));
-
-            string received = GetData(socket, request, key);
-            if (string.IsNullOrWhiteSpace(received) ||
-                received.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
-            {
-                socketVar.Object = null;
-                throw new ArgumentException(received);
-            }
-            return new Variable(received);
-        }
-
-        static string GetData(Socket client, string request, string key)
-        {
-            byte[] bytes = new byte[4096];
-            string received = "";
-            // Connect to a remote device.  
-            try
-            {
-                //client.NoDelay = true;
-                client.ReceiveTimeout = 10 * 1000;
-                // Encode the data string into a byte array.  
-                byte[] msg = Encoding.UTF8.GetBytes(request + "|" + key);
-
-                if (client.Available > 0)
-                {
-                    int bytesAvail = client.Receive(bytes);
-                    received = Encoding.UTF8.GetString(bytes, 0, bytesAvail);
-                }
-
-                // Send the data through the socket. 
-                int bytesSent = client.Send(msg);
-
-                // Receive the response from the remote device.
-                //client.BeginReceive(bytes, SocketFlags.None, );
-                int bytesRec = client.Receive(bytes);
-                received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
-                Console.WriteLine("Received = {0}", received);
-
-                // Release the socket.  
-                //client.Shutdown(SocketShutdown.Both);
-                //client.Close();
-            }
-            catch (Exception e)
-            {
-                var msg = e.Message;
-                Console.WriteLine(e.ToString());
-                if (msg.Contains("Operation on non-blocking socket would block"))
-                {
-                    msg = "Timeout waiting for data";
-                }
-                received = "Error: " + msg;
-            }
-
-            if (string.IsNullOrWhiteSpace(received))
-            {
-                received = "Error: no data received";
-            }
-            return received;
-        }
-
     }
 
     class CheckOSFunction : ParserFunction

@@ -219,7 +219,7 @@ namespace SplitAndMerge
             forScript.Debugger = script.Debugger;
             Variable arrayValue = forScript.ExecuteFrom(index + 1);
 
-            int cycles = arrayValue.TotalElements();
+            int cycles = arrayValue.Count;
             if (cycles == 0)
             {
                 SkipBlock(script);

@@ -1373,26 +1373,20 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            // 1. Get the name of the variable.
-            string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
-            Utils.CheckNotEnd(script, m_name);
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
 
-            List<Variable> arrayIndices = Utils.GetArrayIndices(script, ref varName);
-
-            // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
-            Utils.CheckNotNull(varName, func);
-            Variable currentValue = func.GetValue(script);
-            Variable element = currentValue;
-
-            // 2b. Special case for an array.
-            if (arrayIndices.Count > 0)
-            {// array element
-                element = Utils.ExtractArrayElement(currentValue, arrayIndices);
-                script.MoveForwardIf(Constants.END_ARRAY);
+            bool complexVariable = Utils.GetSafeInt(args, 1, 0) == 1;
+            Variable element =null;
+            if (complexVariable)
+            {
+                element = Utils.GetVariable(args[0].AsString(), script, false);
+            }
+            if (element == null)
+            {
+                element = Utils.GetSafeVariable(args, 0);
             }
 
-            // 3. Convert type to string.
             string type = element.GetTypeString();
             script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
 

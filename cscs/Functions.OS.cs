@@ -362,15 +362,9 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string body =  script.TryPrev() == Constants.START_GROUP ?
-                           Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP) :
-                           Utils.GetBodyBetween(script, script.Current, Constants.END_STATEMENT);
-
-            //Thread newThread = new Thread(ThreadFunction.ThreadProc);
-            //newThread.Start(body);
-            //int threadID = newThread.ManagedThreadId;
-            //return new Variable(threadID);
-
+            string body = script.TryPrev() == Constants.START_GROUP ?
+                          Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP) :
+                          Utils.GetBodyBetween(script, script.Current, Constants.END_STATEMENT);
             ThreadPool.QueueUserWorkItem(ThreadProc, body);
             return Variable.EmptyInstance;
         }

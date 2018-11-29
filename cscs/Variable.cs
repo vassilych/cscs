@@ -299,6 +299,26 @@ namespace SplitAndMerge
             }
         }
 
+        public Variable GetVariable(int index)
+        {
+            if (index < 0 || m_tuple == null || m_tuple.Count <= index)
+            {
+                return Variable.EmptyInstance;
+            }
+            return m_tuple[index];
+        }
+
+        public Variable GetVariable(string hash)
+        {
+            int index = 0;
+            if (m_tuple == null || !m_dictionary.TryGetValue(hash, out index) ||
+                m_tuple.Count <= index)
+            {
+                return Variable.EmptyInstance;
+            }
+            return m_tuple[index];
+        }
+
         public bool Exists(string hash)
         {
             return m_dictionary.ContainsKey(hash);
@@ -536,9 +556,10 @@ namespace SplitAndMerge
             }
         }
 
-        public int TotalElements()
+        public int Count
         {
-            return Type == VarType.ARRAY ? m_tuple.Count : 1;
+            get { return Type == VarType.ARRAY ? m_tuple.Count :
+                         Type == VarType.NONE  ? 0 : 1; }
         }
 
         public Variable SetProperty(string propName, Variable value)
@@ -665,7 +686,7 @@ namespace SplitAndMerge
             return all;
         }
 
-        public string GetTypeString()
+        public virtual string GetTypeString()
         {
             if (Type == VarType.OBJECT && Object != null)
             {
@@ -676,9 +697,9 @@ namespace SplitAndMerge
 
         public Variable GetValue(int index)
         {
-            if (index >= TotalElements())
+            if (index >= Count)
             {
-                throw new ArgumentException("There are only [" + TotalElements() +
+                throw new ArgumentException("There are only [" + Count +
                                              "] but " + index + " requested.");
 
             }
