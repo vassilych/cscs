@@ -562,6 +562,11 @@ namespace SplitAndMerge
                          Type == VarType.NONE  ? 0 : 1; }
         }
 
+        public int TotalElements()
+        {
+            return Count;
+        }
+
         public Variable SetProperty(string propName, Variable value)
         {
             Variable result = Variable.EmptyInstance;
