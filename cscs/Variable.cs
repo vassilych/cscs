@@ -91,11 +91,10 @@ namespace SplitAndMerge
 
         public virtual Variable Clone()
         {
-            //Variable newVar = new Variable();
-            //newVar.Copy(this);
             Variable newVar = (Variable)this.MemberwiseClone();
             return newVar;
         }
+
         public virtual Variable DeepClone()
         {
             Variable newVar = new Variable();
@@ -743,6 +742,7 @@ namespace SplitAndMerge
         public VarType Type { get; set; }
         public bool IsReturn { get; set; }
         public string ParsingToken { get; set; }
+        public int Index { get; set; }
 
         public static Variable EmptyInstance = new Variable();
 

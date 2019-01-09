@@ -401,8 +401,13 @@ namespace SplitAndMerge
                     {
                         defValue = defValue.Substring(0, defValue.Length - 1);
                     }
-                    m_defaultArgs.Add(new Variable(defValue));
+                    Variable defVariable = new Variable(defValue);
+                    defVariable.ParsingToken = m_args[i];
+                    defVariable.Index = i;
+                    m_defArgMap[i] = m_defaultArgs.Count;
+                    m_defaultArgs.Add(defVariable);
                 }
+                m_argMap[m_args[i]] = i;
             }
         }
 
@@ -410,14 +415,70 @@ namespace SplitAndMerge
                                       List<KeyValuePair<string, Variable>> args2 = null)
         {
             int missingArgs = m_args.Length - args.Count;
-            if (missingArgs > 0 && missingArgs <= m_defaultArgs.Count)
+
+            bool namedParameters = false;
+            for (int i = 0; i < args.Count; i++)
             {
-                for (int i = m_defaultArgs.Count - missingArgs; i < m_defaultArgs.Count; i++)
+                var arg = args[i];
+                int argIndex = -1;
+                if (m_argMap.TryGetValue(arg.ParsingToken, out argIndex))
                 {
-                    args.Add(m_defaultArgs[i]);
+                    namedParameters = true;
+                    if (i != argIndex)
+                    {
+                        args[i] = argIndex < args.Count ? args[argIndex] : args[i];
+                        while (argIndex > args.Count - 1)
+                        {
+                            args.Add(Variable.EmptyInstance);
+                        }
+                        args[argIndex] = arg;
+                    }
+                }
+                else if (namedParameters)
+                {
+                    throw new ArgumentException("All arguments in function [" + m_name +
+                     "] must be arg=value form.");
                 }
             }
 
+            if (missingArgs > 0 && missingArgs <= m_defaultArgs.Count)
+            {
+                if (!namedParameters)
+                {
+                    for (int i = m_defaultArgs.Count - missingArgs; i < m_defaultArgs.Count; i++)
+                    {
+                        args.Add(m_defaultArgs[i]);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < args.Count; i++)
+                    {
+                        if (args[i].Type == Variable.VarType.NONE ||
+                           (!string.IsNullOrWhiteSpace(args[i].ParsingToken) &&
+                            args[i].ParsingToken != m_args[i]))
+                        {
+                            int defIndex = -1;
+                            if (!m_defArgMap.TryGetValue(i, out defIndex))
+                            {
+                                throw new ArgumentException("No argument [" + m_args[i] +
+                                 "] given for function [" + m_name + "].");
+                            }
+                            args[i] = m_defaultArgs[defIndex];
+                        }
+                    }
+                }
+            }
+            for (int i = args.Count; i < m_args.Length; i++)
+            {
+                int defIndex = -1;
+                if (!m_defArgMap.TryGetValue(i, out defIndex))
+                {
+                    throw new ArgumentException("No argument [" + m_args[i] +
+                     "] given for function [" + m_name + "].");
+                }
+                args.Add(m_defaultArgs[defIndex]);
+            }
             StackLevel stackLevel = new StackLevel(m_name);
 
             if (args2 != null)
@@ -550,9 +611,12 @@ namespace SplitAndMerge
 
         protected string m_body;
         protected string[] m_args;
-        List<Variable> m_defaultArgs = new List<Variable>();
         protected ParsingScript m_parentScript = null;
         protected int m_parentOffset = 0;
+
+        List<Variable> m_defaultArgs = new List<Variable>();
+        Dictionary<string, int> m_argMap = new Dictionary<string, int>();
+        Dictionary<int, int> m_defArgMap = new Dictionary<int, int>();
     }
 
     class StringOrNumberFunction : ParserFunction
