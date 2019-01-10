@@ -402,7 +402,7 @@ namespace SplitAndMerge
                         defValue = defValue.Substring(0, defValue.Length - 1);
                     }
                     Variable defVariable = new Variable(defValue);
-                    defVariable.ParsingToken = m_args[i];
+                    defVariable.CurrentAssign = m_args[i];
                     defVariable.Index = i;
                     m_defArgMap[i] = m_defaultArgs.Count;
                     m_defaultArgs.Add(defVariable);
@@ -421,7 +421,7 @@ namespace SplitAndMerge
             {
                 var arg = args[i];
                 int argIndex = -1;
-                if (m_argMap.TryGetValue(arg.ParsingToken, out argIndex))
+                if (m_argMap.TryGetValue(arg.CurrentAssign, out argIndex))
                 {
                     namedParameters = true;
                     if (i != argIndex)
@@ -455,8 +455,8 @@ namespace SplitAndMerge
                     for (int i = 0; i < args.Count; i++)
                     {
                         if (args[i].Type == Variable.VarType.NONE ||
-                           (!string.IsNullOrWhiteSpace(args[i].ParsingToken) &&
-                            args[i].ParsingToken != m_args[i]))
+                           (!string.IsNullOrWhiteSpace(args[i].CurrentAssign) &&
+                            args[i].CurrentAssign != m_args[i]))
                         {
                             int defIndex = -1;
                             if (!m_defArgMap.TryGetValue(i, out defIndex))
@@ -1136,6 +1136,7 @@ namespace SplitAndMerge
         {
             script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
+
             // First try processing as an object (with a dot notation):
             Variable result = ProcessObject(script, varValue);
             if (result != null)
@@ -1150,7 +1151,10 @@ namespace SplitAndMerge
             if (arrayIndices.Count == 0)
             {
                 ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(varValue));
-                return varValue.DeepClone();
+                Variable retVar = varValue.DeepClone();
+                retVar.CurrentAssign = m_name;
+                return retVar;
+                //return varValue.DeepClone();
             }
 
             Variable array;

@@ -14,7 +14,6 @@ namespace SplitAndMerge
         private string m_originalScript;// original raw script
         private int m_scriptOffset = 0; // used in functions defined in bigger scripts
         private Dictionary<int, int> m_char2Line = null; // pointers to the original lines
-        private string m_currentAssign; // current variable name being assigned a value
 
         public int Pointer
         {
@@ -53,11 +52,8 @@ namespace SplitAndMerge
             get { return m_originalScript; }
             set { m_originalScript = value; }
         }
-        public string CurrentAssign
-        {
-            get { return m_currentAssign; }
-            set { m_currentAssign = value; }
-        }
+
+        public string CurrentAssign { get; set; }
 
         public Debugger Debugger;
         public bool DisableBreakpoints;
@@ -274,6 +270,19 @@ namespace SplitAndMerge
                 Forward();
             }
         }
+
+        /*public List<Variable> GetCustomArgs(char start = Constants.START_ARG,
+                                      char end = Constants.END_ARG)
+        {
+            string body = Utils.GetBodyBetween(script, Constants.END_ARG, Constants.START_ARG);
+            List<Variable> args = Utils.GetArgs(this,
+                                                start, end, out isList);
+            var parts = body.Split();
+            funcReturn = parts.Length > 1 ? parts[0] : "void";
+            funcName = parts.Last();
+
+            return args;
+        }*/
 
         public List<Variable> GetFunctionArgs(char start = Constants.START_ARG,
                                       char end = Constants.END_ARG)

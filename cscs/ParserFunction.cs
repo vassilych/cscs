@@ -230,7 +230,7 @@ namespace SplitAndMerge
             return LocalNameExists(item) || GlobalNameExists(item);
         }
 
-        public static void AddGlobalOrLocalVariable(string name, ParserFunction function)
+        public static void AddGlobalOrLocalVariable(string name, GetVarFunction function)
         {
             function.Name = name;
             if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
@@ -338,9 +338,19 @@ namespace SplitAndMerge
             s_functions.Remove(name);
         }
 
+        static void NormalizeValue(ParserFunction function)
+        {
+            GetVarFunction gvf = function as GetVarFunction;
+            if (gvf != null)
+            {
+                gvf.Value.CurrentAssign = "";
+            }
+        }
+
         public static void AddGlobal(string name, ParserFunction function,
                                      bool isNative = true)
         {
+            NormalizeValue(function);
             function.isNative = isNative;
             s_functions[name] = function;
 
@@ -406,6 +416,7 @@ namespace SplitAndMerge
 
         public static void AddLocalVariable(ParserFunction local)
         {
+            NormalizeValue(local);
             local.m_isGlobal = false;
             StackLevel locals = null;
             if (s_locals.Count == 0)

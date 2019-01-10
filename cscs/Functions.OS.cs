@@ -364,7 +364,7 @@ namespace SplitAndMerge
         {
             string body = script.TryPrev() == Constants.START_GROUP ?
                           Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP) :
-                          Utils.GetBodyBetween(script, script.Current, Constants.END_STATEMENT);
+                          Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
             ThreadPool.QueueUserWorkItem(ThreadProc, body);
             return Variable.EmptyInstance;
         }
