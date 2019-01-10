@@ -271,19 +271,6 @@ namespace SplitAndMerge
             }
         }
 
-        /*public List<Variable> GetCustomArgs(char start = Constants.START_ARG,
-                                      char end = Constants.END_ARG)
-        {
-            string body = Utils.GetBodyBetween(script, Constants.END_ARG, Constants.START_ARG);
-            List<Variable> args = Utils.GetArgs(this,
-                                                start, end, out isList);
-            var parts = body.Split();
-            funcReturn = parts.Length > 1 ? parts[0] : "void";
-            funcName = parts.Last();
-
-            return args;
-        }*/
-
         public List<Variable> GetFunctionArgs(char start = Constants.START_ARG,
                                       char end = Constants.END_ARG)
         {

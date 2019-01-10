@@ -763,12 +763,6 @@ namespace SplitAndMerge
             return sb.ToString();
         }
 
-        public static bool ContainsNamedParams(string data)
-        {
-            //return data.StartsWith(Constants.NOT) ? Constants.NOT : null;
-            return true;
-        }
-
         public static string IsNotSign(string data)
         {
             //return data.StartsWith(Constants.NOT) ? Constants.NOT : null;
