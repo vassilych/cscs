@@ -1,3 +1,4 @@
+include("scripts/functions.cscs");
 start = pstime;
 
 print("Testing strings");
@@ -634,6 +635,35 @@ function work(loops) {
   return (2*compute(2, 3, "Test", 1000) + 2000)/2;
 }
 test(work(1), 9000);
+
+print("Testing named and default arguments...");
+function myp(par1, par2, par3 = 100) {
+  return par1 + par2 + par3;
+}
+
+function concat(par1, par2, par3 = "", par4 = "", par5 = "", par6= "") {
+  return par1 + par2 + par3 + par4 + par5;
+}
+
+x = myp(par1 = 11, par2 = 21);
+test(x, 132);
+
+y = concat(par3="ghi", par2="def_", par1="abc_", par5="_z");
+test(y, "abc_def_ghi_z");
+
+z = myp(par2=20, par1=70); // doesn't throw
+test(z, 190);
+
+try {
+z = myp(par2=20); // throws: Function [myp] arguments mismatch: 3 declared, 1 supplied.
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
+try {
+  z = myp(par2=20, par3=70); // throws: No argument [par1] given for function [myp].
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
 
 end = pstime;
 printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
