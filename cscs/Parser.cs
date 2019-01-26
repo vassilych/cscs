@@ -15,6 +15,11 @@ namespace SplitAndMerge
         {
             return SplitAndMerge(script, Constants.END_PARSE_ARRAY);
         }
+        public static async Task<Variable> SplitAndMergeAsync(ParsingScript script)
+        {
+            return await SplitAndMergeAsync(script, Constants.END_PARSE_ARRAY);
+        }
+
         public static Variable SplitAndMerge(ParsingScript script, char[] to)
         {
             // First step: process passed expression by splitting it into a list of cells.
@@ -31,7 +36,23 @@ namespace SplitAndMerge
             return result;
         }
 
-        private static List<Variable> Split(ParsingScript script, char[] to)
+        public static async Task<Variable> SplitAndMergeAsync(ParsingScript script, char[] to)
+        {
+            // First step: process passed expression by splitting it into a list of cells.
+            List<Variable> listToMerge = await SplitAsync(script, to);
+
+            if (listToMerge.Count == 0)
+            {
+                throw new ArgumentException("Couldn't parse [" +
+                                            script.Rest + "]");
+            }
+
+            // Second step: merge list of cells to get the result of an expression.
+            Variable result = MergeList(listToMerge);
+            return result;
+        }
+
+        static List<Variable> Split(ParsingScript script, char[] to)
         {
             List<Variable> listToMerge = new List<Variable>(16);
 
@@ -42,18 +63,95 @@ namespace SplitAndMerge
                 return listToMerge;
             }
 
-            StringBuilder item = new StringBuilder();
             int arrayIndexDepth = 0;
             bool inQuotes = false;
             int negated = 0;
-
-            string rest = script.Rest;
-            //if (rest == "b[a[0]];") {
-            //  int stop = 1;
-            //}
+            char ch;
+            string action;
 
             do
             { // Main processing cycle of the first part.
+                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
+
+                bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
+                if (ternary)
+                {
+                    return listToMerge;
+                }
+
+                bool negSign = CheckConsistencyAndSign(script, listToMerge, action, ref token);
+
+                // We are done getting the next token. The GetValue() call below may
+                // recursively call SplitAndMerge(). This will happen if extracted
+                // item is a function or if the next item is starting with a START_ARG '('.
+                ParserFunction func = new ParserFunction(script, token, ch, ref action);
+                Variable current = func.GetValue(script);
+
+                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref action))
+                {
+                    return listToMerge;
+                }
+            } while (script.StillValid() &&
+                    (inQuotes || arrayIndexDepth > 0 || !to.Contains(script.Current)));
+
+            // This happens when called recursively inside of the math expression:
+            script.MoveForwardIf(Constants.END_ARG);
+
+            return listToMerge;
+        }
+
+        static async Task<List<Variable>> SplitAsync(ParsingScript script, char[] to)
+        {
+            List<Variable> listToMerge = new List<Variable>(16);
+
+            if (!script.StillValid() || to.Contains(script.Current))
+            {
+                listToMerge.Add(Variable.EmptyInstance);
+                script.Forward();
+                return listToMerge;
+            }
+
+            int arrayIndexDepth = 0;
+            bool inQuotes = false;
+            int negated = 0;
+            char ch;
+            string action;
+
+            do
+            { // Main processing cycle of the first part.
+                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
+
+                bool ternary = await UpdateIfTernaryAsync(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
+                if (ternary)
+                {
+                    return listToMerge;
+                }
+
+                bool negSign = CheckConsistencyAndSign(script, listToMerge, action, ref token);
+
+                ParserFunction func = new ParserFunction(script, token, ch, ref action);
+                Variable current = await func.GetValueAsync(script);
+
+                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref action))
+                {
+                    return listToMerge;
+                }
+            } while (script.StillValid() &&
+                    (inQuotes || arrayIndexDepth > 0 || !to.Contains(script.Current)));
+
+            // This happens when called recursively inside of the math expression:
+            script.MoveForwardIf(Constants.END_ARG);
+
+            return listToMerge;
+        }
+
+        static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes, ref int arrayIndexDepth, ref int negated, out char ch, out string action)
+        {
+            StringBuilder item = new StringBuilder();
+            ch = Constants.EMPTY;
+            action = null;
+            do
+            {
                 string negateSymbol = Utils.IsNotSign(script.Rest);
                 if (negateSymbol != null && !inQuotes)
                 {
@@ -62,9 +160,8 @@ namespace SplitAndMerge
                     continue;
                 }
 
-                char ch = script.CurrentAndForward();
+                ch = script.CurrentAndForward();
                 CheckQuotesIndices(script, ch, ref inQuotes, ref arrayIndexDepth);
-                string action = null;
 
                 bool keepCollecting = inQuotes || arrayIndexDepth > 0 ||
                      StillCollecting(item.ToString(), to, script, ref action);
@@ -85,94 +182,94 @@ namespace SplitAndMerge
                 {
                     continue;
                 }
+                break;
+            }
+            while (true);
 
-                string token = item.ToString();
+            return item.ToString();
+        }
 
-                bool ternary = UpdateIfTernary(script, token, ch, ref listToMerge);
-                if (ternary)
+        static bool UpdateResult(ParsingScript script, char[] to, List<Variable> listToMerge, string token, bool negSign,
+                                 ref Variable current, ref int negated, ref string action)
+        {
+            if (current == null)
+            {
+                current = Variable.EmptyInstance;
+            }
+            current.ParsingToken = token;
+
+            if (negSign)
+            {
+                current = new Variable(-1 * current.Value);
+            }
+
+            if (negated > 0 && current.Type == Variable.VarType.NUMBER)
+            {
+                // If there has been a NOT sign, this is a boolean.
+                // Use XOR (true if exactly one of the arguments is true).
+                bool neg = !((negated % 2 == 0) ^ Convert.ToBoolean(current.Value));
+                current = new Variable(Convert.ToDouble(neg));
+                negated = 0;
+            }
+
+            if (action == null)
+            {
+                action = UpdateAction(script, to);
+            }
+            else
+            {
+                script.MoveForwardIf(action[0]);
+            }
+
+            char next = script.TryCurrent(); // we've already moved forward
+            bool done = listToMerge.Count == 0 &&
+                        (next == Constants.END_STATEMENT ||
+                        (action == Constants.NULL_ACTION && current.Type != Variable.VarType.NUMBER) ||
+                         current.IsReturn);
+            if (done)
+            {
+                if (action != null && action != Constants.END_ARG_STR)
                 {
-                    return listToMerge;
+                    throw new ArgumentException("Action [" +
+                              action + "] without an argument.");
                 }
+                // If there is no numerical result, we are not in a math expression.
+                listToMerge.Add(current);
+                return true;
+            }
 
-                CheckConsistency(token, listToMerge, script);
+            Variable cell = current.Clone();
+            cell.Action = action;
 
-                script.MoveForwardIf(Constants.SPACE);
+            bool addIt = UpdateIfBool(script, cell, (Variable newCell) => { cell = newCell; }, listToMerge, (List<Variable> var) => { listToMerge = var; });
+            if (addIt)
+            {
+                listToMerge.Add(cell);
+            }
+            return false;
+        }
 
-                if (action != null && action.Length > 1)
-                {
-                    script.Forward(action.Length - 1);
-                }
+        static bool CheckConsistencyAndSign(ParsingScript script, List<Variable> listToMerge, string action, ref string token)
+        {
+            if (Constants.CONTROL_FLOW.Contains(token) && listToMerge.Count > 0)
+            {//&&
+             //item != Constants.RETURN) {
+             // This can happen when the end of statement ";" is forgotten.
+                listToMerge.Clear();
+                //throw new ArgumentException("Token [" +
+                //   item + "] can't be part of an expression. Check \";\". Stopped at [" +
+                //    script.Rest + " ...]");
+            }
 
-                bool negSign = CheckNegativeSign(ref token);
+            script.MoveForwardIf(Constants.SPACE);
 
-                // We are done getting the next token. The GetValue() call below may
-                // recursively call SplitAndMerge(). This will happen if extracted
-                // item is a function or if the next item is starting with a START_ARG '('.
-                ParserFunction func = new ParserFunction(script, token, ch, ref action);
-                Variable current = func.GetValue(script);
-                if (current == null)
-                {
-                    current = Variable.EmptyInstance;
-                }
-                current.ParsingToken = token;
+            if (action != null && action.Length > 1)
+            {
+                script.Forward(action.Length - 1);
+            }
 
-                if (negSign)
-                {
-                    current = new Variable(-1 * current.Value);
-                }
-
-                if (negated > 0 && current.Type == Variable.VarType.NUMBER)
-                {
-                    // If there has been a NOT sign, this is a boolean.
-                    // Use XOR (true if exactly one of the arguments is true).
-                    bool neg = !((negated % 2 == 0) ^ Convert.ToBoolean(current.Value));
-                    current = new Variable(Convert.ToDouble(neg));
-                    negated = 0;
-                }
-
-                if (action == null)
-                {
-                    action = UpdateAction(script, to);
-                }
-                else
-                {
-                    script.MoveForwardIf(action[0]);
-                }
-
-                char next = script.TryCurrent(); // we've already moved forward
-                bool done = listToMerge.Count == 0 &&
-                            (next == Constants.END_STATEMENT ||
-                            (action == Constants.NULL_ACTION && current.Type != Variable.VarType.NUMBER) ||
-                             current.IsReturn);
-                if (done)
-                {
-                    if (action != null && action != Constants.END_ARG_STR)
-                    {
-                        throw new ArgumentException("Action [" +
-                                  action + "] without an argument.");
-                    }
-                    // If there is no numerical result, we are not in a math expression.
-                    listToMerge.Add(current);
-                    return listToMerge;
-                }
-
-                Variable cell = current.Clone();
-                cell.Action = action;
-
-                bool addIt = UpdateIfBool(script, ref cell, ref listToMerge);
-                if (addIt)
-                {
-                    listToMerge.Add(cell);
-                }
-                item.Clear();
-
-            } while (script.StillValid() &&
-                    (inQuotes || arrayIndexDepth > 0 || !to.Contains(script.Current)));
-
-            // This happens when called recursively inside of the math expression:
-            script.MoveForwardIf(Constants.END_ARG);
-
-            return listToMerge;
+            bool negSign = CheckNegativeSign(ref token);
+            return negSign;
         }
 
         static void CheckConsistency(string item, List<Variable> listToMerge,
@@ -308,14 +405,14 @@ namespace SplitAndMerge
             return true;
         }
 
-        static bool UpdateIfTernary(ParsingScript script, string token, char ch, ref List<Variable> listToMerge)
+        static bool UpdateIfTernary(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
         {
-            if (listToMerge.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
+            if (listInput.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
             {
                 return false;
             }
 
-            Variable arg1 = MergeList(listToMerge);
+            Variable arg1 = MergeList(listInput);
             script.MoveForwardIf(Constants.TERNARY_OPERATOR);
             Variable arg2 = script.Execute(Constants.TERNARY_SEPARATOR);
             script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
@@ -325,24 +422,49 @@ namespace SplitAndMerge
             double condition = arg1.AsDouble();
             Variable result = condition != 0 ? arg2 : arg3;
 
-            listToMerge.Clear();
-            listToMerge.Add(result);
+            listInput.Clear();
+            listInput.Add(result);
+            listToMerge(listInput);
+
+            return true;
+        }
+        static async Task<bool> UpdateIfTernaryAsync(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
+        {
+            if (listInput.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
+            {
+                return false;
+            }
+
+            Variable arg1 = MergeList(listInput);
+            script.MoveForwardIf(Constants.TERNARY_OPERATOR);
+            Variable arg2 = await script.ExecuteAsync(Constants.TERNARY_SEPARATOR);
+            script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+            Variable arg3 = await script.ExecuteAsync(Constants.NEXT_OR_END_ARRAY);
+            script.MoveForwardIf(Constants.NEXT_OR_END_ARRAY);
+
+            double condition = arg1.AsDouble();
+            Variable result = condition != 0 ? arg2 : arg3;
+
+            listInput.Clear();
+            listInput.Add(result);
+            listToMerge(listInput);
 
             return true;
         }
 
-        static bool UpdateIfBool(ParsingScript script, ref Variable current, ref List<Variable> listToMerge)
+        static bool UpdateIfBool(ParsingScript script, Variable current, Action<Variable> updateCurrent, List<Variable> listInput, Action<List<Variable>> listToMerge)
         {
             // Short-circuit evaluation: check if don't need to evaluate more.
             bool needToAdd = true;
             if ((current.Action == "&&" || current.Action == "||") &&
-                    listToMerge.Count > 0)
+                    listInput.Count > 0)
             {
-                if (CanMergeCells(listToMerge.Last(), current))
+                if (CanMergeCells(listInput.Last(), current))
                 {
-                    listToMerge.Add(current);
-                    current = MergeList(listToMerge);
-                    listToMerge.Clear();
+                    listInput.Add(current);
+                    current = MergeList(listInput);
+                    updateCurrent(current);
+                    listInput.Clear();
                     needToAdd = false;
                 }
             }
@@ -352,7 +474,9 @@ namespace SplitAndMerge
                 Utils.SkipRestExpr(script);
                 current.Action = Constants.NULL_ACTION;
                 needToAdd = true;
+                updateCurrent(current);
             }
+            listToMerge(listInput);
             return needToAdd;
         }
 

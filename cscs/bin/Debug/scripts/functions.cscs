@@ -69,9 +69,9 @@ function isPrime(n) {
   bound = round(sqrt(n));
   sz = size(primes);
   if (sz <= bound) {
-    print("calling isPrime(", bound, "),n=", n);
+    //print("calling isPrime(", bound, "),n=", n);
     a=isPrime(bound);
-    print("called isPrime(", bound, "),a=", a);
+    //print("called isPrime(", bound, "),a=", a);
   }
   i = 2;
   primes[n] = 1;
@@ -125,21 +125,21 @@ function cot(x) {
 }
 function test(x, expected) {
   if (x == expected) {
-    printgreen(x, " as expected. OK");
+    print(x, " as expected. OK");
     return;
   } 
   if (type(expected) != "NUMBER") {
-    printred("[", x, "] but expected [", expected, "]. ERROR");
+    print("[", x, "] but expected [", expected, "]. ERROR");
     return;
   }
 
   epsilon = 0.000001;
   if ((expected == 0 && abs(x) <= epsilon) ||
        abs(x - expected) / expected <= epsilon) {
-    printgray(x, " within epsion to ", expected, ". almost OK");
+    print(x, " within epsion to ", expected, ". almost OK");
   } else {
     diff = expected - x;
-    printred(x, " but expected ", expected, ", diff=", diff, ". ERROR");
+    print(x, " but expected ", expected, ", diff=", diff, ". ERROR");
   }
 }
 

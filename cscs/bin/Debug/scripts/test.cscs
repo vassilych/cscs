@@ -1,4 +1,4 @@
-include("scripts/functions.cscs");
+include("functions.cscs");
 start = pstime;
 
 print("Testing strings");
@@ -7,110 +7,101 @@ txt += txt;
 txt = txt + "_";
 txt += "la";
 txt += 1;
-test(txt, "lulu_la1");
+Test(txt, "lulu_la1");
 
 txt = "lu";
 txt += txt + substr(txt, 0, 1) + "_" + 1;
-test(txt, "lulul_1");
+Test(txt, "lulul_1");
 
 bb = "abc_blah";
 c = substr(bb, 4, 3);
-test(c, "bla");
+Test(c, "bla");
 ind = indexof(bb, "bla");
-test(ind, 4);
+Test(ind, 4);
 
 print("Testing numbers");
 a=(-3+2*9)-(10-15);
 a++; --a;
 print("a=[", a, "]");
-test(a, 20);
+Test(a, 20);
 
 x = 1;
 b = x++ - x--; // b = -1, x = 1
-test(x, 1);
-test(b, -1);
+Test(x, 1);
+Test(b, -1);
 c = x = (b += 1); // x = b = c = 0,
-test(x, 0);
-test(b, 0);
-test(c, 0);
+Test(x, 0);
+Test(b, 0);
+Test(c, 0);
 x -= ++c; // c = 1, x = -1
-test(x, -1);
-test(c, 1);
+Test(x, -1);
+Test(c, 1);
 
-test(2-11-3*7, -30);
-test((((-5.5))), -5.5);
-test(((16-3)-3)+15/2*5, 47.5);
-test(1-2-3-(4-(5-(6-7)))-pow(2,3*exp(14-7*2)), -10);
-test(3*50-3*pow(2,4)*3, 6);
-test(++a-a--, 0);
-test((a++)-(--a), 0);
-test(a, 20);
-test(1-a--, -19);
-test((a++)-(--a)-a--, -19);
-test(a, 18);
-test(sin(pi/2), 1);
-test(cos(pi/2), 0);
-test(tan(pi/2), 1.63317787283838E+16);
+Test(2-11-3*7, -30);
+Test((((-5.5))), -5.5);
+Test(((16-3)-3)+15/2*5, 47.5);
+Test(1-2-3-(4-(5-(6-7)))-pow(2,3*exp(14-7*2)), -10);
+Test(3*50-3*pow(2,4)*3, 6);
+Test(++a-a--, 0);
+Test((a++)-(--a), 0);
+Test(a, 20);
+Test(1-a--, -19);
+Test((a++)-(--a)-a--, -19);
+Test(a, 18);
+Test(sin(pi/2), 1);
+Test(cos(pi/2), 0);
+Test(tan(pi/2), 1.63317787283838E+16);
 
 a = 19;
-test((a++)-(--a)-a--, a - 2 * a - 1);
-test((a++)-(--a)-a--, a - 2 * a - 1);
+Test((a++)-(--a)-a--, a - 2 * a - 1);
+Test((a++)-(--a)-a--, a - 2 * a - 1);
 
 x = 2.0E+15 + 3e+15 - 1.0e15;
-test(x, 4e+15);
+Test(x, 4e+15);
 
 print;
 
 n = 10;
 getPrimes(n);
-test(isPrime(5), 1);
-test(isPrime(6), 0);
+Test(isPrime(5), 1);
+Test(isPrime(6), 0);
 function isInteger(candidate) {
   return candidate == round(candidate);
 }
 
 n="blah";
 if (!isInteger(n) || n < 0) {
-  test(n, n);
+  Test(n, n);
 } else {
-  test("integer", n);
+  Test("integer", n);
 }
 
 c = 0; b = 2;
 c+=3;
-test(c, 3);
+Test(c, 3);
 b*=5;
-test(b/=2, 5);
+Test(b/=2, 5);
 
-write("Testing factorial(5): ");
-test(factorial(5), 120);
-
-
-x = sin(pi/2);
-if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
-             x < 1 - pi) {
-  print("Error, in if, x=", x);
-} else {
-  print("OK, in else, x=", x);
-}
+print("Testing factorial(5): ");
+Test(factorial(5), 120);
 
 a=1;
 c=0;
-test(a||c, 1);
-test(c&&b, 0);
+Test(a||c, 1);
+Test(c&&b, 0);
 
 a[1]=1;
 a[2]=2;
 c=a[1]+a[2];
-test(c, 3);
+Test(c, 3);
 
 a[1][2]=22;
 a[5][3]=15;
 a[1][2]-=100;
 a[5][3]+=100;
 
-test(a[1][2], -78);
-test(a[5][3], 115);
+Test(a[1][2], -78);
+Test(a[5][3], 115);
 
 print(a[5][2]);
 
@@ -122,13 +113,13 @@ print(a[1][2]);
 print(a[5][3]++);
 print(a[5][3]++);
 print(a[5][3]++);
-test(a[5][3], 118);
+Test(a[5][3], 118);
 
 print(++a[5][3]);
 print(++a[5][3]);
 print(++a[5][3]);
 print(a[5][3]++);
-test(a[5][3], 122);
+Test(a[5][3], 122);
 
 print(--a[5][3]);
 print(--a[5][3]);
@@ -136,7 +127,7 @@ print(--a[5][3]);
 print(a[5][3]--);
 print(a[5][3]--);
 print(a[5][3]--);
-test(a[5][3], 116);
+Test(a[5][3], 116);
 
 i=10;
 
@@ -144,66 +135,66 @@ while(--i > 0) {
   newarray[i] = 2*i;
 }
 print("size(newarray)=", size(newarray));
-test(i, 0);
-test(newarray[9], 18);
-test(size(newarray), 10);
+Test(i, 0);
+Test(newarray[9], 18);
+Test(size(newarray), 10);
 
 print("Testing short circuit evaluation");
 function f(x) {
   counter++;
   return x;
 }
-counter = 0; test(f(0) && f(1), 0); test(counter, 1);
-counter = 0; test(f(1) && f(0), 0); test(counter, 2);
-counter = 0; test(f(1) || f(2), 1); test(counter, 1);
-counter = 0; test(f(0) || f(3), 1); test(counter, 2);
+counter = 0; Test(f(0) && f(1), 0); Test(counter, 1);
+counter = 0; Test(f(1) && f(0), 0); Test(counter, 2);
+counter = 0; Test(f(1) || f(2), 1); Test(counter, 1);
+counter = 0; Test(f(0) || f(3), 1); Test(counter, 2);
 
 a = (f(1) && ((sin(0) || sin(1*2)) && f(2) && (f(3) || f(4))));
-test(a, 1);
+Test(a, 1);
 
 print("Testing arrays and maps");
 arr[2] = 10; arr[1] = "str";
-test(type(arr),    "ARRAY");
-test(type(arr[0]), "NONE");
-test(type(arr[1]), "STRING");
-test(type(arr[2]), "NUMBER");
+Test(type(arr),    "ARRAY");
+Test(type(arr[0]), "NONE");
+Test(type(arr[1]), "STRING");
+Test(type(arr[2]), "NUMBER");
 
 x["bla"]["blu"]=113;
-test(contains (x["bla"], "blu"), 1);
-test(contains (x["bla"], "bla"), 0);
+Test(contains (x["bla"], "blu"), 1);
+Test(contains (x["bla"], "bla"), 0);
 x["blabla"]["blablu"]=125;
-test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 237);
+Test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 237);
 
 b[5][3][5][3]=15;
 print(++b[5][3][5][3]);
-print(++b[5][3][5][1]);
+print(++b[5][3][5][1]); // NaN expected here
 b[5][3][5][3]*=1000;
-test(b[5][3][5][3], 16000);
-test(size(b), 6);
-test(size(b[5]), 4);
-test(size(b[5][3]), 6);
-test(size(b[5][3][5]), 4);
-test(size(b[5][3][5][3]), 5);
+Test(b[5][3][5][3], 16000);
+Test(size(b), 6);
+Test(size(b[5]), 4);
+Test(size(b[5][3]), 6);
+Test(size(b[5][3][5]), 4);
+Test(size(b[5][3][5][3]), 5);
 
 bla="bla";
 x["bla"]=13;
 x["blabla"]=26;
-test(x["bla"], 13);
-test(size(x), 2);
-test(contains(x, "bla") , 1);
-test(contains(x, "bla2"), 0);
-test(x["bla"] + x["blabla"], 39);
+Test(x["bla"], 13);
+Test(size(x), 2);
+Test(contains(x, "bla") , 1);
+Test(contains(x, "bla2"), 0);
+Test(x["bla"] + x["blabla"], 39);
 
 x["bla"]["blu"]=113;
-test(contains(x["bla"], "blu"), 1);
-test(contains(x["bla"], "bla"), 0);
+Test(contains(x["bla"], "blu"), 1);
+Test(contains(x["bla"], "bla"), 0);
 x["bla"]["blu"]++;
-test(x["bla"]["blu"], 114);
+Test(x["bla"]["blu"], 114);
 x["blabla"]["blablu"]=126;
 --x["blabla"]["blablu"];
-test(x["blabla"]["blablu"], 125);
+Test(x["blabla"]["blablu"], 125);
 
-test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 238);
+Test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 238);
 print(--x["blabla"]["blablu"]);
 print(--x["blabla"]["blablu"]);
 print(--x["blabla"]["blablu"]);
@@ -211,17 +202,15 @@ print(x["blabla"]["blablu"]++);
 print(x["blabla"]["blablu"]++);
 print(x["blabla"]["blablu"]++);
 
-x = 20 * sin(pi^2);
+x = 20 * sin(pow(pi,2));
 cache["if"] = -10 * x;
 cache["else"] = 10 * x;
-//print(x, ", log(x + 3*10^2)=", log(x + 3*10^2));
-if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
+if (x < 0 && log(x + 3*pow(10,2)) < 6*exp(x) ||
              x < 1 - pi) {
   print("OK, in if, x=", x, ", cache=", cache["if"]);
 } else {
   print("ERROR, in else, cache=", cache["else"]);
 }
-
 
 a={0};
 i = 0;
@@ -231,8 +220,8 @@ while(++i < 10) {
 print (a);
 i -= 5;
 d=a[--i];
-test(d, 8);
-test(i, 4);
+Test(d, 8);
+Test(i, 4);
 
 n=1.5;
 try {
@@ -260,10 +249,10 @@ try {
 
 f = fibonacci(n);
 print("fibonacci(", n, ")=", f);
-test(f, 55);
+Test(f, 55);
 c = catalan(n);
 print("catalan(", n, ")=", c);
-test(c, 16796);
+Test(c, 16796);
 
 i = 0; b = 0;
 while(i < 13)
@@ -283,11 +272,11 @@ print("while() done");
 
 n = 0; y = 1;
 a =  !!!n && !!y;
-test(a, 1);
+Test(a, 1);
 b =  !a || !y || n;
-test(b, 0);
+Test(b, 0);
 c =  !!(!y || !n && y);
-test(c, 1);
+Test(c, 1);
 
 a = 1+(25-2*3);
 arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-++a), ++a/(a/3), 2 * sqrt(pow(2, 2))};
@@ -306,15 +295,6 @@ if (2*pow(2,4) > pow(2,5)*2 || factorial(3) == 24) {
   print("else not expected");
 }
 
-print;
-x = sin(pi*2);
-if (x < 0 && log(x + 3*10^2) < 6*exp(x) ||
-             x < 1 - pi) {
-  print("in if, x=", x);
-} else {
-  print("in else, x=", x);
-}
-
 b = "bla";
 i = 0;
 while(i < 13)
@@ -328,7 +308,7 @@ while(i < 13)
   }
   //print("this is never reached");
 }
-test(b, "bla-137");
+Test(b, "bla-137");
 
 print("who are \"you\" my friend?"," e=", 0+exp(1)-2*sin(0), ", pi=", pi);
 
@@ -348,31 +328,31 @@ elif (a >= 25) {
 else {
   cond = "cond4";
 }
-test(cond, "cond4");
+Test(cond, "cond4");
 print();
 
 a=1;
 b=2;
 c=0;
-test(a&&c, 0);
-test(a||c, 1);
-test(a||b, 1);
-test(!a&&!b, 0);
-test(!a && !c, 0);
-test(! a || !c, 1);
-test(!a || !b, 0);
-test(a && b && !c, 1);
-test(a || b ||  c, 1);
-test(!a || !b || c, 0);
+Test(a&&c, 0);
+Test(a||c, 1);
+Test(a||b, 1);
+Test(!a&&!b, 0);
+Test(!a && !c, 0);
+Test(! a || !c, 1);
+Test(!a || !b, 0);
+Test(a && b && !c, 1);
+Test(a || b ||  c, 1);
+Test(!a || !b || c, 0);
 
 i = 10;
 while(--i > 0) {
   newarray[i] = 2*i;
 }
 print("size(newarray)=", size(newarray));
-test(i, 0);
-test(newarray[9], 18);
-test(size(newarray), 10);
+Test(i, 0);
+Test(newarray[9], 18);
+Test(size(newarray), 10);
 
 function trySuite(n) {
   print("Trying to calculate negative factorial...");
@@ -394,7 +374,7 @@ function tryZeroDivision() {
 function variableTest() {
   print("In function start, n=", n);
   n = sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
-  test(n, 20);
+  Test(n, 20);
   print("In function end, n=", n);
 }
 
@@ -437,120 +417,101 @@ variableTest();
 print("After function, n=", n);
 
 слова = {"Это", "написано", "по-русски"};
-разм = размер(слова);
+размер = size(слова);
 и = 0;
-пока(и < разм) {
-  если (и  % 2 == 0) {
-    печать(слова[и]);
+while(и < размер) {
+  if (и  % 2 == 0) {
+    print(слова[и]);
   }
   и++;
 }
 
-palabras = {"Este", "sentido", "es", "en", "Español"};
-tam = tamaño(palabras);
-i = 0;
-mientras(i < tam) {
-  si (i  % 2 == 0) {
-    imprimir(palabras[i]);
-  }
-  i++;
-}
-
-я = 0;
-пока (я++ < 10) {
-  если (я % 2 == 0) {
-    печать (я, ": чётное число.");
-  } иначе {
-    печать (я, ": нечётное число.");
-  }
-}
-
 for (i = 10; i >= 0; i--) {
-  write(i, " ");
+  print(i, " ");
   arr[i] = 2*i;
 }
 i = 10;
 print;
 for (;;) {
-  write(i, " ");  arr[i] = 2*i;
+  print(i, " ");  arr[i] = 2*i;
   i--;
   if (i < 0) { break; }
 }
 print;
 for (item : arr) {
-  write(item, " ");
+  print(item, " ");
 }
 print;
-test("x","x");
+Test("x","x");
 
 test1 = {0,3,5};
 test1[1][2]=3;
 
 if(test1[1][2] == 3) { result="equal";}
 else { result="not equal"; }
-test(result, "equal");
+Test(result, "equal");
 
 if(test1[1] == 5) { result="equal";}
 else { result="not equal"; }
-test(result, "not equal");
+Test(result, "not equal");
 
 if(3 == test1[2]) { result="equal";}
 else { result="not equal"; }
-test(result, "not equal");
+Test(result, "not equal");
 
 if(5 == test1[2]) { result="equal";}
 else { result="not equal"; }
-test(result, "equal");
+Test(result, "equal");
 
 ab=2;
 if(ab == 2) { result="equal";}
 else { result="not equal"; }
-test(result, "equal");
+Test(result, "equal");
 
 if(2 != ab) { result="equal";}
 else { result="not equal"; }
-test(result, "not equal");
+Test(result, "not equal");
 
 if (sin(10) > -1) { result = "sintestOK"; }
 else { result = "sintestNotOK";  }
-test(result, "sintestOK");
+Test(result, "sintestOK");
 
 objName = "Columns";
 if (indexof(objName,"Columns") > -1) { result = "indexofOK"; }
 else { result = "indexofNotOK";  }
-test(result, "indexofOK");
+Test(result, "indexofOK");
 
 objName = "aColumns";
 if (indexof(objName,"Columns") < 1) { result = "indexofNotOK"; }
 else { result = "indexofOK";  }
-test(result, "indexofOK");
+Test(result, "indexofOK");
 
 test1 = {1,0};
 test2 = {0,1};
 if (test1 != test2) { result = "not equal";}
 else {  result = "equal"; }
-test(result, "not equal");
+Test(result, "not equal");
 
 test2 = {1,0};
 if (test1 != test2) { result = "not equal";}
 else {  result = "equal"; }
-test(result, "equal");
+Test(result, "equal");
 
 if (1==2 || 2==2) { result = "true"; }
 else { result = "false"; }
-test(result, "true");
+Test(result, "true");
 
 if (2==2 || 1==2) { result = "true"; }
 else { result = "false"; }
-test(result, "true");
+Test(result, "true");
 
 if (1==2 && 2==2) { result = "true"; }
 else { result = "false"; }
-test(result, "false");
+Test(result, "false");
 
 if (2==2 && 1==2) { result = "true"; }
 else { result = "false"; }
-test(result, "false");
+Test(result, "false");
 function threadWork() {
   sleep(10);
   print("  Starting thread work in thread", threadid());
@@ -584,43 +545,43 @@ function returnTest(par) {
 }
 b = 10;
 result = returnTest(9);
-test(result, 1); test(b, 10);
+Test(result, 1); Test(b, 10);
 result = returnTest(19);
-test(result, 2); test(b, 20);
+Test(result, 2); Test(b, 20);
 result = returnTest(30);
-test(result, 3); test(b, 20);
+Test(result, 3); Test(b, 20);
 result = returnTest(40);
-test(result, 4); test(b, 40);
+Test(result, 4); Test(b, 40);
 result = returnTest(50);
-test(result, 5); test(b, 60);
+Test(result, 5); Test(b, 60);
 
 a[0] = 0;
 b[a[0]] = 1;
-test(b[a[0]], 1);
+Test(b[a[0]], 1);
 
 c[b[a[0]]] = 5;
-test(c[b[a[0]]], 5);
+Test(c[b[a[0]]], 5);
 
 a=-2; b=2;
 f1 = a > 0 && b < 0 ? 10 : -10;
-test(f1, -10);
+Test(f1, -10);
 f2 = a < 0 && b < 0 ? 10 : -10;
-test(f2, -10);
+Test(f2, -10);
 f3 = a < 0 && b > 2 ? 10 : -10;
-test(f3, -10);
+Test(f3, -10);
 t1 = a < 0 && b > 0 ? 10 : -10;
-test(t1, 10);
+Test(t1, 10);
 s1 = a < 0 ? -20 : b > 0 ? 20 : -30;
-test(s1, -20);
+Test(s1, -20);
 s2 = a > 0 ? -20 : b > 0 ? 20 : -30;
-test(s2, 20);
+Test(s2, 20);
 s3 = a > 0 ? -20 : b < 0 ? 20 : -30;
-test(s3, -30);
+Test(s3, -30);
 
 x=c=2;
 ++x;
-test(c, 2);
-test(x, 3);
+Test(c, 2);
+Test(x, 3);
 
 function compute(base, power, str, extra) {
   x = pow(base, power) * extra;
@@ -630,11 +591,11 @@ function compute(base, power, str, extra) {
 function work(loops) {
   x = 0.0;
   for(i = 0; i < loops; i++) {
-     x = (2*compute(2, 3, "Test", 1000) + 2000)/2;
+     x = (2*compute(2, 3, "test", 1000) + 2000)/2;
   }
-  return (2*compute(2, 3, "Test", 1000) + 2000)/2;
+  return (2*compute(2, 3, "test", 1000) + 2000)/2;
 }
-test(work(1), 9000);
+Test(work(1), 9000);
 
 print("Testing named and default arguments...");
 function myp(par1, par2, par3 = 100) {
@@ -646,24 +607,76 @@ function concat(par1, par2, par3 = "", par4 = "", par5 = "", par6= "") {
 }
 
 x = myp(par1 = 11, par2 = 21);
-test(x, 132);
+Test(x, 132);
 
 y = concat(par3="ghi", par2="def_", par1="abc_", par5="_z");
-test(y, "abc_def_ghi_z");
+Test(y, "abc_def_ghi_z");
 
-z = myp(par2=20, par1=70); // doesn't throw
-test(z, 190);
+z = myp(par2=20, par1=70);
+Test(z, 190);
 
 try {
-z = myp(par2=20); // throws: Function [myp] arguments mismatch: 3 declared, 1 supplied.
+  z = myp(par2=20);
+  print("Error. Missing Exception: Function [myp] arguments mismatch: 3 declared, 1 supplied.");
 } catch(exc) {
   print("OK. Caught: " + exc);
 }
 try {
-  z = myp(par2=20, par3=70); // throws: No argument [par1] given for function [myp].
+  z = myp(par2=20, par3=70);
+  print("Error. Missing Exception: No argument [par1] given for function [myp].");
 } catch(exc) {
   print("OK. Caught: " + exc);
 }
+
+print("Testing Classes and Inheritance");
+class Stuff1 {
+  x = 2;
+  Stuff1(a) {
+    x = a;
+  } 
+  function addStuff1(n) {
+    return n + x;
+  }
+}
+
+class Stuff2 {
+  y = 3;
+  Stuff2(b) {
+    y = b;
+  } 
+  function addStuff2(n) {
+    return n + y;
+  }
+}
+
+class CoolStuff : Stuff1, Stuff2 {
+  z = 3;
+  CoolStuff(a, b, c) {
+    x = a;
+    y = b;
+    z = c;
+  } 
+  function addCoolStuff() {
+    return x + y + z;
+  }
+}
+
+addition = 100;
+obj1 = new Stuff1(10);
+Test(obj1.x, 10);
+Test(obj1.addStuff1(addition), 110);
+
+obj2 = new Stuff2(20);
+Test(obj2.y, 20);
+Test(obj2.addStuff2(addition), 120);
+
+newObj = new CoolStuff(11, 13, 17);
+Test(newObj.x, 11);
+Test(newObj.y, 13);
+Test(newObj.z, 17);
+Test(newObj.addCoolStuff(), 41);
+Test(newObj.addStuff1(addition), 111);
+Test(newObj.addStuff2(addition), 113);
 
 end = pstime;
-printblack("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
+print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");

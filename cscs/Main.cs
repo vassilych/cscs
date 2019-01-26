@@ -38,8 +38,9 @@ namespace SplitAndMerge
             Interpreter.Instance.GetOutput += Print;
 
             //ProcessScript("include(\"scripts/functions.cscs\");");
+            string scriptFilename = "scripts/test.cscs";
             string script = "";
-            //script = Utils.GetFileContents("scripts/temp.cscs");
+            script = Utils.GetFileContents(scriptFilename);
 
             if (string.IsNullOrWhiteSpace(script) && (args.Length < 1 || args[1] == "debugger"))
             {
@@ -56,9 +57,9 @@ namespace SplitAndMerge
             {
                 if (args[0].EndsWith(EXT))
                 {
-                    string filename = args[0];
-                    Console.WriteLine("Reading script from " + filename);
-                    script = Utils.GetFileContents(filename);
+                    scriptFilename = args[0];
+                    Console.WriteLine("Reading script from " + scriptFilename);
+                    script = Utils.GetFileContents(scriptFilename);
                 }
                 else
                 {
@@ -68,7 +69,7 @@ namespace SplitAndMerge
 
             if (!string.IsNullOrWhiteSpace(script))
             {
-                ProcessScript(script);
+                ProcessScript(script, scriptFilename);
                 return;
             }
 
@@ -260,7 +261,7 @@ namespace SplitAndMerge
             }
         }
 
-        private static void ProcessScript(string script)
+        private static void ProcessScript(string script, string filename = "")
         {
             s_PrintingCompleted = false;
             string errorMsg = null;
@@ -268,11 +269,12 @@ namespace SplitAndMerge
 
             try
             {
-                result = Interpreter.Instance.Process(script);
+                result = System.Threading.Tasks.Task.Run(() => Interpreter.Instance.Process(script, filename)).Result;
+                //result = Interpreter.Instance.Process(script);
             }
             catch (Exception exc)
             {
-                errorMsg = exc.Message;
+                errorMsg = exc.InnerException != null ? exc.InnerException.Message : exc.Message;
                 ParserFunction.InvalidateStacksAfterLevel(0);
             }
 

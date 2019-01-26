@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -45,7 +46,26 @@ namespace SplitAndMerge
         public string Filename
         {
             get { return m_filename; }
-            set { m_filename = value; }
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    value = Path.GetFullPath(value);
+                }
+                m_filename = value;
+            }
+        }
+        public string PWD
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(m_filename))
+                {
+                    return Path.GetDirectoryName(m_filename);
+                }
+
+                return Directory.GetCurrentDirectory();
+            }
         }
         public string OriginalScript
         {
@@ -86,6 +106,16 @@ namespace SplitAndMerge
         public bool StillValid() { return m_from < m_data.Length; }
 
         public void SetDone() { m_from = m_data.Length; }
+
+        public string GetFilePath(string path)
+        {
+            if (File.Exists(path) || Path.IsPathRooted(path))
+            {
+                return path;
+            }
+            string pathname = Path.Combine(PWD, path);
+            return pathname;
+        }
 
         public int Find(char ch, int from = -1)
         { return m_data.IndexOf(ch, from < 0 ? m_from : from); }
@@ -276,7 +306,15 @@ namespace SplitAndMerge
         {
             bool isList;
             List<Variable> args = Utils.GetArgs(this,
-                                                start, end, out isList);
+                                                start, end, (outList) => { isList = outList; } );
+            return args;
+        }
+        public async Task<List<Variable>> GetFunctionArgsAsync(char start = Constants.START_ARG,
+                                      char end = Constants.END_ARG)
+        {
+            bool isList;
+            List<Variable> args = await Utils.GetArgsAsync(this,
+                                                start, end, (outList) => { isList = outList; });
             return args;
         }
 
@@ -305,20 +343,28 @@ namespace SplitAndMerge
             return endGroupRead;
         }
 
-        public Variable Execute()
-        {
-            return ExecuteFrom(Pointer);
-        }
         public Variable ExecuteTo(char to = '\0')
         {
             return ExecuteFrom(Pointer, to);
         }
+        public async Task<Variable> ExecuteToAsync(char to = '\0')
+        {
+            return await ExecuteFromAsync(Pointer, to);
+        }
+
         public Variable ExecuteFrom(int from, char to = '\0')
         {
             Pointer = from;
             char[] toArray = to == '\0' ? Constants.END_PARSE_ARRAY :
                                           to.ToString().ToCharArray();
             return Execute(toArray);
+        }
+        public async Task<Variable> ExecuteFromAsync(int from, char to = '\0')
+        {
+            Pointer = from;
+            char[] toArray = to == '\0' ? Constants.END_PARSE_ARRAY :
+                                          to.ToString().ToCharArray();
+            return await ExecuteAsync(toArray);
         }
 
         public Variable Execute(char[] toArray)
@@ -333,7 +379,7 @@ namespace SplitAndMerge
             bool handleByDebugger = DebuggerServer.DebuggerAttached && !Debugger.Executing;
             if (DebuggerServer.DebuggerAttached)
             {
-                result = Debugger.CheckBreakpoints(this);
+                result = Debugger.CheckBreakpoints(this).Result;
                 if (result != null)
                 {
                     return result;
@@ -349,6 +395,56 @@ namespace SplitAndMerge
                 try
                 {
                     result = Parser.SplitAndMerge(this, toArray);
+                }
+                catch (ParsingException parseExc)
+                {
+                    if (handleByDebugger)
+                    {
+                        Debugger.ProcessException(this, parseExc);
+                    }
+                    throw;
+                }
+                catch (Exception exc)
+                {
+                    ParsingException parseExc = new ParsingException(exc.Message, this, exc);
+                    if (handleByDebugger)
+                    {
+                        Debugger.ProcessException(this, parseExc);
+                    }
+                    throw parseExc;
+                }
+            }
+            return result;
+        }
+
+        public async Task<Variable> ExecuteAsync(char[] toArray)
+        {
+            if (!m_data.EndsWith(Constants.END_STATEMENT.ToString()))
+            {
+                m_data += Constants.END_STATEMENT;
+            }
+
+            Variable result = null;
+
+            bool handleByDebugger = DebuggerServer.DebuggerAttached && !Debugger.Executing;
+            if (DebuggerServer.DebuggerAttached)
+            {
+                result = await Debugger.CheckBreakpoints(this);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            if (InTryBlock)
+            {
+                result = await Parser.SplitAndMergeAsync(this, toArray);
+            }
+            else
+            {
+                try
+                {
+                    result = await Parser.SplitAndMergeAsync(this, toArray);
                 }
                 catch (ParsingException parseExc)
                 {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -32,8 +33,9 @@ namespace SplitAndMerge
             return new Variable(m_color);
         }
 
-        public virtual Variable GetProperty(string sPropertyName, List<Variable> args = null, ParsingScript script = null)
+        public virtual async Task<Variable> GetProperty(string sPropertyName, List<Variable> args = null, ParsingScript script = null)
         {
+            sPropertyName = Variable.GetActualPropertyName(sPropertyName, GetProperties());
             switch (sPropertyName)
             {
                 case "name": return GetNameProperty();
@@ -46,10 +48,10 @@ namespace SplitAndMerge
             }
         }
 
-        public Variable SetNameProperty(string sValue)
+        public async Task<Variable> SetNameProperty(string sValue)
         {
             m_name = sValue;
-            SetProperty("name", new Variable(sValue));
+            await SetProperty("name", new Variable(sValue));
             return Variable.EmptyInstance;
         }
 
@@ -59,11 +61,12 @@ namespace SplitAndMerge
             return Variable.EmptyInstance;
         }
 
-        public virtual Variable SetProperty(string sPropertyName, Variable argValue)
+        public virtual async Task<Variable> SetProperty(string sPropertyName, Variable argValue)
         {
+            sPropertyName = Variable.GetActualPropertyName(sPropertyName, GetProperties());
             switch (sPropertyName)
             {
-                case "name": return SetNameProperty(argValue.AsString());
+                case "name": return await SetNameProperty(argValue.AsString());
                 case "color": return SetColorProperty(argValue.AsString());
                 case "translate": return Translate(argValue);
                 default: return Variable.EmptyInstance;
@@ -86,11 +89,16 @@ namespace SplitAndMerge
         public abstract ScriptObject GetImplementation(List<Variable> args);
     }
 
+    public abstract class CompiledClassAsync : CSCSClass
+    {
+        public abstract Task<ScriptObject> GetImplementationAsync(List<Variable> args);
+    }
+
     public class TestCompiledClass : CompiledClass
     {
         public override ScriptObject GetImplementation(List<Variable> args)
         {
-            string name  = Utils.GetSafeString(args, 0);
+            string name = Utils.GetSafeString(args, 0);
             string color = Utils.GetSafeString(args, 1);
             return new TestScriptObject(name, color);
         }

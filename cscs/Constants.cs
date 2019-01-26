@@ -46,7 +46,6 @@ namespace SplitAndMerge
         public const string CATCH = "catch";
         public const string CANCEL = "cancel_operation";
         public const string COMMENT = "//";
-        public const string CONTAINS = "contains";
         public const string CONTINUE = "continue";
         public const string ELSE = "else";
         public const string ELSE_IF = "elif";
@@ -73,6 +72,7 @@ namespace SplitAndMerge
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
         public const string ASIN = "asin";
         public const string CEIL = "ceil";
+        public const string CONTAINS = "contains";
         public const string COS = "cos";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
@@ -188,13 +188,14 @@ namespace SplitAndMerge
         // use in calculation of a result.
         public static List<string> CONTROL_FLOW = new List<string>
         {
-            BREAK, CONTINUE, FUNCTION, COMPILED_FUNCTION, IF, INCLUDE, FOR, WHILE, RETURN, THROW, TRY
+            BREAK, CATCH, CLASS, COMPILED_FUNCTION, CONTINUE, ELSE, ELSE_IF, ELSE, FOR, FUNCTION, IF, INCLUDE, NEW,
+            RETURN, THROW, TRY, WHILE
         };
 
         public static List<string> RESERVED = new List<string>
         {
             BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
-            RETURN, THROW, TRY, CATCH, COMMENT,
+            RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
             NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString()
@@ -217,6 +218,22 @@ namespace SplitAndMerge
         public const int INDENT = 2;
         public const int DEFAULT_FILE_LINES = 20;
         public const int MAX_CHARS_TO_SHOW = 45;
+
+        public static string ConvertName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name) || name[0] == QUOTE)
+            {
+                return name;
+            }
+
+            string lower = name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
+            if (CONTROL_FLOW.Contains(lower))
+            { // Do not permit using key words with no case, like IF, For
+                return name;
+            }
+
+            return lower;
+        }
 
         public static string TypeToString(Variable.VarType type)
         {

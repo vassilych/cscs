@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -21,6 +22,13 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
+            AddOutput(args, script, m_newLine);
+
+            return Variable.EmptyInstance;
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = await script.GetFunctionArgsAsync();
             AddOutput(args, script, m_newLine);
 
             return Variable.EmptyInstance;
@@ -406,6 +414,8 @@ namespace SplitAndMerge
                                                        Constants.END_ARG);
             ParsingScript threadScript = new ParsingScript(body);
 
+            // BUGBUG: Alfred - what is this actually locking?
+            // Vassili - it's a global (static) lock. used when called from different threads
             lock (lockObject)
             {
                 threadScript.ExecuteAll();

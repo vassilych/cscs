@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -570,6 +572,7 @@ namespace SplitAndMerge
         public Variable SetProperty(string propName, Variable value)
         {
             Variable result = Variable.EmptyInstance;
+            propName = Constants.ConvertName(propName);
 
             int ind = propName.IndexOf(".");
             if (ind > 0)
@@ -587,7 +590,33 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(propName, value);
+                result = obj.SetProperty(propName, value).Result;
+            }
+            return result;
+        }
+
+        public async Task<Variable> SetPropertyAsync(string propName, Variable value)
+        {
+            Variable result = Variable.EmptyInstance;
+            propName = Constants.ConvertName(propName);
+
+            int ind = propName.IndexOf(".");
+            if (ind > 0)
+            { // The case a.b.c = ... is dealt here recursively
+                string varName = propName.Substring(0, ind);
+                string actualPropName = propName.Substring(ind + 1);
+                Variable property = await GetPropertyAsync(varName);
+                result = await property.SetPropertyAsync(actualPropName, value);
+                return result;
+            }
+
+            m_propertyMap[propName] = value;
+            Type = VarType.OBJECT;
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
+                result = await obj.SetProperty(propName, value);
             }
             return result;
         }
@@ -610,8 +639,8 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                var supported = obj.GetProperties();
-                if (supported.Contains(propName))
+                string match = GetActualPropertyName(propName, obj.GetProperties());
+                if (!string.IsNullOrWhiteSpace(match))
                 {
                     List<Variable> args = null;
                     if (script != null && script.TryPrev() == Constants.START_ARG)
@@ -622,7 +651,7 @@ namespace SplitAndMerge
                     {
                         args = new List<Variable>();
                     }
-                    result = obj.GetProperty(propName, args, script);
+                    result = obj.GetProperty(match, args, script).Result;
                     if (result != null)
                     {
                         return result;
@@ -645,6 +674,61 @@ namespace SplitAndMerge
 
             return result;
         }
+        public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)
+        {
+            Variable result = Variable.EmptyInstance;
+
+            int ind = propName.IndexOf(".");
+            if (ind > 0)
+            { // The case x = a.b.c ... is dealt here recursively
+                string varName = propName.Substring(0, ind);
+                string actualPropName = propName.Substring(ind + 1);
+                Variable property = await GetPropertyAsync(varName, script);
+                result = string.IsNullOrEmpty(actualPropName) ? property :
+                               await property.GetPropertyAsync(actualPropName, script);
+                return result;
+            }
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
+                var supported = obj.GetProperties();
+                string match = GetActualPropertyName(propName, obj.GetProperties());
+                if (!string.IsNullOrWhiteSpace(match))
+                {
+                    List<Variable> args = null;
+                    if (script != null && script.TryPrev() == Constants.START_ARG)
+                    {
+                        args = await script.GetFunctionArgsAsync();
+                    }
+                    else if (script != null)
+                    {
+                        args = new List<Variable>();
+                    }
+                    result = await obj.GetProperty(match, args, script);
+                    if (result != null)
+                    {
+                        return result;
+                    }
+                }
+            }
+
+            if (m_propertyMap.TryGetValue(propName, out result))
+            {
+                return result;
+            }
+            else if (propName.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetProperties());
+            }
+            else if (propName.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetTypeString());
+            }
+
+            return result;
+        }
+
 
         public List<Variable> GetProperties()
         {
@@ -715,6 +799,17 @@ namespace SplitAndMerge
             return this;
         }
 
+        public static string GetActualPropertyName(string propName, List<string> properties)
+        {
+            string match = properties.FirstOrDefault(element => element.Equals(propName,
+                                   StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(match))
+            {
+                match = "";
+            }
+            return match;
+        }
+
         public double Value
         {
             get { return m_value; }
@@ -761,12 +856,12 @@ namespace SplitAndMerge
     public interface ScriptObject
     {
         // SetProperty is triggered by the following scripting call: "a.name = value;"
-        Variable SetProperty(string name, Variable value);
+        Task<Variable> SetProperty(string name, Variable value);
 
         // GetProperty is triggered by the following scripting call: "x = a.name;"
         // If args are null, it is triggered by object.ToString() function"
         // If args are not empty, it is triggered by a function call: "y = a.name(arg1, arg2, ...);"
-        Variable GetProperty(string name, List<Variable> args = null, ParsingScript script = null);
+        Task<Variable> GetProperty(string name, List<Variable> args = null, ParsingScript script = null);
 
         // Returns all of the properties that this object implements. Only these properties will be processed
         // by SetProperty() and GetProperty() methods above.

@@ -344,7 +344,7 @@ namespace SplitAndMerge
             {
                 script.Forward();
             }
-            string newDir = Utils.GetStringOrVarValue(script);
+            string newDir = Utils.GetItem(script).AsString();
 
             try
             {
@@ -380,7 +380,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             string[] lines = Utils.GetFileLines(filename);
 
             List<Variable> results = Utils.ConvertToResults(lines);
@@ -396,7 +396,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             int size = Constants.DEFAULT_FILE_LINES;
 
             bool sizeAvailable = Utils.SeparatorExists(script);
@@ -419,7 +419,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             int size = Constants.DEFAULT_FILE_LINES;
 
             bool sizeAvailable = Utils.SeparatorExists(script);
@@ -442,7 +442,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             Variable line = Utils.GetItem(script);
             Utils.AppendFileText(filename, line.AsString() + Environment.NewLine);
 
@@ -455,7 +455,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             string lines = Utils.GetLinesFromList(script);
             Utils.AppendFileText(filename, lines);
 
@@ -468,7 +468,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             Variable line = Utils.GetItem(script);
             Utils.WriteFileText(filename, line.AsString() + Environment.NewLine);
 
@@ -482,7 +482,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             //string filename = Utils.ResultToString(Utils.GetItem(script));
-            string filename = Utils.GetStringOrVarValue(script);
+            string filename = Utils.GetItem(script).AsString();
             string lines = Utils.GetLinesFromList(script);
             Utils.WriteFileText(filename, lines);
 
@@ -495,7 +495,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string search = Utils.GetStringOrVarValue(script);
+            string search = Utils.GetItem(script).AsString();
             List<string> patterns = Utils.GetFunctionArgs(script);
 
             bool ignoreCase = true;
@@ -559,9 +559,9 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string source = Utils.GetStringOrVarValue(script);
+            string source = Utils.GetItem(script).AsString();
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
-            string dest = Utils.GetStringOrVarValue(script);
+            string dest = Utils.GetItem(script).AsString();
 
             string src = Path.GetFullPath(source);
             string dst = Path.GetFullPath(dest);
@@ -602,9 +602,9 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string source = Utils.GetStringOrVarValue(script);
+            string source = Utils.GetItem(script).AsString();
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
-            string dest = Utils.GetStringOrVarValue(script);
+            string dest = Utils.GetItem(script).AsString();
 
             string src = Path.GetFullPath(source);
             string dst = Path.GetFullPath(dest);
@@ -648,7 +648,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string dirname = Utils.GetStringOrVarValue(script);
+            string dirname = Utils.GetItem(script).AsString();
             try
             {
                 Directory.CreateDirectory(dirname);
@@ -667,7 +667,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string pathname = Utils.GetStringOrVarValue(script);
+            string pathname = Utils.GetItem(script).AsString();
 
             bool isFile = File.Exists(pathname);
             bool isDir = Directory.Exists(pathname);
@@ -700,7 +700,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string pathname = Utils.GetStringOrVarValue(script);
+            string pathname = Utils.GetItem(script).AsString();
 
             bool isFile = File.Exists(pathname);
             bool isDir = Directory.Exists(pathname);

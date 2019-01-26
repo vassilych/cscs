@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.IO;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -138,7 +139,7 @@ namespace SplitAndMerge
 #endif
         }
 
-        public static void ProcessQueue()
+        public static async Task ProcessQueue()
         {
             string data;
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
@@ -148,7 +149,7 @@ namespace SplitAndMerge
                 {
                     return;
                 }
-                Debugger.MainInstance?.ProcessClientCommands(data);
+                await Debugger.MainInstance?.ProcessClientCommands(data);
 #else
             while (DebuggerAttached)
             { // A blocking call.
@@ -317,7 +318,7 @@ namespace SplitAndMerge
             return "none\n";
         }
 
-        public static Variable Execute(ParsingScript script)
+        public static async Task<Variable> Execute(ParsingScript script)
         {
             char[] toArray = Constants.END_PARSE_ARRAY;
             Variable result = null;
@@ -333,7 +334,7 @@ namespace SplitAndMerge
 #endif
                 try
                 {
-                    result = script.Execute(toArray);
+                    result = await script.ExecuteAsync(toArray);
                 }
                 catch (ParsingException exc)
                 {

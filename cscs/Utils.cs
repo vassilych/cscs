@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -363,6 +364,18 @@ namespace SplitAndMerge
             }
             Utils.CheckNotNull(varName, func);
             Variable varValue = func.GetValue(script);
+            Utils.CheckNotNull(varValue, varName);
+            return varValue;
+        }
+        public static async Task<Variable> GetVariableAsync(string varName, ParsingScript script, bool testNull = true)
+        {
+            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            if (!testNull && func == null)
+            {
+                return null;
+            }
+            Utils.CheckNotNull(varName, func);
+            Variable varValue = await func.GetValueAsync(script);
             Utils.CheckNotNull(varValue, varName);
             return varValue;
         }

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
@@ -185,6 +187,29 @@ namespace SplitAndMerge
 
             return result;
         }
+        public async Task<Variable> ProcessAsync(string script, string filename = "")
+        {
+            Dictionary<int, int> char2Line;
+            string data = Utils.ConvertToScript(script, out char2Line);
+            if (string.IsNullOrWhiteSpace(data))
+            {
+                return null;
+            }
+
+            ParsingScript toParse = new ParsingScript(data, 0, char2Line);
+            toParse.OriginalScript = script;
+            toParse.Filename = filename;
+
+            Variable result = null;
+
+            while (toParse.Pointer < data.Length)
+            {
+                result = await toParse.ExecuteToAsync();
+                toParse.GoToNextStatement();
+            }
+
+            return result;
+        }
 
         internal Variable ProcessFor(ParsingScript script)
         {
@@ -203,6 +228,24 @@ namespace SplitAndMerge
 
             return Variable.EmptyInstance;
         }
+        internal async Task<Variable> ProcessForAsync(ParsingScript script)
+        {
+            string forString = Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
+            script.Forward();
+            if (forString.Contains(Constants.END_STATEMENT.ToString()))
+            {
+                // Looks like: "for(i = 0; i < 10; i++)".
+                await ProcessCanonicalForAsync(script, forString);
+            }
+            else
+            {
+                // Otherwise looks like: "for(item : array)"
+                await ProcessArrayForAsync(script, forString);
+            }
+
+            return Variable.EmptyInstance;
+        }
+
         void ProcessArrayFor(ParsingScript script, string forString)
         {
             int index = forString.IndexOf(Constants.FOR_EACH);
@@ -245,6 +288,49 @@ namespace SplitAndMerge
             script.Pointer = startForCondition;
             SkipBlock(script);
         }
+        async Task ProcessArrayForAsync(ParsingScript script, string forString)
+        {
+            int index = forString.IndexOf(Constants.FOR_EACH);
+            if (index <= 0 || index == forString.Length - 1)
+            {
+                throw new ArgumentException("Expecting: for(item : array)");
+            }
+
+            string varName = forString.Substring(0, index);
+
+            ParsingScript forScript = new ParsingScript(forString, 0, script.Char2Line);
+            forScript.ParentScript = script;
+            forScript.Filename = script.Filename;
+            forScript.Debugger = script.Debugger;
+            Variable arrayValue = await forScript.ExecuteFromAsync(index + 1);
+
+            int cycles = arrayValue.Count;
+            if (cycles == 0)
+            {
+                SkipBlock(script);
+                return;
+            }
+            int startForCondition = script.Pointer;
+
+            for (int i = 0; i < cycles; i++)
+            {
+                script.Pointer = startForCondition;
+                Variable current = arrayValue.GetValue(i);
+                ParserFunction.AddGlobalOrLocalVariable(varName,
+                               new GetVarFunction(current));
+                Variable result = await ProcessBlockAsync(script);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                {
+                    //script.Pointer = startForCondition;
+                    //SkipBlock(script);
+                    //return;
+                    break;
+                }
+            }
+            script.Pointer = startForCondition;
+            SkipBlock(script);
+        }
+
         void ProcessCanonicalFor(ParsingScript script, string forString)
         {
             string[] forTokens = forString.Split(Constants.END_STATEMENT);
@@ -298,6 +384,59 @@ namespace SplitAndMerge
             script.Pointer = startForCondition;
             SkipBlock(script);
         }
+        async Task ProcessCanonicalForAsync(ParsingScript script, string forString)
+        {
+            string[] forTokens = forString.Split(Constants.END_STATEMENT);
+            if (forTokens.Length != 3)
+            {
+                throw new ArgumentException("Expecting: for(init; condition; loopStatement)");
+            }
+
+            int startForCondition = script.Pointer;
+
+            ParsingScript initScript = new ParsingScript(forTokens[0] + Constants.END_STATEMENT);
+            ParsingScript condScript = new ParsingScript(forTokens[1] + Constants.END_STATEMENT);
+            ParsingScript loopScript = new ParsingScript(forTokens[2] + Constants.END_STATEMENT);
+
+            initScript.ParentScript = script;
+            condScript.ParentScript = script;
+            loopScript.ParentScript = script;
+
+            await initScript.ExecuteFromAsync(0);
+
+            int cycles = 0;
+            bool stillValid = true;
+
+            while (stillValid)
+            {
+                Variable condResult = await condScript.ExecuteFromAsync(0);
+                stillValid = Convert.ToBoolean(condResult.Value);
+                if (!stillValid)
+                {
+                    break;
+                }
+
+                if (MAX_LOOPS > 0 && ++cycles >= MAX_LOOPS)
+                {
+                    throw new ArgumentException("Looks like an infinite loop after " +
+                                                  cycles + " cycles.");
+                }
+
+                script.Pointer = startForCondition;
+                Variable result = await ProcessBlockAsync(script);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                {
+                    //script.Pointer = startForCondition;
+                    //SkipBlock(script);
+                    //return;
+                    break;
+                }
+                await loopScript.ExecuteFromAsync(0);
+            }
+
+            script.Pointer = startForCondition;
+            SkipBlock(script);
+        }
 
         internal Variable ProcessWhile(ParsingScript script)
         {
@@ -327,6 +466,46 @@ namespace SplitAndMerge
                 }
 
                 Variable result = ProcessBlock(script);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                {
+                    script.Pointer = startWhileCondition;
+                    break;
+                }
+            }
+
+            // The while condition is not true anymore: must skip the whole while
+            // block before continuing with next statements.
+            SkipBlock(script);
+            return Variable.EmptyInstance;
+        }
+        internal async Task<Variable> ProcessWhileAsync(ParsingScript script)
+        {
+            int startWhileCondition = script.Pointer;
+
+            // A check against an infinite loop.
+            int cycles = 0;
+            bool stillValid = true;
+
+            while (stillValid)
+            {
+                script.Pointer = startWhileCondition;
+
+                //int startSkipOnBreakChar = from;
+                Variable condResult = await script.ExecuteToAsync(Constants.END_ARG);
+                stillValid = Convert.ToBoolean(condResult.Value);
+                if (!stillValid)
+                {
+                    break;
+                }
+
+                // Check for an infinite loop if we are comparing same values:
+                if (MAX_LOOPS > 0 && ++cycles >= MAX_LOOPS)
+                {
+                    throw new ArgumentException("Looks like an infinite loop after " +
+                        cycles + " cycles.");
+                }
+
+                Variable result = await ProcessBlockAsync(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     script.Pointer = startWhileCondition;
@@ -382,6 +561,56 @@ namespace SplitAndMerge
             {
                 script.Pointer = nextData.Pointer + 1;
                 result = ProcessBlock(script);
+            }
+
+            if (result.IsReturn)
+            {
+                return result;
+            }
+            return Variable.EmptyInstance;
+        }
+        internal async Task<Variable> ProcessIfAsync(ParsingScript script)
+        {
+            int startIfCondition = script.Pointer;
+
+            Variable result = await script.ExecuteToAsync(Constants.END_ARG);
+            bool isTrue = Convert.ToBoolean(result.Value);
+
+            if (isTrue)
+            {
+                result = await ProcessBlockAsync(script);
+
+                if (result.IsReturn ||
+                    result.Type == Variable.VarType.BREAK ||
+                    result.Type == Variable.VarType.CONTINUE)
+                {
+                    // We are here from the middle of the if-block. Skip it.
+                    script.Pointer = startIfCondition;
+                    SkipBlock(script);
+                }
+                SkipRestBlocks(script);
+
+                return result;
+                //return Variable.EmptyInstance;
+            }
+
+            // We are in Else. Skip everything in the If statement.
+            SkipBlock(script);
+
+            ParsingScript nextData = new ParsingScript(script);
+            nextData.ParentScript = script;
+
+            string nextToken = Utils.GetNextToken(nextData);
+
+            if (Constants.ELSE_IF_LIST.Contains(nextToken))
+            {
+                script.Pointer = nextData.Pointer + 1;
+                result = await ProcessIfAsync(script);
+            }
+            else if (Constants.ELSE_LIST.Contains(nextToken))
+            {
+                script.Pointer = nextData.Pointer + 1;
+                result = await ProcessBlockAsync(script);
             }
 
             if (result.IsReturn)
@@ -457,6 +686,72 @@ namespace SplitAndMerge
             SkipRestBlocks(script);
             return result;
         }
+        internal async Task<Variable> ProcessTryAsync(ParsingScript script)
+        {
+            int startTryCondition = script.Pointer - 1;
+            int currentStackLevel = ParserFunction.GetCurrentStackLevel();
+            Exception exception = null;
+
+            Variable result = null;
+
+            bool alreadyInTryBlock = script.InTryBlock;
+            script.InTryBlock = true;
+            try
+            {
+                result = await ProcessBlockAsync(script);
+            }
+            catch (Exception exc)
+            {
+                exception = exc;
+            }
+            finally
+            {
+                script.InTryBlock = alreadyInTryBlock;
+            }
+
+            if (exception != null || result.IsReturn ||
+                result.Type == Variable.VarType.BREAK ||
+                result.Type == Variable.VarType.CONTINUE)
+            {
+                // We are here from the middle of the try-block either because
+                // an exception was thrown or because of a Break/Continue. Skip it.
+                script.Pointer = startTryCondition;
+                SkipBlock(script);
+            }
+
+            string catchToken = Utils.GetNextToken(script);
+            script.Forward(); // skip opening parenthesis
+                              // The next token after the try block must be a catch.
+            if (!Constants.CATCH_LIST.Contains(catchToken))
+            {
+                throw new ArgumentException("Expecting a 'catch()' but got [" +
+                    catchToken + "]");
+            }
+
+            string exceptionName = Utils.GetNextToken(script);
+            script.Forward(); // skip closing parenthesis
+
+            if (exception != null)
+            {
+                string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
+                ParserFunction.InvalidateStacksAfterLevel(currentStackLevel);
+
+                GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
+                ParserFunction.AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+                GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
+                ParserFunction.AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
+
+                result = await ProcessBlockAsync(script);
+                ParserFunction.PopLocalVariable(exceptionName);
+            }
+            else
+            {
+                SkipBlock(script);
+            }
+
+            SkipRestBlocks(script);
+            return result;
+        }
 
         private static string CreateExceptionStack(string exceptionName, int lowestStackLevel)
         {
@@ -512,7 +807,7 @@ namespace SplitAndMerge
             if (script.Debugger != null)
             {
                 bool done = false;
-                result = script.Debugger.DebugBlockIfNeeded(script, ref done);
+                result = script.Debugger.DebugBlockIfNeeded(script, done, (newDone) => { done = newDone; }).Result;
                 if (done)
                 {
                     return result;
@@ -532,6 +827,45 @@ namespace SplitAndMerge
                     script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
                 }*/
                 result = script.ExecuteTo();
+
+                if (result.IsReturn ||
+                    result.Type == Variable.VarType.BREAK ||
+                    result.Type == Variable.VarType.CONTINUE)
+                {
+                    return result;
+                }
+            }
+            return result;
+        }
+
+        private async Task<Variable> ProcessBlockAsync(ParsingScript script)
+        {
+            int blockStart = script.Pointer;
+            Variable result = null;
+
+            if (script.Debugger != null)
+            {
+                bool done = false;
+                result = await script.Debugger.DebugBlockIfNeeded(script, done, (newDone) => { done = newDone; });
+                if (done)
+                {
+                    return result;
+                }
+            }
+            while (script.StillValid())
+            {
+                int endGroupRead = script.GoToNextStatement();
+                if (endGroupRead > 0 || !script.StillValid())
+                {
+                    return result != null ? result : new Variable();
+                }
+
+                /*if (!script.StillValid())
+                {
+                    throw new ArgumentException("Couldn't process block [" +
+                    script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
+                }*/
+                result = await script.ExecuteToAsync();
 
                 if (result.IsReturn ||
                     result.Type == Variable.VarType.BREAK ||
