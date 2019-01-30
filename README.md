@@ -1,5 +1,5 @@
 
-
+<br><br>
 CSCS Control Flow Functions
 
 | **CSCS Statement**                  | **Description**                                     |
@@ -19,8 +19,7 @@ CSCS Control Flow Functions
 | **true**                                   | Represents a boolean value of true. Equivalent to number 1.    |
 | **false**                                   | Represents a boolean value of false. Equivalent to number 0.    |
 
-
-
+<br><br>
 CSCS Object-Oriented Functons
 
 | **CSCS Function**                  | **Description**                                     |
@@ -33,7 +32,7 @@ CSCS Object-Oriented Functons
 | **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as objectName.propertyName = propertyValue.|
 
 
-
+<br><br>
 CSCS Math Functions
 
 | **CSCS Function**                  | **Description**                                     |
@@ -53,26 +52,26 @@ CSCS Math Functions
 | **Sqrt** (*number*)             | Returns squeared root of the specified number.
 | **Sin** (*value*)                   | Sine function   
 
-
-
+<br><br>
 CSCS Variable and Array Functions
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **Add**(*array, value, index = -1*)  | Appends value to the current variable array. If index is greater or equal to zero, inserts it at the index.|
-| **AddVariableToHash** (*array, value, hashKey*)                    | Appends a value to the list of values of a given hash key.|
-| **AddAllToHash** (*array, values, startFrom, hashKey, sep = "\t"*)  | Add all of the values in values list to the hash map variable. E.g. AddAllToHash("categories", lines, startWords, "all");  |
-| **Contains**(*variable, value*)    | Checks if the current variable contains another variable. Makes sense only if curent variable is an array.|
+| **Add**(*variable, value, index = -1*)  | Appends value to the current variable array. If index is greater or equal to zero, inserts it at the index.|
+| **AddVariableToHash** (*variable, value, hashKey*)                    | Appends a value to the list of values of a given hash key.|
+| **AddAllToHash** (*variable, values, startFrom, hashKey, sep = "\t"*)  | Add all of the values in values list to the hash map variable. E.g. AddAllToHash("categories", lines, startWords, "all");  |
+| **Contains** (*variable, value*)    | Checks if the current variable contains another variable. Makes sense only if curent variable is an array.|
 | **DeepCopy** (*variable*)    | Makes a deep copy of the passed object, assigning new memory to all of it array members.|
 | **DefineLocal** (*variable, value=""*)    | Defines a variable in local scope. Makes sense only if a global variable with this name already exists (without this function, a global variable will be used and modified).|
-| **FindIndex** (*array, value*)    | Looks for the value in the specified array and return its index if found, or -1 otherwise.|
-| **Remove** (*array, value*)    | Removes specified value from the array. Returns true on success and false otherwise.|
-| **RemoveAt** (*array, index*)    | Removes a value from the array at specified index. Returns true on success and false otherwise.|
-| **Size** (*array*)           | Returns number of elements in an array (for strings returns length of the string). |
+| **FindIndex** (*variable, value*)    | Looks for the value in the specified variable array and returns its index if found, or -1 otherwise.|
+| **GetColumn** (*variable, column, fromRow=0*)    | Goes over all rows of the variable array starting from the specified row and return a specified column.|
+| **GetKeys** (*variable*)    |If the underlying variable is a dictionary, returns all the dictionary keys.|
+| **Remove** (*variable, value*)    | Removes specified value from the variable array. Returns true on success and false otherwise.|
+| **RemoveAt** (*variable, index*)    | Removes a value from the variable array at specified index. Returns true on success and false otherwise.|
+| **Size** (*variable*)           | Returns number of elements in a variable array (for strings returns the length of the string). |
 | **Type** *(variableName)*             | Returns type of the passed variable (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT).|
 
-
-
+<br><br>
 CSCS Conversion Functions
 
 | **CSCS Function**                  | **Description**                                     |
@@ -83,8 +82,7 @@ CSCS Conversion Functions
 | **Int** (*variable*)  | Converts variable to an integer value.|
 | **String** (*variable*)  | Converts variable to a string value.|
 
-
-
+<br><br>
 CSCS String Functions
 
 | **CSCS Function**                  | **Description**                                     |
@@ -105,8 +103,7 @@ CSCS String Functions
 | **Tokenize** (*string, separator="\t", option=""*)   | Converts string to a list of tokens based on the specified token separator. If option="prev", will convert all empty tokens to their previous token values.|
 | **TokenizeLines** (*newVariableName, variableWithLines, fromLine=0, separator="\t"*)   | Converts a list of string in variableWithLines to the list of tokens based on the specified token separator. Adds result to a new variable newVariableName.|
 
-
-
+<br><br>
 CSCS Debugger
 
 | **CSCS Function**                  | **Description**                                     |
@@ -115,22 +112,62 @@ CSCS Debugger
 | **StopDebugger** ()          | Stops running a debugger server.|
 
 
+<br><br>
+CSCS File and Command-Line Functions
 
+| **CSCS Function**                  | **Description**                                     |
+| :------------------------------------------- |:------------------------------------------------|
+| **cd** *pathname*          | Changes current directory to pathname.|
+| **cd..**              | Changes current directory to its parent (one level up).|
+| **clr**           | Clear contents of the Console.|
+| **copy** *source destination*          | Copies source to destination. Source can be a file, a directory or a pattern (like \*.txt).|
+| **delete** *pathname*          | Deletes specified file or directory.|
+| **dir** *pathname=currentDirectory*          | Lists contents of the specified directory.|
+| **exists**  *pathname*         | Returns true if the specified pathname exists and false otherwise.|
+| **findfiles**  *pattern1, pattern2="",...*         | Searches for files with specified patterns.|
+| **findstr** *string, pattern1, pattern2="",...*         | Searches for a specified string in files with specified patterns.|
+| **kill** *processId*         | Kills a process with specified Id.|
+| **mkdir** *dirName*         | Creates a specified directory.|
+| **more** *filename*         | Prints content of a file to the screen with the possibility to get to the next screen with a space.|
+| **move** *source, destination*         | Moves source to destination. Source can be a file or a directory.|
+| **printblack** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
+| **printgray** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
+| **printgreen** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
+| **printred** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
+| **psinfo** *pattern*         | Prints process info for all processes having name with the specified pattern.|
+| **pwd**         | Prints current directory.|
+| **read**          | Reads and returns a string from console.|
+| **readfile** *filename*         | Reads a file and returns an array with its contents.|
+| **readnum**         | Reads and returns a number from console.|
+| **run** *program, arg1="", arg2=""...*         | Runs specified process with specified arguments.|
+| **tail** *filename, numberOfLines=20*         | Prints last numberOfLines of a specified filename.|
+| **writeline** *filename, line*         | Writes specified line to a file.|
+| **writelines** *filename, variable*         | Writes all lines from a variable (which must be an array) to a file.|
+
+<br><br>
 CSCS Miscelaneous Functions
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **Env** (*variableName*)                   | Returns value of the passed environment variable  |
-| **Exit** (*code = 0*)               | Stops execution and exits with passed return code.   |
+| **CallNative** (*methodName, parameterName, parameterValue*)    | Calls a C# static method, implemented in Statics.cs, from CSCS code, passing a specified parameter name and value. Not available on iOS and Android. |
+| **Env** (*variableName*)                   | Returns value of the specified environment variable.  |
+| **Exit** (*code = 0*)               | Stops execution and exits with the specified return code.   |
+| **GetNative** (*variableName*)    | Gets a value of a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
 | **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.  |
 | **Now** (*format="HH:mm:ss.fff"*)          | Returns current date and time according to the specified format. |
 | **Print** (*var1="", var2="", ...*)          | Prints specified parameters, converting them all to strings. |
 | **PsTime**       | Returns current process CPU time. Used for measuring the script execution time. |
-| **Show** (*funcName*)          | Prints contents of a CSCS function. |
+| **SetEnv** (*variableName, value*)                   | Sets value of the specified environment variable.  |
+| **SetNative** (*variableName, variableValue*)    | Sets a specified value to a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
+| **Show** (*funcName*)          | Prints contents of a specified CSCS function. |
 | **Signal** ()         | Signals waiting threads. |
-| **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds. |
+| **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds.
+| **StartStopWatch** ()          | Starts a stopwatch. There is just one stopwatch in the system. |
+| **StopStopWatch** ()          | Stops a stopwatch. There is just one stopwatch in the system. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
+| **StopWatchElapsed** (*format=secs*)          | Returns elapsed time according to the specified format. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
 | **Thread** (*functionName*) OR { *statements;* } | Starts a new thread. The thread will either execute a specified CSCS function or all the statements between the curly brackets. |
 | **ThreadId** () | Returns current thread Id. |
+| **Timestamp** (*doubleValue, format="yyyy/MM/dd HH:mm:ss.fff"*)   | Converts specified number of milliseconds since 01/01/1970 to a date time string according to the passed format. |
 | **Wait** ()         | Waits for a signal.  | 
 
 
