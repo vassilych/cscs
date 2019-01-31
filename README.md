@@ -4,7 +4,7 @@ CSCS Control Flow Functions
 
 | **CSCS Statement**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **include**(*pathToFile*)                    | Include another scripting file, e.g. include("functions.cscs");   
+| **include** (*pathToFile*)                    | Include another scripting file, e.g. include("functions.cscs");   
 | **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1))  |
 | **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
 | **return** or **return** *variable*          | Finishes execution of a function and optionally can return a value                          |
@@ -15,21 +15,23 @@ CSCS Control Flow Functions
 | **continue**                                 | Forces the next iteration of the loop           |
 | **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br>Curly brackets are mandatory.|
 | **try** { *statements;* } <br> **catch**(*exceptionString*)  { *statements;* } | Try and catch control flow.<br>Curly brackets are mandatory.|
-| **throw** *string;*                                    | Throw an exception, e.g. throw "value must be positive";    |
+| **throw** *string*;                                    | Throw an exception, e.g. throw "value must be positive";    |
 | **true**                                   | Represents a boolean value of true. Equivalent to number 1.    |
 | **false**                                   | Represents a boolean value of false. Equivalent to number 0.    |
 
 <br><br>
-CSCS Object-Oriented Functons
+CSCS Object-Oriented Functions and named properties
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **class** *className : Class1, Class2, ... { }*     | A definition of a new class. it can optionaly inherit from one or more classes. Inside of a class definition you can have constructors, functions, and variable definitions. You access these variables and functions using the dot notation (all of them are public).|
 | **new** *className(param1, param2, ...)*  | Creates and returns an instance (object) of class className. There can be a zero or more parameters passed to the class constructor (depending on the class constructer prameter definitions).|
-| **properties** | object.properties returns a list of all properties that this object implements. For each of these properties is legal to call object.property.|
-| **GetProperty** (*objectName, propertyName*)  | Returns objectName.propertyName.|
-| **GetPropertyStrings** *(objectName)*  | Same as calling objectName.properties.|
-| **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as objectName.propertyName = propertyValue.|
+| *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, Type, and Properties. |
+| *variable*.**Size** | Returns either a number of elements in an array if variable is of type ARRAY or a number of characters in a string representation of this variable. |
+| *variable*.**Type** | Returns this variable's type (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT). |
+| **GetProperty** (*objectName, propertyName*)  | Returns variable.propertyName.|
+| **GetPropertyStrings** (*objectName*)  | Same as calling variable.properties.|
+| **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as variable.propertyName = propertyValue.|
 
 
 <br><br>
@@ -68,8 +70,8 @@ CSCS Variable and Array Functions
 | **GetKeys** (*variable*)    |If the underlying variable is a dictionary, returns all the dictionary keys.|
 | **Remove** (*variable, value*)    | Removes specified value from the variable array. Returns true on success and false otherwise.|
 | **RemoveAt** (*variable, index*)    | Removes a value from the variable array at specified index. Returns true on success and false otherwise.|
-| **Size** (*variable*)           | Returns number of elements in a variable array (for strings returns the length of the string). |
-| **Type** *(variableName)*             | Returns type of the passed variable (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT).|
+| **Size** (*variable*)           | Returns number of elements in a variable array or the length of the string (same as variable.Size). |
+| **Type** *(variableName)*             | Returns type of the passed variable (same as variable.Type).|
 
 <br><br>
 CSCS Conversion Functions
@@ -124,16 +126,16 @@ CSCS File and Command-Line Functions
 | **delete** *pathname*          | Deletes specified file or directory.|
 | **dir** *pathname=currentDirectory*          | Lists contents of the specified directory.|
 | **exists**  *pathname*         | Returns true if the specified pathname exists and false otherwise.|
-| **findfiles**  *pattern1, pattern2="",...*         | Searches for files with specified patterns.|
-| **findstr** *string, pattern1, pattern2="",...*         | Searches for a specified string in files with specified patterns.|
+| **findfiles**  *pattern1, pattern2="", ...*         | Searches for files with specified patterns.|
+| **findstr** *string, pattern1, pattern2="", ...*         | Searches for a specified string in files with specified patterns.|
 | **kill** *processId*         | Kills a process with specified Id.|
 | **mkdir** *dirName*         | Creates a specified directory.|
 | **more** *filename*         | Prints content of a file to the screen with the possibility to get to the next screen with a space.|
 | **move** *source, destination*         | Moves source to destination. Source can be a file or a directory.|
-| **printblack** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
-| **printgray** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
-| **printgreen** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
-| **printred** *arg1, arg2="",...*         | Prints specified arguments in black color on console.|
+| **printblack** (*arg1, arg2="", ...*)         | Prints specified arguments in black color on console.|
+| **printgray** (*arg1, arg2="", ...*)         | Prints specified arguments in black color on console.|
+| **printgreen** (*arg1, arg2="", ...*)         | Prints specified arguments in black color on console.|
+| **printred** (*arg1, arg2="", ...*)         | Prints specified arguments in black color on console.|
 | **psinfo** *pattern*         | Prints process info for all processes having name with the specified pattern.|
 | **pwd**         | Prints current directory.|
 | **read**          | Reads and returns a string from console.|
