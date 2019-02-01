@@ -1,16 +1,31 @@
 
-<br><br>
+
+CSCS (Customized Scripting in C#) is a scripting language, whcih is very easy to integrate into any C# code and adjust according to your needs. Basically, it's not only a language, but also a framework that you can use to create your own language. CSCS has been described in:
+
+* [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx)  MSDN
+* [Programming your own language in C#](http://www.codemag.com/Article/1607081)  CODE Magazine
+* [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language)  Syncfusion E-book
+
+The usage of CSCS in Mobile App development has been described in:
+
+* [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081)  CODE Magazine
+* [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272)  MSDN
+* [Writing Native Mobile Apps in a Functional Language Succinctly](https://www.syncfusion.com/ebooks/writing_native_mobile_apps_in_a_functional_language_succinctly)  Syncfusion E-book
+
+<br>
+
 CSCS Control Flow Functions
+------
 
 | **CSCS Statement**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **include** (*pathToFile*)                    | Include another scripting file, e.g. include("functions.cscs");   
 | **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1))  |
 | **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
-| **return** or **return** *variable*          | Finishes execution of a function and optionally can return a value                          |
-| **while** (*condition*) { *statements;* }                                    | Execute loop as long as the condition is true, e.g. for (i = 0; i < 10; ++i).<br>Curly brackets are mandatory.   |
+| **return** or **return** *variable*          | Finishes execution of a function and optionally can return a value            |
+| **while** (*condition*) { *statements;* }                                    | Execute loop as long as the condition is true. <br>Curly brackets are mandatory.   |
 | **for** (*init*; *condition*; *step*) { *statements;* }  | A canonic for loop, e.g. for (i = 0; i < 10; ++i).<br>Curly brackets are mandatory.          |
-| **for** (*item in listOfValues*) { *statements;* }  | Execute loop for each elemеnt of listOfValues.<br>Curly brackets are mandatory.          |
+| **for** (*item in listOfValues*) { *statements;* }  | Execute loop for each elemеnt of listOfValues.<br>Curly brackets are mandatory. |
 | **break**                                    | Breaks out of a loop                            |
 | **continue**                                 | Forces the next iteration of the loop           |
 | **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br>Curly brackets are mandatory.|
@@ -19,8 +34,65 @@ CSCS Control Flow Functions
 | **true**                                   | Represents a boolean value of true. Equivalent to number 1.    |
 | **false**                                   | Represents a boolean value of false. Equivalent to number 0.    |
 
-<br><br>
-CSCS Object-Oriented Functions and named properties
+<br>
+
+### Control Flow Example
+<pre><code>
+include("functions.cscs");
+
+i = 0;
+for (i = 0; i < 13; i++) {
+  b += (i*4 - 1);
+  if ( i == 3) {
+    break;
+  } else {
+    continue;
+  }
+  print("this is never reached");
+}
+
+a = 23; b = 22;
+cond = "na";
+if (a < b) {
+  if (b < 15) {
+    cond = "cond1";
+  }
+  elif  (b < 50) {
+    cond = "cond2";
+  }
+}
+elif (a >= 25) {
+  cond = "cond3";
+}
+else {
+  cond = "cond4";
+}
+
+function myp(par1, par2, par3 = 100) {
+  return par1 + par2 + par3;
+}
+
+z = myp(par2=20, par1=70); // z = 190
+
+try {
+  z = myp(par2=20);
+  print("Error. Missing Exception: Function [myp] arguments mismatch: 3 declared, 1 supplied.");
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
+try {
+  z = myp(par2=20, par3=70);
+  print("Error. Missing Exception: No argument [par1] given for function [myp].");
+} catch(exc) {
+  print("OK. Caught: " + exc);
+}
+</code></pre>
+
+<br>
+
+CSCS Object-Oriented Functions and Named Properties
+------
+
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -34,8 +106,40 @@ CSCS Object-Oriented Functions and named properties
 | **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as variable.propertyName = propertyValue.|
 
 
-<br><br>
+### Object-Oriented Example
+
+<pre><code>
+class CoolStuff : Stuff1, Stuff2 {
+  z = 3;
+  CoolStuff(a, b, c) {
+    x = a;
+    y = b;
+    z = c;
+  } 
+  function addCoolStuff() {
+    return x + y + z;
+  }
+}
+
+addition = 100;
+obj1 = new Stuff1(10);
+print(obj1.x); // prints 10
+print(obj1.addStuff1(addition); // prints 110
+
+obj2 = new Stuff2(20);
+print(obj2.y); // prints 20 
+print(obj2.addStuff2(addition)); // prints 120
+
+newObj = new CoolStuff(11, 13, 17);
+print(newObj.addCoolStuff()); // prints 41
+print(newObj.addStuff1(addition)); // prints 111
+print(newObj.addStuff2(addition)); // prints 113
+</code></pre>
+
+<br>
+
 CSCS Math Functions
+------
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -54,8 +158,11 @@ CSCS Math Functions
 | **Sqrt** (*number*)             | Returns squeared root of the specified number.
 | **Sin** (*value*)                   | Sine function   
 
-<br><br>
+<br>
+
 CSCS Variable and Array Functions
+------
+
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -73,8 +180,40 @@ CSCS Variable and Array Functions
 | **Size** (*variable*)           | Returns number of elements in a variable array or the length of the string (same as variable.Size). |
 | **Type** *(variableName)*             | Returns type of the passed variable (same as variable.Type).|
 
-<br><br>
+
+### Array Example
+
+<pre><code>
+a[1]=1; a[2]=2;
+c=a[1]+a[2];
+
+a[1][2]=22;
+a[5][3]=15;
+a[1][2]-=100;
+a[5][3]+=100;
+
+print(a[5][2]);
+
+a[1][2]++;
+print(a[1][2]);
+print(a[5][3]++);
+print(++a[5][3]);
+print(--a[5][3]);
+print(a[5][3]--);
+
+b[5][3][5][3]=15;
+print(++b[5][3][5][3]);
+
+x["bla"]["blu"]=113;
+x["bla"]["blu"]++;
+x["blabla"]["blablu"]=126;
+--x["blabla"]["blablu"];
+</code></pre>
+
+<br>
+
 CSCS Conversion Functions
+------
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -84,8 +223,11 @@ CSCS Conversion Functions
 | **Int** (*variable*)  | Converts variable to an integer value.|
 | **String** (*variable*)  | Converts variable to a string value.|
 
-<br><br>
+<br>
+
 CSCS String Functions
+------
+
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -105,8 +247,10 @@ CSCS String Functions
 | **Tokenize** (*string, separator="\t", option=""*)   | Converts string to a list of tokens based on the specified token separator. If option="prev", will convert all empty tokens to their previous token values.|
 | **TokenizeLines** (*newVariableName, variableWithLines, fromLine=0, separator="\t"*)   | Converts a list of string in variableWithLines to the list of tokens based on the specified token separator. Adds result to a new variable newVariableName.|
 
-<br><br>
+<br>
+
 CSCS Debugger
+------
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -114,8 +258,11 @@ CSCS Debugger
 | **StopDebugger** ()          | Stops running a debugger server.|
 
 
-<br><br>
+<br>
+
 CSCS File and Command-Line Functions
+------
+
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -146,8 +293,11 @@ CSCS File and Command-Line Functions
 | **writeline** *filename, line*         | Writes specified line to a file.|
 | **writelines** *filename, variable*         | Writes all lines from a variable (which must be an array) to a file.|
 
-<br><br>
+<br>
+
 CSCS Miscelaneous Functions
+------
+
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -171,5 +321,4 @@ CSCS Miscelaneous Functions
 | **ThreadId** () | Returns current thread Id. |
 | **Timestamp** (*doubleValue, format="yyyy/MM/dd HH:mm:ss.fff"*)   | Converts specified number of milliseconds since 01/01/1970 to a date time string according to the passed format. |
 | **Wait** ()         | Waits for a signal.  | 
-
 
