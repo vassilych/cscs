@@ -14,23 +14,39 @@ The usage of CSCS in Mobile App development has been described in:
 
 <br>
 
+Decription of CSCS
+======
+
+* The syntax is a mixture between C# and Python.
+* All statements must finish with a semicolon ";".
+* Identation and new lines are not used in parsing.
+* All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, size, and type
+  E.g. after setting n=10; n.properties will return {type, size, properties}.
+* Variables and arrays are all defined implicitely, e.g. x=5, b[7]=11<br>
+  An example of a list initialization: c = {"aa", "bb", "xxx"};<br>
+  You can also define it explicitely: c[0]="aa"; c[1]="bb"; <br>
+  Definition in index form doesn't have to start from index 0, or even from the first dimension: not defined elements will have a type NONE.
+  E.g.: b[5][3][5][3]=15;<br>
+  Similarly, when defining dictionaries, e.g.: x["bla"]["blu"]="wichtig";
+* Control flow statements if, else, while, for, try, etc., all require statements between the curly braces (even for a single statement).
+
 CSCS Control Flow Functions
 ------
 
 | **CSCS Statement**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **include** (*pathToFile*)                    | Include another scripting file, e.g. include("functions.cscs");   
-| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1))  |
-| **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declare a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
-| **return** or **return** *variable*          | Finishes execution of a function and optionally can return a value            |
+| **include** (*pathToFile*)                    | Includes another scripting file, e.g. include("functions.cscs");   
+| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1)).  |
+| **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
+| **return** or **return** *variable*;          | Finishes execution of a function and optionally can return a value.            |
 | **while** (*condition*) { *statements;* }                                    | Execute loop as long as the condition is true. <br>Curly brackets are mandatory.   |
 | **for** (*init*; *condition*; *step*) { *statements;* }  | A canonic for loop, e.g. for (i = 0; i < 10; ++i).<br>Curly brackets are mandatory.          |
-| **for** (*item in listOfValues*) { *statements;* }  | Execute loop for each elemеnt of listOfValues.<br>Curly brackets are mandatory. |
-| **break**                                    | Breaks out of a loop                            |
-| **continue**                                 | Forces the next iteration of the loop           |
+| **for** (*item in listOfValues*) { *statements;* }  | Executes loop for each elemеnt of listOfValues.<br>Curly brackets are mandatory. |
+| **break**                                    | Breaks out of a loop.                            |
+| **continue**                                 | Forces the next iteration of the loop.           |
 | **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br>Curly brackets are mandatory.|
 | **try** { *statements;* } <br> **catch**(*exceptionString*)  { *statements;* } | Try and catch control flow.<br>Curly brackets are mandatory.|
-| **throw** *string*;                                    | Throw an exception, e.g. throw "value must be positive";    |
+| **throw** *string*;                                    | Throws an exception, e.g. throw "value must be positive";    |
 | **true**                                   | Represents a boolean value of true. Equivalent to number 1.    |
 | **false**                                   | Represents a boolean value of false. Equivalent to number 0.    |
 
@@ -254,7 +270,7 @@ CSCS Debugger
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **StartDebugger** ()          | Starts running a debugger server (to accept connections from Visual Studio Code).|
+| **StartDebugger** *(port=13337)*  | Starts running a debugger server on specified port (to accept connections from Visual Studio Code).|
 | **StopDebugger** ()          | Stops running a debugger server.|
 
 
