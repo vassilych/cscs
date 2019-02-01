@@ -1,6 +1,6 @@
 
 
-CSCS (Customized Scripting in C#) is a scripting language, whcih is very easy to integrate into any C# code and adjust according to your needs. Basically, it's not only a language, but also a framework that you can use to create your own language. CSCS has been described in:
+CSCS (Customized Scripting in C#) is a scripting language, which is very easy to integrate into any C# code and adjust according to your needs. Basically, it's not only a language, but also a framework that you can use to create your own language. CSCS has been described in:
 
 * [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx)  MSDN
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081)  CODE Magazine
