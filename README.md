@@ -2,15 +2,15 @@
 
 CSCS (Customized Scripting in C#) is a scripting language, which is very easy to integrate into any C# code and adjust according to your needs. Basically, it's not only a language, but also a framework that you can use to create your own language. CSCS has been described in:
 
-* [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx)  MSDN
-* [Programming your own language in C#](http://www.codemag.com/Article/1607081)  CODE Magazine
-* [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language)  Syncfusion E-book
+* [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx),  MSDN
+* [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
+* [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language),  Syncfusion E-book
 
 The usage of CSCS in Mobile App development has been described in:
 
-* [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081)  CODE Magazine
-* [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272)  MSDN
-* [Writing Native Mobile Apps in a Functional Language Succinctly](https://www.syncfusion.com/ebooks/writing_native_mobile_apps_in_a_functional_language_succinctly)  Syncfusion E-book
+* [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081),  CODE Magazine
+* [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272),  MSDN
+* [Writing Native Mobile Apps in a Functional Language Succinctly](https://www.syncfusion.com/ebooks/writing_native_mobile_apps_in_a_functional_language_succinctly),  Syncfusion E-book
 
 <br>
 
