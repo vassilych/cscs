@@ -325,7 +325,7 @@ CSCS Core Miscelaneous Functions
 
 <br>
 
-All of the functions above are supported on all of the devices. But there are also a few functions that have more access to the OS internals and are supported only for Windows or Mac apps. They are below.
+All of the functions above are supported on all devices. But there are also a few functions that have more access to the OS internals and are supported only for Windows or Mac apps. They are below.
 <br>
 
 
@@ -362,8 +362,8 @@ CSCS File and Command-Line Functions (not available in Unity, iOS, Android)
 | **writeline** *filename, line*         | Writes specified line to a file.|
 | **writelines** *filename, variable*         | Writes all lines from a variable (which must be an array) to a file.|
 
-
 <br>
+
 CSCS Extended Miscelaneous Functions
 ------
 
