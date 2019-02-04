@@ -6,7 +6,7 @@ CSCS (Customized Scripting in C#) is a scripting language, which is very easy to
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
 * [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language),  Syncfusion E-book
 
-The usage of CSCS in Mobile App development has been described in:
+<br>The usage of CSCS in Mobile App development has been described in:
 
 * [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081),  CODE Magazine
 * [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272),  MSDN
@@ -29,6 +29,11 @@ Decription of CSCS
   E.g.: b[5][3][5][3]=15;<br>
   Similarly, when defining dictionaries, e.g.: x["bla"]["blu"]="wichtig";
 * Control flow statements if, else, while, for, try, etc., all require statements between the curly braces (even for a single statement).
+
+
+<br>
+What follows is the description of the CSCS functions. The usage of CSCS has been tested on Windows, Mac, iOS, Android, and Unity. Not all of the functions are supported on all of platforms. First, we see the core fuctions, that are supported everywhere, and then the extended functions, dealing more with OS internals and therefore not supported on all the platforms. 
+<br>
 
 CSCS Control Flow Functions
 ------
@@ -53,8 +58,7 @@ CSCS Control Flow Functions
 <br>
 
 ### Control Flow Example
-<pre><code>
-include("functions.cscs");
+<pre><code>include("functions.cscs");
 
 i = 0;
 for (i = 0; i < 13; i++) {
@@ -85,6 +89,14 @@ else {
 }
 
 function myp(par1, par2, par3 = 100) {
+  return par1 + par2 + par3;
+}
+</code></pre>
+
+<br>
+
+### Functions and Try/Catch Example
+<pre><code>function myp(par1, par2, par3 = 100) {
   return par1 + par2 + par3;
 }
 
@@ -121,11 +133,10 @@ CSCS Object-Oriented Functions and Named Properties
 | **GetPropertyStrings** (*objectName*)  | Same as calling variable.properties.|
 | **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as variable.propertyName = propertyValue.|
 
+<br>
 
 ### Object-Oriented Example
-
-<pre><code>
-class CoolStuff : Stuff1, Stuff2 {
+<pre><code>class CoolStuff : Stuff1, Stuff2 {
   z = 3;
   CoolStuff(a, b, c) {
     x = a;
@@ -199,8 +210,7 @@ CSCS Variable and Array Functions
 
 ### Array Example
 
-<pre><code>
-a[1]=1; a[2]=2;
+<pre><code>a[1]=1; a[2]=2;
 c=a[1]+a[2];
 
 a[1][2]=22;
@@ -265,6 +275,26 @@ CSCS String Functions
 
 <br>
 
+###  Measuring Execution Time, Throwing Exceptions, and String Manipulation Examples
+<pre><code>cycles = 1000; i = 0;
+start = pstime();
+while ( i++ < cycles) {
+    str = " la la ";
+    str = StrTrim(str);
+    str = StrReplace(str, "la", "lu");
+    if (str != "lu lu") {    
+      throw "Wrong result: [" + str + "] instead of [lu lu]";
+    }
+}
+end = pstime();
+print("Total CPU time of", cycles, "loops:", end-start, "ms.");
+// Example output: Total CPU time of 1000 loops: 968.75 ms.
+</code></pre>
+
+<br>
+
+<br>
+
 CSCS Debugger
 ------
 
@@ -273,10 +303,33 @@ CSCS Debugger
 | **StartDebugger** *(port=13337)*  | Starts running a debugger server on specified port (to accept connections from Visual Studio Code).|
 | **StopDebugger** ()          | Stops running a debugger server.|
 
+<br>
+
+CSCS Core Miscelaneous Functions
+------
+
+
+| **CSCS Function**                  | **Description**                                     |
+| :------------------------------------------- |:------------------------------------------------|
+| **Exit** (*code = 0*)               | Stops execution and exits with the specified return code.   |
+| **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.  |
+| **Now** (*format="HH:mm:ss.fff"*)          | Returns current date and time according to the specified format. |
+| **Print** (*var1="", var2="", ...*)          | Prints specified parameters, converting them all to strings. |
+| **PsTime**       | Returns current process CPU time. Used for measuring the script execution time. |
+| **Show** (*funcName*)          | Prints contents of a specified CSCS function. |
+| **Signal** ()         | Signals waiting threads. |
+| **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds.
+| **Thread** (*functionName*) OR { *statements;* } | Starts a new thread. The thread will either execute a specified CSCS function or all the statements between the curly brackets. |
+| **ThreadId** () | Returns current thread Id. |
+| **Wait** ()         | Waits for a signal.  | 
 
 <br>
 
-CSCS File and Command-Line Functions
+All of the functions above are supported on all of the devices. But there are also a few functions that have more access to the OS internals and are supported only for Windows or Mac apps. They are below.
+<br>
+
+
+CSCS File and Command-Line Functions (not available in Unity, iOS, Android)
 ------
 
 
@@ -309,9 +362,9 @@ CSCS File and Command-Line Functions
 | **writeline** *filename, line*         | Writes specified line to a file.|
 | **writelines** *filename, variable*         | Writes all lines from a variable (which must be an array) to a file.|
 
-<br>
 
-CSCS Miscelaneous Functions
+<br>
+CSCS Extended Miscelaneous Functions
 ------
 
 
@@ -319,22 +372,11 @@ CSCS Miscelaneous Functions
 | :------------------------------------------- |:------------------------------------------------|
 | **CallNative** (*methodName, parameterName, parameterValue*)    | Calls a C# static method, implemented in Statics.cs, from CSCS code, passing a specified parameter name and value. Not available on iOS and Android. |
 | **Env** (*variableName*)                   | Returns value of the specified environment variable.  |
-| **Exit** (*code = 0*)               | Stops execution and exits with the specified return code.   |
 | **GetNative** (*variableName*)    | Gets a value of a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
-| **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.  |
-| **Now** (*format="HH:mm:ss.fff"*)          | Returns current date and time according to the specified format. |
-| **Print** (*var1="", var2="", ...*)          | Prints specified parameters, converting them all to strings. |
-| **PsTime**       | Returns current process CPU time. Used for measuring the script execution time. |
 | **SetEnv** (*variableName, value*)                   | Sets value of the specified environment variable.  |
 | **SetNative** (*variableName, variableValue*)    | Sets a specified value to a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
-| **Show** (*funcName*)          | Prints contents of a specified CSCS function. |
-| **Signal** ()         | Signals waiting threads. |
-| **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds.
 | **StartStopWatch** ()          | Starts a stopwatch. There is just one stopwatch in the system. |
 | **StopStopWatch** ()          | Stops a stopwatch. There is just one stopwatch in the system. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
 | **StopWatchElapsed** (*format=secs*)          | Returns elapsed time according to the specified format. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
-| **Thread** (*functionName*) OR { *statements;* } | Starts a new thread. The thread will either execute a specified CSCS function or all the statements between the curly brackets. |
-| **ThreadId** () | Returns current thread Id. |
 | **Timestamp** (*doubleValue, format="yyyy/MM/dd HH:mm:ss.fff"*)   | Converts specified number of milliseconds since 01/01/1970 to a date time string according to the passed format. |
-| **Wait** ()         | Waits for a signal.  | 
 
