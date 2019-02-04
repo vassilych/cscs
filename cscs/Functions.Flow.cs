@@ -1586,11 +1586,11 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 3, m_name);
+            Utils.CheckArgs(args.Count, 2, m_name);
 
             string varName = Utils.GetSafeString(args, 0);
             Variable lines = Utils.GetSafeVariable(args, 1);
-            int fromLine = Utils.GetSafeInt(args, 2);
+            int fromLine = Utils.GetSafeInt(args, 2, 0);
             string sepStr = Utils.GetSafeString(args, 3, "\t");
             if (sepStr == "\\t")
             {
@@ -1801,9 +1801,7 @@ namespace SplitAndMerge
             // 3. Take either the length of the underlying tuple or
             // string part if it is defined,
             // or the numerical part converted to a string otherwise.
-            int size = element.Type == Variable.VarType.ARRAY ?
-                              element.Tuple.Count :
-                              element.AsString().Length;
+            int size = element.GetSize();
 
             script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
 

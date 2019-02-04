@@ -86,7 +86,6 @@ namespace SplitAndMerge
         public const string INDEX_OF = "indexof";
         public const string LOCK = "lock";
         public const string HELP = "help";
-        public const string LOCAL_IP = "LocalIP";
         public const string LOG = "log";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "properties";
@@ -99,7 +98,6 @@ namespace SplitAndMerge
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string ROUND = "round";
-        public const string SET = "set";
         public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
         public const string SIGNAL = "signal";

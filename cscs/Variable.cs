@@ -671,6 +671,10 @@ namespace SplitAndMerge
             {
                 return new Variable(GetTypeString());
             }
+            else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetSize());
+            }
 
             return result;
         }
@@ -763,16 +767,28 @@ namespace SplitAndMerge
             List<string> all = new List<string>(allSet);
             all.Sort();
 
-            if (!allSet.Contains(Constants.OBJECT_TYPE))
-            {
-                all.Insert(0, Constants.OBJECT_TYPE);
-            }
             if (!allSet.Contains(Constants.OBJECT_PROPERTIES))
             {
                 all.Add(Constants.OBJECT_PROPERTIES);
             }
+            if (!allSet.Contains(Constants.SIZE))
+            {
+                all.Insert(0, Constants.SIZE);
+            }
+            if (!allSet.Contains(Constants.OBJECT_TYPE))
+            {
+                all.Insert(0, Constants.OBJECT_TYPE);
+            }
 
             return all;
+        }
+
+        public int GetSize()
+        {
+            int size = Type == Variable.VarType.ARRAY ?
+                  Tuple.Count :
+                  AsString().Length;
+            return size;
         }
 
         public virtual string GetTypeString()

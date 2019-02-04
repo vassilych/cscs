@@ -11,7 +11,6 @@ namespace SplitAndMerge
         {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
             //ParserFunction.CleanUp();
-            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction());
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINE, new AppendLineFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINES, new AppendLinesFunction());
@@ -43,8 +42,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.STOPWATCH_ELAPSED, new StopWatchFunction(StopWatchFunction.Mode.ELAPSED));
             ParserFunction.RegisterFunction(Constants.STOPWATCH_START, new StopWatchFunction(StopWatchFunction.Mode.START));
             ParserFunction.RegisterFunction(Constants.STOPWATCH_STOP, new StopWatchFunction(StopWatchFunction.Mode.STOP));
-            ParserFunction.RegisterFunction(Constants.STR_BETWEEN, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN));
-            ParserFunction.RegisterFunction(Constants.STR_BETWEEN_ANY, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN_ANY));
             ParserFunction.RegisterFunction(Constants.TAIL, new TailFunction());
             ParserFunction.RegisterFunction(Constants.TIMESTAMP, new TimestampFunction());
             ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
@@ -160,7 +157,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.REMOVE_AT, tr1, tr2);
                 Translation.Add(languageSection, Constants.ROUND, tr1, tr2);
                 Translation.Add(languageSection, Constants.RUN, tr1, tr2);
-                Translation.Add(languageSection, Constants.SET, tr1, tr2);
                 Translation.Add(languageSection, Constants.SETENV, tr1, tr2);
                 Translation.Add(languageSection, Constants.SHOW, tr1, tr2);
                 Translation.Add(languageSection, Constants.SIGNAL, tr1, tr2);
