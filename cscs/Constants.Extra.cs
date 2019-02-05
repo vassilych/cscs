@@ -39,7 +39,6 @@ namespace SplitAndMerge
         public const string READFILE = "readfile";
         public const string READNUMBER = "readnum";
         public const string RUN = "run";
-        public const string SETENV = "setenv";
         public const string SET_NATIVE = "SetNative";
         public const string STARTSRV = "startsrv";
         public const string STOPWATCH_ELAPSED = "StopWatchElapsed";

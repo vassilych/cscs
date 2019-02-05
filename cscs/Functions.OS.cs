@@ -461,4 +461,31 @@ namespace SplitAndMerge
             return new Variable(res);
         }
     }
+    // Returns an environment variable
+    class GetEnvFunction : ParserFunction, IStringFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
+            string res = Environment.GetEnvironmentVariable(varName);
+
+            return new Variable(res);
+        }
+    }
+
+    // Sets an environment variable
+    class SetEnvFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string varName = Utils.GetToken(script, Constants.NEXT_ARG_ARRAY);
+            Utils.CheckNotEmpty(script, varName, m_name);
+
+            Variable varValue = Utils.GetItem(script);
+            string strValue = varValue.AsString();
+            Environment.SetEnvironmentVariable(varName, strValue);
+
+            return new Variable(varName);
+        }
+    }
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
-using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -98,7 +97,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
-            ParserFunction.RegisterFunction(Constants.EXIT, new ExitFunction());
+            ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
             ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
             ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
@@ -115,6 +114,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
+            ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());

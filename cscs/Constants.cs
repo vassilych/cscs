@@ -98,6 +98,7 @@ namespace SplitAndMerge
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string ROUND = "round";
+        public const string SETENV = "setenv";
         public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
         public const string SIGNAL = "signal";

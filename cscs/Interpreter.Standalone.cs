@@ -21,8 +21,8 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.COPY, new CopyFunction());
             ParserFunction.RegisterFunction(Constants.DELETE, new DeleteFunction());
             ParserFunction.RegisterFunction(Constants.DIR, new DirFunction());
-            ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
             ParserFunction.RegisterFunction(Constants.EXISTS, new ExistsFunction());
+            ParserFunction.RegisterFunction(Constants.EXIT, new ExitFunction());
             ParserFunction.RegisterFunction(Constants.FINDFILES, new FindfilesFunction());
             ParserFunction.RegisterFunction(Constants.FINDSTR, new FindstrFunction());
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
@@ -37,7 +37,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.READFILE, new ReadCSCSFileFunction());
             ParserFunction.RegisterFunction(Constants.RUN, new RunFunction());
             ParserFunction.RegisterFunction(Constants.SET_NATIVE, new SetNativeFunction());
-            ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
             ParserFunction.RegisterFunction(Constants.STARTSRV, new ServerSocket());
             ParserFunction.RegisterFunction(Constants.STOPWATCH_ELAPSED, new StopWatchFunction(StopWatchFunction.Mode.ELAPSED));
             ParserFunction.RegisterFunction(Constants.STOPWATCH_START, new StopWatchFunction(StopWatchFunction.Mode.START));
