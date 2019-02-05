@@ -277,7 +277,7 @@ CSCS String Functions
 
 ###  Measuring Execution Time, Throwing Exceptions, and String Manipulation Examples
 <pre><code>cycles = 1000; i = 0;
-start = pstime();
+start = PsTime();
 while ( i++ < cycles) {
     str = " la la ";
     str = StrTrim(str);
@@ -286,7 +286,7 @@ while ( i++ < cycles) {
       throw "Wrong result: [" + str + "] instead of [lu lu]";
     }
 }
-end = pstime();
+end = PsTime();
 print("Total CPU time of", cycles, "loops:", end-start, "ms.");
 // Example output: Total CPU time of 1000 loops: 968.75 ms.
 </code></pre>
@@ -305,17 +305,18 @@ CSCS Debugger
 
 <br>
 
-CSCS Core Miscelaneous Functions
+CSCS Core Miscellaneous Functions
 ------
 
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **Exit** (*code = 0*)               | Stops execution and exits with the specified return code.   |
+| **Env** (*variableName*)                   | Returns value of the specified environment variable.  |
 | **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.  |
 | **Now** (*format="HH:mm:ss.fff"*)          | Returns current date and time according to the specified format. |
 | **Print** (*var1="", var2="", ...*)          | Prints specified parameters, converting them all to strings. |
 | **PsTime**       | Returns current process CPU time. Used for measuring the script execution time. |
+| **SetEnv** (*variableName, value*)                   | Sets value of the specified environment variable.  |
 | **Show** (*funcName*)          | Prints contents of a specified CSCS function. |
 | **Signal** ()         | Signals waiting threads. |
 | **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds.
@@ -364,16 +365,15 @@ CSCS File and Command-Line Functions (not available in Unity, iOS, Android)
 
 <br>
 
-CSCS Extended Miscelaneous Functions
+CSCS Extended Miscellaneous Functions
 ------
 
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **CallNative** (*methodName, parameterName, parameterValue*)    | Calls a C# static method, implemented in Statics.cs, from CSCS code, passing a specified parameter name and value. Not available on iOS and Android. |
-| **Env** (*variableName*)                   | Returns value of the specified environment variable.  |
+| **Exit** (*code = 0*)               | Stops execution and exits with the specified return code.   |
 | **GetNative** (*variableName*)    | Gets a value of a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
-| **SetEnv** (*variableName, value*)                   | Sets value of the specified environment variable.  |
 | **SetNative** (*variableName, variableValue*)    | Sets a specified value to a specified C# static variable, implemented in Statics.cs, from CSCS code. Not available on iOS and Android. |
 | **StartStopWatch** ()          | Starts a stopwatch. There is just one stopwatch in the system. |
 | **StopStopWatch** ()          | Stops a stopwatch. There is just one stopwatch in the system. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
