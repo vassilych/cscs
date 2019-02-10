@@ -64,6 +64,7 @@ namespace SplitAndMerge
             DebuggerAttached = true;
 
             Debugger.OnResult += SendBack;
+            Debugger.OnSendFile += SendFile;
             ThreadPool.QueueUserWorkItem(StartProcessing, null);
 
             while (DebuggerAttached)
@@ -102,6 +103,21 @@ namespace SplitAndMerge
                     continue;
                 }
                 client.SendBack(str);
+                i++;
+            }
+        }
+        static void SendFile(string filename, string destination)
+        {
+            int i = 0;
+            while (i < m_clients.Count)
+            {
+                DebuggerClient client = m_clients[i];
+                if (!client.Connected)
+                {
+                    m_clients.RemoveAt(i);
+                    continue;
+                }
+                client.SendFile(filename, destination);
                 i++;
             }
         }
@@ -247,7 +263,7 @@ namespace SplitAndMerge
             m_stream.Dispose();
         }
 
-        public void SendBack(string str)
+        public bool SendBack(string str)
         {
             byte[] msg = System.Text.Encoding.UTF8.GetBytes(str);
             try
@@ -259,11 +275,45 @@ namespace SplitAndMerge
             {
                 Console.Write("Client disconnected: {0}", exc.Message);
                 Disconnect();
+                return false;
             }
 
             if (m_isRepl)
             {
                 Disconnect();
+            }
+            return true;
+        }
+
+        public bool SendFile(string filename, string destination)
+        {
+            //byte[] bytes = new byte[1024];
+            byte[] fileBytes = File.ReadAllBytes(filename);
+
+            string result = "send_file\n";
+            result += new FileInfo(filename).Length + "\n";
+            result += destination + "\n";
+            if (!SendBack(result))
+            {
+                return false;
+            }
+
+            try
+            {
+                //int i = m_stream.Read(bytes, 0, bytes.Length);
+                /*string data = */
+                //System.Text.Encoding.UTF8.GetString(bytes, 0, i);
+
+                m_stream.Write(fileBytes, 0, fileBytes.Length);
+                m_stream.Flush();
+                Thread.Sleep(500); // Let the client get the file.
+
+                return true;
+            }
+            catch (Exception exc)
+            {
+                Console.Write("Client disconnected while sending data: " + exc.Message);
+                return false;
             }
         }
     }
@@ -271,7 +321,7 @@ namespace SplitAndMerge
     public class DebuggerUtils
     {
         public enum DebugAction { NONE, FILE, NEXT, CONTINUE, STEP_IN, STEP_OUT,
-            SET_BP, VARS, STACK, ALL, REPL, _REPL, END, BYE };
+            SET_BP, VARS, STACK, ALL, GET_FILE, REPL, _REPL, END, BYE };
 
         public static DebugAction StringToAction(string str, ref string rest)
         {
@@ -293,6 +343,7 @@ namespace SplitAndMerge
                 case "vars": return DebugAction.VARS;
                 case "stack": return DebugAction.STACK;
                 case "all": return DebugAction.ALL;
+                case "get_file": return DebugAction.GET_FILE;
                 case "repl": return DebugAction.REPL;
                 case "_repl": return DebugAction._REPL;
                 case "bye": return DebugAction.BYE;
