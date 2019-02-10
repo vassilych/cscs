@@ -101,6 +101,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
             ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
+            ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
             ParserFunction.RegisterFunction(Constants.INDEX_OF, new IndexOfFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());

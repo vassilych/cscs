@@ -14,6 +14,7 @@ namespace SplitAndMerge
     {
         public static Debugger MainInstance { get; set; }
         public static Action<string> OnResult;
+        public static Action<string, string> OnSendFile;
 
         static int m_id;
         static string m_startFilename;
@@ -200,6 +201,15 @@ namespace SplitAndMerge
             if (script == null)
             {
                 script = m_steppingIns.Count > 0 ? m_steppingIns.Peek().m_debugging : m_debugging;
+            }
+
+            if (LastResult.Type == Variable.VarType.ARRAY &&
+                LastResult.Tuple.Count >= 3 &&
+                LastResult.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
+            {
+                string file = LastResult.Tuple[1].AsString();
+                string dest = LastResult.Tuple[2].AsString();
+                OnSendFile?.Invoke(file, dest);
             }
 
             string filename = GetCurrentFilename(script);
@@ -486,11 +496,11 @@ namespace SplitAndMerge
 
         public async Task<Variable> StepInBreakpointIfNeeded(ParsingScript stepInScript)
         {
-            stepInScript.Debugger = this;
-            if (ReplMode)
+            if (ReplMode || stepInScript.Debugger == null)
             {
                 return null;
             }
+            stepInScript.Debugger = this;
 
             int startPointer = stepInScript.Pointer;
             string filename = stepInScript.Filename;

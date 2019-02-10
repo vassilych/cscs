@@ -488,4 +488,25 @@ namespace SplitAndMerge
             return new Variable(varName);
         }
     }
+
+    class GetFileFromDebugger : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            Utils.CheckArgs(args.Count, 2, m_name);
+            string filename = Utils.GetSafeString(args, 0);
+            string destination = Utils.GetSafeString(args, 1);
+
+            Variable result = new Variable(Variable.VarType.ARRAY);
+            result.Tuple.Add(new Variable(Constants.GET_FILE_FROM_DEBUGGER));
+            result.Tuple.Add(new Variable(filename));
+            result.Tuple.Add(new Variable(destination));
+
+            result.ParsingToken = m_name;
+
+            return result;
+        }
+    }
 }

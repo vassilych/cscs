@@ -135,6 +135,7 @@ namespace SplitAndMerge
 
         public const string START_DEBUGGER = "StartDebugger";
         public const string STOP_DEBUGGER  = "StopDebugger";
+        public const string GET_FILE_FROM_DEBUGGER = "GetFileFromDebugger";
 
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();

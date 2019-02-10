@@ -75,7 +75,12 @@ namespace SplitAndMerge
 
         public string CurrentAssign { get; set; }
 
-        public Debugger Debugger;
+        public Debugger Debugger
+        {
+            get;
+            set;
+        }
+
         public bool DisableBreakpoints;
         public bool InTryBlock;
         public ParsingScript ParentScript;
