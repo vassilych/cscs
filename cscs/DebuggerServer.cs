@@ -16,6 +16,7 @@ namespace SplitAndMerge
         public static bool DebuggerAttached { set; get; }
 
         static TcpListener s_server;
+        static bool s_serverStarted;
 
         static CancellationTokenSource s_cancelTokenSource = new CancellationTokenSource();
 
@@ -24,9 +25,14 @@ namespace SplitAndMerge
 
         static List<DebuggerClient> m_clients = new List<DebuggerClient>();
 
-        public static string StartServer(int port = 13337)
+        public static string StartServer(int port = 13337, bool allowRemoteConnections = false)
         {
-            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+            if (s_serverStarted)
+            {
+                return "OK";
+            }
+
+            IPAddress localAddr = allowRemoteConnections ? IPAddress.Any : IPAddress.Parse("127.0.0.1");
             Console.Write("Starting a server on {0}... ", port);
 
             s_server = new TcpListener(localAddr, port);
@@ -58,9 +64,13 @@ namespace SplitAndMerge
             DebuggerAttached = false;
         }
 
-        public static void StartServerBlocked(Object threadContext)
+        static void StartServerBlocked(Object threadContext)
         {
-            s_server.Start();
+            if (s_serverStarted)
+            {
+                return;
+            }
+            s_serverStarted = true;
             DebuggerAttached = true;
 
             Debugger.OnResult += SendBack;
@@ -88,7 +98,9 @@ namespace SplitAndMerge
 
                 Thread.Sleep(1000);
             }
+
             Console.Write("Stopped listening for requests");
+            s_serverStarted = false;
         }
 
         static void SendBack(string str)

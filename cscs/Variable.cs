@@ -729,6 +729,10 @@ namespace SplitAndMerge
             {
                 return new Variable(GetTypeString());
             }
+            else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetSize());
+            }
 
             return result;
         }
@@ -771,13 +775,13 @@ namespace SplitAndMerge
             {
                 all.Add(Constants.OBJECT_PROPERTIES);
             }
-            if (!allSet.Contains(Constants.SIZE))
-            {
-                all.Insert(0, Constants.SIZE);
-            }
             if (!allSet.Contains(Constants.OBJECT_TYPE))
             {
                 all.Insert(0, Constants.OBJECT_TYPE);
+            }
+            if (!allSet.Contains(Constants.SIZE))
+            {
+                all.Insert(0, Constants.SIZE);
             }
 
             return all;
