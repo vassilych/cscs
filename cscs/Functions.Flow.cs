@@ -1234,6 +1234,7 @@ namespace SplitAndMerge
             Utils.CheckNotNull(m_name, func);
 
             Variable currentValue = func.GetValue(script);
+            currentValue = currentValue.DeepClone();
 
             if (arrayIndices.Count > 0 || script.TryCurrent() == Constants.START_ARRAY)
             {
@@ -1281,6 +1282,7 @@ namespace SplitAndMerge
             Utils.CheckNotNull(m_name, func);
 
             Variable currentValue = func.GetValue(script);
+            currentValue = currentValue.DeepClone();
             Variable left = currentValue;
 
             if (arrayIndices.Count > 0)
