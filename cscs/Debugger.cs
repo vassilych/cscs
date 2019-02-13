@@ -189,6 +189,10 @@ namespace SplitAndMerge
                     else
                     {
                         result = CreateResult(Output);
+                        if (string.IsNullOrEmpty(result))
+                        {
+                            return;
+                        }
                     }
                 }
             }
@@ -209,6 +213,13 @@ namespace SplitAndMerge
             {
                 string file = LastResult.Tuple[1].AsString();
                 string dest = LastResult.Tuple[2].AsString();
+                if (!File.Exists(file))
+                {
+                    ParsingException exc = new ParsingException("File [" + file + "] not found.", script);
+                    ProcessException(script, exc);
+                    return "";
+                }
+
                 OnSendFile?.Invoke(file, dest);
             }
 
@@ -255,6 +266,10 @@ namespace SplitAndMerge
         public void CreateResultAndSendBack(string cmd, string output, ParsingScript script = null)
         {
             string result = CreateResult(output, script);
+            if (string.IsNullOrEmpty(result))
+            {
+                return;
+            }
             result = cmd + "\n" + result;
             SendBack(result);
         }

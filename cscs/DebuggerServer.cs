@@ -33,7 +33,7 @@ namespace SplitAndMerge
             }
 
             IPAddress localAddr = allowRemoteConnections ? IPAddress.Any : IPAddress.Parse("127.0.0.1");
-            Console.Write("Starting a server on {0}... ", port);
+            Console.Write("Starting a server on {0}:{1}... ", localAddr.ToString(), port);
 
             s_server = new TcpListener(localAddr, port);
             try
@@ -297,13 +297,17 @@ namespace SplitAndMerge
             return true;
         }
 
-        public bool SendFile(string filename, string destination)
+        public bool SendFile(string source, string destination)
         {
-            //byte[] bytes = new byte[1024];
-            byte[] fileBytes = File.ReadAllBytes(filename);
+            byte[] fileBytes = File.ReadAllBytes(source);
+
+            if (destination.EndsWith("/") || destination.EndsWith("\\"))
+            {
+                destination += Path.GetFileName(source);
+            }
 
             string result = "send_file\n";
-            result += new FileInfo(filename).Length + "\n";
+            result += new FileInfo(source).Length + "\n";
             result += destination + "\n";
             if (!SendBack(result))
             {
@@ -312,13 +316,9 @@ namespace SplitAndMerge
 
             try
             {
-                //int i = m_stream.Read(bytes, 0, bytes.Length);
-                /*string data = */
-                //System.Text.Encoding.UTF8.GetString(bytes, 0, i);
-
                 m_stream.Write(fileBytes, 0, fileBytes.Length);
                 m_stream.Flush();
-                Thread.Sleep(500); // Let the client get the file.
+                Thread.Sleep(100); // Let the client get the file.
 
                 return true;
             }
