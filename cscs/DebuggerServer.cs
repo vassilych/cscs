@@ -25,6 +25,12 @@ namespace SplitAndMerge
 
         static List<DebuggerClient> m_clients = new List<DebuggerClient>();
 
+        static public string BaseDirectory
+        {
+            get;
+            set;
+        }
+
         public static string StartServer(int port = 13337, bool allowRemoteConnections = false)
         {
             if (s_serverStarted)
@@ -306,12 +312,18 @@ namespace SplitAndMerge
             {
                 throw new ArgumentException("Can't send files to a local host");
             }
-            if (!File.Exists(source))
+            if (string.IsNullOrWhiteSpace(DebuggerServer.BaseDirectory))
             {
-                throw new ArgumentException("File [" + source + "] not found.");
+                throw new ArgumentException("Debugger Base Directory is not set.");
             }
 
-            byte[] fileBytes = File.ReadAllBytes(source);
+            string filename = Path.Combine(DebuggerServer.BaseDirectory, source);
+            if (!File.Exists(filename))
+            {
+                throw new ArgumentException("File [" + filename + "] not found.");
+            }
+
+            byte[] fileBytes = File.ReadAllBytes(filename);
 
             if (destination.EndsWith("/") || destination.EndsWith("\\"))
             {
@@ -319,7 +331,7 @@ namespace SplitAndMerge
             }
 
             string result = "send_file\n";
-            result += new FileInfo(source).Length + "\n";
+            result += new FileInfo(filename).Length + "\n";
             result += destination + "\n";
             if (!SendBack(result))
             {
