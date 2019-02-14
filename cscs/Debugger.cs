@@ -13,7 +13,7 @@ namespace SplitAndMerge
     public class Debugger
     {
         public static Debugger MainInstance { get; set; }
-        public static Action<string> OnResult;
+        public static Action<string, bool> OnResult;
         public static Action<string, string> OnSendFile;
 
         static int m_id;
@@ -104,7 +104,7 @@ namespace SplitAndMerge
                 action == DebuggerUtils.DebugAction._REPL)
             {
                 result = responseToken + await ProcessRepl(load);
-                SendBack(result);
+                SendBack(result, false);
                 return;
             }
             if (action == DebuggerUtils.DebugAction.SET_BP)
@@ -198,7 +198,7 @@ namespace SplitAndMerge
             }
 
             result = responseToken + result;
-            SendBack(result);
+            SendBack(result, true);
         }
         public string CreateResult(string output, ParsingScript script = null)
         {
@@ -207,7 +207,8 @@ namespace SplitAndMerge
                 script = m_steppingIns.Count > 0 ? m_steppingIns.Peek().m_debugging : m_debugging;
             }
 
-            if (LastResult.Type == Variable.VarType.ARRAY &&
+            if (LastResult != null &&
+                LastResult.Type == Variable.VarType.ARRAY &&
                 LastResult.Tuple.Count >= 3 &&
                 LastResult.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
             {
@@ -253,10 +254,10 @@ namespace SplitAndMerge
             return stack.Trim();
         }
 
-        public void SendBack(string str)
+        public void SendBack(string str, bool sendLength = true)
         {
             Trace("SEND_BACK: " + str);
-            OnResult?.Invoke(str);
+            OnResult?.Invoke(str, sendLength);
 
             Output = "";
             m_startFilename = null;
@@ -271,7 +272,7 @@ namespace SplitAndMerge
                 return;
             }
             result = cmd + "\n" + result;
-            SendBack(result);
+            SendBack(result, true);
         }
 
         string GetAllVariables(ParsingScript script)
@@ -423,8 +424,10 @@ namespace SplitAndMerge
             if (debugger.ReplMode)
             {
                 string replResult = exc.Message + "\n";
-                debugger.SendBack(replResult);
+                debugger.SendBack(replResult, false);
                 debugger.LastResult = null;
+                ParserFunction.InvalidateStacksAfterLevel(0);
+                return;
             }
 
             string stack = exc.ExceptionStack;
@@ -436,7 +439,7 @@ namespace SplitAndMerge
             result += vars + "\n";
             result += stack + "\n";
 
-            debugger.SendBack(result);
+            debugger.SendBack(result, !debugger.ReplMode);
             debugger.LastResult = null;
 
             ParserFunction.InvalidateStacksAfterLevel(0);

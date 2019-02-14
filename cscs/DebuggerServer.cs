@@ -25,6 +25,11 @@ namespace SplitAndMerge
 
         static List<DebuggerClient> m_clients = new List<DebuggerClient>();
 
+        static public string AllowedClients
+        {
+            get;
+            set;
+        }
         static public string BaseDirectory
         {
             get;
@@ -36,6 +41,12 @@ namespace SplitAndMerge
             if (s_serverStarted)
             {
                 return "OK";
+            }
+
+            if (allowRemoteConnections && string.IsNullOrWhiteSpace(DebuggerServer.AllowedClients))
+            {
+                Console.Write("AllowedClients property is not set. Cannot allow remote connections.");
+                allowRemoteConnections = false;
             }
 
             IPAddress localAddr = allowRemoteConnections ? IPAddress.Any : IPAddress.Parse("127.0.0.1");
@@ -109,7 +120,7 @@ namespace SplitAndMerge
             s_serverStarted = false;
         }
 
-        static void SendBack(string str)
+        static void SendBack(string str, bool sendLength = true)
         {
             int i = 0;
             while (i < m_clients.Count)
@@ -120,7 +131,7 @@ namespace SplitAndMerge
                     m_clients.RemoveAt(i);
                     continue;
                 }
-                client.SendBack(str);
+                client.SendBack(str, sendLength);
                 i++;
             }
         }
@@ -214,10 +225,24 @@ namespace SplitAndMerge
         TcpClient m_client;
         NetworkStream m_stream;
 
+        string m_remoteHost;
+
         public void RunClient(Object threadContext)
         {
             m_client = (TcpClient)threadContext;
             m_stream = m_client.GetStream();
+
+            string remoteAddress = m_client.Client.RemoteEndPoint.ToString();
+            var items = remoteAddress.Split(':');
+            m_remoteHost = items[0];
+
+            if (m_remoteHost != "127.0.0.1" && DebuggerServer.AllowedClients != "*" &&
+                !DebuggerServer.AllowedClients.Contains(m_remoteHost))
+            {
+                Console.WriteLine("Host [" + m_remoteHost + "] is not allowed.");
+                return;
+            }
+
             Connected = true;
 
             Byte[] bytes = new Byte[4096];
@@ -281,14 +306,17 @@ namespace SplitAndMerge
             m_stream.Dispose();
         }
 
-        public bool SendBack(string str)
+        public bool SendBack(string str, bool sendLength = true)
         {
             byte[] msg = System.Text.Encoding.UTF8.GetBytes(str);
-            byte[] lenMsg = System.Text.Encoding.UTF8.GetBytes(msg.Length + "\n");
             try
             {
-                m_stream.Write(lenMsg, 0, lenMsg.Length);
-                m_stream.Write(msg,    0, msg.Length);
+                if (sendLength)
+                {
+                    byte[] lenMsg = System.Text.Encoding.UTF8.GetBytes(msg.Length + "\n");
+                    m_stream.Write(lenMsg, 0, lenMsg.Length);
+                }
+                m_stream.Write(msg, 0, msg.Length);
                 m_stream.Flush();
             }
             catch (Exception exc)
@@ -307,16 +335,14 @@ namespace SplitAndMerge
 
         public void SendFile(string source, string destination)
         {
-            string remoteAddress = m_client.Client.RemoteEndPoint.ToString();
-            if (remoteAddress.Contains("127.0.0.1"))
+            if (m_remoteHost.Contains("127.0.0.1"))
             {
-                throw new ArgumentException("Can't send files to a local host");
+                throw new ArgumentException("Cannot send files to a local host");
             }
             if (string.IsNullOrWhiteSpace(DebuggerServer.BaseDirectory))
             {
                 throw new ArgumentException("Debugger Base Directory is not set.");
             }
-
             if (source.Contains("..") || source.Contains(":"))
             {
                 throw new ArgumentException("The source file cannot have [..] or [:] characters.");
@@ -338,13 +364,13 @@ namespace SplitAndMerge
             string result = "send_file\n";
             result += new FileInfo(filename).Length + "\n";
             result += destination + "\n";
-            if (!SendBack(result))
-            {
-                return;
-            }
 
+            byte[] msg = System.Text.Encoding.UTF8.GetBytes(result);
             try
             {
+                m_stream.Write(msg, 0, msg.Length);
+                m_stream.Flush();
+
                 m_stream.Write(fileBytes, 0, fileBytes.Length);
                 m_stream.Flush();
                 Thread.Sleep(100); // Let the client get the file.
