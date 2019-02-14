@@ -317,6 +317,11 @@ namespace SplitAndMerge
                 throw new ArgumentException("Debugger Base Directory is not set.");
             }
 
+            if (source.Contains("..") || source.Contains(":"))
+            {
+                throw new ArgumentException("The source file cannot have [..] or [:] characters.");
+            }
+
             string filename = Path.Combine(DebuggerServer.BaseDirectory, source);
             if (!File.Exists(filename))
             {
