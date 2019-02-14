@@ -278,9 +278,11 @@ namespace SplitAndMerge
         public bool SendBack(string str)
         {
             byte[] msg = System.Text.Encoding.UTF8.GetBytes(str);
+            byte[] lenMsg = System.Text.Encoding.UTF8.GetBytes(msg.Length + "\n");
             try
             {
-                m_stream.Write(msg, 0, msg.Length);
+                m_stream.Write(lenMsg, 0, lenMsg.Length);
+                m_stream.Write(msg,    0, msg.Length);
                 m_stream.Flush();
             }
             catch (Exception exc)
@@ -297,8 +299,18 @@ namespace SplitAndMerge
             return true;
         }
 
-        public bool SendFile(string source, string destination)
+        public void SendFile(string source, string destination)
         {
+            string remoteAddress = m_client.Client.RemoteEndPoint.ToString();
+            if (remoteAddress.Contains("127.0.0.1"))
+            {
+                throw new ArgumentException("Can't send files to a local host");
+            }
+            if (!File.Exists(source))
+            {
+                throw new ArgumentException("File [" + source + "] not found.");
+            }
+
             byte[] fileBytes = File.ReadAllBytes(source);
 
             if (destination.EndsWith("/") || destination.EndsWith("\\"))
@@ -311,7 +323,7 @@ namespace SplitAndMerge
             result += destination + "\n";
             if (!SendBack(result))
             {
-                return false;
+                return;
             }
 
             try
@@ -319,13 +331,10 @@ namespace SplitAndMerge
                 m_stream.Write(fileBytes, 0, fileBytes.Length);
                 m_stream.Flush();
                 Thread.Sleep(100); // Let the client get the file.
-
-                return true;
             }
             catch (Exception exc)
             {
                 Console.Write("Client disconnected while sending data: " + exc.Message);
-                return false;
             }
         }
     }

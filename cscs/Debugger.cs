@@ -211,16 +211,16 @@ namespace SplitAndMerge
                 LastResult.Tuple.Count >= 3 &&
                 LastResult.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
             {
-                string file = LastResult.Tuple[1].AsString();
-                string dest = LastResult.Tuple[2].AsString();
-                if (!File.Exists(file))
+                try
+                { 
+                    OnSendFile?.Invoke(LastResult.Tuple[1].AsString(), LastResult.Tuple[2].AsString());
+                }
+                catch (Exception exc)
                 {
-                    ParsingException exc = new ParsingException("File [" + file + "] not found.", script);
-                    ProcessException(script, exc);
+                    ProcessException(m_debugging, new ParsingException(exc.Message, script, exc));
                     return "";
                 }
 
-                OnSendFile?.Invoke(file, dest);
             }
 
             string filename = GetCurrentFilename(script);

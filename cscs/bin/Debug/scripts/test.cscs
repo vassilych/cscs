@@ -1,11 +1,11 @@
 include("functions.cscs");
 start = pstime;
 
-print("Testing strings");
+Print("Testing strings");
 txt = "lu";
 txt += txt;
 txt = txt + "_";
-txt += "la";
+txt += "la";  
 txt += 1;
 Test(txt, "lulu_la1");
 
@@ -19,10 +19,10 @@ Test(c, "bla");
 ind = indexof(bb, "bla");
 Test(ind, 4);
 
-print("Testing numbers");
+Print("Testing numbers");
 a=(-3+2*9)-(10-15);
 a++; --a;
-print("a=[", a, "]");
+Print("a=[", a, "]");
 Test(a, 20);
 
 x = 1;
@@ -59,7 +59,7 @@ Test((a++)-(--a)-a--, a - 2 * a - 1);
 x = 2.0E+15 + 3e+15 - 1.0e15;
 Test(x, 4e+15);
 
-print;
+Print;
 
 n = 10;
 getPrimes(n);
@@ -82,7 +82,7 @@ Test(c, 3);
 b*=5;
 Test(b/=2, 5);
 
-print("Testing factorial(5): ");
+Print("Testing factorial(5): ");
 Test(factorial(5), 120);
 
 a=1;
@@ -103,30 +103,30 @@ a[5][3]+=100;
 Test(a[1][2], -78);
 Test(a[5][3], 115);
 
-print(a[5][2]);
+Print(a[5][2]);
 
 i=13;
 i++;
-print(i);
+Print(i);
 a[1][2]++;
-print(a[1][2]);
-print(a[5][3]++);
-print(a[5][3]++);
-print(a[5][3]++);
+Print(a[1][2]);
+Print(a[5][3]++);
+Print(a[5][3]++);
+Print(a[5][3]++);
 Test(a[5][3], 118);
 
-print(++a[5][3]);
-print(++a[5][3]);
-print(++a[5][3]);
-print(a[5][3]++);
+Print(++a[5][3]);
+Print(++a[5][3]);
+Print(++a[5][3]);
+Print(a[5][3]++);
 Test(a[5][3], 122);
 
-print(--a[5][3]);
-print(--a[5][3]);
-print(--a[5][3]);
-print(a[5][3]--);
-print(a[5][3]--);
-print(a[5][3]--);
+Print(--a[5][3]);
+Print(--a[5][3]);
+Print(--a[5][3]);
+Print(a[5][3]--);
+Print(a[5][3]--);
+Print(a[5][3]--);
 Test(a[5][3], 116);
 
 i=10;
@@ -134,12 +134,12 @@ i=10;
 while(--i > 0) {
   newarray[i] = 2*i;
 }
-print("size(newarray)=", size(newarray));
+Print("size(newarray)=", size(newarray));
 Test(i, 0);
 Test(newarray[9], 18);
 Test(size(newarray), 10);
 
-print("Testing short circuit evaluation");
+Print("Testing short circuit evaluation");
 function f(x) {
   counter++;
   return x;
@@ -152,7 +152,7 @@ counter = 0; Test(f(0) || f(3), 1); Test(counter, 2);
 a = (f(1) && ((sin(0) || sin(1*2)) && f(2) && (f(3) || f(4))));
 Test(a, 1);
 
-print("Testing arrays and maps");
+Print("Testing arrays and maps");
 arr[2] = 10; arr[1] = "str";
 Test(type(arr),    "ARRAY");
 Test(type(arr[0]), "NONE");
@@ -166,8 +166,8 @@ x["blabla"]["blablu"]=125;
 Test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 237);
 
 b[5][3][5][3]=15;
-print(++b[5][3][5][3]);
-print(++b[5][3][5][1]); // NaN expected here
+Print(++b[5][3][5][3]);
+Print(++b[5][3][5][1]); // NaN expected here
 b[5][3][5][3]*=1000;
 Test(b[5][3][5][3], 16000);
 Test(size(b), 6);
@@ -195,21 +195,21 @@ x["blabla"]["blablu"]=126;
 Test(x["blabla"]["blablu"], 125);
 
 Test(--x["bla"]["blu"] + x["blabla"]["blablu"]--, 238);
-print(--x["blabla"]["blablu"]);
-print(--x["blabla"]["blablu"]);
-print(--x["blabla"]["blablu"]);
-print(x["blabla"]["blablu"]++);
-print(x["blabla"]["blablu"]++);
-print(x["blabla"]["blablu"]++);
+Print(--x["blabla"]["blablu"]);
+Print(--x["blabla"]["blablu"]);
+Print(--x["blabla"]["blablu"]);
+Print(x["blabla"]["blablu"]++);
+Print(x["blabla"]["blablu"]++);
+Print(x["blabla"]["blablu"]++);
 
 x = 20 * sin(pow(pi,2));
 cache["if"] = -10 * x;
 cache["else"] = 10 * x;
 if (x < 0 && log(x + 3*pow(10,2)) < 6*exp(x) ||
              x < 1 - pi) {
-  print("OK, in if, x=", x, ", cache=", cache["if"]);
+  Print("OK, in if, x=", x, ", cache=", cache["if"]);
 } else {
-  print("ERROR, in else, cache=", cache["else"]);
+  Print("ERROR, in else, cache=", cache["else"]);
 }
 
 a={0};
@@ -217,7 +217,7 @@ i = 0;
 while(++i < 10) {
   add(a, 2*i);
 }
-print (a);
+Print (a);
 i -= 5;
 d=a[--i];
 Test(d, 8);
@@ -226,32 +226,32 @@ Test(i, 4);
 n=1.5;
 try {
   c = catalan(n);
-  print("catalan(", n, ")=", c);
-  print("ERROR. Exception needed for n=", n);
+  Print("catalan(", n, ")=", c);
+  Print("ERROR. Exception needed for n=", n);
 } catch(exc) {
-  print("OK. Caught: " + exc);
+  Print("OK. Caught: " + exc);
 }
 n=-10;
 try {
   c = catalan(n);
-  print("catalan(", n, ")=", c);
-  print("ERROR. Exception needed for n=", n);
+  Print("catalan(", n, ")=", c);
+  Print("ERROR. Exception needed for n=", n);
 } catch(exc) {
-  print("OK. Caught: " + exc);
+  Print("OK. Caught: " + exc);
 }
 n=10;
 try {
   c = catalan(n);
-  print("catalan(", n, ")=", c);
+  Print("catalan(", n, ")=", c);
 } catch(exc) {
-  print("ERROR. Caught: " + exc);
+  Print("ERROR. Caught: " + exc);
 }
 
 f = fibonacci(n);
-print("fibonacci(", n, ")=", f);
+Print("fibonacci(", n, ")=", f);
 Test(f, 55);
 c = catalan(n);
-print("catalan(", n, ")=", c);
+Print("catalan(", n, ")=", c);
 Test(c, 16796);
 
 i = 0; b = 0;
@@ -260,15 +260,15 @@ while(i < 13)
   b += (i*4 - 1);
   i++;
   if ( i >= 4) {
-    print("in if, i==", i, ", break");
+    Print("in if, i==", i, ", break");
     break;
   } else {
-    print("in else, i==", i, ", continue");
+    Print("in else, i==", i, ", continue");
     continue;
   }
-  print("this is never reached");
+  Print("this is never reached");
 }
-print("while() done");
+Print("while() done");
 
 n = 0; y = 1;
 a =  !!!n && !!y;
@@ -280,19 +280,19 @@ Test(c, 1);
 
 a = 1+(25-2*3);
 arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-++a), ++a/(a/3), 2 * sqrt(pow(2, 2))};
-print(arr);
+Print(arr);
 i = 0;
 while(i < size(arr)) {
-  print("arr[", i, "]=", arr[i], ", expecting ", i);
+  Print("arr[", i, "]=", arr[i], ", expecting ", i);
   i++;
 }
 
 if (2*pow(2,4) > pow(2,5)*2 || factorial(3) == 24) {
-  print("if not expected");
+  Print("if not expected");
 } elif(exp(3) <= (3*(pow(2,3)+1)-(1-sin(pi))) && factorial(4) == 24) {
-  print(exp(3), "<=", (3*(pow(2,3)+1)-(1-sin(pi))), " expected");
+  Print(exp(3), "<=", (3*(pow(2,3)+1)-(1-sin(pi))), " expected");
 } else {
-  print("else not expected");
+  Print("else not expected");
 }
 
 b = "bla";
@@ -306,11 +306,11 @@ while(i < 13)
   } else {
     continue;
   }
-  //print("this is never reached");
+  //Print("this is never reached");
 }
 Test(b, "bla-137");
 
-print("who are \"you\" my friend?"," e=", 0+exp(1)-2*sin(0), ", pi=", pi);
+Print("who are \"you\" my friend?"," e=", 0+exp(1)-2*sin(0), ", pi=", pi);
 
 a = 23; b = 22;
 cond = "na";
@@ -329,7 +329,7 @@ else {
   cond = "cond4";
 }
 Test(cond, "cond4");
-print();
+Print();
 
 a=1;
 b=2;
@@ -349,13 +349,13 @@ i = 10;
 while(--i > 0) {
   newarray[i] = 2*i;
 }
-print("size(newarray)=", size(newarray));
+Print("size(newarray)=", size(newarray));
 Test(i, 0);
 Test(newarray[9], 18);
 Test(size(newarray), 10);
 
 function trySuite(n) {
-  print("Trying to calculate negative factorial...");
+  Print("Trying to calculate negative factorial...");
   result = tryNegative(n);
   return result;
 }
@@ -364,7 +364,7 @@ function tryNegative(n) {
   return factorial(-1 * n);
 }
 function tryNonInteger(n) {
-  print ("In try non-integer");
+  Print ("In try non-integer");
   return factorial(n + 0.5);
 }
 function tryZeroDivision() {
@@ -372,10 +372,10 @@ function tryZeroDivision() {
 }
 
 function variableTest() {
-  print("In function start, n=", n);
+  Print("In function start, n=", n);
   n = sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
   Test(n, 20);
-  print("In function end, n=", n);
+  Print("In function end, n=", n);
 }
 
 function convertToNegative(n) {
@@ -384,82 +384,82 @@ function convertToNegative(n) {
 n = 5;
 try {
   f = trySuite(n);
-  print("factorial(", n, ")=", f);
+  Print("factorial(", n, ")=", f);
 }
 catch(exc) {
-  print ("Caught Exception: ", exc);
+  Print ("Caught Exception: ", exc);
 }
 
 try {
   f = tryNonInteger(n);
-  print("factorial(", n, ")=", f);
+  Print("factorial(", n, ")=", f);
 }
 catch(exc) {
-  print ("Caught Exception: ", exc);
+  Print ("Caught Exception: ", exc);
 }
 
 try {
-  print ("In try zero division ");
+  Print ("In try zero division ");
   f = tryZeroDivision();
-  print("cot(0)=", f);
+  Print("cot(0)=", f);
 }
 catch(exc) {
-  print ("Caught Exception: ", exc);
+  Print ("Caught Exception: ", exc);
 }
 
-print("After try-catches");
+Print("After try-catches");
 
 n *= 2;
 f=factorial(n);
-print("factorial(", n, ")=", f);
+Print("factorial(", n, ")=", f);
 
 variableTest();
-print("After function, n=", n);
+Print("After function, n=", n);
 
 слова = {"Это", "написано", "по-русски"};
 размер = size(слова);
 и = 0;
 while(и < размер) {
   if (и  % 2 == 0) {
-    print(слова[и]);
+    Print(слова[и]);
   }
   и++;
 }
 
 for (i = 10; i >= 0; i--) {
-  print(i, " ");
+  Print(i, " ");
   arr[i] = 2*i;
 }
 i = 10;
-print;
+Print;
 for (;;) {
-  print(i, " ");  arr[i] = 2*i;
+  Print(i, " ");  arr[i] = 2*i;
   i--;
   if (i < 0) { break; }
 }
-print;
+Print;
 for (item : arr) {
-  print(item, " ");
+  Print(item, " ");
 }
-print;
+Print;
 Test("x","x");
 
-test1 = {0,3,5};
-test1[1][2]=3;
+Test1 = {0,3,5};
+Test1[1][2]=3;
 
-if(test1[1][2] == 3) { result="equal";}
+if(Test1[1][2] == 3) { result="equal";}
 else { result="not equal"; }
 Test(result, "equal");
 
-if(test1[1] == 5) { result="equal";}
+if(Test1[1] == 5) { result="equal";}
 else { result="not equal"; }
 Test(result, "not equal");
 
-if(3 == test1[2]) { result="equal";}
+if(3 == Test1[2]) { result="equal";}
 else { result="not equal"; }
 Test(result, "not equal");
 
-if(5 == test1[2]) { result="equal";}
+if(5 == Test1[2]) { result="equal";}
 else { result="not equal"; }
 Test(result, "equal");
 
@@ -472,9 +472,9 @@ if(2 != ab) { result="equal";}
 else { result="not equal"; }
 Test(result, "not equal");
 
-if (sin(10) > -1) { result = "sintestOK"; }
-else { result = "sintestNotOK";  }
-Test(result, "sintestOK");
+if (sin(10) > -1) { result = "sinTestOK"; }
+else { result = "sinTestNotOK";  }
+Test(result, "sinTestOK");
 
 objName = "Columns";
 if (indexof(objName,"Columns") > -1) { result = "indexofOK"; }
@@ -486,14 +486,14 @@ if (indexof(objName,"Columns") < 1) { result = "indexofNotOK"; }
 else { result = "indexofOK";  }
 Test(result, "indexofOK");
 
-test1 = {1,0};
-test2 = {0,1};
-if (test1 != test2) { result = "not equal";}
+Test1 = {1,0};
+Test2 = {0,1};
+if (Test1 != Test2) { result = "not equal";}
 else {  result = "equal"; }
 Test(result, "not equal");
 
-test2 = {1,0};
-if (test1 != test2) { result = "not equal";}
+Test2 = {1,0};
+if (Test1 != Test2) { result = "not equal";}
 else {  result = "equal"; }
 Test(result, "equal");
 
@@ -514,17 +514,17 @@ else { result = "false"; }
 Test(result, "false");
 function threadWork() {
   sleep(10);
-  print("  Starting thread work in thread", threadid());
+  Print("  Starting thread work in thread", threadid());
   sleep(1000);
-  print("  Finishing thread work in thread", threadid());
+  Print("  Finishing thread work in thread", threadid());
   signal();
 }
 
-print("Main, starting new thread from ", threadid());
+Print("Main, starting new thread from ", threadid());
 thread(threadWork());
-print("Main, waiting for thread in ", threadid());
+Print("Main, waiting for thread in ", threadid());
 wait();
-print("Main, wait returned in ", threadid());
+Print("Main, wait returned in ", threadid());
 
 function returnTest(par) {
   if (par <= 10) {
@@ -591,13 +591,30 @@ function compute(base, power, str, extra) {
 function work(loops) {
   x = 0.0;
   for(i = 0; i < loops; i++) {
-     x = (2*compute(2, 3, "test", 1000) + 2000)/2;
+     x = (2*compute(2, 3, "Test", 1000) + 2000)/2;
   }
-  return (2*compute(2, 3, "test", 1000) + 2000)/2;
+  return (2*compute(2, 3, "Test", 1000) + 2000)/2;
 }
 Test(work(1), 9000);
 
-print("Testing named and default arguments...");
+Print("Testing cyles, assignment, and increment-decremet operators.");
+for (i = 0; i < 3; i++) {
+  myarray[i] = i;
+}
+Test(myarray.size, 3);
+for (i = 0; i < myarray.size; i++) {
+  Test(myarray[i], i);
+}
+i=0;
+while(i < 3) {
+  myarray[i] = i;
+  i += 1;
+}
+for (i = 0; i < myarray.size; i++) {
+  Test(myarray[i], i);
+}
+
+Print("Testing named and default arguments...");
 function myp(par1, par2, par3 = 100) {
   return par1 + par2 + par3;
 }
@@ -617,18 +634,18 @@ Test(z, 190);
 
 try {
   z = myp(par2=20);
-  print("Error. Missing Exception: Function [myp] arguments mismatch: 3 declared, 1 supplied.");
+  Print("Error. Missing par1 for myp.");
 } catch(exc) {
-  print("OK. Caught: " + exc);
+  Print("OK. Caught: " + exc);
 }
 try {
   z = myp(par2=20, par3=70);
-  print("Error. Missing Exception: No argument [par1] given for function [myp].");
+  Print("Error. Missing par1 for myp.");
 } catch(exc) {
-  print("OK. Caught: " + exc);
+  Print("OK. Caught: " + exc);
 }
 
-print("Testing Classes and Inheritance");
+Print("Testing Classes and Inheritance");
 class Stuff1 {
   x = 2;
   Stuff1(a) {
@@ -679,4 +696,4 @@ Test(newObj.addStuff1(addition), 111);
 Test(newObj.addStuff2(addition), 113);
 
 end = pstime;
-print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
+Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
