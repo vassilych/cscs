@@ -102,7 +102,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
             ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
             ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
-            ParserFunction.RegisterFunction(Constants.INDEX_OF, new IndexOfFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
             ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
@@ -135,14 +134,11 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.STR_SUBSTR, new StringManipulationFunction(StringManipulationFunction.Mode.SUBSTRING));
             ParserFunction.RegisterFunction(Constants.STR_TRIM, new StringManipulationFunction(StringManipulationFunction.Mode.TRIM));
             ParserFunction.RegisterFunction(Constants.STR_UPPER, new StringManipulationFunction(StringManipulationFunction.Mode.UPPER));
-            ParserFunction.RegisterFunction(Constants.SUBSTR, new SubstrFunction());
             ParserFunction.RegisterFunction(Constants.THREAD, new ThreadFunction());
             ParserFunction.RegisterFunction(Constants.THREAD_ID, new ThreadIDFunction());
             ParserFunction.RegisterFunction(Constants.TOKENIZE, new TokenizeFunction());
             ParserFunction.RegisterFunction(Constants.TOKENIZE_LINES, new TokenizeLinesFunction());
             ParserFunction.RegisterFunction(Constants.TOKEN_COUNTER, new TokenCounterFunction());
-            ParserFunction.RegisterFunction(Constants.TOLOWER, new ToLowerFunction());
-            ParserFunction.RegisterFunction(Constants.TOUPPER, new ToUpperFunction());
             ParserFunction.RegisterFunction(Constants.TO_BOOL, new ToBoolFunction());
             ParserFunction.RegisterFunction(Constants.TO_DECIMAL, new ToDecimalFunction());
             ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());

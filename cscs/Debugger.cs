@@ -103,8 +103,12 @@ namespace SplitAndMerge
             if (action == DebuggerUtils.DebugAction.REPL ||
                 action == DebuggerUtils.DebugAction._REPL)
             {
-                result = responseToken + await ProcessRepl(load);
-                SendBack(result, false);
+                result = await ProcessRepl(load);
+                if (!string.IsNullOrWhiteSpace(result))
+                {
+                    result = responseToken + result;
+                    SendBack(result, false);
+                }
                 return;
             }
             if (action == DebuggerUtils.DebugAction.SET_BP)
@@ -200,6 +204,28 @@ namespace SplitAndMerge
             result = responseToken + result;
             SendBack(result, true);
         }
+
+        bool TrySendFile(Variable result, ParsingScript script, ref bool excThrown)
+        {
+            if (result != null &&
+                result.Type == Variable.VarType.ARRAY &&
+                result.Tuple.Count >= 3 &&
+                result.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
+            {
+                try
+                {
+                    OnSendFile?.Invoke(result.Tuple[1].AsString(), result.Tuple[2].AsString());
+                }
+                catch (Exception exc)
+                {
+                    ProcessException(m_debugging, new ParsingException(exc.Message, script, exc));
+                    excThrown = true;
+                }
+                return true;
+            }
+            return false;
+        }
+
         public string CreateResult(string output, ParsingScript script = null)
         {
             if (script == null)
@@ -207,21 +233,10 @@ namespace SplitAndMerge
                 script = m_steppingIns.Count > 0 ? m_steppingIns.Peek().m_debugging : m_debugging;
             }
 
-            if (LastResult != null &&
-                LastResult.Type == Variable.VarType.ARRAY &&
-                LastResult.Tuple.Count >= 3 &&
-                LastResult.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
+            bool excThrown = false;
+            if (TrySendFile(LastResult, script, ref excThrown) && excThrown)
             {
-                try
-                { 
-                    OnSendFile?.Invoke(LastResult.Tuple[1].AsString(), LastResult.Tuple[2].AsString());
-                }
-                catch (Exception exc)
-                {
-                    ProcessException(m_debugging, new ParsingException(exc.Message, script, exc));
-                    return "";
-                }
-
+                return "";
             }
 
             string filename = GetCurrentFilename(script);
@@ -310,6 +325,7 @@ namespace SplitAndMerge
             tempScript.Debugger = this;
 
             Variable result = null;
+            bool excThrown = false;
 
             try
             {
@@ -317,6 +333,11 @@ namespace SplitAndMerge
                 {
                     result = await DebuggerUtils.Execute(tempScript);
                     tempScript.GoToNextStatement();
+                }
+
+                if (TrySendFile(result, tempScript, ref excThrown) || excThrown)
+                {
+                    return "";
                 }
             }
             catch (Exception exc)
@@ -415,7 +436,8 @@ namespace SplitAndMerge
 
         public static void ProcessException(ParsingScript script, ParsingException exc)
         {
-            Debugger debugger = script.Debugger != null ? script.Debugger : MainInstance;
+            Debugger debugger = script != null && script.Debugger != null ?
+                                script.Debugger : MainInstance;
             if (debugger == null)
             {
                 return;
@@ -423,7 +445,8 @@ namespace SplitAndMerge
 
             if (debugger.ReplMode)
             {
-                string replResult = exc.Message + "\n";
+                string replResult = DebuggerUtils.ResponseMainToken(DebuggerUtils.DebugAction.REPL) +
+                                    "Exception thrown: " + exc.Message + "\n";
                 debugger.SendBack(replResult, false);
                 debugger.LastResult = null;
                 ParserFunction.InvalidateStacksAfterLevel(0);

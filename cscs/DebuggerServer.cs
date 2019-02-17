@@ -219,7 +219,6 @@ namespace SplitAndMerge
     public class DebuggerClient
     {
         public bool Connected { private set; get; }
-        bool m_isRepl;
 
         Debugger m_debugger;
         TcpClient m_client;
@@ -268,11 +267,6 @@ namespace SplitAndMerge
                     {
                         break;
                     }
-                    else if (action == DebuggerUtils.DebugAction.REPL)
-                    {
-                        m_isRepl = true;
-                        DebuggerServer.Queue.Add(data);
-                    }
                     else if (m_debugger.CanProcess(action))
                     {
                         ThreadPool.QueueUserWorkItem(DebuggerServer.RunRequestBlocked, data);
@@ -286,11 +280,6 @@ namespace SplitAndMerge
             catch (Exception exc)
             {
                 Console.Write("Client disconnected: {0}", exc.Message);
-            }
-
-            if (m_debugger == Debugger.MainInstance)
-            {
-                Debugger.MainInstance = null;
             }
 
             // Shutdown and end connection
@@ -326,10 +315,6 @@ namespace SplitAndMerge
                 return false;
             }
 
-            if (m_isRepl)
-            {
-                Disconnect();
-            }
             return true;
         }
 
@@ -423,8 +408,8 @@ namespace SplitAndMerge
                 case DebugAction.CONTINUE:
                 case DebugAction.STEP_IN:
                 case DebugAction.STEP_OUT: return "next\n";
-                case DebugAction.REPL: return "";
-                case DebugAction._REPL: return "repl\n";
+                case DebugAction.REPL: return "repl\n";
+                case DebugAction._REPL: return "_repl\n";
                 case DebugAction.FILE: return "file\n";
                 case DebugAction.SET_BP: return "set_bp\n";
                 case DebugAction.END: return "end\n";

@@ -83,7 +83,6 @@ namespace SplitAndMerge
         public const string FLOOR = "floor";
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
-        public const string INDEX_OF = "indexof";
         public const string LOCK = "lock";
         public const string HELP = "help";
         public const string LOG = "log";
@@ -118,14 +117,11 @@ namespace SplitAndMerge
         public const string STR_SUBSTR = "Substring";
         public const string STR_TRIM = "StrTrim";
         public const string STR_UPPER = "StrUpper";
-        public const string SUBSTR = "substr";
         public const string THREAD = "thread";
         public const string THREAD_ID = "threadid";
         public const string TOKENIZE = "tokenize";
         public const string TOKENIZE_LINES = "TokenizeLines";
         public const string TOKEN_COUNTER = "CountTokens";
-        public const string TOLOWER = "tolower";
-        public const string TOUPPER = "toupper";
         public const string TO_BOOL = "bool";
         public const string TO_DECIMAL = "decimal";
         public const string TO_DOUBLE = "double";

@@ -5,19 +5,24 @@ Print("Testing strings");
 txt = "lu";
 txt += txt;
 txt = txt + "_";
-txt += "la";  
+txt += "la";
 txt += 1;
 Test(txt, "lulu_la1");
 
 txt = "lu";
-txt += txt + substr(txt, 0, 1) + "_" + 1;
+txt += txt + Substring(txt, 0, 1) + "_" + 1;
 Test(txt, "lulul_1");
 
-bb = "abc_blah";
-c = substr(bb, 4, 3);
+bb = "abc_blah_!123";
+c = Substring(bb, 4, 3);
 Test(c, "bla");
-ind = indexof(bb, "bla");
+ind = StrIndexOf(bb, "bla");
 Test(ind, 4);
+
+upper = StrUpper(bb);
+Test(upper, "ABC_BLAH_!123");
+lower = StrLower(upper);
+Test(lower, "abc_blah_!123");
 
 Print("Testing numbers");
 a=(-3+2*9)-(10-15);
@@ -205,8 +210,8 @@ Print(x["blabla"]["blablu"]++);
 x = 20 * sin(pow(pi,2));
 cache["if"] = -10 * x;
 cache["else"] = 10 * x;
-if (x < 0 && log(x + 3*pow(10,2)) < 6*exp(x) ||
-             x < 1 - pi) {
+//Print("6*exp(x)=", 6*exp(x), ", 3*pow(10,2)=", 3*pow(10,2), ", log(x + 3*pow(10,2))=", log(x + 3*pow(10,2)));
+if (x < 0 && (log(x + 3*pow(10,2)) < 6*exp(x) || x < 1 - pi)) {
   Print("OK, in if, x=", x, ", cache=", cache["if"]);
 } else {
   Print("ERROR, in else, cache=", cache["else"]);
@@ -477,14 +482,13 @@ else { result = "sinTestNotOK";  }
 Test(result, "sinTestOK");
 
 objName = "Columns";
-if (indexof(objName,"Columns") > -1) { result = "indexofOK"; }
+if (StrIndexOf(objName,"Columns") > -1) { result = "indexofOK"; }
 else { result = "indexofNotOK";  }
 Test(result, "indexofOK");
 
-objName = "aColumns";
-if (indexof(objName,"Columns") < 1) { result = "indexofNotOK"; }
-else { result = "indexofOK";  }
-Test(result, "indexofOK");
+objName = "abcColumnsXX";
+result = StrIndexOf(objName,"Columns");
+Test(result, 3);
 
 Test1 = {1,0};
 Test2 = {0,1};

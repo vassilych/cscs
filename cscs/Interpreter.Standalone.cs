@@ -133,7 +133,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.FLOOR, tr1, tr2);
                 Translation.Add(languageSection, Constants.GET_COLUMN, tr1, tr2);
                 Translation.Add(languageSection, Constants.GET_KEYS, tr1, tr2);
-                Translation.Add(languageSection, Constants.INDEX_OF, tr1, tr2);
                 Translation.Add(languageSection, Constants.KILL, tr1, tr2);
                 Translation.Add(languageSection, Constants.LOCK, tr1, tr2);
                 Translation.Add(languageSection, Constants.MKDIR, tr1, tr2);
@@ -176,7 +175,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.STR_SUBSTR, tr1, tr2);
                 Translation.Add(languageSection, Constants.STR_TRIM, tr1, tr2);
                 Translation.Add(languageSection, Constants.STR_UPPER, tr1, tr2);
-                Translation.Add(languageSection, Constants.SUBSTR, tr1, tr2);
                 Translation.Add(languageSection, Constants.TAIL, tr1, tr2);
                 Translation.Add(languageSection, Constants.THREAD, tr1, tr2);
                 Translation.Add(languageSection, Constants.THREAD_ID, tr1, tr2);
@@ -184,8 +182,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.TOKENIZE, tr1, tr2);
                 Translation.Add(languageSection, Constants.TOKENIZE_LINES, tr1, tr2);
                 Translation.Add(languageSection, Constants.TOKEN_COUNTER, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOLOWER, tr1, tr2);
-                Translation.Add(languageSection, Constants.TOUPPER, tr1, tr2);
                 Translation.Add(languageSection, Constants.TO_BOOL, tr1, tr2);
                 Translation.Add(languageSection, Constants.TO_DECIMAL, tr1, tr2);
                 Translation.Add(languageSection, Constants.TO_DOUBLE, tr1, tr2);
