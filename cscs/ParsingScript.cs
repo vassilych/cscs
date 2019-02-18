@@ -484,8 +484,12 @@ namespace SplitAndMerge
     public class ParsingException : Exception
     {
         public ParsingScript ExceptionScript { get; private set; }
-        public string ExceptionStack { get; private set; }
+        public string ExceptionStack { get; private set; } = "";
 
+        public ParsingException(string message)
+            : base(message)
+        {
+        }
         public ParsingException(string message, ParsingScript script)
             : base(message)
         {

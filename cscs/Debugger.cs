@@ -123,6 +123,12 @@ namespace SplitAndMerge
                 string filename = load;
                 string rawScript = Utils.GetFileContents(filename);
 
+                if (string.IsNullOrWhiteSpace(rawScript))
+                {
+                    ProcessException(null, new ParsingException("Could not load script " + filename));
+                    return;
+                }
+
                 m_script = Utils.ConvertToScript(rawScript, out m_char2Line);
                 m_debugging = new ParsingScript(m_script, 0, m_char2Line);
                 m_debugging.Filename = filename;
@@ -394,10 +400,8 @@ namespace SplitAndMerge
             if (m_debugging.Pointer >= m_script.Length - 1)
             {
                 LastResult = null;
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
                 End = true;
-                Trace("END!");
-#endif
+                Trace("END of parsing");
                 return true;
             }
 
