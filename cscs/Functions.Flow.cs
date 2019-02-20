@@ -1093,7 +1093,7 @@ namespace SplitAndMerge
             Dictionary<int, int> char2Line;
             includeScript = Utils.ConvertToScript(includeFile, out char2Line);
             ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
-            tempScript.Filename = filename;
+            tempScript.Filename = pathname;
             tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script.InTryBlock;
