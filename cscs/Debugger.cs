@@ -348,7 +348,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                return "Exception thrown: " + exc.Message;
+                return ""; // The exception was already thrown and sent back.
             }
             finally
             {
