@@ -7,7 +7,7 @@ namespace SplitAndMerge
     public class TestScriptObject : ScriptObject
     {
         static List<string> s_properties = new List<string> {
-            "name", "color", "translate"
+            "Name", "Color", "Translate"
         };
 
         public TestScriptObject(string name = "", string color = "")
@@ -38,9 +38,9 @@ namespace SplitAndMerge
             sPropertyName = Variable.GetActualPropertyName(sPropertyName, GetProperties());
             switch (sPropertyName)
             {
-                case "name": return GetNameProperty();
-                case "color": return GetColorProperty();
-                case "translate":
+                case "Name": return GetNameProperty();
+                case "Color": return GetColorProperty();
+                case "Translate":
                     return args != null && args.Count > 0 ?
                     Translate(args[0]) : Variable.EmptyInstance;
                 default:
@@ -51,7 +51,6 @@ namespace SplitAndMerge
         public async Task<Variable> SetNameProperty(string sValue)
         {
             m_name = sValue;
-            await SetProperty("name", new Variable(sValue));
             return Variable.EmptyInstance;
         }
 
@@ -66,9 +65,9 @@ namespace SplitAndMerge
             sPropertyName = Variable.GetActualPropertyName(sPropertyName, GetProperties());
             switch (sPropertyName)
             {
-                case "name": return await SetNameProperty(argValue.AsString());
-                case "color": return SetColorProperty(argValue.AsString());
-                case "translate": return Translate(argValue);
+                case "Name": return await SetNameProperty(argValue.AsString());
+                case "Color": return SetColorProperty(argValue.AsString());
+                case "Translate": return Translate(argValue);
                 default: return Variable.EmptyInstance;
             }
         }

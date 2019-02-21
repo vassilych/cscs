@@ -590,7 +590,8 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(propName, value).Result;
+                string match = GetActualPropertyName(propName, obj.GetProperties());
+                result = obj.SetProperty(match, value).Result;
             }
             return result;
         }
@@ -616,7 +617,8 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = await obj.SetProperty(propName, value);
+                string match = GetActualPropertyName(propName, obj.GetProperties());
+                result = await obj.SetProperty(match, value);
             }
             return result;
         }
