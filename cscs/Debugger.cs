@@ -564,7 +564,7 @@ namespace SplitAndMerge
             m_startLine = line;
 
             Trace("Starting StepInBreakpoint");
-            await StepIn(stepInScript);
+            await StepIn(stepInScript, true);
 
             Trace("Finished StepInBreakpoint");
             SendBackResult = true;
@@ -605,7 +605,7 @@ namespace SplitAndMerge
             Output += output;
         }
 
-        async Task StepIn(ParsingScript stepInScript)
+        async Task StepIn(ParsingScript stepInScript, bool aBreakpoint = false)
         {
             Debugger stepIn = new Debugger();
             stepIn.m_debugging = stepInScript;
@@ -627,7 +627,7 @@ namespace SplitAndMerge
                 stepIn.m_completedStepIn.WaitOne();
 
                 stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
-                if (Debugger.SteppingOut)
+                if (Debugger.SteppingOut || aBreakpoint)
                 {
                     break;
                 }
@@ -653,7 +653,7 @@ namespace SplitAndMerge
             }
             
             stepIn.Trace("Finished StepIn, this: " + Id);
-            ProcessingClientRequest = false;
+            ProcessingClientRequest = aBreakpoint;
         }
 
         async Task<string> DebugScript()
