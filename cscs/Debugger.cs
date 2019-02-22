@@ -97,6 +97,7 @@ namespace SplitAndMerge
             SteppingIn = SteppingOut = false;
             SendBackResult = true;
             m_firstBlock = true;
+            End = false;
             string responseToken = DebuggerUtils.ResponseMainToken(action);
 
             Trace("REQUEST: " + data);
