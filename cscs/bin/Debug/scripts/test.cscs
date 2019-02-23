@@ -1,5 +1,5 @@
 include("functions.cscs");
-start = pstime;
+Start = pstime;
 
 Print("Testing strings");
 txt = "lu";
@@ -601,7 +601,7 @@ function work(loops) {
 }
 Test(work(1), 9000);
 
-Print("Testing cyles, assignment, and increment-decremet operators.");
+Print("Testing cycles, assignment, and increment-decrement operators.");
 for (i = 0; i < 3; i++) {
   myarray[i] = i;
 }
@@ -698,6 +698,32 @@ Test(newObj.z, 17);
 Test(newObj.addCoolStuff(), 41);
 Test(newObj.addStuff1(addition), 111);
 Test(newObj.addStuff2(addition), 113);
+
+Print("Testing Dot Notation");
+numVar = 1234.56;
+strVar = numVar.string;
+Test(strVar.first, "1");
+Test(strVar.last, "6");
+Test(strVar.size, 7);
+
+strVar = "A Simple String!";
+index = strVar.indexOf("S");
+Test(index, 2);
+Test(strVar.substring(index), "Simple String!");
+Test(strVar.upper, "A SIMPLE STRING!");
+Test(strVar.lower, "a simple string!");
+
+arrVar = {"first", "second", "third"};
+print("Properties:", arrVar.Properties);
+Test(arrVar.first, "first");
+Test(arrVar.last, "third");
+Test(arrVar.size, 3);
+
+testStr = "Let's tokenize this.";
+tokens = testStr.tokenize();
+Test(tokens.first, "Let's");
+Test(tokens.last, "this.");
+Test(tokens.size, 3);
 
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
