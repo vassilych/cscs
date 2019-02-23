@@ -119,7 +119,6 @@ namespace SplitAndMerge
         public const string STR_UPPER = "StrUpper";
         public const string THREAD = "thread";
         public const string THREAD_ID = "threadid";
-        public const string TOKENIZE = "tokenize";
         public const string TOKENIZE_LINES = "TokenizeLines";
         public const string TOKEN_COUNTER = "CountTokens";
         public const string TO_BOOL = "bool";
@@ -133,13 +132,14 @@ namespace SplitAndMerge
         public const string STOP_DEBUGGER  = "StopDebugger";
         public const string GET_FILE_FROM_DEBUGGER = "GetFileFromDebugger";
 
-        // Properties, retuned after variable dot:
+        // Properties, returned after the variable dot:
         public const string FIRST     = "First";
         public const string INDEX_OF  = "IndexOf";
         public const string LAST      = "Last";
         public const string LOWER     = "Lower";
         public const string SUBSTRING = "Substring";
         public const string STRING    = "String";
+        public const string TOKENIZE  = "Tokenize";
         public const string UPPER     = "Upper";
 
         public static string END_ARG_STR = END_ARG.ToString();

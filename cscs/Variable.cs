@@ -758,18 +758,33 @@ namespace SplitAndMerge
             {
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
+
                 string search = Utils.GetSafeString(args, 0);
                 int startFrom = Utils.GetSafeInt(args, 1, 0);
-                return new Variable(AsString().IndexOf(search, startFrom, StringComparison.OrdinalIgnoreCase));
+                string param  = Utils.GetSafeString(args, 2, "no_case");
+                StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                return new Variable(AsString().IndexOf(search, startFrom,comp));
             }
             else if (script != null && propName.Equals(Constants.SUBSTRING, StringComparison.OrdinalIgnoreCase))
             {
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
+
                 int startFrom = Utils.GetSafeInt(args, 0, 0);
                 int length = Utils.GetSafeInt(args, 1, AsString().Length);
                 length = Math.Min(length, AsString().Length - startFrom);
+
                 return new Variable(AsString().Substring(startFrom, length));
+            }
+            else if (script != null && propName.Equals(Constants.TOKENIZE, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                string sep = Utils.GetSafeString(args, 0, " ");
+                var option = Utils.GetSafeString(args, 1);
+
+                return TokenizeFunction.Tokenize(AsString(), sep, option);
             }
 
             return result;

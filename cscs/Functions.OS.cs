@@ -80,6 +80,13 @@ namespace SplitAndMerge
             string data = Utils.GetSafeString(args, 0);
 
             string sep = Utils.GetSafeString(args, 1, "\t");
+            var option = Utils.GetSafeString(args, 2);
+
+            return Tokenize(data, sep, option);
+        }
+
+        static public Variable Tokenize(string data, string sep, string option = "")
+        {
             if (sep == "\\t")
             {
                 sep = "\t";
@@ -106,8 +113,6 @@ namespace SplitAndMerge
                 }
                 tokens = tokens_.ToArray();
             }
-
-            var option = Utils.GetSafeString(args, 2);
 
             List<Variable> results = new List<Variable>();
             for (int i = 0; i < tokens.Length; i++)
