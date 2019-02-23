@@ -29,7 +29,7 @@ namespace SplitAndMerge
             if (item.Length > 1 && item[0] == Constants.QUOTE && item[item.Length - 1] == Constants.QUOTE)
             {
                 // We are dealing with a string.
-                s_strOrNumFunction.Item = item.Replace("\\\"", "\"");
+                s_strOrNumFunction.Item = item;
                 m_impl = s_strOrNumFunction;
                 return;
             }

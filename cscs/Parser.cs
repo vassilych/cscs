@@ -186,7 +186,9 @@ namespace SplitAndMerge
             }
             while (true);
 
-            return item.ToString();
+            string extracted = item.ToString();
+            string result = extracted.Replace("\\\\", "\\");
+            return result;
         }
 
         static bool UpdateResult(ParsingScript script, char[] to, List<Variable> listToMerge, string token, bool negSign,
@@ -294,7 +296,8 @@ namespace SplitAndMerge
                 case Constants.QUOTE:
                     {
                         char prev = script.TryPrevPrev();
-                        inQuotes = prev != '\\' ? !inQuotes : inQuotes;
+                        char prevprev = script.TryPrevPrevPrev();
+                        inQuotes = (prev != '\\' || prevprev == '\\') ? !inQuotes : inQuotes;
                         return;
                     }
                 case Constants.START_ARRAY:

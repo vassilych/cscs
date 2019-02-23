@@ -256,6 +256,10 @@ namespace SplitAndMerge
         {
             return m_from >= 2 ? m_data[m_from - 2] : Constants.EMPTY;
         }
+        public char TryPrevPrevPrev()
+        {
+            return m_from >= 3 ? m_data[m_from - 3] : Constants.EMPTY;
+        }
 
         public string FromPrev(int backChars = 1, int maxChars = Constants.MAX_CHARS_TO_SHOW)
         {

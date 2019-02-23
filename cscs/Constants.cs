@@ -87,8 +87,8 @@ namespace SplitAndMerge
         public const string HELP = "help";
         public const string LOG = "log";
         public const string NOW = "Now";
-        public const string OBJECT_PROPERTIES = "properties";
-        public const string OBJECT_TYPE = "type";
+        public const string OBJECT_PROPERTIES = "Properties";
+        public const string OBJECT_TYPE = "Type";
         public const string PI = "pi";
         public const string POW = "pow";
         public const string PRINT = "print";
@@ -102,7 +102,7 @@ namespace SplitAndMerge
         public const string SHOW = "show";
         public const string SIGNAL = "signal";
         public const string SIN = "sin";
-        public const string SIZE = "size";
+        public const string SIZE = "Size";
         public const string SLEEP = "sleep";
         public const string SQRT = "sqrt";
         public const string STR_BETWEEN = "StrBetween";
@@ -132,6 +132,15 @@ namespace SplitAndMerge
         public const string START_DEBUGGER = "StartDebugger";
         public const string STOP_DEBUGGER  = "StopDebugger";
         public const string GET_FILE_FROM_DEBUGGER = "GetFileFromDebugger";
+
+        // Properties, retuned after variable dot:
+        public const string FIRST     = "First";
+        public const string INDEX_OF  = "IndexOf";
+        public const string LAST      = "Last";
+        public const string LOWER     = "Lower";
+        public const string SUBSTRING = "Substring";
+        public const string STRING    = "String";
+        public const string UPPER     = "Upper";
 
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();

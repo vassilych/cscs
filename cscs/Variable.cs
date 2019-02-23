@@ -661,25 +661,9 @@ namespace SplitAndMerge
                 }
             }
 
-            if (m_propertyMap.TryGetValue(propName, out result))
-            {
-                return result;
-            }
-            else if (propName.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
-            {
-                return new Variable(GetProperties());
-            }
-            else if (propName.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
-            {
-                return new Variable(GetTypeString());
-            }
-            else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
-            {
-                return new Variable(GetSize());
-            }
-
-            return result;
+            return GetCoreProperty(propName, script);
         }
+
         public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)
         {
             Variable result = Variable.EmptyInstance;
@@ -719,6 +703,13 @@ namespace SplitAndMerge
                 }
             }
 
+            return GetCoreProperty(propName, script);
+        }
+
+        Variable GetCoreProperty(string propName, ParsingScript script = null)
+        {
+            Variable result = Variable.EmptyInstance;
+
             if (m_propertyMap.TryGetValue(propName, out result))
             {
                 return result;
@@ -734,6 +725,51 @@ namespace SplitAndMerge
             else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
             {
                 return new Variable(GetSize());
+            }
+            else if (propName.Equals(Constants.UPPER, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(AsString().ToUpper());
+            }
+            else if (propName.Equals(Constants.LOWER, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(AsString().ToLower());
+            }
+            else if (propName.Equals(Constants.STRING, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(AsString());
+            }
+            else if (propName.Equals(Constants.FIRST, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Tuple != null && Tuple.Count > 0)
+                {
+                    return Tuple[0];
+                }
+                return AsString().Length > 0 ? new Variable("" + AsString()[0]) : Variable.EmptyInstance;
+            }
+            else if (propName.Equals(Constants.LAST, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Tuple != null && Tuple.Count > 0)
+                {
+                    return Tuple.Last<Variable>();
+                }
+                return AsString().Length > 0 ? new Variable("" + AsString().Last<char>()) : Variable.EmptyInstance;
+            }
+            else if (script != null && propName.Equals(Constants.INDEX_OF, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string search = Utils.GetSafeString(args, 0);
+                int startFrom = Utils.GetSafeInt(args, 1, 0);
+                return new Variable(AsString().IndexOf(search, startFrom, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (script != null && propName.Equals(Constants.SUBSTRING, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                int startFrom = Utils.GetSafeInt(args, 0, 0);
+                int length = Utils.GetSafeInt(args, 1, AsString().Length);
+                length = Math.Min(length, AsString().Length - startFrom);
+                return new Variable(AsString().Substring(startFrom, length));
             }
 
             return result;
@@ -757,7 +793,7 @@ namespace SplitAndMerge
             HashSet<string> allSet = new HashSet<string>();
             foreach (string key in m_propertyMap.Keys)
             {
-                allSet.Add(key);
+                allSet.Add(key.ToLower());
             }
 
             if (Object is ScriptObject)
@@ -766,24 +802,44 @@ namespace SplitAndMerge
                 List<string> objProps = obj.GetProperties();
                 foreach (string key in objProps)
                 {
-                    allSet.Add(key);
+                    allSet.Add(key.ToLower());
                 }
             }
 
             List<string> all = new List<string>(allSet);
             all.Sort();
 
-            if (!allSet.Contains(Constants.OBJECT_PROPERTIES))
+            if (!allSet.Contains(Constants.OBJECT_PROPERTIES.ToLower()))
             {
                 all.Add(Constants.OBJECT_PROPERTIES);
             }
-            if (!allSet.Contains(Constants.OBJECT_TYPE))
+            if (!allSet.Contains(Constants.OBJECT_TYPE.ToLower()))
             {
-                all.Insert(0, Constants.OBJECT_TYPE);
+                all.Add(Constants.OBJECT_TYPE);
             }
-            if (!allSet.Contains(Constants.SIZE))
+            if (!allSet.Contains(Constants.SIZE.ToLower()))
             {
-                all.Insert(0, Constants.SIZE);
+                all.Add(Constants.SIZE);
+            }
+            if (!allSet.Contains(Constants.STRING.ToLower()))
+            {
+                all.Add(Constants.STRING);
+            }
+            if (!allSet.Contains(Constants.FIRST.ToLower()))
+            {
+                all.Add(Constants.FIRST);
+            }
+            if (!allSet.Contains(Constants.LAST.ToLower()))
+            {
+                all.Add(Constants.LAST);
+            }
+            if (!allSet.Contains(Constants.UPPER.ToLower()))
+            {
+                all.Add(Constants.UPPER);
+            }
+            if (!allSet.Contains(Constants.LOWER.ToLower()))
+            {
+                all.Add(Constants.LOWER);
             }
 
             return all;

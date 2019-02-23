@@ -157,7 +157,8 @@ namespace SplitAndMerge
         {
             int argRead = 0;
             bool inQuotes = false;
-            char previous = Constants.EMPTY;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
 
             while (script.StillValid())
             {
@@ -171,7 +172,7 @@ namespace SplitAndMerge
                 switch (currentChar)
                 {
                     case Constants.QUOTE:
-                        if (previous != '\\')
+                        if (prev != '\\' || prevprev == '\\')
                         {
                             inQuotes = !inQuotes;
                         }
@@ -200,7 +201,8 @@ namespace SplitAndMerge
                 }
 
                 script.Forward();
-                previous = currentChar;
+                prevprev = prev;
+                prev = currentChar;
             }
         }
 
@@ -537,7 +539,8 @@ namespace SplitAndMerge
             List<string> args = new List<string>();
 
             bool inQuotes = false;
-            char previous = Constants.EMPTY;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
             int angleBrackets = 0;
 
             for (int i = 0; i < source.Length; i++)
@@ -550,7 +553,7 @@ namespace SplitAndMerge
                     case '„':
                     case '"':
                         ch = '"';
-                        if (previous != '\\')
+                        if (prev != '\\' || prevprev == '\\')
                         {
                             inQuotes = !inQuotes;
                         }
@@ -568,11 +571,13 @@ namespace SplitAndMerge
                         }
                         args.Add(sb.ToString());
                         sb.Clear();
-                        previous = ch;
+                        prevprev = prev;
+                        prev = ch;
                         continue;
                 }
                 sb.Append(ch);
-                previous = ch;
+                prevprev = prev;
+                prev = ch;
             }
             if (sb.Length > 0)
             {
@@ -590,7 +595,8 @@ namespace SplitAndMerge
             bool spaceOK = false;
             bool inComments = false;
             bool simpleComments = false;
-            char previous = Constants.EMPTY;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
 
             int parentheses = 0;
             int groups = 0;
@@ -648,7 +654,10 @@ namespace SplitAndMerge
                         ch = '"';
                         if (!inComments)
                         {
-                            if (previous != '\\') inQuotes = !inQuotes;
+                            if (prev != '\\' || prevprev == '\\')
+                            {
+                                inQuotes = !inQuotes;
+                            }
                         }
                         break;
                     case ' ':
@@ -661,12 +670,12 @@ namespace SplitAndMerge
                             bool keepSpace = KeepSpace(sb, next);
                             bool usedSpace = spaceOK;
                             spaceOK = keepSpace ||
-                                 (previous != Constants.EMPTY && previous != Constants.NEXT_ARG && spaceOK);
+                                 (prev != Constants.EMPTY && prev != Constants.NEXT_ARG && spaceOK);
                             if (spaceOK || KeepSpaceOnce(sb, next))
                             {
                                 sb.Append(ch);
                             }
-                            spaceOK = spaceOK || (usedSpace && previous == Constants.NEXT_ARG);
+                            spaceOK = spaceOK || (usedSpace && prev == Constants.NEXT_ARG);
                         }
                         continue;
                     case '\t':
@@ -718,7 +727,8 @@ namespace SplitAndMerge
                 {
                     sb.Append(ch);
                 }
-                previous = ch;
+                prevprev = prev;
+                prev = ch;
             }
 
             if (sb.Length > lastScriptLength)
@@ -804,7 +814,8 @@ namespace SplitAndMerge
             int braces = 0;
             bool inQuotes = false;
             bool checkBraces = true;
-            char previous = Constants.EMPTY;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
 
             for (; script.StillValid(); script.Forward())
             {
@@ -813,7 +824,8 @@ namespace SplitAndMerge
                 if (close != Constants.QUOTE)
                 {
                     checkBraces = !inQuotes;
-                    if (ch == Constants.QUOTE && previous != '\\')
+                    if (ch == Constants.QUOTE &&
+                       (prev != '\\' || prevprev == '\\'))
                     {
                         inQuotes = !inQuotes;
                     }
@@ -833,7 +845,8 @@ namespace SplitAndMerge
                 }
 
                 sb.Append(ch);
-                previous = ch;
+                prevprev = prev;
+                prev = ch;
                 if (braces < 0)
                 {
                     if (ch == close)
