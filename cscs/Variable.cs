@@ -786,6 +786,78 @@ namespace SplitAndMerge
 
                 return TokenizeFunction.Tokenize(AsString(), sep, option);
             }
+            else if (script != null && propName.Equals(Constants.AT, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                int at = Utils.GetSafeInt(args, 0);
+
+                if (Tuple != null && Tuple.Count > 0)
+                {
+                    return Tuple.Count > at ? Tuple[at] : Variable.EmptyInstance;
+                }
+                string str = AsString();
+                return str.Length > at ? new Variable("" + str[at]) : Variable.EmptyInstance;
+            }
+            else if (script != null && propName.Equals(Constants.REPLACE, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 2, propName);
+                string oldVal = Utils.GetSafeString(args, 0);
+                string newVal = Utils.GetSafeString(args, 1);
+
+                return new Variable(AsString().Replace(oldVal, newVal));
+            }
+            else if (script != null && propName.Equals(Constants.CONTAINS, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string val = Utils.GetSafeString(args, 0);
+                string param = Utils.GetSafeString(args, 1, "no_case");
+                StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                int index = AsString().IndexOf(val, comp);
+                return new Variable(index >= 0);
+            }
+            else if (script != null && propName.Equals(Constants.EQUALS, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string val = Utils.GetSafeString(args, 0);
+                string param = Utils.GetSafeString(args, 1, "no_case");
+                StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                return new Variable(AsString().Equals(val, comp));
+            }
+            else if (script != null && propName.Equals(Constants.STARTS_WITH, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string val = Utils.GetSafeString(args, 0);
+                string param = Utils.GetSafeString(args, 1, "no_case");
+                StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                return new Variable(AsString().StartsWith(val, comp));
+            }
+            else if (script != null && propName.Equals(Constants.ENDS_WITH, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string val = Utils.GetSafeString(args, 0);
+                string param = Utils.GetSafeString(args, 1, "no_case");
+                StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                return new Variable(AsString().EndsWith(val, comp));
+            }
+            else if (script != null && propName.Equals(Constants.TRIM, StringComparison.OrdinalIgnoreCase))
+            {
+                script.GetFunctionArgs();
+                return new Variable(AsString().Trim());
+            }
 
             return result;
         }

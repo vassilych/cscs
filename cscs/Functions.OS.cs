@@ -191,8 +191,8 @@ namespace SplitAndMerge
                     return new Variable(source.Substring(startFrom, length));
                 case Mode.BEETWEEN:
                 case Mode.BEETWEEN_ANY:
-                    int index1 = source.IndexOf(argument);
-                    int index2 = m_mode == Mode.BEETWEEN ? source.IndexOf(parameter, index1 + 1) :
+                    int index1 = source.IndexOf(argument, comp);
+                    int index2 = m_mode == Mode.BEETWEEN ? source.IndexOf(parameter, index1 + 1, comp) :
                                           source.IndexOfAny(parameter.ToCharArray(), index1 + 1);
                     startFrom = index1 + argument.Length;
 

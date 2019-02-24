@@ -719,6 +719,15 @@ Test(arrVar.first, "first");
 Test(arrVar.last, "third");
 Test(arrVar.size, 3);
 
+Test(strVar.Contains("simple"), true);
+Test(strVar.Contains("simple", "case"), false);
+Test(strVar.Equals(strVar.upper), true);
+Test(strVar.StartsWith(strVar.upper), true);
+Test(strVar.EndsWith(strVar.lower, "case"), false);
+Test(strVar.Replace("Simple String", "string"), "A string!");
+Test(strVar.Replace(strVar, strVar.lower), strVar.lower);
+Test(strVar.At(strVar.size-1), "!");
+
 testStr = "Let's tokenize this.";
 tokens = testStr.tokenize();
 Test(tokens.first, "Let's");

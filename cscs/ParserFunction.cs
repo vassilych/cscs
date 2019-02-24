@@ -48,9 +48,7 @@ namespace SplitAndMerge
                 return;
             }
 
-            var arrayTask = GetArrayFunction(item, script, action);
-            arrayTask.Wait();
-            m_impl = arrayTask.Result;
+            m_impl = GetArrayFunction(item, script, action);
             if (m_impl != null)
             {
                 return;
@@ -74,7 +72,7 @@ namespace SplitAndMerge
             m_impl = s_strOrNumFunction;
         }
 
-        static async Task<ParserFunction> GetArrayFunction(string name, ParsingScript script, string action)
+        static ParserFunction GetArrayFunction(string name, ParsingScript script, string action)
         {
             int arrayStart = name.IndexOf(Constants.START_ARRAY);
             if (arrayStart < 0)

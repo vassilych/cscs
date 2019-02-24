@@ -1139,9 +1139,9 @@ namespace SplitAndMerge
             // Now check that this is an object:
             if (!string.IsNullOrWhiteSpace(m_propName))
             {
-                Variable propValue = m_value.GetProperty(m_propName, script);
                 string temp = m_propName;
-                m_propName = null; // Need this trick in case the below statement throws
+                m_propName = null; // Need this to reset for recursive calls
+                Variable propValue = m_value.GetProperty(temp, script);
                 Utils.CheckNotNull(propValue, temp);
                 return propValue;
             }
@@ -1178,9 +1178,9 @@ namespace SplitAndMerge
             // Now check that this is an object:
             if (!string.IsNullOrWhiteSpace(m_propName))
             {
-                Variable propValue = await m_value.GetPropertyAsync(m_propName, script);
                 string temp = m_propName;
-                m_propName = null; // Need this trick in case the below statement throws
+                m_propName = null; // Need this to reset for recursive calls
+                Variable propValue = await m_value.GetPropertyAsync(temp, script);
                 Utils.CheckNotNull(propValue, temp);
                 return propValue;
             }

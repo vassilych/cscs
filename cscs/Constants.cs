@@ -133,14 +133,20 @@ namespace SplitAndMerge
         public const string GET_FILE_FROM_DEBUGGER = "GetFileFromDebugger";
 
         // Properties, returned after the variable dot:
-        public const string FIRST     = "First";
-        public const string INDEX_OF  = "IndexOf";
-        public const string LAST      = "Last";
-        public const string LOWER     = "Lower";
-        public const string SUBSTRING = "Substring";
-        public const string STRING    = "String";
-        public const string TOKENIZE  = "Tokenize";
-        public const string UPPER     = "Upper";
+        public const string AT          = "At";
+        public const string ENDS_WITH   = "EndsWith";
+        public const string EQUALS      = "Equals";
+        public const string FIRST       = "First";
+        public const string INDEX_OF    = "IndexOf";
+        public const string LAST        = "Last";
+        public const string LOWER       = "Lower";
+        public const string REPLACE     = "Replace";
+        public const string STRING      = "String";
+        public const string STARTS_WITH = "StartsWith";
+        public const string SUBSTRING   = "Substring";
+        public const string TOKENIZE    = "Tokenize";
+        public const string TRIM        = "Trim";
+        public const string UPPER       = "Upper";
 
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();
