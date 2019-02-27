@@ -517,12 +517,13 @@ namespace SplitAndMerge
             }
             else
             {
-                sb.Append((m_object != null ? (m_object.ToString() + " ") : "") + Constants.START_GROUP.ToString());
+                sb.Append((m_object != null ? (m_object.ToString() + " ") : "") +
+                           Constants.START_GROUP.ToString());
 
                 List<string> allProps = GetAllProperties();
                 foreach (string prop in allProps)
                 {
-                    if (prop == Constants.OBJECT_PROPERTIES)
+                    if (prop.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
                     {
                         sb.Append(prop);
                         continue;
@@ -534,7 +535,8 @@ namespace SplitAndMerge
                         value = propValue.AsString();
                         if (!string.IsNullOrEmpty(value))
                         {
-                            if (propValue.Type == VarType.STRING && prop != Constants.OBJECT_TYPE)
+                            if (propValue.Type == VarType.STRING &&
+                               !prop.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
                             {
                                 value = "\"" + value + "\"";
                             }
@@ -573,6 +575,7 @@ namespace SplitAndMerge
         {
             Variable result = Variable.EmptyInstance;
             propName = Constants.ConvertName(propName);
+            string match = GetActualPropertyName(propName, GetAllProperties());
 
             int ind = propName.IndexOf(".");
             if (ind > 0)
@@ -584,13 +587,12 @@ namespace SplitAndMerge
                 return result;
             }
 
-            m_propertyMap[propName] = value;
+            m_propertyMap[match] = value;
             Type = VarType.OBJECT;
 
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                string match = GetActualPropertyName(propName, obj.GetProperties());
                 result = obj.SetProperty(match, value).Result;
             }
             return result;
@@ -682,7 +684,6 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                var supported = obj.GetProperties();
                 string match = GetActualPropertyName(propName, obj.GetProperties());
                 if (!string.IsNullOrWhiteSpace(match))
                 {
@@ -878,9 +879,12 @@ namespace SplitAndMerge
         public List<string> GetAllProperties()
         {
             HashSet<string> allSet = new HashSet<string>();
+            List<string> all = new List<string>();
+
             foreach (string key in m_propertyMap.Keys)
             {
                 allSet.Add(key.ToLower());
+                all.Add(key);
             }
 
             if (Object is ScriptObject)
@@ -889,11 +893,13 @@ namespace SplitAndMerge
                 List<string> objProps = obj.GetProperties();
                 foreach (string key in objProps)
                 {
-                    allSet.Add(key.ToLower());
+                    if (allSet.Add(key.ToLower()))
+                    {
+                        all.Add(key);
+                    }
                 }
             }
 
-            List<string> all = new List<string>(allSet);
             all.Sort();
 
             if (!allSet.Contains(Constants.OBJECT_PROPERTIES.ToLower()))
@@ -911,22 +917,6 @@ namespace SplitAndMerge
             if (!allSet.Contains(Constants.STRING.ToLower()))
             {
                 all.Add(Constants.STRING);
-            }
-            if (!allSet.Contains(Constants.FIRST.ToLower()))
-            {
-                all.Add(Constants.FIRST);
-            }
-            if (!allSet.Contains(Constants.LAST.ToLower()))
-            {
-                all.Add(Constants.LAST);
-            }
-            if (!allSet.Contains(Constants.UPPER.ToLower()))
-            {
-                all.Add(Constants.UPPER);
-            }
-            if (!allSet.Contains(Constants.LOWER.ToLower()))
-            {
-                all.Add(Constants.LOWER);
             }
 
             return all;

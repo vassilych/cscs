@@ -734,5 +734,12 @@ Test(tokens.first, "Let's");
 Test(tokens.last, "this.");
 Test(tokens.size, 3);
 
+ct = new CompiledTest();
+ct.NaMe="Lala";
+Test(ct.name, "Lala");
+props = ct.properties;
+print("Properties:", props);
+Test(props.size, 7);
+
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
