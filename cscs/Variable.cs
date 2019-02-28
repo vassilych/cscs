@@ -432,6 +432,11 @@ namespace SplitAndMerge
             return result;
         }
 
+        public override string ToString()
+        {
+            return AsString();
+        }
+
         public virtual string AsString(bool isList = true,
                                        bool sameLine = true,
                                        int maxCount = -1)
@@ -573,9 +578,7 @@ namespace SplitAndMerge
 
         public Variable SetProperty(string propName, Variable value)
         {
-            Variable result = Variable.EmptyInstance;
             propName = Constants.ConvertName(propName);
-            string match = GetActualPropertyName(propName, GetAllProperties());
 
             int ind = propName.IndexOf(".");
             if (ind > 0)
@@ -583,19 +586,9 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = GetProperty(varName);
-                result = property.SetProperty(actualPropName, value);
-                return result;
+                return property.SetProperty(actualPropName, value);
             }
-
-            m_propertyMap[match] = value;
-            Type = VarType.OBJECT;
-
-            if (Object is ScriptObject)
-            {
-                ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(match, value).Result;
-            }
-            return result;
+            return FinishSetProperty(propName, value);
         }
 
         public async Task<Variable> SetPropertyAsync(string propName, Variable value)
@@ -612,15 +605,20 @@ namespace SplitAndMerge
                 result = await property.SetPropertyAsync(actualPropName, value);
                 return result;
             }
+            return FinishSetProperty(propName, value);
+        }
 
-            m_propertyMap[propName] = value;
+        public Variable FinishSetProperty(string propName, Variable value)
+        {
+            Variable result = Variable.EmptyInstance;
+            string match = GetActualPropertyName(propName, GetAllProperties());
+            m_propertyMap[match] = value;
             Type = VarType.OBJECT;
 
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                string match = GetActualPropertyName(propName, obj.GetProperties());
-                result = await obj.SetProperty(match, value);
+                result = obj.SetProperty(match, value).Result;
             }
             return result;
         }
@@ -786,6 +784,18 @@ namespace SplitAndMerge
                 var option = Utils.GetSafeString(args, 1);
 
                 return TokenizeFunction.Tokenize(AsString(), sep, option);
+            }
+            else if (script != null && propName.Equals(Constants.JOIN, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                string sep = Utils.GetSafeString(args, 0, " ");
+                if (Tuple == null)
+                {
+                    return new Variable(AsString());
+                }
+
+                var join = string.Join(sep, Tuple);
+                return new Variable(join);
             }
             else if (script != null && propName.Equals(Constants.AT, StringComparison.OrdinalIgnoreCase))
             {

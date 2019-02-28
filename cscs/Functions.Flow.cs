@@ -444,7 +444,7 @@ namespace SplitAndMerge
                 int ind = arg.IndexOf("=");
                 if (ind > 0)
                 {
-                    m_args[i] = arg.Substring(0, ind).Trim();
+                    m_args[i] = arg.Substring(0, ind).Trim().ToLower();
                     string defValue = ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim();
                     if (defValue.StartsWith("\""))
                     {
@@ -459,6 +459,10 @@ namespace SplitAndMerge
                     defVariable.Index = i;
                     m_defArgMap[i] = m_defaultArgs.Count;
                     m_defaultArgs.Add(defVariable);
+                }
+                else
+                {
+                    m_args[i] = arg.ToLower();
                 }
                 m_argMap[m_args[i]] = i;
             }
@@ -1978,6 +1982,71 @@ namespace SplitAndMerge
             Canceled = mode;
 
             return new Variable(Canceled);
+        }
+    }
+
+    public class ScheduleRunFunction : ParserFunction
+    {
+        static Dictionary<string, System.Timers.Timer> m_timers =
+           new Dictionary<string, System.Timers.Timer>();
+
+        bool m_startTimer;
+
+        public ScheduleRunFunction(bool startTimer)
+        {
+            m_startTimer = startTimer;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            if (!m_startTimer)
+            {
+                Utils.CheckArgs(args.Count, 1, m_name);
+                string cancelTimerId = Utils.GetSafeString(args, 0);
+                System.Timers.Timer cancelTimer;
+                if (m_timers.TryGetValue(cancelTimerId, out cancelTimer))
+                {
+                    cancelTimer.Stop();
+                    cancelTimer.Dispose();
+                    m_timers.Remove(cancelTimerId);
+                }
+                return Variable.EmptyInstance;
+            }
+
+            Utils.CheckArgs(args.Count, 2, m_name);
+            int timeout = args[0].AsInt();
+            string strAction = args[1].AsString();
+            string owner = Utils.GetSafeString(args, 2);
+            string timerId = Utils.GetSafeString(args, 3);
+            bool autoReset = Utils.GetSafeInt(args, 4, 0) != 0;
+
+            System.Timers.Timer pauseTimer = new System.Timers.Timer(timeout);
+            pauseTimer.Elapsed += (sender, e) =>
+            {
+                if (!autoReset)
+                {
+                    pauseTimer.Stop();
+                    pauseTimer.Dispose();
+                    m_timers.Remove(timerId);
+                }
+                if (owner == "")
+                {
+                    owner = "\"\"";
+                }
+
+                string body = string.Format("{0}({1},{2});", strAction,
+                              "\"" + owner + "\"", "\"" + timerId + "\"");
+
+                ParsingScript tempScript = new ParsingScript(body);
+                tempScript.ExecuteTo();
+            };
+            pauseTimer.AutoReset = autoReset;
+            m_timers[timerId] = pauseTimer;
+
+            pauseTimer.Start();
+
+            return Variable.EmptyInstance;
         }
     }
 }

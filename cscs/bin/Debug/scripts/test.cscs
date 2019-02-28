@@ -733,13 +733,25 @@ tokens = testStr.tokenize();
 Test(tokens.first, "Let's");
 Test(tokens.last, "this.");
 Test(tokens.size, 3);
+back = tokens.join(" ");
+Test(back, testStr);
 
-ct = new CompiledTest();
+ct = new CompiledTestAsync();
 ct.NaMe="Lala";
 Test(ct.name, "Lala");
 props = ct.properties;
 print("Properties:", props);
 Test(props.size, 7);
 
+Timeout = 100;
+Sender = "Tester";
+print(Now(), "Scheduling to run in ", Timeout, "ms.");
+ScheduleRun(timeout, "timer_timeout", Sender, Timeout);
+ScheduleRun(timeout*2, "timer_timeout", "Sender", "Argument");
+function timer_timeout(Sender, Arg) {
+  print(Now(), "Running script from ", SENDER, "with argument", ARG);
+}
+
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
+Sleep(1000);

@@ -71,6 +71,7 @@ namespace SplitAndMerge
         public const string ADD_TO_HASH = "AddToHash";
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
         public const string ASIN = "asin";
+        public const string CANCEL_RUN = "CancelRun";
         public const string CEIL = "ceil";
         public const string CONTAINS = "contains";
         public const string COS = "cos";
@@ -97,6 +98,7 @@ namespace SplitAndMerge
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string ROUND = "round";
+        public const string SCHEDULE_RUN = "ScheduleRun";
         public const string SETENV = "setenv";
         public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
@@ -138,6 +140,7 @@ namespace SplitAndMerge
         public const string EQUALS      = "Equals";
         public const string FIRST       = "First";
         public const string INDEX_OF    = "IndexOf";
+        public const string JOIN        = "Join";
         public const string LAST        = "Last";
         public const string LOWER       = "Lower";
         public const string REPLACE     = "Replace";

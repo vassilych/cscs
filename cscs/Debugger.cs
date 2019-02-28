@@ -105,11 +105,8 @@ namespace SplitAndMerge
                 action == DebuggerUtils.DebugAction._REPL)
             {
                 result = await ProcessRepl(load);
-                if (!string.IsNullOrWhiteSpace(result))
-                {
-                    result = responseToken + result;
-                    SendBack(result, false);
-                }
+                result = responseToken + (result == null ? "" : result);
+                SendBack(result, false);
                 return;
             }
             if (action == DebuggerUtils.DebugAction.SET_BP)

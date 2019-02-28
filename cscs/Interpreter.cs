@@ -91,8 +91,9 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
             ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
             ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
-            ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
             ParserFunction.RegisterFunction(Constants.CANCEL, new CancelFunction());
+            ParserFunction.RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
+            ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
@@ -113,6 +114,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
+            ParserFunction.RegisterFunction(Constants.SCHEDULE_RUN, new ScheduleRunFunction(true));
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
             ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));

@@ -83,6 +83,7 @@ namespace SplitAndMerge
         public static void Init()
         {
             RegisterClass("CompiledTest", new TestCompiledClass());
+            RegisterClass("CompiledTestAsync", new TestCompiledClassAsync());
         }
 
         public abstract ScriptObject GetImplementation(List<Variable> args);
@@ -96,6 +97,15 @@ namespace SplitAndMerge
     public class TestCompiledClass : CompiledClass
     {
         public override ScriptObject GetImplementation(List<Variable> args)
+        {
+            string name = Utils.GetSafeString(args, 0);
+            string color = Utils.GetSafeString(args, 1);
+            return new TestScriptObject(name, color);
+        }
+    }
+    public class TestCompiledClassAsync : CompiledClassAsync
+    {
+        public override async Task<ScriptObject> GetImplementationAsync(List<Variable> args)
         {
             string name = Utils.GetSafeString(args, 0);
             string color = Utils.GetSafeString(args, 1);
