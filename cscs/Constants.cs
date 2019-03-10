@@ -233,6 +233,8 @@ namespace SplitAndMerge
         public const int DEFAULT_FILE_LINES = 20;
         public const int MAX_CHARS_TO_SHOW = 45;
 
+        static Dictionary<string, string> s_realNames = new Dictionary<string, string>();
+
         public static string ConvertName(string name)
         {
             if (string.IsNullOrWhiteSpace(name) || name[0] == QUOTE)
@@ -241,12 +243,23 @@ namespace SplitAndMerge
             }
 
             string lower = name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
-            if (CONTROL_FLOW.Contains(lower))
+            if (name == lower || CONTROL_FLOW.Contains(lower))
             { // Do not permit using key words with no case, like IF, For
                 return name;
             }
 
+            s_realNames[lower] = name;
             return lower;
+        }
+
+        public static string GetRealName(string name)
+        {
+            string realName;
+            if (!s_realNames.TryGetValue(name, out realName))
+            {
+                return name;
+            }
+            return realName;
         }
 
         public static string TypeToString(Variable.VarType type)

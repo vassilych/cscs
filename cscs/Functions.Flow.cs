@@ -776,7 +776,7 @@ namespace SplitAndMerge
             }
 
             // Otherwise this should be a number.
-            double num = Utils.ConvertToDouble(Item, script.OriginalLine);
+            double num = Utils.ConvertToDouble(Item, script);
             return new Variable(num);
         }
 

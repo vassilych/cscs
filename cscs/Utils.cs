@@ -380,21 +380,34 @@ namespace SplitAndMerge
             return varValue;
         }
 
-        public static double ConvertToDouble(object obj, string errorOrigin = "")
+        public static double ConvertToDouble(object obj, ParsingScript script = null)
         {
             string str = obj.ToString();
             double num = 0;
 
             if (!Double.TryParse(str, NumberStyles.Number |
-                                 NumberStyles.AllowExponent |
-                                 NumberStyles.Float,
-                                 CultureInfo.InvariantCulture, out num) &&
-                !string.IsNullOrWhiteSpace(errorOrigin))
+                                      NumberStyles.AllowExponent |
+                                      NumberStyles.Float,
+                                      CultureInfo.InvariantCulture, out num) &&
+                script != null)
             {
-                throw new ArgumentException("Couldn't parse [" + str + "] in " + errorOrigin);
+                ThrowErrorMsg(str, script);
             }
             return num;
         }
+
+        public static void ThrowErrorMsg(string str, ParsingScript script)
+        {
+            char ch = string.IsNullOrEmpty(script.Rest) ? Constants.EMPTY : script.Rest[0];
+            string entity = ch == '(' || ch == ')' ? "function" :
+                            ch == '[' || ch == ']' ? "array" :
+                                                     "variable";
+            string lineExpr = str.Length < script.OriginalLine.Length - 2 ? " in [" + 
+                              script.OriginalLine + "]" : "";
+            string token    = Constants.GetRealName(str);
+            throw new ArgumentException("Couldn't find " + entity + " [" + token + "]" + lineExpr);
+        }
+
         public static bool ConvertToBool(object obj)
         {
             string str = obj.ToString();
@@ -409,11 +422,12 @@ namespace SplitAndMerge
             Boolean.TryParse(str, out res);
             return res;
         }
-        public static int ConvertToInt(object obj, string errorOrigin = "")
+        public static int ConvertToInt(object obj, ParsingScript script = null)
         {
-            double num = ConvertToDouble(obj, errorOrigin);
+            double num = ConvertToDouble(obj, script);
             return (int)num;
         }
+
         public static void Extract(string data, ref string str1, ref string str2,
                                    ref string str3, ref string str4, ref string str5)
         {
