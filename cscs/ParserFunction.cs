@@ -505,10 +505,10 @@ namespace SplitAndMerge
             return new Variable();
         }
 
-        protected virtual async Task<Variable> EvaluateAsync(ParsingScript script)
+        protected virtual Task<Variable> EvaluateAsync(ParsingScript script)
         {
             // If not overriden, the non-sync version will be called.
-            return Evaluate(script);
+            return Task.FromResult( Evaluate(script) );
         }
 
         // Derived classes may want to return a new instance in order to

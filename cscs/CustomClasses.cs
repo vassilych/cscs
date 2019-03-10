@@ -33,25 +33,26 @@ namespace SplitAndMerge
             return new Variable(m_color);
         }
 
-        public virtual async Task<Variable> GetProperty(string sPropertyName, List<Variable> args = null, ParsingScript script = null)
+        public virtual Task<Variable> GetProperty(string sPropertyName, List<Variable> args = null, ParsingScript script = null)
         {
             sPropertyName = Variable.GetActualPropertyName(sPropertyName, GetProperties());
             switch (sPropertyName)
             {
-                case "Name": return GetNameProperty();
-                case "Color": return GetColorProperty();
+                case "Name": return Task.FromResult( GetNameProperty() );
+                case "Color": return Task.FromResult( GetColorProperty() );
                 case "Translate":
-                    return args != null && args.Count > 0 ?
-                    Translate(args[0]) : Variable.EmptyInstance;
+                    return Task.FromResult(
+                        args != null && args.Count > 0 ?
+                    Translate(args[0]) : Variable.EmptyInstance);
                 default:
-                    return Variable.EmptyInstance;
+                    return Task.FromResult( Variable.EmptyInstance );
             }
         }
 
-        public async Task<Variable> SetNameProperty(string sValue)
+        public Task<Variable> SetNameProperty(string sValue)
         {
             m_name = sValue;
-            return Variable.EmptyInstance;
+            return Task.FromResult( Variable.EmptyInstance );
         }
 
         public Variable SetColorProperty(string aColor)
@@ -105,11 +106,12 @@ namespace SplitAndMerge
     }
     public class TestCompiledClassAsync : CompiledClassAsync
     {
-        public override async Task<ScriptObject> GetImplementationAsync(List<Variable> args)
+        public override Task<ScriptObject> GetImplementationAsync(List<Variable> args)
         {
             string name = Utils.GetSafeString(args, 0);
             string color = Utils.GetSafeString(args, 1);
-            return new TestScriptObject(name, color);
+            ScriptObject myScriptObject = new TestScriptObject(name, color);
+            return Task.FromResult( myScriptObject );
         }
     }
 }

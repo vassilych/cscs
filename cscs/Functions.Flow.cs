@@ -282,11 +282,11 @@ namespace SplitAndMerge
             Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
             HashSet<string> m_propSet = new HashSet<string>();
 
-            public async Task<Variable> SetProperty(string name, Variable value)
+            public Task<Variable> SetProperty(string name, Variable value)
             {
                 m_properties[name] = value;
                 m_propSet.Add(name);
-                return Variable.EmptyInstance;
+                return Task.FromResult( Variable.EmptyInstance );
             }
 
             public async Task<Variable> GetProperty(string name, List<Variable> args = null, ParsingScript script = null)
@@ -691,7 +691,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        public static async Task<Variable> Run(string functionName, Variable arg1 = null, Variable arg2 = null)
+        public static Task<Variable> Run(string functionName, Variable arg1 = null, Variable arg2 = null)
         {
             CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
 
@@ -711,7 +711,7 @@ namespace SplitAndMerge
             }
 
             Variable result = customFunction.Run(args);
-            return result;
+            return Task.FromResult( result );
         }
         public static async Task<Variable> RunAsync(string functionName, Variable arg1 = null, Variable arg2 = null)
         {

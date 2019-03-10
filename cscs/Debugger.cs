@@ -344,7 +344,7 @@ namespace SplitAndMerge
                     return "";
                 }
             }
-            catch (Exception exc)
+            catch (Exception)
             {
                 return ""; // The exception was already thrown and sent back.
             }
