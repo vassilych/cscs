@@ -236,8 +236,8 @@ namespace SplitAndMerge
 
         public static void AddGlobalOrLocalVariable(string name, GetVarFunction function)
         {
-            name = Constants.ConvertName(name);
-            function.Name = name;
+            name          = Constants.ConvertName(name);
+            function.Name = Constants.GetRealName(name);
             if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
             {
                 AddLocalVariable(function);
@@ -373,10 +373,7 @@ namespace SplitAndMerge
             function.isNative = isNative;
             s_functions[name] = function;
 
-            if (string.IsNullOrWhiteSpace(function.Name))
-            {
-                function.Name = name;
-            }
+            function.Name = Constants.GetRealName(name);
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             if (!isNative)
             {
@@ -389,7 +386,7 @@ namespace SplitAndMerge
         {
             name = Constants.ConvertName(name);
             variable.isNative = false;
-            variable.Name = name;
+            variable.Name = Constants.GetRealName(name);
 
             if (scopeName == null)
             {
@@ -450,10 +447,11 @@ namespace SplitAndMerge
                 locals = s_locals.Peek();
             }
 
-            local.Name = Constants.ConvertName(local.Name);
-            locals.Variables[local.Name] = local;
+            var name = Constants.ConvertName(local.Name);
+            local.Name = Constants.GetRealName(name);
+            locals.Variables[name] = local;
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-            Translation.AddTempKeyword(local.Name);
+            Translation.AddTempKeyword(name);
 #endif
         }
 
@@ -527,7 +525,11 @@ namespace SplitAndMerge
         }
 
         protected string m_name;
-        public string Name { get { return m_name; } set { m_name = value; } }
+        public string Name
+        {
+            get { return m_name; }
+            set { m_name = value; }
+        }
 
         protected bool m_isGlobal = true;
         public bool isGlobal { get { return m_isGlobal; } set { m_isGlobal = value; } }

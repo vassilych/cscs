@@ -649,6 +649,19 @@ try {
   Print("OK. Caught: " + exc);
 }
 
+function localsHere() {
+  localVariable = 10;
+  x  = localVariable;
+}
+
+localsHere();
+try {
+  x = localVariable;
+  Print("Error: Local Variable in Global Scope");
+} catch(exc) {
+  Print("OK. Local Variable not in Global Scope: " + exc);
+}
+
 Print("Testing Classes and Inheritance");
 class Stuff1 {
   x = 2;

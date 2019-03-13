@@ -171,13 +171,13 @@ namespace SplitAndMerge
 
         public CSCSClass(string className)
         {
-            m_name = className;
+            Name = className;
             RegisterClass(className, this);
         }
 
         public CSCSClass(string className, string[] baseClasses)
         {
-            m_name = className;
+            Name = className;
             RegisterClass(className, this);
 
             foreach (string baseClass in baseClasses)
@@ -434,7 +434,7 @@ namespace SplitAndMerge
         internal CustomFunction(string funcName,
                                 string body, string[] args)
         {
-            m_name = funcName;
+            Name = funcName;
             m_body = body;
             m_args = args;
 
@@ -747,7 +747,7 @@ namespace SplitAndMerge
         {
             get
             {
-                return Constants.FUNCTION + " " + Name + " " +
+                return Constants.FUNCTION + " " + Constants.GetRealName(Name) + " " +
                        Constants.START_ARG + string.Join(", ", m_args) +
                        Constants.END_ARG + " " + Constants.START_GROUP;
             }
@@ -1222,7 +1222,7 @@ namespace SplitAndMerge
             bool prefix = string.IsNullOrWhiteSpace(m_name);
             if (prefix)
             {// If it is a prefix we do not have the variable name yet.
-                m_name = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                Name = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
             }
 
             // Value to be added to the variable:
