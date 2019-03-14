@@ -119,6 +119,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
+            ParserFunction.RegisterFunction(Constants.SINGLETON, new SingletonFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
             ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
             ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());

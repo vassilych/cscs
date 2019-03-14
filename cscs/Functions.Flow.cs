@@ -2049,4 +2049,31 @@ namespace SplitAndMerge
             return Variable.EmptyInstance;
         }
     }
+
+    public class SingletonFunction : ParserFunction
+    {
+        static Dictionary<string, Variable> m_singletons =
+           new Dictionary<string, Variable>();
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            string expr = args[0].AsString();
+
+            Variable result;
+            if (m_singletons.TryGetValue(expr, out result))
+            {
+                return result;
+            }
+
+            ParsingScript tempScript = new ParsingScript(expr);
+            result = tempScript.ExecuteTo();
+
+            m_singletons[expr] = result;
+
+            return result;
+        }
+    }
 }
