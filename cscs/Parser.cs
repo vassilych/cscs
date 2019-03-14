@@ -186,8 +186,9 @@ namespace SplitAndMerge
             }
             while (true);
 
-            string extracted = item.ToString();
-            string result = extracted.Replace("\\\\", "\\");
+            string result = item.ToString();
+            result = result.Replace("\\\\", "\\");
+            result = result.Replace("\\\"", "\"");
             return result;
         }
 
