@@ -426,7 +426,8 @@ namespace SplitAndMerge
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
             // Do nothing: already on the main thread
 #elif __ANDROID__
-            scripting.Droid.MainActivity.TheView.RunOnUiThread(() => {
+            scripting.Droid.MainActivity.TheView.RunOnUiThread(() =>
+            {
 #elif __IOS__
             scripting.iOS.AppDelegate.GetCurrentController().InvokeOnMainThread(() =>
             {
@@ -434,7 +435,11 @@ namespace SplitAndMerge
 #endif
                 try
                 {
+#if __IOS__  || __ANDROID__
+                    result = script.Execute(toArray);
+#else
                     result = await script.ExecuteAsync(toArray);
+#endif
                 }
                 catch (ParsingException exc)
                 {
@@ -442,17 +447,15 @@ namespace SplitAndMerge
                 }
 
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
-            // Do nothing: already on the main thread
+            // Do nothing: already on the main thread or main thread is not required
 #elif __ANDROID__ || __IOS__
             });
 #endif
-
             if (exception != null)
             {
                 throw exception;
             }
             return result;
         }
-
     }
 }
