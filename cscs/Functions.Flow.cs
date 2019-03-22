@@ -769,8 +769,8 @@ namespace SplitAndMerge
         {
             // First check if the passed expression is a string between quotes.
             if (Item.Length > 1 &&
-                Item[0] == Constants.QUOTE &&
-                Item[Item.Length - 1] == Constants.QUOTE)
+              ((Item[0] == Constants.QUOTE  && Item[Item.Length - 1] == Constants.QUOTE) ||
+               (Item[0] == Constants.QUOTE1 && Item[Item.Length - 1] == Constants.QUOTE1)))
             {
                 return new Variable(Item.Substring(1, Item.Length - 2));
             }
@@ -2015,11 +2015,14 @@ namespace SplitAndMerge
             }
 
             Utils.CheckArgs(args.Count, 2, m_name);
-            int timeout = args[0].AsInt();
+            int timeout      = args[0].AsInt();
             string strAction = args[1].AsString();
-            string owner = Utils.GetSafeString(args, 2);
-            string timerId = Utils.GetSafeString(args, 3);
-            bool autoReset = Utils.GetSafeInt(args, 4, 0) != 0;
+            string arg       = Utils.GetSafeString(args, 2);
+            string timerId   = Utils.GetSafeString(args, 3);
+            bool autoReset   = Utils.GetSafeInt(args, 4, 0) != 0;
+
+            arg              = Utils.ProtectQuotes(arg);
+            timerId          = Utils.ProtectQuotes(timerId);
 
             System.Timers.Timer pauseTimer = new System.Timers.Timer(timeout);
             pauseTimer.Elapsed += (sender, e) =>
@@ -2030,13 +2033,8 @@ namespace SplitAndMerge
                     pauseTimer.Dispose();
                     m_timers.Remove(timerId);
                 }
-                if (owner == "")
-                {
-                    owner = "\"\"";
-                }
-
                 string body = string.Format("{0}({1},{2});", strAction,
-                              "\"" + owner + "\"", "\"" + timerId + "\"");
+                              "\"" + arg + "\"", "\"" + timerId + "\"");
 
                 ParsingScript tempScript = new ParsingScript(body);
                 tempScript.ExecuteTo();
@@ -2061,6 +2059,8 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name);
 
             string expr = args[0].AsString();
+            Dictionary<int, int> char2Line;
+            expr = Utils.ConvertToScript(expr, out char2Line);
 
             Variable result;
             if (m_singletons.TryGetValue(expr, out result))

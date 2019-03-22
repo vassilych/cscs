@@ -405,10 +405,11 @@ namespace SplitAndMerge
 
         public static void ThrowErrorMsg(string str, ParsingScript script)
         {
-            char ch = string.IsNullOrEmpty(script.Rest) ? Constants.EMPTY : script.Rest[0];
-            string entity = ch == '(' || ch == ')' ? "function" :
-                            ch == '[' || ch == ']' ? "array" :
-                                                     "variable";
+            char ch = script.TryPrev();
+            string entity = ch == '(' ? "function":
+                            ch == '[' ? "array"   :
+                            ch == '{' ? "operand" :
+                                        "variable";
             string lineExpr = str.Length < script.OriginalLine.Length - 2 ? " in [" + 
                               script.OriginalLine + "]" : "";
             string token    = Constants.GetRealName(str);

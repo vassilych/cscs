@@ -26,7 +26,9 @@ namespace SplitAndMerge
                 m_impl = s_idFunction;
                 return;
             }
-            if (item.Length > 1 && item[0] == Constants.QUOTE && item[item.Length - 1] == Constants.QUOTE)
+            if (item.Length > 1 &&
+              ((item[0] == Constants.QUOTE  && item[item.Length - 1] == Constants.QUOTE) ||
+               (item[0] == Constants.QUOTE1 && item[item.Length - 1] == Constants.QUOTE1)))
             {
                 // We are dealing with a string.
                 s_strOrNumFunction.Item = item;

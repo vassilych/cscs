@@ -13,7 +13,8 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
             Utils.CheckNotEnd(script);
 
-            bool inQuotes = script.Current == Constants.QUOTE;
+            bool inQuotes  = script.Current == Constants.QUOTE;
+            bool inQuotes1 = script.Current == Constants.QUOTE1;
 
             if (script.Current == Constants.START_GROUP)
             {
@@ -34,6 +35,10 @@ namespace SplitAndMerge
             {
                 script.MoveForwardIf(Constants.QUOTE);
             }
+            else if (inQuotes1)
+            {
+                script.MoveForwardIf(Constants.QUOTE1);
+            }
             if (eatLast)
             {
                 script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
@@ -46,7 +51,8 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
             Utils.CheckNotEnd(script);
 
-            bool inQuotes = script.Current == Constants.QUOTE;
+            bool inQuotes  = script.Current == Constants.QUOTE;
+            bool inQuotes1 = script.Current == Constants.QUOTE1;
 
             if (script.Current == Constants.START_GROUP)
             {
@@ -67,6 +73,10 @@ namespace SplitAndMerge
             {
                 script.MoveForwardIf(Constants.QUOTE);
             }
+            else if (inQuotes1)
+            {
+                script.MoveForwardIf(Constants.QUOTE1);
+            }
             if (eatLast)
             {
                 script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
@@ -83,7 +93,7 @@ namespace SplitAndMerge
             if (!to.Contains(Constants.SPACE))
             {
                 // Skip a leading space unless we are inside of quotes
-                while (curr == Constants.SPACE && prev != Constants.QUOTE)
+                while (curr == Constants.SPACE && prev != Constants.QUOTE && prev != Constants.QUOTE1)
                 {
                     script.Forward();
                     curr = script.TryCurrent();
@@ -92,10 +102,10 @@ namespace SplitAndMerge
             }
 
             // String in quotes
-            bool inQuotes = curr == Constants.QUOTE;
+            bool inQuotes = curr == Constants.QUOTE || curr == Constants.QUOTE1;
             if (inQuotes)
             {
-                int qend = script.Find(Constants.QUOTE, script.Pointer + 1);
+                int qend = script.Find(curr, script.Pointer + 1);
                 if (qend == -1)
                 {
                     throw new ArgumentException("Unmatched quotes in [" +
@@ -106,7 +116,7 @@ namespace SplitAndMerge
                 return result;
             }
 
-            script.MoveForwardIf(Constants.QUOTE);
+            script.MoveForwardIf(Constants.QUOTE, Constants.QUOTE1);
 
             int end = script.FindFirstOf(to);
             end = end < 0 ? script.Size() : end;
@@ -156,7 +166,9 @@ namespace SplitAndMerge
         public static void SkipRestExpr(ParsingScript script)
         {
             int argRead = 0;
-            bool inQuotes = false;
+            bool inQuotes  = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
             char prev = Constants.EMPTY;
             char prevprev = Constants.EMPTY;
 
@@ -171,10 +183,16 @@ namespace SplitAndMerge
 
                 switch (currentChar)
                 {
-                    case Constants.QUOTE:
-                        if (prev != '\\' || prevprev == '\\')
+                    case Constants.QUOTE1:
+                        if (!inQuotes2 && (prev != '\\' || prevprev == '\\'))
                         {
-                            inQuotes = !inQuotes;
+                            inQuotes = inQuotes1 = !inQuotes1;
+                        }
+                        break;
+                    case Constants.QUOTE:
+                        if (!inQuotes1 && (prev != '\\' || prevprev == '\\'))
+                        {
+                            inQuotes = inQuotes2 = !inQuotes2;
                         }
                         break;
                     case Constants.START_ARG:
@@ -591,7 +609,9 @@ namespace SplitAndMerge
             StringBuilder sb = new StringBuilder(source.Length);
             char2Line = new Dictionary<int, int>();
 
-            bool inQuotes = false;
+            bool inQuotes  = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
             bool spaceOK = false;
             bool inComments = false;
             bool simpleComments = false;
@@ -647,17 +667,25 @@ namespace SplitAndMerge
                             continue;
                         }
                         break;
+                    case '\'':
+                        if (!inComments && !inQuotes2 && (prev != '\\' || prevprev == '\\'))
+                        {
+                            ch = '"';
+                            inQuotes = inQuotes1 = !inQuotes1;
+                        }
+                        break;
                     case '“':
                     case '”':
                     case '„':
                     case '"':
                         ch = '"';
-                        if (!inComments)
+                        if (!inComments && !inQuotes1 && (prev != '\\' || prevprev == '\\'))
                         {
-                            if (prev != '\\' || prevprev == '\\')
-                            {
-                                inQuotes = !inQuotes;
-                            }
+                            inQuotes = inQuotes2 = !inQuotes2;
+                        }
+                        else if (inQuotes1)
+                        {
+                            sb.Append("\\");
                         }
                         break;
                     case ' ':
@@ -812,7 +840,9 @@ namespace SplitAndMerge
             // we must not have the opening char as the first one.
             StringBuilder sb = new StringBuilder(script.Size());
             int braces = 0;
-            bool inQuotes = false;
+            bool inQuotes  = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
             bool checkBraces = true;
             char prev = Constants.EMPTY;
             char prevprev = Constants.EMPTY;
@@ -824,10 +854,13 @@ namespace SplitAndMerge
                 if (close != Constants.QUOTE)
                 {
                     checkBraces = !inQuotes;
-                    if (ch == Constants.QUOTE &&
-                       (prev != '\\' || prevprev == '\\'))
+                    if (ch == Constants.QUOTE && !inQuotes1 && (prev != '\\' || prevprev == '\\'))
                     {
-                        inQuotes = !inQuotes;
+                        inQuotes = inQuotes2 = !inQuotes2;
+                    }
+                    if (ch == Constants.QUOTE1 && !inQuotes2 && (prev != '\\' || prevprev == '\\'))
+                    {
+                        inQuotes = inQuotes1 = !inQuotes1;
                     }
                 }
 
@@ -855,6 +888,28 @@ namespace SplitAndMerge
                     }
                     break;
                 }
+            }
+
+            return sb.ToString();
+        }
+
+        public static string ProtectQuotes(string str)
+        {
+            StringBuilder sb = new StringBuilder(str.Length);
+            char prev        = Constants.EMPTY;
+            char prevprev    = Constants.EMPTY;
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                char ch = str[i];
+
+                if (ch == Constants.QUOTE && (prev != '\\' || prevprev == '\\'))
+                {
+                    sb.Append('\\');
+                }
+                sb.Append(ch);
+                prevprev = prev;
+                prev = ch;
             }
 
             return sb.ToString();

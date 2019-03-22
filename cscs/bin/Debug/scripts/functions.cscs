@@ -130,7 +130,7 @@ function test(x, expected) {
   } 
   if (type(expected) != "NUMBER") {
     print("[", x, "] but expected [", expected, "]. ERROR");
-    return;
+    throw("Failed Test");
   }
 
   epsilon = 0.000001;
@@ -140,6 +140,7 @@ function test(x, expected) {
   } else {
     diff = expected - x;
     print(x, " but expected ", expected, ", diff=", diff, ". ERROR");
+    throw("Failed Test");
   }
 }
 

@@ -15,6 +15,7 @@ namespace SplitAndMerge
         public const char END_LINE = '\n';
         public const char NEXT_ARG = ',';
         public const char QUOTE = '"';
+        public const char QUOTE1 = '\'';
         public const char SPACE = ' ';
         public const char START_GROUP = '{';
         public const char END_GROUP = '}';
@@ -238,7 +239,7 @@ namespace SplitAndMerge
 
         public static string ConvertName(string name)
         {
-            if (string.IsNullOrWhiteSpace(name) || name[0] == QUOTE)
+            if (string.IsNullOrWhiteSpace(name) || name[0] == QUOTE || name[0] == QUOTE1)
             {
                 return name;
             }

@@ -158,11 +158,11 @@ a = (f(1) && ((sin(0) || sin(1*2)) && f(2) && (f(3) || f(4))));
 Test(a, 1);
 
 Print("Testing arrays and maps");
-arr[2] = 10; arr[1] = "str";
-Test(type(arr),    "ARRAY");
-Test(type(arr[0]), "NONE");
-Test(type(arr[1]), "STRING");
-Test(type(arr[2]), "NUMBER");
+_arr[2] = 10; _arr[1] = "str";
+Test(type(_arr),    "ARRAY");
+Test(type(_arr[0]), "NONE");
+Test(type(_arr[1]), "STRING");
+Test(type(_arr[2]), "NUMBER");
 
 x["bla"]["blu"]=113;
 Test(contains (x["bla"], "blu"), 1);
@@ -756,14 +756,37 @@ props = ct.properties;
 print("Properties:", props);
 Test(props.size, 7);
 
-Timeout = 100;
-Sender = "Tester";
-print(Now(), "Scheduling to run in ", Timeout, "ms.");
-ScheduleRun(timeout, "timer_timeout", Sender, Timeout);
-ScheduleRun(timeout*2, "timer_timeout", "Sender", "Argument");
-function timer_timeout(Sender, Arg) {
-  print(Now(), "Running script from ", SENDER, "with argument", ARG);
+function CreateArray(size, initValue = 0) {
+    result = {};
+    for (i = 0; i < size; i++) {
+        result[i] = initValue;
+    }
+    return result;
 }
+
+pattern = "CreateArray(10, 'Test')";
+uniqueArray = Singleton(pattern);
+uniqueArray[5] = "Extra";
+uniqueArray2 = Singleton(pattern);
+print("Testing Singleton with uniqueArray=", uniqueArray2);
+Test(uniqueArray2[5], "Extra");
+uniqueArray3 = Singleton("CreateArray(9, 'Test')");
+Test(uniqueArray3[5], "Test");
+
+quote1 = "Can't fail!";
+Test(quote1, 'Can\'t fail!');
+quote2 = 'This is in "quotes"';
+Test(quote2, "This is in \"quotes\"");
+
+Timeout = 100;
+MySender = "Tester";
+print(Now(), "Scheduling to run in ", Timeout, "ms.");
+
+function timer_timeout(Sender, Arg) {
+  print(Now(), "Running script from [" + SENDER + "] with argument [" + ARG + "]");
+}
+ScheduleRun(timeout, "timer_timeout", MySender, Timeout);
+ScheduleRun(timeout*2, "timer_timeout", 'MySender', 'Arg with "double quotes"');
 
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");

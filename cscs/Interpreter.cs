@@ -884,8 +884,11 @@ namespace SplitAndMerge
             int blockStart = script.Pointer;
             int startCount = 0;
             int endCount = 0;
-            bool inQuotes = false;
+            bool inQuotes  = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
             char previous = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
             while (startCount == 0 || startCount > endCount)
             {
                 if (!script.StillValid())
@@ -896,10 +899,32 @@ namespace SplitAndMerge
                 char currentChar = script.CurrentAndForward();
                 switch (currentChar)
                 {
-                    case Constants.QUOTE: if (previous != '\\') inQuotes = !inQuotes; break;
-                    case Constants.START_GROUP: if (!inQuotes) startCount++; break;
-                    case Constants.END_GROUP: if (!inQuotes) endCount++; break;
+                    case Constants.QUOTE1:
+                        if (!inQuotes2 && (previous != '\\' || prevprev == '\\'))
+                        {
+                            inQuotes = inQuotes1 = !inQuotes1;
+                        }
+                        break;
+                    case Constants.QUOTE:
+                        if (!inQuotes1 && (previous != '\\' || prevprev == '\\'))
+                        {
+                            inQuotes = inQuotes2 = !inQuotes2;
+                        }
+                        break;
+                    case Constants.START_GROUP:
+                        if (!inQuotes)
+                        {
+                            startCount++;
+                        }
+                        break;
+                    case Constants.END_GROUP:
+                        if (!inQuotes)
+                        {
+                            endCount++;
+                        }
+                        break;
                 }
+                prevprev = previous;
                 previous = currentChar;
             }
 
