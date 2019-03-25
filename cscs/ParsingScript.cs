@@ -327,6 +327,15 @@ namespace SplitAndMerge
             return args;
         }
 
+        public bool IsProcessingFunctionCall()
+        {
+            if (TryPrev() == Constants.START_ARG || TryCurrent() == Constants.START_ARG)
+            {
+                return true;
+            }
+            return false;
+        }
+
         public int GoToNextStatement()
         {
             int endGroupRead = 0;
