@@ -118,7 +118,8 @@ namespace SplitAndMerge
                 script.Backward(name.Length + 1);
                 return new FunctionCreator();
             }
-            if (script.ClassInstance != null && script.ClassInstance.PropertyExists(name))
+            if (script.ClassInstance != null &&
+               (script.ClassInstance.PropertyExists(name) || script.ClassInstance.FunctionExists(name)))
             {
                 name = script.ClassInstance.InstanceName + "." + name;
             }

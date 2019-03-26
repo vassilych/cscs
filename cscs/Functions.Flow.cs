@@ -337,6 +337,16 @@ namespace SplitAndMerge
             {
                 return m_propSet.Contains(name);
             }
+
+            public bool FunctionExists(string name)
+            {
+                CustomFunction customFunction = null;
+                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out customFunction))
+                {
+                    return false;
+                }
+                return true;
+            }
         }
     }
 
@@ -398,8 +408,10 @@ namespace SplitAndMerge
             int lineNumber = 0;
             /*string line = */script.GetOriginalLine(out lineNumber);
 
-            string body = Utils.GetBodyBetween(script, Constants.START_GROUP,
-                                               Constants.END_GROUP);
+            string scriptExpr = Utils.GetBodyBetween(script, Constants.START_GROUP,
+                                                     Constants.END_GROUP);
+            Dictionary<int, int> char2Line;
+            string body = Utils.ConvertToScript(scriptExpr, out char2Line);
 
             Variable result = null;
             ParsingScript tempScript = new ParsingScript(body);
@@ -412,6 +424,7 @@ namespace SplitAndMerge
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.DisableBreakpoints = true;
 
+            // Uncomment if want to step into the class creation code when the debugger is attached (unlikely)
             /*Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
             {

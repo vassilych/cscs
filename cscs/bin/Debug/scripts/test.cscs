@@ -691,7 +691,7 @@ class CoolStuff : Stuff1, Stuff2 {
     z = c;
   } 
   function addCoolStuff() {
-    return x + y + z;
+    return x + addStuff2(z);
   }
 }
 
