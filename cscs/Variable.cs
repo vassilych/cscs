@@ -611,7 +611,7 @@ namespace SplitAndMerge
         public Variable FinishSetProperty(string propName, Variable value)
         {
             Variable result = Variable.EmptyInstance;
-            string match = GetActualPropertyName(propName, GetAllProperties());
+            string match = GetActualPropertyName(propName, GetAllProperties(), this);
             m_propertyMap[match] = value;
             Type = VarType.OBJECT;
 
@@ -964,13 +964,21 @@ namespace SplitAndMerge
             return this;
         }
 
-        public static string GetActualPropertyName(string propName, List<string> properties)
+        public static string GetActualPropertyName(string propName, List<string> properties,
+                                                   Variable root = null)
         {
             string match = properties.FirstOrDefault(element => element.Equals(propName,
                                    StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrWhiteSpace(match))
             {
                 match = "";
+                if (root != null)
+                {
+                    CSCSClass.ClassInstance obj = root.m_object as CSCSClass.ClassInstance;
+                    string objName = obj != null ? obj.InstanceName + "." : "";
+                    match = Constants.GetRealName(objName + propName);
+                    match = match.Substring(objName.Length);
+                }
             }
             return match;
         }

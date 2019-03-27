@@ -201,6 +201,7 @@ namespace SplitAndMerge
 
         public static void RegisterClass(string className, CSCSClass obj)
         {
+            obj.Name = className;
             className = Constants.ConvertName(className);
             s_allClasses[className] = obj;
         }
@@ -281,6 +282,11 @@ namespace SplitAndMerge
 
             Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
             HashSet<string> m_propSet = new HashSet<string>();
+
+            public override string ToString()
+            {
+                return m_cscsClass.Name + "." + InstanceName;
+            }
 
             public Task<Variable> SetProperty(string name, Variable value)
             {
