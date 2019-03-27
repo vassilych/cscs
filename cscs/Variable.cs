@@ -576,7 +576,7 @@ namespace SplitAndMerge
             return Count;
         }
 
-        public Variable SetProperty(string propName, Variable value)
+        public Variable SetProperty(string propName, Variable value, string baseName = "")
         {
             propName = Constants.ConvertName(propName);
 
@@ -586,12 +586,12 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = GetProperty(varName);
-                return property.SetProperty(actualPropName, value);
+                return property.SetProperty(actualPropName, value, baseName);
             }
-            return FinishSetProperty(propName, value);
+            return FinishSetProperty(propName, value, baseName);
         }
 
-        public async Task<Variable> SetPropertyAsync(string propName, Variable value)
+        public async Task<Variable> SetPropertyAsync(string propName, Variable value, string baseName = "")
         {
             Variable result = Variable.EmptyInstance;
             propName = Constants.ConvertName(propName);
@@ -602,16 +602,16 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = await GetPropertyAsync(varName);
-                result = await property.SetPropertyAsync(actualPropName, value);
+                result = await property.SetPropertyAsync(actualPropName, value, baseName);
                 return result;
             }
-            return FinishSetProperty(propName, value);
+            return FinishSetProperty(propName, value, baseName);
         }
 
-        public Variable FinishSetProperty(string propName, Variable value)
+        public Variable FinishSetProperty(string propName, Variable value, string baseName = "")
         {
             Variable result = Variable.EmptyInstance;
-            string match = GetActualPropertyName(propName, GetAllProperties(), this);
+            string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
             m_propertyMap[match] = value;
             Type = VarType.OBJECT;
 
@@ -965,7 +965,7 @@ namespace SplitAndMerge
         }
 
         public static string GetActualPropertyName(string propName, List<string> properties,
-                                                   Variable root = null)
+                                                   string baseName = "", Variable root = null)
         {
             string match = properties.FirstOrDefault(element => element.Equals(propName,
                                    StringComparison.OrdinalIgnoreCase));
@@ -974,8 +974,12 @@ namespace SplitAndMerge
                 match = "";
                 if (root != null)
                 {
-                    CSCSClass.ClassInstance obj = root.m_object as CSCSClass.ClassInstance;
-                    string objName = obj != null ? obj.InstanceName + "." : "";
+                    string objName = !string.IsNullOrWhiteSpace(baseName) ? baseName + "." : "";
+                    if (string.IsNullOrWhiteSpace(objName))
+                    {
+                        CSCSClass.ClassInstance obj = root.m_object as CSCSClass.ClassInstance;
+                        objName = obj != null ? obj.InstanceName + "." : "";
+                    }
                     match = Constants.GetRealName(objName + propName);
                     match = match.Substring(objName.Length);
                 }

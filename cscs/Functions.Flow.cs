@@ -1504,7 +1504,7 @@ namespace SplitAndMerge
 
             ParserFunction existing = ParserFunction.GetFunction(name, script);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
-            baseValue.SetProperty(prop, varValue);
+            baseValue.SetProperty(prop, varValue, name);
 
             ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
             //ParserFunction.AddGlobal(name, new GetVarFunction(baseValue), false);
@@ -1536,7 +1536,7 @@ namespace SplitAndMerge
 
             ParserFunction existing = ParserFunction.GetFunction(name, script);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
-            await baseValue.SetPropertyAsync(prop, varValue);
+            await baseValue.SetPropertyAsync(prop, varValue, name);
 
             ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
             //ParserFunction.AddGlobal(name, new GetVarFunction(baseValue), false);

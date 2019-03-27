@@ -752,9 +752,11 @@ Test(back, testStr);
 ct = new CompiledTestAsync();
 ct.NaMe="Lala";
 Test(ct.name, "Lala");
+ct.Extra = "New property";
 props = ct.properties;
+Test(props.contains("Extra"), true);
 print("Properties:", props);
-Test(props.size, 7);
+Test(props.size, 8);
 
 function CreateArray(size, initValue = 0) {
     result = {};
