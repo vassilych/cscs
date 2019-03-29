@@ -2095,4 +2095,46 @@ namespace SplitAndMerge
             return result;
         }
     }
+
+    class GetColumnFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+
+            Variable arrayVar = Utils.GetSafeVariable(args, 0);
+            int col = Utils.GetSafeInt(args, 1);
+            int fromCol = Utils.GetSafeInt(args, 2, 0);
+
+            var tuple = arrayVar.Tuple;
+
+            List<Variable> result = new List<Variable>(tuple.Count);
+            for (int i = fromCol; i < tuple.Count; i++)
+            {
+                Variable current = tuple[i];
+                if (current.Tuple == null || current.Tuple.Count <= col)
+                {
+                    throw new ArgumentException(m_name + ": Index [" + col + "] doesn't exist in column " +
+                                                i + "/" + (tuple.Count - 1));
+                }
+                result.Add(current.Tuple[col]);
+            }
+
+            return new Variable(result);
+        }
+    }
+
+    class GetAllKeysFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            Variable varName = Utils.GetItem(script);
+            Utils.CheckNotNull(varName, m_name);
+
+            List<Variable> results = varName.GetAllKeys();
+
+            return new Variable(results);
+        }
+    }
 }

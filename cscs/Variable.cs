@@ -869,6 +869,11 @@ namespace SplitAndMerge
                 script.GetFunctionArgs();
                 return new Variable(AsString().Trim());
             }
+            else if (script != null && propName.Equals(Constants.KEYS, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> results = GetAllKeys();
+                return new Variable(results);
+            }
 
             return result;
         }

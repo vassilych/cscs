@@ -83,8 +83,10 @@ namespace SplitAndMerge
         public const string EXP = "exp";
         public const string FIND_INDEX = "find_index";
         public const string FLOOR = "floor";
+        public const string GET_COLUMN = "GetColumn";
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
+        public const string GET_KEYS = "GetKeys";
         public const string LOCK = "lock";
         public const string HELP = "help";
         public const string LOG = "log";
@@ -143,6 +145,7 @@ namespace SplitAndMerge
         public const string FIRST       = "First";
         public const string INDEX_OF    = "IndexOf";
         public const string JOIN        = "Join";
+        public const string KEYS        = "Keys";
         public const string LAST        = "Last";
         public const string LOWER       = "Lower";
         public const string REPLACE     = "Replace";
