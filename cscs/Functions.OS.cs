@@ -400,4 +400,20 @@ namespace SplitAndMerge
             return result;
         }
     }
+
+    class GetVariableFromJSONFunction : ParserFunction
+    {
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = await script.GetFunctionArgsAsync();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            Variable newVariable = Utils.CreateVariableFromJsonString(args[0].AsString());
+            return newVariable;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return EvaluateAsync(script).Result;
+        }
+    }
 }

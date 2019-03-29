@@ -70,7 +70,9 @@ namespace SplitAndMerge
             List<Variable> tuple = new List<Variable>(a.Count);
             foreach (string key in a.Keys)
             {
-                m_dictionary[key] = tuple.Count;
+                string lower = key.ToLower();
+                m_keyMappings[lower] = key;
+                m_dictionary[lower] = tuple.Count;
                 tuple.Add(new Variable(a[key]));
             }
             this.Tuple = tuple;
@@ -80,7 +82,9 @@ namespace SplitAndMerge
             List<Variable> tuple = new List<Variable>(a.Count);
             foreach (string key in a.Keys)
             {
-                m_dictionary[key] = tuple.Count;
+                string lower = key.ToLower();
+                m_keyMappings[lower] = key;
+                m_dictionary[lower] = tuple.Count;
                 tuple.Add(new Variable(a[key]));
             }
             this.Tuple = tuple;
@@ -198,7 +202,8 @@ namespace SplitAndMerge
         {
             int retValue = 0;
             Variable listVar = null;
-            if (m_dictionary.TryGetValue(hash, out retValue))
+            string lower = hash.ToLower();
+            if (m_dictionary.TryGetValue(lower, out retValue))
             {
                 // already exists, change the value:
                 listVar = m_tuple[retValue];
@@ -207,7 +212,9 @@ namespace SplitAndMerge
             {
                 listVar = new Variable(VarType.ARRAY);
                 m_tuple.Add(listVar);
-                m_dictionary[hash] = m_tuple.Count - 1;
+
+                m_keyMappings[lower] = hash;
+                m_dictionary[lower] = m_tuple.Count - 1;
             }
 
             listVar.AddVariable(newVar);
@@ -216,7 +223,7 @@ namespace SplitAndMerge
         public List<Variable> GetAllKeys()
         {
             List<Variable> results = new List<Variable>();
-            var keys = m_dictionary.Keys;
+            var keys = m_keyMappings.Values;
             foreach (var key in keys)
             {
                 results.Add(new Variable(key));
@@ -233,7 +240,7 @@ namespace SplitAndMerge
         public List<string> GetKeys()
         {
             List<string> results = new List<string>();
-            var keys = m_dictionary.Keys;
+            var keys = m_keyMappings.Values;
             foreach (var key in keys)
             {
                 results.Add(key);
@@ -244,7 +251,8 @@ namespace SplitAndMerge
         public int SetHashVariable(string hash, Variable var)
         {
             int retValue = m_tuple.Count;
-            if (m_dictionary.TryGetValue(hash, out retValue))
+            string lower = hash.ToLower();
+            if (m_dictionary.TryGetValue(lower, out retValue))
             {
                 // already exists, change the value:
                 m_tuple[retValue] = var;
@@ -252,7 +260,8 @@ namespace SplitAndMerge
             }
 
             m_tuple.Add(var);
-            m_dictionary[hash] = m_tuple.Count - 1;
+            m_keyMappings[lower] = hash;
+            m_dictionary[lower] = m_tuple.Count - 1;
 
             return m_tuple.Count - 1;
         }
@@ -271,8 +280,9 @@ namespace SplitAndMerge
             }
 
             string hash = indexVar.AsString();
+            string lower = hash.ToLower();
             int ptr = m_tuple.Count;
-            if (m_dictionary.TryGetValue(hash, out ptr) &&
+            if (m_dictionary.TryGetValue(lower, out ptr) &&
                 ptr < m_tuple.Count)
             {
                 return ptr;
@@ -313,7 +323,8 @@ namespace SplitAndMerge
         public Variable GetVariable(string hash)
         {
             int index = 0;
-            if (m_tuple == null || !m_dictionary.TryGetValue(hash, out index) ||
+            string lower = hash.ToLower();
+            if (m_tuple == null || !m_dictionary.TryGetValue(lower, out index) ||
                 m_tuple.Count <= index)
             {
                 return Variable.EmptyInstance;
@@ -323,7 +334,8 @@ namespace SplitAndMerge
 
         public bool Exists(string hash)
         {
-            return m_dictionary.ContainsKey(hash);
+            string lower = hash.ToLower();
+            return m_dictionary.ContainsKey(lower);
         }
 
         public int FindIndex(string val)
@@ -476,7 +488,10 @@ namespace SplitAndMerge
                     if (entry.Value >= 0 || entry.Value < m_tuple.Count)
                     {
                         string value = m_tuple[entry.Value].AsString(isList, sameLine, maxCount);
-                        sb.Append("\"" + entry.Key + "\" : " + value);
+                        string realKey = entry.Key;
+                        m_keyMappings.TryGetValue(entry.Key.ToLower(), out realKey);
+
+                        sb.Append("\"" + realKey + "\" : " + value);
                         if (i++ < count - 1)
                         {
                             sb.Append(sameLine ? ", " : Environment.NewLine);
@@ -869,7 +884,7 @@ namespace SplitAndMerge
                 script.GetFunctionArgs();
                 return new Variable(AsString().Trim());
             }
-            else if (script != null && propName.Equals(Constants.KEYS, StringComparison.OrdinalIgnoreCase))
+            else if (propName.Equals(Constants.KEYS, StringComparison.OrdinalIgnoreCase))
             {
                 List<Variable> results = GetAllKeys();
                 return new Variable(results);
@@ -1030,6 +1045,7 @@ namespace SplitAndMerge
         object m_object;
         List<Variable> m_tuple;
         Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
+        Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
 
         Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
     }

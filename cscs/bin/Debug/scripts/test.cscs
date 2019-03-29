@@ -749,6 +749,14 @@ Test(tokens.size, 3);
 back = tokens.join(" ");
 Test(back, testStr);
 
+arr2["Xxx"]=12;
+arr2["yYy"]=13;
+arr2["zzZ"]=14;
+Test(arr2.keys.size, 3);
+Test(arr2.keys.contains("xXx"), true);
+Test(arr2.keys.contains("xxx"), true);
+Test(arr2.keys.contains("xxxx"), false);
+
 ct = new CompiledTestAsync();
 ct.NaMe="Lala";
 Test(ct.name, "Lala");
@@ -766,14 +774,14 @@ function CreateArray(size, initValue = 0) {
     return result;
 }
 
-pattern = "CreateArray(10, 'Test')";
+pattern = "CreateArray(5, 'Test')";
 uniqueArray = Singleton(pattern);
-uniqueArray[5] = "Extra";
+uniqueArray[2] = "Extra";
 uniqueArray2 = Singleton(pattern);
 print("Testing Singleton with uniqueArray=", uniqueArray2);
-Test(uniqueArray2[5], "Extra");
+Test(uniqueArray2[2], "Extra");
 uniqueArray3 = Singleton("CreateArray(9, 'Test')");
-Test(uniqueArray3[5], "Test");
+Test(uniqueArray3[2], "Test");
 
 quote1 = "Can't fail!";
 Test(quote1, 'Can\'t fail!');

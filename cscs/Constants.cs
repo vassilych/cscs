@@ -87,8 +87,9 @@ namespace SplitAndMerge
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
         public const string GET_KEYS = "GetKeys";
-        public const string LOCK = "lock";
         public const string HELP = "help";
+        public const string JSON = "GetVariableFromJsonNewton";
+        public const string LOCK = "lock";
         public const string LOG = "log";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "Properties";
