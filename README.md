@@ -6,12 +6,15 @@ CSCS (Customized Scripting in C#) is a scripting language, which is very easy to
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
 * [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language),  Syncfusion E-book
 
-<br>The usage of CSCS in Mobile App development has been described in:
+The usage of CSCS in Mobile App development has been described in:
 
 * [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081),  CODE Magazine
 * [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272),  MSDN
 * [Writing Native Mobile Apps in a Functional Language Succinctly](https://www.syncfusion.com/ebooks/writing_native_mobile_apps_in_a_functional_language_succinctly),  Syncfusion E-book
 
+The usage of CSCS in Unity has been described in:
+
+* [Using Custom Scripting and Modding in Unity Game and App Development](https://www.codemag.com/Article/1903081),  CODE Magazine
 <br>
 
 Decription of CSCS
@@ -43,23 +46,22 @@ CSCS Control Flow Functions
 | **include** (*pathToFile*)                    | Includes another scripting file, e.g. include("functions.cscs");   
 | **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1)).  |
 | **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
-| **return** or **return** *variable*;          | Finishes execution of a function and optionally can return a value.            |
-| **while** (*condition*) { *statements;* }                                    | Execute loop as long as the condition is true. <br>Curly brackets are mandatory.   |
-| **for** (*init*; *condition*; *step*) { *statements;* }  | A canonic for loop, e.g. for (i = 0; i < 10; ++i).<br>Curly brackets are mandatory.          |
-| **for** (*item in listOfValues*) { *statements;* }  | Executes loop for each elemеnt of listOfValues.<br>Curly brackets are mandatory. |
-| **break**                                    | Breaks out of a loop.                            |
-| **continue**                                 | Forces the next iteration of the loop.           |
-| **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br>Curly brackets are mandatory.|
-| **try** { *statements;* } <br> **catch**(*exceptionString*)  { *statements;* } | Try and catch control flow.<br>Curly brackets are mandatory.|
-| **throw** *string*;                                    | Throws an exception, e.g. throw "value must be positive";    |
-| **true**                                   | Represents a boolean value of true. Equivalent to number 1.    |
-| **false**                                   | Represents a boolean value of false. Equivalent to number 0.    |
+| **return** or **return** *variable*;      | Finishes execution of a function and optionally can return a value.|
+| **while** (*condition*) { *statements;* } | Execute loop as long as the condition is true. <br><b>Curly brackets are mandatory.</b>|
+| **for** (*init*; *condition*; *step*) { *statements;* }  | A canonic for loop, e.g. for (i = 0; i < 10; ++i).<br><b>Curly brackets are mandatory.</b>|
+| **for** (*item in listOfValues*) { *statements;* }  | Executes loop for each elemеnt of listOfValues.<br><b>Curly brackets are mandatory.</b>|
+| **break**                                    | Breaks out of a loop.                  |
+| **continue**                                 | Forces the next iteration of the loop. |
+| **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br><b>Curly brackets are mandatory.</b>|
+| **try** { *statements;* } <br> **catch**(*exceptionString*)  { *statements;* } | Try and catch control flow.<br><b>Curly brackets are mandatory.</b>|
+| **throw** *string*;                  | Throws an exception, e.g. throw "value must be positive"; |
+| **true**                             | Represents a boolean value of true. Equivalent to number 1.|
+| **false**                            | Represents a boolean value of false. Equivalent to number 0.|
 
 <br>
 
 ### Control Flow Example
 <pre><code>include("functions.cscs");
-
 i = 0;
 for (i = 0; i < 13; i++) {
   b += (i*4 - 1);
@@ -121,7 +123,6 @@ try {
 CSCS Object-Oriented Functions and Named Properties
 ------
 
-
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **class** *className : Class1, Class2, ... { }*     | A definition of a new class. it can optionaly inherit from one or more classes. Inside of a class definition you can have constructors, functions, and variable definitions. You access these variables and functions using the dot notation (all of them are public).|
@@ -129,14 +130,47 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, Type, and Properties. |
 | *variable*.**Size** | Returns either a number of elements in an array if variable is of type ARRAY or a number of characters in a string representation of this variable. |
 | *variable*.**Type** | Returns this variable's type (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT). |
+| *variable*.**Contains(value)** | If variable is a list, whether it contains this value.|
+| *variable*.**StartsWith(value)** | Whether the variable, converted to a string, starts with this value.|
+| *variable*.**EndsWith(value)** | Whether the variable, converted to a string, ends with this value.|
+| *variable*.**Replace(oldValue, newValue)** | Replaces oldValue with the newValue.|
+| *variable*.**IndexOf(value, from)** | Returns index of the value in the variable (-1 if not found).|
+| *variable*.**Join(sep=" ")** | Converts a list to a string, based on the string separation token.|
+| *variable*.**First** | Returns the first character or first element of this string or list.|
+| *variable*.**Last**  | Returns the last character or last element of this string or list. |
+| *variable*.**Substring(value, from, size)** | Returns a substring of a given string.|
+| *variable*.**Tokenize(sep=" ")** | Returns a new list based on the string separation token.|
+| *variable*.**Trim()** | Returns a new variable without leading or trailing white spaces.|
+| *variable*.**Lower()** | Returns a variable converted to the lower case.|
+| *variable*.**Upper()** | Returns a variable converted to the upper case.|
 | **GetProperty** (*objectName, propertyName*)  | Returns variable.propertyName.|
 | **GetPropertyStrings** (*objectName*)  | Same as calling variable.properties.|
 | **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as variable.propertyName = propertyValue.|
 
 <br>
 
-### Object-Oriented Example
-<pre><code>class CoolStuff : Stuff1, Stuff2 {
+### Object-Oriented Example with Multiple Inheritance
+<pre><code>class Stuff1 {
+  x = 2;
+  Stuff1(a) {
+    x = a;
+  } 
+  function addStuff1(n) {
+    return n + x;
+  }
+}
+
+class Stuff2 {
+  y = 3;
+  Stuff2(b) {
+    y = b;
+  } 
+  function addStuff2(n) {
+    return n + y;
+  }
+}
+
+class CoolStuff : Stuff1, Stuff2 {
   z = 3;
   CoolStuff(a, b, c) {
     x = a;
@@ -144,7 +178,7 @@ CSCS Object-Oriented Functions and Named Properties
     z = c;
   } 
   function addCoolStuff() {
-    return x + y + z;
+    return x + addStuff2(z);
   }
 }
 
@@ -163,7 +197,15 @@ print(newObj.addStuff1(addition)); // prints 111
 print(newObj.addStuff2(addition)); // prints 113
 </code></pre>
 
-<br>
+### Object-Oriented Example with a C# Compiled Object
+<pre><code>ct = new CompiledTest();
+ct.NaMe="Lala";
+print(ct.name); // prints "Lala": properties are case-insensitive
+
+ct.Extra = "New property";
+props = ct.properties;
+print(props.contains("Extra")); // prints 1 (true)
+</code></pre>
 
 CSCS Math Functions
 ------
@@ -182,14 +224,13 @@ CSCS Math Functions
 | **Pow** (*base, power*)             | Returns base to the specified power.
 | **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. Id limit >= numberOfRandoms, each number will be present at most once|
 | **Round** (*number, digits=0*)             | Rounds number according to the specified number of digits.
-| **Sqrt** (*number*)             | Returns squeared root of the specified number.
+| **Sqrt** (*number*)             | Returns squared root of the specified number.
 | **Sin** (*value*)                   | Sine function   
 
 <br>
 
 CSCS Variable and Array Functions
 ------
-
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
@@ -241,13 +282,13 @@ x["blabla"]["blablu"]=126;
 CSCS Conversion Functions
 ------
 
-| **CSCS Function**                  | **Description**                                     |
-| :------------------------------------------- |:------------------------------------------------|
-| **Bool** (*variable*)  | Converts variable to a Boolean value.|
-| **Decimal** (*variable*)  | Converts variable to a decimal value.|
-| **Double** (*variable*)  | Converts variable to a double value.|
-| **Int** (*variable*)  | Converts variable to an integer value.|
-| **String** (*variable*)  | Converts variable to a string value.|
+| **CSCS Function**        | **Description**                                 |
+| :------------------------|:------------------------------------------------|
+| **Bool** (*variable*)    | Converts a variable to a Boolean value.|
+| **Decimal** (*variable*) | Converts a variable to a decimal value.|
+| **Double** (*variable*)  | Converts a variable to a double value.|
+| **Int** (*variable*)     | Converts a variable to an integer value.|
+| **String** (*variable*)  | Converts a variable to a string value.|
 
 <br>
 
@@ -255,9 +296,9 @@ CSCS String Functions
 ------
 
 
-| **CSCS Function**                  | **Description**                                     |
-| :------------------------------------------- |:------------------------------------------------|
-| **Size** (*variableName*)           | Returns length of the string (for arrays returns number of elemnts in an array). |
+| **CSCS Function**                  | **Description**                                 |
+| :----------------------------------|:------------------------------------------------|
+| **Size** (*variableName*)          | Returns length of the string (for arrays returns number of elemnts in an array). |
 | **StrBetween** (*string, from, to*) | Returns a substring with characters between substrings from and to.  
 | **StrBetweenAny** (*string, from, to*) | Returns a substring with characters between any of the cgars in from and any of the chars in to.|
 | **StrContains** (*string, argument, case=case*) | Returns whether a string contains a specified substring. The case parameter can be either "case" (default) or "nocase. |
@@ -290,17 +331,15 @@ end = PsTime();
 print("Total CPU time of", cycles, "loops:", end-start, "ms.");
 // Example output: Total CPU time of 1000 loops: 968.75 ms.
 </code></pre>
-
 <br>
-
 <br>
 
 CSCS Debugger
 ------
 
 | **CSCS Function**                  | **Description**                                     |
-| :------------------------------------------- |:------------------------------------------------|
-| **StartDebugger** *(port=13337)*  | Starts running a debugger server on specified port (to accept connections from Visual Studio Code).|
+| :----------------------------------|:------------------------------------------------|
+| **StartDebugger** *(port=13337)*   | Starts running a debugger server on a specified port (to accept connections from Visual Studio Code).|
 | **StopDebugger** ()          | Stops running a debugger server.|
 
 <br>
@@ -308,22 +347,39 @@ CSCS Debugger
 CSCS Core Miscellaneous Functions
 ------
 
-
-| **CSCS Function**                  | **Description**                                     |
-| :------------------------------------------- |:------------------------------------------------|
-| **Env** (*variableName*)                   | Returns value of the specified environment variable.  |
-| **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.  |
-| **Now** (*format="HH:mm:ss.fff"*)          | Returns current date and time according to the specified format. |
-| **Print** (*var1="", var2="", ...*)          | Prints specified parameters, converting them all to strings. |
-| **PsTime**       | Returns current process CPU time. Used for measuring the script execution time. |
-| **SetEnv** (*variableName, value*)                   | Sets value of the specified environment variable.  |
-| **Show** (*funcName*)          | Prints contents of a specified CSCS function. |
-| **Signal** ()         | Signals waiting threads. |
-| **Sleep** (*millisecs*)          | Sleeps specified number of milliseconds.
+| **CSCS Function**                   | **Description**                                 |
+| :-----------------------------------|:------------------------------------------------|
+| **Env** (*variableName*)            | Returns value of the specified environment variable.|
+| **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.|
+| **Now** (*format="HH:mm:ss.fff"*)   | Returns current date and time according to the specified format.|
+| **Print** (*var1="", var2="", ...*) | Prints specified parameters, converting them all to strings. |
+| **PsTime**                          | Returns current process CPU time. Used for measuring the script execution time. |
+| **SetEnv** (*variableName, value*)  | Sets value of the specified environment variable.  |
+| **Show** (*funcName*)               | Prints contents of a specified CSCS function. |
+| **Singleton** (*code*)              | Creates a singleton Variable. The code is executed only once. See an example below.|
+| **Signal** ()                       | Signals waiting threads. |
+| **Sleep** (*millisecs*)             | Sleeps specified number of milliseconds.
 | **Thread** (*functionName*) OR { *statements;* } | Starts a new thread. The thread will either execute a specified CSCS function or all the statements between the curly brackets. |
 | **ThreadId** () | Returns current thread Id. |
 | **Wait** ()         | Waits for a signal.  | 
 
+<br>
+
+###  Singleton Example
+<pre><code>function CreateArray(size, initValue = 0) {
+    result = {};
+    for (i = 0; i < size; i++) {
+        result[i] = initValue;
+    }
+    return result;
+}
+
+pattern = "CreateArray(5, 'Test')";
+uniqueArray = Singleton(pattern);
+uniqueArray[2] = "Extra";
+arr = Singleton(pattern);
+print("array=", arr); // {Test, Test, Extra, Test, Test}
+</code></pre>
 <br>
 
 All of the functions above are supported on all devices. But there are also a few functions that have more access to the OS internals and are supported only for Windows or Mac apps. They are below.
