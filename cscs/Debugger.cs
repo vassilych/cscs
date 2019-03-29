@@ -598,7 +598,13 @@ namespace SplitAndMerge
                 return;
             }
             int origLineNumber = script == null ? 0 : script.GetOriginalLineNumber();
-            string filename = script == null ? "" : Path.GetFullPath(script.Filename);
+            string filename = "";
+            if (script != null && script.Filename != null)
+            {
+                filename = Path.GetFullPath(script.Filename);
+            }
+
+
             Output += origLineNumber + "\t" + filename + "\n";
             Output += output;
         }
