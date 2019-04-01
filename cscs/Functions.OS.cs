@@ -428,10 +428,10 @@ namespace SplitAndMerge
             string onSuccess = args[1].AsString();
             string onFailure = Utils.GetSafeString(args, 2, onSuccess);
             string tracking  = Utils.GetSafeString(args, 3);
-            int timeout      = Utils.GetSafeInt(args, 4, 15);
+            int timeoutMs    = Utils.GetSafeInt(args, 4, 15 * 1000);
             bool justFire    = Utils.GetSafeInt(args, 5) > 0;
 
-            await ProcessWebRequest(uri, onSuccess, onFailure, tracking, timeout, justFire);
+            await ProcessWebRequest(uri, onSuccess, onFailure, tracking, timeoutMs, justFire);
 
             return Variable.EmptyInstance;
         }
@@ -465,17 +465,16 @@ namespace SplitAndMerge
 
         static async Task FinishRequest(string onSuccess, string onFailure,
                                         string tracking, Task<WebResponse> responseTask,
-                                        int timeout)
+                                        int timeoutMs)
         {
             string result = "";
             string method = onSuccess;
-            Task timeoutTask = Task.Delay(timeout * 1000);
+            Task timeoutTask = Task.Delay(timeoutMs);
             try
             {
                 Task first = await Task.WhenAny(timeoutTask, responseTask);
                 if (first == timeoutTask)
                 {
-                    responseTask.Dispose();
                     await timeoutTask;
                     throw new Exception("Timeout waiting for response.");
                 }
