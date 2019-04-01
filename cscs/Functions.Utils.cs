@@ -849,4 +849,111 @@ namespace SplitAndMerge
             return elapsed >= 0 ? new Variable(elapsed) : new Variable(elapsedStr);
         }
     }
+
+    class GetVariableFromJSONFunction : ParserFunction
+    {
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = await script.GetFunctionArgsAsync();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            Variable newVariable = Utils.CreateVariableFromJsonString(args[0].AsString());
+            return newVariable;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return EvaluateAsync(script).Result;
+        }
+    }
+
+    public class WebRequestFunction : ParserFunction
+    {
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+            string uri = args[0].AsString();
+            string onSuccess = args[1].AsString();
+            string onFailure = Utils.GetSafeString(args, 2, onSuccess);
+            string tracking = Utils.GetSafeString(args, 3);
+            int timeoutMs = Utils.GetSafeInt(args, 4, 15 * 1000);
+            bool justFire = Utils.GetSafeInt(args, 5) > 0;
+
+            await ProcessWebRequest(uri, onSuccess, onFailure, tracking, timeoutMs, justFire);
+
+            return Variable.EmptyInstance;
+        }
+
+        static async Task ProcessWebRequest(string uri, string onSuccess, string onFailure,
+                                            string tracking, int timeout,
+                                            bool justFire = false)
+        {
+            try
+            {
+                WebRequest request = WebRequest.Create(uri);
+
+                Task<WebResponse> task = request.GetResponseAsync();
+                Task finishTask = FinishRequest(onSuccess, onFailure,
+                                                tracking, task, timeout);
+                if (justFire)
+                {
+                    return;
+                }
+                await finishTask;
+            }
+            catch (Exception exc)
+            {
+                string body = string.Format("{0}({1},{2});", onFailure,
+                       "\"" + tracking + "\"", "\"" + exc.Message + "\"");
+
+                ParsingScript tempScript = new ParsingScript(body);
+                tempScript.ExecuteTo();
+            }
+        }
+
+        static async Task FinishRequest(string onSuccess, string onFailure,
+                                        string tracking, Task<WebResponse> responseTask,
+                                        int timeoutMs)
+        {
+            string result = "";
+            string method = onSuccess;
+            Task timeoutTask = Task.Delay(timeoutMs);
+            try
+            {
+                Task first = await Task.WhenAny(timeoutTask, responseTask);
+                if (first == timeoutTask)
+                {
+                    await timeoutTask;
+                    throw new Exception("Timeout waiting for response.");
+                }
+
+                HttpWebResponse response = await responseTask as HttpWebResponse;
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    throw new Exception(response.StatusDescription);
+                }
+                using (StreamReader sr = new StreamReader(response.GetResponseStream()))
+                {
+                    result = sr.ReadToEnd();
+                }
+            }
+            catch (Exception exc)
+            {
+                result = exc.Message;
+                method = onFailure;
+            }
+
+            result = result.Replace("\"", "\\\"");
+            string body = string.Format("{0}({1},{2});", method,
+                   "\"" + tracking + "\"", "\"" + result + "\"");
+
+            ParsingScript tempScript = new ParsingScript(body);
+            tempScript.ExecuteTo();
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return EvaluateAsync(script).Result;
+        }
+    }
 }

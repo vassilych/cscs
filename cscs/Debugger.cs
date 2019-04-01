@@ -104,7 +104,23 @@ namespace SplitAndMerge
             if (action == DebuggerUtils.DebugAction.REPL ||
                 action == DebuggerUtils.DebugAction._REPL)
             {
-                result = await ProcessRepl(load);
+                string filename = "";
+                if (action == DebuggerUtils.DebugAction.REPL)
+                {
+                    int ind = load.IndexOf('|');
+                    if (ind >= 0)
+                    {
+                        if (ind > 0)
+                        {
+                            filename = load.Substring(0, ind);
+                        }
+                        if (ind + 1 < load.Length)
+                        {
+                            load = load.Substring(ind + 1);
+                        }
+                    }
+                }
+                result = await ProcessRepl(load, filename);
                 result = responseToken + (result == null ? "" : result);
                 SendBack(result, false);
                 return;
@@ -318,7 +334,7 @@ namespace SplitAndMerge
             return filename;
         }
 
-        async Task<string> ProcessRepl(string repl)
+        async Task<string> ProcessRepl(string repl, string filename = "")
         {
             ReplMode = true;
 
@@ -327,6 +343,10 @@ namespace SplitAndMerge
             ParsingScript tempScript = new ParsingScript(script, 0, char2Line);
             tempScript.OriginalScript = repl;
             tempScript.Debugger = this;
+            if (!string.IsNullOrWhiteSpace(filename))
+            {
+                tempScript.Filename = filename;
+            }
 
             Variable result = null;
             bool excThrown = false;
