@@ -1156,7 +1156,16 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices);
-                return result;
+                if (script.TryCurrent() != '.')
+                {
+                    return result;
+                }
+
+                script.Forward();
+                m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+                Variable propValue = result.GetProperty(m_propName, script);
+                Utils.CheckNotNull(propValue, m_propName);
+                return propValue;
             }
 
             // Now check that this is an object:
@@ -1195,7 +1204,16 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices);
-                return result;
+                if (script.TryCurrent() != '.')
+                {
+                    return result;
+                }
+
+                script.Forward();
+                m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+                Variable propValue = await result.GetPropertyAsync(m_propName, script);
+                Utils.CheckNotNull(propValue, m_propName);
+                return propValue;
             }
 
             // Now check that this is an object:

@@ -134,6 +134,9 @@ Print(a[5][3]--);
 Print(a[5][3]--);
 Test(a[5][3], 116);
 
+Test(a[5][3].type, "NUMBER");
+Test(a[5].size, 4);
+
 i=10;
 
 while(--i > 0) {
@@ -756,6 +759,8 @@ Test(arr2.keys.size, 3);
 Test(arr2.keys.contains("xXx"), true);
 Test(arr2.keys.contains("xxx"), true);
 Test(arr2.keys.contains("xxxx"), false);
+
+Test(arr2["zzZ"].size, 2);
 
 ct = new CompiledTestAsync();
 ct.NaMe="Lala";

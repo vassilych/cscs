@@ -134,6 +134,7 @@ namespace SplitAndMerge
         public const string TO_INT = "int";
         public const string TO_STRING = "string";
         public const string WAIT = "wait";
+        public const string WEB_REQUEST = "WebRequest";
 
         public const string START_DEBUGGER = "StartDebugger";
         public const string STOP_DEBUGGER  = "StopDebugger";

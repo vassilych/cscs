@@ -44,13 +44,13 @@ namespace SplitAndMerge
                 return;
             }
 
-            m_impl = GetObjectFunction(item, script);
+            m_impl = GetArrayFunction(item, script, action);
             if (m_impl != null)
             {
                 return;
             }
 
-            m_impl = GetArrayFunction(item, script, action);
+            m_impl = GetObjectFunction(item, script);
             if (m_impl != null)
             {
                 return;
