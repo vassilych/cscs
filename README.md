@@ -31,7 +31,7 @@ Decription of CSCS
   E.g.: b[5][3][5][3]=15;<br>
   Similarly, when defining dictionaries, e.g.: x["bla"]["blu"]="wichtig";
 * Control flow statements if, else, while, for, try, etc., all require statements between the curly braces (even for a single statement).
-
+* "elif" means "else if" (like in Python)
 
 <br>
 What follows is the description of the CSCS functions. The usage of CSCS has been tested on Windows, Mac, iOS, Android, and Unity. Not all of the functions are supported on all of platforms. First, we see the core fuctions, that are supported everywhere, and then the extended functions, dealing more with OS internals and therefore not supported on all the platforms. 
