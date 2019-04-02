@@ -357,6 +357,10 @@ namespace SplitAndMerge
                 {
                     result = await DebuggerUtils.Execute(tempScript);
                     tempScript.GoToNextStatement();
+                    while (tempScript.TryCurrent() == Constants.END_STATEMENT)
+                    {
+                        tempScript.Forward();
+                    }
                 }
 
                 if (TrySendFile(result, tempScript, ref excThrown) || excThrown)
