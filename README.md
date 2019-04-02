@@ -4,7 +4,7 @@ CSCS (Customized Scripting in C#) is a scripting language, which is very easy to
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
 * [Implementing a Custom Language Succinctly](https://www.syncfusion.com/resources/techportal/details/ebooks/implementing-a-custom-language),  Syncfusion E-book
 
-The usage of CSCS in Mobile App development has been described in:
+The source code for Mobile App development is [here](https://github.com/vassilych/mobile). The usage of CSCS in Mobile App development has been described in:
 
 * [Developing Cross-Platform Native Apps with a Functional Language](http://www.codemag.com/article/1711081),  CODE Magazine
 * [Writing Native Mobile Apps Using a Customizable Scripting Language](https://msdn.microsoft.com/en-us/magazine/mt829272),  MSDN
@@ -13,6 +13,9 @@ The usage of CSCS in Mobile App development has been described in:
 The usage of CSCS in Unity has been described in:
 
 * [Using Custom Scripting and Modding in Unity Game and App Development](https://www.codemag.com/Article/1903081),  CODE Magazine
+
+The Visual Studio Code Extension to debug CSCS code is available [here](https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debugger).
+
 <br>
 
 Decription of CSCS
@@ -22,7 +25,7 @@ Decription of CSCS
 * All statements must finish with a semicolon ";".
 * Identation and new lines are not used in parsing (unlike Python).
 * All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, type, size, and string. E.g. after setting n=10; n.properties will return {properties, type, size, string}.
-* Variables and arrays are all defined implicitely, e.g. x=5, b[7]=11<br>
+* Variables and arrays are all defined implicitly, e.g. x=5, b[7]=11<br>
   An example of a list initialization: c = {"aa", "bb", "xxx"};<br>
   You can also define it explicitely: c[0]="aa"; c[1]="bb"; <br>
   Definition in index form doesn't have to start from index 0, or even from the first dimension: not defined elements will have a type NONE.
@@ -41,7 +44,7 @@ CSCS Control Flow Functions
 | **CSCS Statement**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **include** (*pathToFile*)                    | Includes another scripting file, e.g. include("functions.cscs");   
-| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitely (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1)).  |
+| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitly (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1)).  |
 | **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
 | **return** or **return** *variable*;      | Finishes execution of a function and optionally can return a value.|
 | **while** (*condition*) { *statements;* } | Execute loop as long as the condition is true. <br><b>Curly brackets are mandatory.</b>|
