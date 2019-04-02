@@ -1,6 +1,6 @@
 
 
-CSCS (Customized Scripting in C#) is a scripting language, which is very easy to integrate into any C# code and adjust according to your needs. Basically, it's not only a language, but also a framework that you can use to create your own language. CSCS has been described in:
+CSCS (Customized Scripting in C#) is a scripting language, which is very easy to integrate into any C# project and adjust according to your needs. Basically, the concept of CSCS is not only a language, but also a framework that you can use to create your own language. Since the compiler will be inside of your project you can do with the language whatever you want: add new features, modify existing ones, etc. How to do that and the CSCS Framework itself have been described in:
 
 * [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx),  MSDN
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
@@ -20,11 +20,10 @@ The usage of CSCS in Unity has been described in:
 Decription of CSCS
 ======
 
-* The syntax is a mixture between C# and Python.
+* The syntax is a mixture between C#, JavaScript, and Python.
 * All statements must finish with a semicolon ";".
-* Identation and new lines are not used in parsing.
-* All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, size, and type
-  E.g. after setting n=10; n.properties will return {type, size, properties}.
+* Identation and new lines are not used in parsing (unlike Python).
+* All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, type, size, and string. E.g. after setting n=10; n.properties will return {properties, type, size, string}.
 * Variables and arrays are all defined implicitely, e.g. x=5, b[7]=11<br>
   An example of a list initialization: c = {"aa", "bb", "xxx"};<br>
   You can also define it explicitely: c[0]="aa"; c[1]="bb"; <br>
@@ -138,6 +137,7 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Join(sep=" ")** | Converts a list to a string, based on the string separation token.|
 | *variable*.**First** | Returns the first character or first element of this string or list.|
 | *variable*.**Last**  | Returns the last character or last element of this string or list. |
+| *variable*.**Keys** | If the underlying variable is a dictionary, returns all the dictionary keys.|
 | *variable*.**Substring(value, from, size)** | Returns a substring of a given string.|
 | *variable*.**Tokenize(sep=" ")** | Returns a new list based on the string separation token.|
 | *variable*.**Trim()** | Returns a new variable without leading or trailing white spaces.|
@@ -246,7 +246,7 @@ CSCS Variable and Array Functions
 | **Remove** (*variable, value*)    | Removes specified value from the variable array. Returns true on success and false otherwise.|
 | **RemoveAt** (*variable, index*)    | Removes a value from the variable array at specified index. Returns true on success and false otherwise.|
 | **Size** (*variable*)           | Returns number of elements in a variable array or the length of the string (same as variable.Size). |
-| **Type** *(variableName)*             | Returns type of the passed variable (same as variable.Type).|
+| **Type** *(variableName)*       | Returns type of the passed variable (same as variable.Type).|
 
 
 ### Array Example
