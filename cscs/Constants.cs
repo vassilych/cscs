@@ -74,6 +74,7 @@ namespace SplitAndMerge
         public const string ASIN = "asin";
         public const string CANCEL_RUN = "CancelRun";
         public const string CEIL = "ceil";
+        public const string CHECK_LOADER_MAIN = "LoaderMain";
         public const string CONTAINS = "contains";
         public const string COS = "cos";
         public const string DEEP_COPY = "DeepCopy";
@@ -88,7 +89,6 @@ namespace SplitAndMerge
         public const string GET_PROPERTY = "GetProperty";
         public const string GET_KEYS = "GetKeys";
         public const string HELP = "help";
-        public const string JSON = "GetVariableFromJsonNewton";
         public const string LOCK = "lock";
         public const string LOG = "log";
         public const string NOW = "Now";

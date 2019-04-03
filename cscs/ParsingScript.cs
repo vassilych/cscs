@@ -83,6 +83,8 @@ namespace SplitAndMerge
 
         public bool DisableBreakpoints;
         public bool InTryBlock;
+        public string MainFilename;
+
         public ParsingScript ParentScript;
 
         public CSCSClass CurrentClass { get; set; }

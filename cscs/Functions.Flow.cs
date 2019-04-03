@@ -2155,4 +2155,15 @@ namespace SplitAndMerge
             return new Variable(results);
         }
     }
+
+    class CheckLoaderMainFunction : ParserFunction, IArrayFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            bool isMain = !string.IsNullOrWhiteSpace(script.MainFilename) &&
+                           script.MainFilename == script.Filename;
+
+            return new Variable(isMain);
+        }
+    }
 }

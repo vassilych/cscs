@@ -1,6 +1,9 @@
 include("functions.cscs");
 Start = pstime;
 
+Print("Testing LoaderMain:", LoaderMain);
+Test(LoaderMain, true);
+
 Print("Testing strings");
 txt = "lu";
 txt += txt;

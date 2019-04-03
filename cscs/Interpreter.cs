@@ -94,6 +94,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CANCEL, new CancelFunction());
             ParserFunction.RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
             ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
+            ParserFunction.RegisterFunction(Constants.CHECK_LOADER_MAIN, new CheckLoaderMainFunction());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
@@ -168,7 +169,7 @@ namespace SplitAndMerge
             CompiledClass.Init();
         }
 
-        public Variable Process(string script, string filename = "")
+        public Variable Process(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
             string data = Utils.ConvertToScript(script, out char2Line);
@@ -180,6 +181,11 @@ namespace SplitAndMerge
             ParsingScript toParse = new ParsingScript(data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
+
+            if (mainFile)
+            {
+                toParse.MainFilename = toParse.Filename;
+            }
 
             Variable result = null;
 
@@ -191,7 +197,7 @@ namespace SplitAndMerge
 
             return result;
         }
-        public async Task<Variable> ProcessAsync(string script, string filename = "")
+        public async Task<Variable> ProcessAsync(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
             string data = Utils.ConvertToScript(script, out char2Line);
@@ -203,6 +209,11 @@ namespace SplitAndMerge
             ParsingScript toParse = new ParsingScript(data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
+
+            if (mainFile)
+            {
+                toParse.MainFilename = toParse.Filename;
+            }
 
             Variable result = null;
 

@@ -146,6 +146,7 @@ namespace SplitAndMerge
                 m_script = Utils.ConvertToScript(rawScript, out m_char2Line);
                 m_debugging = new ParsingScript(m_script, 0, m_char2Line);
                 m_debugging.Filename = filename;
+                m_debugging.MainFilename = m_debugging.Filename;
                 m_debugging.OriginalScript = rawScript; //m_script;
                 m_debugging.Debugger = this;
             }

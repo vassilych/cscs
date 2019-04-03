@@ -1,3 +1,6 @@
+if (LoaderMain) {
+  throw("Error! This file must be sourced and not used directly!");
+}
 
 function max(a, b) {
   if (a >= b) {

@@ -23,6 +23,7 @@ namespace SplitAndMerge
         public const string FINDFILES = "findfiles";
         public const string FINDSTR = "findstr";
         public const string GET_NATIVE = "GetNative";
+        public const string JSON = "GetVariableFromJsonNewton";
         public const string KILL = "kill";
         public const string MKDIR = "mkdir";
         public const string MORE = "more";

@@ -270,7 +270,7 @@ namespace SplitAndMerge
             {
                 result = System.Threading.Tasks.Task.Run(() =>
                   //Interpreter.Instance.ProcessAsync(script, filename)).Result;
-                  Interpreter.Instance.Process(script, filename)).Result;
+                  Interpreter.Instance.Process(script, filename, true)).Result;
             }
             catch (Exception exc)
             {
