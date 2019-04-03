@@ -364,6 +364,19 @@ namespace SplitAndMerge
             return args[index];
         }
 
+        public static string GetSafeToken(List<Variable> args, int index, string defaultValue = "")
+        {
+            if (args.Count <= index)
+            {
+                return defaultValue;
+            }
+
+            Variable var = args[index];
+            string token = var.ParsingToken;
+
+            return token;
+        }
+
         public static Variable GetVariable(string varName, ParsingScript script, bool testNull = true)
         {
             ParserFunction func = ParserFunction.GetFunction(varName, script);

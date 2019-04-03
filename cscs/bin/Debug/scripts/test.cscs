@@ -793,6 +793,20 @@ Test(quote1, 'Can\'t fail!');
 quote2 = 'This is in "quotes"';
 Test(quote2, "This is in \"quotes\"");
 
+loop1 = loop2 = 0;
+loops = 5;
+for (i = 0; i < loops; i++) {
+  arr = {i, 2, 3};
+  for (j = 0; j < loops; j++) {
+    arr2 = {10, 20};
+    loop2++;
+  }
+  loop1++;
+}
+Test(loop1, loops);
+Test(loop2, loops*loops);
+Test(arr, {loops-1, 2, 3});
+
 Timeout = 100;
 MySender = "Tester";
 print(Now(), "Scheduling to run in ", Timeout, "ms.");

@@ -351,7 +351,7 @@ namespace SplitAndMerge
             {
                 // Eat closing parenthesis, if there is one, but only if it closes
                 // the current argument list, not one after it. 
-                script.MoveForwardIf(Constants.END_ARG);
+                script.MoveForwardIf(Constants.END_ARG, end);
             }
 
             script.MoveForwardIf(Constants.SPACE);
