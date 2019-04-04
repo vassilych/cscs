@@ -37,8 +37,8 @@ namespace SplitAndMerge
             // execution. On error an exception will be thrown.
             Interpreter.Instance.GetOutput += Print;
 
-            string scriptFilename = "scripts/temp.cscs";
-            scriptFilename = "";
+            string scriptFilename = "scripts/test.cscs";
+            //scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
             DebuggerServer.BaseDirectory = "";
@@ -268,9 +268,18 @@ namespace SplitAndMerge
 
             try
             {
-                result = System.Threading.Tasks.Task.Run(() =>
-                  //Interpreter.Instance.ProcessAsync(script, filename)).Result;
-                  Interpreter.Instance.Process(script, filename, true)).Result;
+                if (!string.IsNullOrWhiteSpace(filename))
+                {
+                    result = System.Threading.Tasks.Task.Run(() =>
+                  Interpreter.Instance.ProcessFileAsync(filename, true)).Result;
+                  //Interpreter.Instance.ProcessFile(filename, true)).Result;
+                }
+                else
+                {
+                    result = System.Threading.Tasks.Task.Run(() =>
+                      //Interpreter.Instance.ProcessAsync(script, filename)).Result;
+                      Interpreter.Instance.Process(script, filename, true)).Result;
+                }
             }
             catch (Exception exc)
             {

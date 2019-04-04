@@ -169,6 +169,19 @@ namespace SplitAndMerge
             CompiledClass.Init();
         }
 
+        public Variable ProcessFile(string filename, bool mainFile = false)
+        {
+            string script = Utils.GetFileContents(filename);
+            return Process(script, filename, mainFile);
+        }
+
+        public async Task<Variable> ProcessFileAsync(string filename, bool mainFile = false)
+        {
+            string script = Utils.GetFileContents(filename);
+            Variable result = await ProcessAsync(script, filename, mainFile);
+            return result;
+        }
+
         public Variable Process(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
