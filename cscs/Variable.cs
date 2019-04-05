@@ -630,7 +630,7 @@ namespace SplitAndMerge
             {
                 m_enumMap = new Dictionary<int, string>();
             }
-            m_enumMap[value.AsInt()] = propName;
+            m_enumMap[value.AsInt()] = match;
         }
 
         public Variable GetEnumProperty(string propName, ParsingScript script, string baseName = "")
