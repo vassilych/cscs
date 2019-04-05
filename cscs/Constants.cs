@@ -54,6 +54,7 @@ namespace SplitAndMerge
         public const string FUNCTION = "function";
         public const string CLASS = "class";
         public const string COMPILED_FUNCTION = "cfunction";
+        public const string ENUM = "enum";
         public const string IF = "if";
         public const string INCLUDE = "include";
         public const string NEW = "new";

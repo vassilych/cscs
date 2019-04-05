@@ -72,6 +72,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.BREAK, new BreakStatement());
             ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             ParserFunction.RegisterFunction(Constants.CLASS, new ClassCreator());
+            ParserFunction.RegisterFunction(Constants.ENUM, new EnumFunction());
             ParserFunction.RegisterFunction(Constants.NEW, new NewObjectFunction());
             ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
             ParserFunction.RegisterFunction(Constants.FUNCTION, new FunctionCreator());

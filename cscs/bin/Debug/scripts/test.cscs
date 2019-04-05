@@ -796,19 +796,37 @@ Test(quote1, 'Can\'t fail!');
 quote2 = 'This is in "quotes"';
 Test(quote2, "This is in \"quotes\"");
 
-loop1 = loop2 = 0;
+loop1 = loop2 = loop3 = loop3b = 0;
 loops = 5;
 for (i = 0; i < loops; i++) {
   arr = {i, 2, 3};
   for (j = 0; j < loops; j++) {
     arr2 = {10, 20};
     loop2++;
+    for (k = 0; k < loops; k++) {
+      if (k > loops) {
+        break;
+      } else {
+        loop3++;
+      }
+      loop3b++;
+    }
   }
   loop1++;
 }
 Test(loop1, loops);
 Test(loop2, loops*loops);
+Test(loop3, loops*loops*loops);
+Test(loop3b, loop3);
 Test(arr, {loops-1, 2, 3});
+
+Print("Testing Enums...");
+existingEnum = Enum { SplitAndMerge.Variable.VarType };
+newlyDefined = Enum { None, Horizontal, Vertical, Orthogonal };
+Test(existingEnum.None, 0);
+Test(existingEnum.Object > 0, true);
+Test(newlyDefined.Vertical > newlyDefined.Horizontal, true);
+Test(newlyDefined.Orthogonal, 3);
 
 Timeout = 100;
 MySender = "Tester";

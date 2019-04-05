@@ -1039,6 +1039,19 @@ namespace SplitAndMerge
             return indices;
         }
 
+        public static List<string> ExtractTokens(ParsingScript script)
+        {
+            List<string> tokens = new List<string>(); 
+            script.MoveForwardIf(Constants.START_ARG);
+            while (script.TryCurrent() != Constants.END_GROUP)
+            {
+                string propName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                script.MoveForwardIf(Constants.NEXT_ARG);
+                tokens.Add(propName);
+            }
+            return tokens;
+        }
+
         public static Variable ExtractArrayElement(Variable array,
                                                    List<Variable> indices)
         {

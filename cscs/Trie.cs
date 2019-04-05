@@ -93,13 +93,13 @@ namespace SplitAndMerge
     {
         TrieCell m_root;
 
-        public override Variable Clone()
+        /*public override Variable Clone()
         {
             Trie newVar = new Trie();
             newVar.Copy(this);
             newVar.m_root = m_root;
             return newVar;
-        }
+        }*/
         Trie()
         {
         }

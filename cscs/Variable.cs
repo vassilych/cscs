@@ -12,7 +12,7 @@ namespace SplitAndMerge
         {
             NONE, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
-            BREAK, CONTINUE, OBJECT
+            BREAK, CONTINUE, OBJECT, ENUM
         };
 
         public Variable()
@@ -42,10 +42,6 @@ namespace SplitAndMerge
         public Variable(List<Variable> a)
         {
             this.Tuple = a;
-        }
-        public Variable(Variable other)
-        {
-            Copy(other);
         }
         public Variable(List<string> a)
         {
@@ -118,32 +114,6 @@ namespace SplitAndMerge
                 newVar.Tuple = newTuple;
             }
             return newVar;
-        }
-        public virtual void Copy(Variable other)
-        {
-            Reset();
-            Action = other.Action;
-            Type = other.Type;
-            IsReturn = other.IsReturn;
-            m_dictionary = other.m_dictionary;
-            m_propertyMap = other.m_propertyMap;
-            //bug todo
-
-            switch (other.Type)
-            {
-                case VarType.NUMBER:
-                    Value = other.Value;
-                    break;
-                case VarType.STRING:
-                    String = other.String;
-                    break;
-                case VarType.ARRAY:
-                    this.Tuple = other.Tuple;
-                    break;
-                case VarType.OBJECT:
-                    Object = other.Object;
-                    break;
-            }
         }
 
         public static Variable NewEmpty()
@@ -465,12 +435,23 @@ namespace SplitAndMerge
             {
                 return ObjectToString();
             }
+
+            StringBuilder sb = new StringBuilder();
+            if (Type == VarType.ENUM)
+            {
+                sb.Append(Constants.START_GROUP.ToString() + " ");
+                foreach (string key in m_propertyMap.Keys)
+                {
+                    sb.Append(key + " ");
+                }
+                sb.Append(Constants.END_GROUP.ToString());
+                return sb.ToString();
+            }
+
             if (Type == VarType.NONE || m_tuple == null)
             {
                 return string.Empty;
             }
-
-            StringBuilder sb = new StringBuilder();
 
             if (isList)
             {
@@ -636,6 +617,54 @@ namespace SplitAndMerge
                 result = obj.SetProperty(match, value).Result;
             }
             return result;
+        }
+
+        public void SetEnumProperty(string propName, Variable value, string baseName = "")
+        {
+            propName = Constants.ConvertName(propName); 
+
+            string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
+            m_propertyMap[match] = value;
+
+            if (m_enumMap == null)
+            {
+                m_enumMap = new Dictionary<int, string>();
+            }
+            m_enumMap[value.AsInt()] = propName;
+        }
+
+        public Variable GetEnumProperty(string propName, ParsingScript script, string baseName = "")
+        {
+            propName = Constants.ConvertName(propName);
+            if (script.TryPrev() == Constants.START_ARG)
+            {
+                Variable value = Utils.GetItem(script);
+                if (propName == Constants.TO_STRING)
+                {
+                    return ConvertEnumToString(value);
+                }
+                else
+                {
+                    return new Variable(m_enumMap != null && m_enumMap.ContainsKey(value.AsInt()));
+                }
+
+            }
+
+            string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
+
+            Variable result = GetCoreProperty(match, script);
+
+            return result;
+        }
+
+        public Variable ConvertEnumToString(Variable value)
+        {
+            string result = "";
+            if (m_enumMap != null && m_enumMap.TryGetValue(value.AsInt(), out result))
+            {
+                return new Variable(result);
+            }
+            return Variable.EmptyInstance;
         }
 
         public Variable GetProperty(string propName, ParsingScript script = null)
@@ -1032,7 +1061,11 @@ namespace SplitAndMerge
         }
 
         public string Action { get; set; }
-        public VarType Type { get; set; }
+        public VarType Type
+        {
+            get;
+            set;
+        }
         public bool IsReturn { get; set; }
         public string ParsingToken { get; set; }
         public int Index { get; set; }
@@ -1048,6 +1081,7 @@ namespace SplitAndMerge
         Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
 
         Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
+        Dictionary<int, string> m_enumMap;
     }
 
     // A Variable supporting "dot-notation" must have an object implementing this interface.

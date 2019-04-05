@@ -37,7 +37,7 @@ namespace SplitAndMerge
             // execution. On error an exception will be thrown.
             Interpreter.Instance.GetOutput += Print;
 
-            string scriptFilename = "scripts/test.cscs";
+            string scriptFilename = "scripts/temp.cscs";
             //scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
