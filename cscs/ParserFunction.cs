@@ -347,6 +347,18 @@ namespace SplitAndMerge
             return s_functions.ContainsKey(name);
         }
 
+        public static Variable RegisterEnum(string varName, string enumName)
+        {
+            Variable enumVar = EnumFunction.UseExistingEnum(enumName);
+            if (enumVar == Variable.EmptyInstance)
+            {
+                return enumVar;
+            }
+
+            AddGlobalOrLocalVariable(varName, new GetVarFunction(enumVar));
+            return enumVar;
+        }
+
         public static void RegisterFunction(string name, ParserFunction function,
                                             bool isNative = true)
         {

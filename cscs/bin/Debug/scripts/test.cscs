@@ -137,7 +137,7 @@ Print(a[5][3]--);
 Print(a[5][3]--);
 Test(a[5][3], 116);
 
-Test(a[5][3].type, "NUMBER");
+Test(a[5][3].type, VariableType.NUMBER);
 Test(a[5].size, 4);
 
 i=10;
@@ -165,10 +165,18 @@ Test(a, 1);
 
 Print("Testing arrays and maps");
 _arr[2] = 10; _arr[1] = "str";
-Test(type(_arr),    "ARRAY");
-Test(type(_arr[0]), "NONE");
-Test(type(_arr[1]), "STRING");
-Test(type(_arr[2]), "NUMBER");
+Test(_arr.type,    VariableType.ARRAY);
+Test(_arr[0].type, VariableType.NONE);
+Test(_arr[1].type, VariableType.STRING);
+Test(_arr[2].type, VariableType.NUMBER);
+
+num = 10;
+Test(num.type, VariableType.Number);
+
+Test(VariableType.NONE.string.lower, "none");
+Test(VariableType.NUMBER.String.Upper, "NUMBER");
+Test(VariableType.NONE, 0);
+Test(VariableType.NUMBER, 1);
 
 x["bla"]["blu"]=113;
 Test(contains (x["bla"], "blu"), 1);

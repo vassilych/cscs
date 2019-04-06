@@ -134,6 +134,7 @@ namespace SplitAndMerge
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";
         public const string TO_STRING = "string";
+        public const string VARIABLE_TYPE = "VariableType";
         public const string WAIT = "wait";
         public const string WEB_REQUEST = "WebRequest";
 

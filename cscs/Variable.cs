@@ -576,7 +576,7 @@ namespace SplitAndMerge
         {
             propName = Constants.ConvertName(propName);
 
-            int ind = propName.IndexOf(".");
+            int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -592,7 +592,7 @@ namespace SplitAndMerge
             Variable result = Variable.EmptyInstance;
             propName = Constants.ConvertName(propName);
 
-            int ind = propName.IndexOf(".");
+            int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -621,16 +621,13 @@ namespace SplitAndMerge
 
         public void SetEnumProperty(string propName, Variable value, string baseName = "")
         {
-            propName = Constants.ConvertName(propName); 
-
-            string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
-            m_propertyMap[match] = value;
+            m_propertyMap[propName] = value;
 
             if (m_enumMap == null)
             {
                 m_enumMap = new Dictionary<int, string>();
             }
-            m_enumMap[value.AsInt()] = match;
+            m_enumMap[value.AsInt()] = propName;
         }
 
         public Variable GetEnumProperty(string propName, ParsingScript script, string baseName = "")
@@ -647,12 +644,27 @@ namespace SplitAndMerge
                 {
                     return new Variable(m_enumMap != null && m_enumMap.ContainsKey(value.AsInt()));
                 }
+            }
 
+            string[] tokens = propName.Split('.');
+            if (tokens.Length > 1)
+            {
+                propName = tokens[0];
             }
 
             string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
 
             Variable result = GetCoreProperty(match, script);
+
+            if (tokens.Length > 1)
+            {
+                result = ConvertEnumToString(result);
+                if (tokens.Length > 2)
+                {
+                    string rest = string.Join(".", tokens, 2, tokens.Length - 2);
+                    result = result.GetProperty(rest, script);
+                }
+            }
 
             return result;
         }
@@ -671,7 +683,7 @@ namespace SplitAndMerge
         {
             Variable result = Variable.EmptyInstance;
 
-            int ind = propName.IndexOf(".");
+            int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case x = a.b.c ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -712,7 +724,7 @@ namespace SplitAndMerge
         {
             Variable result = Variable.EmptyInstance;
 
-            int ind = propName.IndexOf(".");
+            int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case x = a.b.c ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -763,7 +775,7 @@ namespace SplitAndMerge
             }
             else if (propName.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
             {
-                return new Variable(GetTypeString());
+                return new Variable((int)Type);
             }
             else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
             {

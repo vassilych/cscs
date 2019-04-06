@@ -376,7 +376,7 @@ namespace SplitAndMerge
             return enumVar;
         }
 
-        static Variable UseExistingEnum(string enumName)
+        public static Variable UseExistingEnum(string enumName)
         {
             Type enumType = GetEnumType(enumName);
             if (enumType == null || !enumType.IsEnum)
