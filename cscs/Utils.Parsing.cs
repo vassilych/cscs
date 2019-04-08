@@ -604,8 +604,36 @@ namespace SplitAndMerge
             return args;
         }
 
+        static void ThrowErrorMsg(string code, int level, int lineStart, int lineEnd, string msg)
+        {
+            var lines = code.Split('\n');
+
+            var lineNumber = level > 0 ? lineStart : lineEnd;
+            var currentLineNumber = lineNumber;
+            var line = lines[lineNumber].Trim();
+            var collectMore = line.Length < 3;
+            var lineContents = line;
+
+            while (collectMore && currentLineNumber > 0)
+            {
+                line = lines[--currentLineNumber].Trim();
+                collectMore = line.Length < 2;
+                lineContents = line + "  " + lineContents;
+            }
+
+            string lineStr = currentLineNumber == lineNumber ? "Line " + (lineNumber + 1) :
+                             "Lines " + (currentLineNumber + 1) + "-" + (lineNumber + 1);
+
+            throw new ArgumentException(msg + " " + lineStr + ": " + lineContents);
+        }
+
         public static string ConvertToScript(string source, out Dictionary<int, int> char2Line)
         {
+            string curlyErrorMsg   = "Unbalanced curly braces.";
+            string bracketErrorMsg = "Unbalanced square brackets.";
+            string parenthErrorMsg = "Unbalanced parentheses.";
+            string quoteErrorMsg   = "Unbalanced quotes.";
+
             StringBuilder sb = new StringBuilder(source.Length);
             char2Line = new Dictionary<int, int>();
 
@@ -618,9 +646,15 @@ namespace SplitAndMerge
             char prev = Constants.EMPTY;
             char prevprev = Constants.EMPTY;
 
-            int parentheses = 0;
-            int groups = 0;
+            int levelCurly = 0;
+            int levelBrackets = 0;
+            int levelParentheses = 0;
             int lineNumber = 0;
+            int lineNumberCurly = 0;
+            int lineNumberBrack = 0;
+            int lineNumberPar = 0;
+            int lineNumberQuote = 0;
+
             int lastScriptLength = 0;
 
             //string result = "";
@@ -717,30 +751,57 @@ namespace SplitAndMerge
                         }
                         spaceOK = false;
                         continue;
-                    case Constants.END_ARG:
-                        if (!inQuotes)
-                        {
-                            parentheses--;
-                            spaceOK = false;
-                        }
-                        break;
                     case Constants.START_ARG:
-                        if (!inQuotes)
+                        if (!inQuotes && !inComments)
                         {
-                            parentheses++;
+                            levelParentheses++;
+                            lineNumberPar = lineNumber;
                         }
                         break;
-                    case Constants.END_GROUP:
-                        if (!inQuotes)
+                    case Constants.END_ARG:
+                        if (!inQuotes && !inComments)
                         {
-                            groups--;
+                            levelParentheses--;
                             spaceOK = false;
+                            if (levelParentheses < 0)
+                            {
+                                ThrowErrorMsg(source, levelParentheses, lineNumberPar, lineNumber, parenthErrorMsg);
+                            }
                         }
                         break;
                     case Constants.START_GROUP:
-                        if (!inQuotes)
+                        if (!inQuotes && !inComments)
                         {
-                            groups++;
+                            levelCurly++;
+                            lineNumberCurly = lineNumber;
+                        }
+                        break;
+                    case Constants.END_GROUP:
+                        if (!inQuotes && !inComments)
+                        {
+                            levelCurly--;
+                            spaceOK = false;
+                            if (levelCurly < 0)
+                            {
+                                ThrowErrorMsg(source, levelCurly, lineNumberCurly, lineNumber, curlyErrorMsg);
+                            }
+                        }
+                        break;
+                    case Constants.START_ARRAY:
+                        if (!inQuotes && !inComments)
+                        {
+                            levelBrackets++;
+                            lineNumberBrack = lineNumber;
+                        }
+                        break;
+                    case Constants.END_ARRAY:
+                        if (!inQuotes && !inComments)
+                        {
+                            levelBrackets--;
+                            if (levelBrackets < 0)
+                            {
+                                ThrowErrorMsg(source, levelBrackets, lineNumberBrack, lineNumber, bracketErrorMsg);
+                            }
                         }
                         break;
                     case Constants.END_STATEMENT:
@@ -763,11 +824,31 @@ namespace SplitAndMerge
             {
                 char2Line[sb.Length - 1] = lineNumber;
                 lastScriptLength = sb.Length;
-
                 //result += lineNumber + ": " + (sb.Length - 1) + " " +
                 //  source.Substring(source.Length - Math.Min(source.Length, 40), Math.Min(source.Length, 40)) + "\n";
-
             }
+
+            bool error = levelCurly != 0 || levelBrackets != 0 || levelParentheses != 0 || inQuotes;
+            if (error)
+            {
+                if (inQuotes)
+                {
+                    ThrowErrorMsg(source, 1, lineNumberQuote, lineNumber, quoteErrorMsg);
+                }
+                else if (levelBrackets != 0)
+                {
+                    ThrowErrorMsg(source, levelBrackets, lineNumberBrack, lineNumber, bracketErrorMsg);
+                }
+                else if (levelParentheses != 0)
+                {
+                    ThrowErrorMsg(source, levelParentheses, lineNumberPar, lineNumber, parenthErrorMsg);
+                }
+                else if (levelCurly != 0)
+                {
+                    ThrowErrorMsg(source, levelCurly, lineNumberCurly, lineNumber, curlyErrorMsg);
+                }
+            }
+
             return sb.ToString();
         }
 

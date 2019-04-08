@@ -61,7 +61,7 @@ function catalan(n) {
 
 primes = {};
 function isPrime(n) {
-  if (size(primes) > n) {
+  if (primes.size > n) {
     return primes[n];
   }
   if (n == 0 || n == 1) {
@@ -70,7 +70,7 @@ function isPrime(n) {
   }
 
   bound = round(sqrt(n));
-  sz = size(primes);
+  sz = primes.size;
   if (sz <= bound) {
     //print("calling isPrime(", bound, "),n=", n);
     a=isPrime(bound);
