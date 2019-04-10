@@ -153,7 +153,7 @@ namespace SplitAndMerge
             Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
             precompiler.Compile();
 
-            CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap);
+            CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap, script);
             customFunc.ParentScript = script;
             customFunc.ParentOffset = parentOffset;
 
@@ -167,8 +167,9 @@ namespace SplitAndMerge
         internal CustomCompiledFunction(string funcName,
                                         string body, string[] args,
                                         Precompiler precompiler,
-                                        Dictionary<string, Variable> argsMap)
-          : base(funcName, body, args)
+                                        Dictionary<string, Variable> argsMap,
+                                        ParsingScript script)
+          : base(funcName, body, args, script)
         {
             m_precompiler = precompiler;
             m_argsMap = argsMap;

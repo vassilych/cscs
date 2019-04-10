@@ -122,7 +122,58 @@ namespace SplitAndMerge
                 throw new ArgumentException("Variable or function [" + realName + "] doesn't exist");
             }
         }
- 
+
+        public static void CheckForValidName(string name, ParsingScript script)
+        {
+            string illegals = "\"'?!";
+            for (int i = 0; i < illegals.Length; i++)
+            {
+                char ch = illegals[i];
+                if (name.Contains(ch))
+                {
+                    ThrowErrorMsg("Variable [" + name + "] contains illegal character [" + ch + "]",
+                                  script.OriginalScript, script.OriginalLineNumber);
+                }
+            }
+        }
+
+        static void ThrowErrorMsg(string msg, string script, int lineNumber, string filename = "")
+        {
+            string [] lines = script.Split('\n');
+            if (lines.Length <= 1)
+            {
+                throw new ArgumentException(msg);
+            }
+
+            var currentLineNumber = lineNumber;
+            var line = lines[lineNumber].Trim();
+            var collectMore = line.Length < 3;
+            var lineContents = line;
+
+            while (collectMore && currentLineNumber > 0)
+            {
+                line = lines[--currentLineNumber].Trim();
+                collectMore = line.Length < 2;
+                lineContents = line + "  " + lineContents;
+            }
+
+            string lineStr = currentLineNumber == lineNumber ? "Line " + (lineNumber + 1) :
+                             "Lines " + (currentLineNumber + 1) + "-" + (lineNumber + 1);
+
+            StringBuilder stack = new StringBuilder();
+            stack.AppendLine("" + lineNumber);
+            stack.AppendLine(filename);
+            stack.AppendLine(line);
+
+            throw new ParsingException(msg + " " + lineStr + ": " + lineContents, stack.ToString());
+        }
+
+        static void ThrowErrorMsg(string msg, string code, int level, int lineStart, int lineEnd, string filename)
+        {
+            var lineNumber = level > 0 ? lineStart : lineEnd;
+            ThrowErrorMsg(msg, code, lineNumber, filename);
+        }
+
         public static string GetLine(int chars = 40)
         {
             return string.Format("-").PadRight(chars, '-');
@@ -336,10 +387,7 @@ namespace SplitAndMerge
             if (numberVar.Type != Variable.VarType.NUMBER)
             {
                 double num;
-                if (!Double.TryParse(numberVar.String, NumberStyles.Number |
-                                   NumberStyles.AllowExponent |
-                                   NumberStyles.Float,
-                                   CultureInfo.InvariantCulture, out num))
+                if (!CanConvertToDouble(numberVar.String, out num))
                 {
                     throw new ArgumentException("Expected a double instead of [" + numberVar.AsString() + "]");
                 }
@@ -347,6 +395,7 @@ namespace SplitAndMerge
             }
             return numberVar.AsDouble();
         }
+
         public static string GetSafeString(List<Variable> args, int index, string defaultValue = "")
         {
             if (args.Count <= index)
@@ -407,15 +456,20 @@ namespace SplitAndMerge
             string str = obj.ToString();
             double num = 0;
 
-            if (!Double.TryParse(str, NumberStyles.Number |
-                                      NumberStyles.AllowExponent |
-                                      NumberStyles.Float,
-                                      CultureInfo.InvariantCulture, out num) &&
+            if (!CanConvertToDouble(str, out num) &&
                 script != null)
             {
                 ThrowErrorMsg(str, script);
             }
             return num;
+        }
+
+        public static bool CanConvertToDouble(string str, out double num)
+        {
+            return Double.TryParse(str, NumberStyles.Number |
+                                        NumberStyles.AllowExponent |
+                                        NumberStyles.Float,
+                                        CultureInfo.InvariantCulture, out num);
         }
 
         public static void ThrowErrorMsg(string str, ParsingScript script)
@@ -425,8 +479,8 @@ namespace SplitAndMerge
                             ch == '[' ? "array"   :
                             ch == '{' ? "operand" :
                                         "variable";
-            string lineExpr = str.Length < script.OriginalLine.Length - 2 ? " in [" + 
-                              script.OriginalLine + "]" : "";
+            string lineExpr = str.Length < script.OriginalLine.Length - 2 ? " in [ " + 
+                              script.OriginalLine.Trim() + " ]" : "";
             string token    = Constants.GetRealName(str);
             throw new ArgumentException("Couldn't find " + entity + " [" + token + "]" + lineExpr);
         }
@@ -435,8 +489,7 @@ namespace SplitAndMerge
         {
             string str = obj.ToString();
             double dRes = 0;
-            if (Double.TryParse(str, NumberStyles.Number | NumberStyles.AllowExponent,
-                                CultureInfo.InvariantCulture, out dRes))
+            if (CanConvertToDouble(str, out dRes))
             {
                 return dRes != 0;
             }

@@ -572,7 +572,8 @@ namespace SplitAndMerge
                 // Done!
                 return;
             }
-            if (leftCell.Type == Variable.VarType.NUMBER)
+            if (leftCell.Type  == Variable.VarType.NUMBER &&
+                rightCell.Type == Variable.VarType.NUMBER)
             {
                 MergeNumbers(leftCell, rightCell);
             }

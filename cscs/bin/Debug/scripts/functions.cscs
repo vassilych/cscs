@@ -131,7 +131,7 @@ function test(x, expected) {
     print(x, " as expected. OK");
     return;
   } 
-  if (type(expected) != "NUMBER") {
+  if (expected.type != VariableType.Number) {
     print("[", x, "] but expected [", expected, "]. ERROR");
     throw("Failed Test");
   }

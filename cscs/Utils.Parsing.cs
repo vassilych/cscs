@@ -445,12 +445,60 @@ namespace SplitAndMerge
             }
 
             string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
-            string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder collect = new StringBuilder(argStr.Length);
+            List<string> args = new List<string>();
+            int curlyLevel = 0;
+            for (int i = 0; i < argStr.Length; i++)
+            {
+                if (argStr[i] == '{')
+                {
+                    curlyLevel++;
+                }
+                else if (argStr[i] == '}')
+                {
+                    curlyLevel--;
+                    if (curlyLevel < 0)
+                    {
+                        break;
+                    }
+                }
+                else if (argStr[i] == Constants.NEXT_ARG && curlyLevel == 0)
+                {
+                    string item = collect.ToString().Trim();
+                    if (item.Length == 0)
+                    {
+                        throw new ArgumentException("Empty argument in function signature [" + argStr + "]");
+                    }
+                    args.Add(item);
+                    collect.Clear();
+                    continue;
+                }
+                collect.Append(argStr[i]);
+            }
 
-            args = args.Select(element => element.Trim()).ToArray();
+            if (curlyLevel != 0)
+            {
+                throw new ArgumentException("Unbalanced curly braces in function signature [" + argStr + "]");
+            }
+            if (collect.Length > 0)
+            {
+                args.Add(collect.ToString().Trim());
+            }
+
             script.Pointer = endArgs + 1;
 
-            return args;
+            return args.ToArray();
+        }
+
+        public static Variable GetVariableFromString(string str, ParsingScript script, int startIndex = 0)
+        {
+            ParsingScript tempScript = new ParsingScript(str, startIndex);
+            tempScript.Filename      = script.Filename;
+            tempScript.InTryBlock    = script.InTryBlock;
+            tempScript.Debugger      = script.Debugger;
+
+            Variable result          = Utils.GetItem(tempScript);
+            return result;
         }
 
         public static string[] GetBaseClasses(ParsingScript script)
@@ -604,30 +652,7 @@ namespace SplitAndMerge
             return args;
         }
 
-        static void ThrowErrorMsg(string code, int level, int lineStart, int lineEnd, string msg)
-        {
-            var lines = code.Split('\n');
-
-            var lineNumber = level > 0 ? lineStart : lineEnd;
-            var currentLineNumber = lineNumber;
-            var line = lines[lineNumber].Trim();
-            var collectMore = line.Length < 3;
-            var lineContents = line;
-
-            while (collectMore && currentLineNumber > 0)
-            {
-                line = lines[--currentLineNumber].Trim();
-                collectMore = line.Length < 2;
-                lineContents = line + "  " + lineContents;
-            }
-
-            string lineStr = currentLineNumber == lineNumber ? "Line " + (lineNumber + 1) :
-                             "Lines " + (currentLineNumber + 1) + "-" + (lineNumber + 1);
-
-            throw new ArgumentException(msg + " " + lineStr + ": " + lineContents);
-        }
-
-        public static string ConvertToScript(string source, out Dictionary<int, int> char2Line)
+        public static string ConvertToScript(string source, out Dictionary<int, int> char2Line, string filename = "")
         {
             string curlyErrorMsg   = "Unbalanced curly braces.";
             string bracketErrorMsg = "Unbalanced square brackets.";
@@ -754,8 +779,11 @@ namespace SplitAndMerge
                     case Constants.START_ARG:
                         if (!inQuotes && !inComments)
                         {
+                            if (levelParentheses == 0)
+                            {
+                                lineNumberPar = lineNumber;
+                            }
                             levelParentheses++;
-                            lineNumberPar = lineNumber;
                         }
                         break;
                     case Constants.END_ARG:
@@ -765,15 +793,18 @@ namespace SplitAndMerge
                             spaceOK = false;
                             if (levelParentheses < 0)
                             {
-                                ThrowErrorMsg(source, levelParentheses, lineNumberPar, lineNumber, parenthErrorMsg);
+                                ThrowErrorMsg(parenthErrorMsg, source, levelParentheses, lineNumberPar, lineNumber, filename);
                             }
                         }
                         break;
                     case Constants.START_GROUP:
                         if (!inQuotes && !inComments)
                         {
+                            if (levelCurly == 0)
+                            {
+                                lineNumberCurly = lineNumber;
+                            }
                             levelCurly++;
-                            lineNumberCurly = lineNumber;
                         }
                         break;
                     case Constants.END_GROUP:
@@ -783,13 +814,17 @@ namespace SplitAndMerge
                             spaceOK = false;
                             if (levelCurly < 0)
                             {
-                                ThrowErrorMsg(source, levelCurly, lineNumberCurly, lineNumber, curlyErrorMsg);
+                                ThrowErrorMsg(curlyErrorMsg, source, levelCurly, lineNumberCurly, lineNumber, filename);
                             }
                         }
                         break;
                     case Constants.START_ARRAY:
                         if (!inQuotes && !inComments)
                         {
+                            if (levelBrackets == 0)
+                            {
+                                lineNumberBrack = lineNumber;
+                            }
                             levelBrackets++;
                             lineNumberBrack = lineNumber;
                         }
@@ -800,7 +835,7 @@ namespace SplitAndMerge
                             levelBrackets--;
                             if (levelBrackets < 0)
                             {
-                                ThrowErrorMsg(source, levelBrackets, lineNumberBrack, lineNumber, bracketErrorMsg);
+                                ThrowErrorMsg(bracketErrorMsg, source, levelBrackets, lineNumberBrack, lineNumber, filename);
                             }
                         }
                         break;
@@ -833,19 +868,19 @@ namespace SplitAndMerge
             {
                 if (inQuotes)
                 {
-                    ThrowErrorMsg(source, 1, lineNumberQuote, lineNumber, quoteErrorMsg);
+                    ThrowErrorMsg(quoteErrorMsg, source, 1, lineNumberQuote, lineNumber, filename);
                 }
                 else if (levelBrackets != 0)
                 {
-                    ThrowErrorMsg(source, levelBrackets, lineNumberBrack, lineNumber, bracketErrorMsg);
+                    ThrowErrorMsg(bracketErrorMsg, source, levelBrackets, lineNumberBrack, lineNumber, filename);
                 }
                 else if (levelParentheses != 0)
                 {
-                    ThrowErrorMsg(source, levelParentheses, lineNumberPar, lineNumber, parenthErrorMsg);
+                    ThrowErrorMsg(parenthErrorMsg, source, levelParentheses, lineNumberPar, lineNumber, filename);
                 }
                 else if (levelCurly != 0)
                 {
-                    ThrowErrorMsg(source, levelCurly, lineNumberCurly, lineNumber, curlyErrorMsg);
+                    ThrowErrorMsg(curlyErrorMsg, source, levelCurly, lineNumberCurly, lineNumber, filename);
                 }
             }
 

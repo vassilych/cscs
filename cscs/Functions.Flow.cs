@@ -148,7 +148,7 @@ namespace SplitAndMerge
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
-            CustomFunction customFunc = new CustomFunction(funcName, body, args);
+            CustomFunction customFunc = new CustomFunction(funcName, body, args, script);
             customFunc.ParentScript = script;
             customFunc.ParentOffset = parentOffset;
 
@@ -537,7 +537,7 @@ namespace SplitAndMerge
     public class CustomFunction : ParserFunction
     {
         internal CustomFunction(string funcName,
-                                string body, string[] args)
+                                string body, string[] args, ParsingScript script)
         {
             Name = funcName;
             m_body = body;
@@ -546,22 +546,16 @@ namespace SplitAndMerge
             for (int i = 0; i < args.Length; i++)
             {
                 string arg = args[i];
-                int ind = arg.IndexOf("=");
+                int ind = arg.IndexOf('=');
                 if (ind > 0)
                 {
                     m_args[i] = arg.Substring(0, ind).Trim().ToLower();
                     string defValue = ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim();
-                    if (defValue.StartsWith("\""))
-                    {
-                        defValue = defValue.Substring(1);
-                    }
-                    if (defValue.EndsWith("\""))
-                    {
-                        defValue = defValue.Substring(0, defValue.Length - 1);
-                    }
-                    Variable defVariable = new Variable(defValue);
+
+                    Variable defVariable = Utils.GetVariableFromString(defValue, script);
                     defVariable.CurrentAssign = m_args[i];
                     defVariable.Index = i;
+
                     m_defArgMap[i] = m_defaultArgs.Count;
                     m_defaultArgs.Add(defVariable);
                 }
@@ -1200,7 +1194,7 @@ namespace SplitAndMerge
 
             string includeFile = string.Join(Environment.NewLine, lines);
             Dictionary<int, int> char2Line;
-            includeScript = Utils.ConvertToScript(includeFile, out char2Line);
+            includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
             ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
             tempScript.Filename = pathname;
             tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
@@ -1299,7 +1293,7 @@ namespace SplitAndMerge
 
                 script.Forward();
                 m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
-                Variable propValue = await result.GetPropertyAsync(m_propName, script);
+                Variable propValue = await result.GetPropertyAsync(m_propName, script); 
                 Utils.CheckNotNull(propValue, m_propName);
                 return propValue;
             }
@@ -1552,7 +1546,8 @@ namespace SplitAndMerge
 
             // First try processing as an object (with a dot notation):
             Variable result = await ProcessObjectAsync(script, varValue);
-            if (result != null)
+    
+                    if (result != null)
             {
                 return result;
             }
@@ -1603,11 +1598,14 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            int ind = varName.IndexOf(".");
+            int ind = varName.IndexOf('.');
             if (ind <= 0)
             {
                 return null;
             }
+
+            Utils.CheckForValidName(varName, script);
+
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
 
@@ -1635,11 +1633,14 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            int ind = varName.IndexOf(".");
+            int ind = varName.IndexOf('.');
             if (ind <= 0)
             {
                 return null;
             }
+
+            Utils.CheckForValidName(varName, script);
+
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
 

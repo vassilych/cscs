@@ -582,6 +582,7 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = GetProperty(varName);
+                Utils.CheckNotNull(property, varName);
                 return property.SetProperty(actualPropName, value, baseName);
             }
             return FinishSetProperty(propName, value, baseName);
@@ -598,6 +599,7 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = await GetPropertyAsync(varName);
+                Utils.CheckNotNull(property, varName);
                 result = await property.SetPropertyAsync(actualPropName, value, baseName);
                 return result;
             }

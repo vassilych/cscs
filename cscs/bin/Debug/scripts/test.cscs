@@ -145,10 +145,13 @@ i=10;
 while(--i > 0) {
   newarray[i] = 2*i;
 }
-Print("size(newarray)=", size(newarray));
+Print("newarray.size=", newarray.size);
 Test(i, 0);
 Test(newarray[9], 18);
-Test(size(newarray), 10);
+Test(newarray.size, 10);
+
+Test(1 + " " + 2, "1 2");
+Test("" + 4 + 5, "45");
 
 Print("Testing short circuit evaluation");
 function f(x) {
@@ -633,6 +636,27 @@ for (i = 0; i < myarray.size; i++) {
 }
 
 Print("Testing named and default arguments...");
+
+function withList(action = "+", what = {1,2,3,4}) {
+  if (action == "+") {
+    result = 0;
+    for (arg : what) {
+      result += arg;
+    }
+    return result;
+  } elif (action == "*") {
+    result = 1;
+    for (arg : what) {
+      result *= arg;
+    }
+    return result;
+  }
+  return "Unknown action: " + action;
+}
+Test(withList(), 10);
+Test(withList("*"), 24);
+Test(withList("+", {5,10,15}), 30);
+
 function myp(par1, par2, par3 = 100) {
   return par1 + par2 + par3;
 }
@@ -848,4 +872,4 @@ ScheduleRun(timeout*2, "timer_timeout", 'MySender', 'Arg with "double quotes"');
 
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
-Sleep(1000);
+Sleep(2000);

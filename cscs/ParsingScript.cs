@@ -149,11 +149,15 @@ namespace SplitAndMerge
             {
                 int pointer = script == this ? script.Pointer + firstOffset : script.Pointer;
                 int lineNumber = script.GetOriginalLineNumber(pointer);
-                string filename = string.IsNullOrWhiteSpace(script.Filename) ? "" : Path.GetFullPath(script.Filename);
-                string line = string.IsNullOrWhiteSpace(filename) ? "" : File.ReadLines(filename).Skip(lineNumber).Take(1).First();
+                string filename = string.IsNullOrWhiteSpace(script.Filename) ? "" :
+                                  Path.GetFullPath(script.Filename);
+                string line = string.IsNullOrWhiteSpace(filename) ? "" :
+                              File.ReadLines(filename).Skip(lineNumber).Take(1).First();
+
                 result.AppendLine("" + lineNumber);
                 result.AppendLine(filename);
                 result.AppendLine(line.Trim());
+
                 script = script.ParentScript;
             }
 
@@ -501,9 +505,10 @@ namespace SplitAndMerge
         public ParsingScript ExceptionScript { get; private set; }
         public string ExceptionStack { get; private set; } = "";
 
-        public ParsingException(string message)
+        public ParsingException(string message, string excStack = "")
             : base(message)
         {
+            ExceptionStack = excStack.Trim();
         }
         public ParsingException(string message, ParsingScript script)
             : base(message)
