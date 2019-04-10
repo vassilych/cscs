@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Configuration;
 using System.Text;
 using System.Threading.Tasks;
+using static SplitAndMerge.ParserFunction;
 
 namespace SplitAndMerge
 {
@@ -188,7 +189,7 @@ namespace SplitAndMerge
         public Variable Process(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
-            string data = Utils.ConvertToScript(script, out char2Line);
+            string data = Utils.ConvertToScript(script, out char2Line, filename);
             if (string.IsNullOrWhiteSpace(data))
             {
                 return null;
@@ -216,7 +217,7 @@ namespace SplitAndMerge
         public async Task<Variable> ProcessAsync(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
-            string data = Utils.ConvertToScript(script, out char2Line);
+            string data = Utils.ConvertToScript(script, out char2Line, filename);
             if (string.IsNullOrWhiteSpace(data))
             {
                 return null;
@@ -835,6 +836,9 @@ namespace SplitAndMerge
             int blockStart = script.Pointer;
             Variable result = null;
 
+            //StackLevel stackLevel = new StackLevel(script.Rest);
+            //ParserFunction.AddLocalVariables(stackLevel);
+
             if (script.Debugger != null)
             {
                 bool done = false;
@@ -852,11 +856,6 @@ namespace SplitAndMerge
                     return result != null ? result : new Variable();
                 }
 
-                /*if (!script.StillValid())
-                {
-                    throw new ArgumentException("Couldn't process block [" +
-                    script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
-                }*/
                 result = script.ExecuteTo();
 
                 if (result.IsReturn ||
@@ -866,6 +865,8 @@ namespace SplitAndMerge
                     return result;
                 }
             }
+
+            //ParserFunction.PopLocalVariables();
             return result;
         }
 
@@ -873,6 +874,9 @@ namespace SplitAndMerge
         {
             int blockStart = script.Pointer;
             Variable result = null;
+
+            //StackLevel stackLevel = new StackLevel(script.Rest);
+            //ParserFunction.AddLocalVariables(stackLevel);
 
             if (script.Debugger != null)
             {
@@ -891,11 +895,6 @@ namespace SplitAndMerge
                     return result != null ? result : new Variable();
                 }
 
-                /*if (!script.StillValid())
-                {
-                    throw new ArgumentException("Couldn't process block [" +
-                    script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
-                }*/
                 result = await script.ExecuteToAsync();
 
                 if (result.IsReturn ||
@@ -905,6 +904,8 @@ namespace SplitAndMerge
                     return result;
                 }
             }
+
+            //ParserFunction.PopLocalVariables();
             return result;
         }
 
