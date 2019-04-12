@@ -246,6 +246,7 @@ namespace SplitAndMerge
 
         public static string ConvertName(string name)
         {
+            name = name.Trim();
             if (string.IsNullOrWhiteSpace(name) || name[0] == QUOTE || name[0] == QUOTE1)
             {
                 return name;
@@ -263,6 +264,7 @@ namespace SplitAndMerge
 
         public static string GetRealName(string name)
         {
+            name = name.Trim();
             string realName;
             if (!s_realNames.TryGetValue(name, out realName))
             {

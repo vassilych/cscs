@@ -513,7 +513,7 @@ namespace SplitAndMerge
             tempScript.OriginalScript = script.OriginalScript;
             tempScript.CurrentClass = newClass;
             tempScript.ParentScript = script;
-            tempScript.InTryBlock = script == null ? false : script.InTryBlock;
+            tempScript.InTryBlock = script.InTryBlock;
             tempScript.DisableBreakpoints = true;
 
             // Uncomment if want to step into the class creation code when the debugger is attached (unlikely)
@@ -1307,7 +1307,7 @@ namespace SplitAndMerge
                 Variable propValue = m_value.Type == Variable.VarType.ENUM ?
                          m_value.GetEnumProperty(temp, script) :
                          await m_value.GetPropertyAsync(temp, script);
-                Utils.CheckNotNull(propValue, temp);
+                Utils.CheckNotNull(propValue, temp, script);
                 return propValue;
             }
 
@@ -1405,7 +1405,7 @@ namespace SplitAndMerge
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
 
             ParserFunction func = ParserFunction.GetFunction(m_name, script);
-            Utils.CheckNotNull(m_name, func);
+            Utils.CheckNotNull(func, m_name, script);
 
             Variable currentValue = func.GetValue(script);
             currentValue = currentValue.DeepClone();

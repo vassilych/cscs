@@ -499,7 +499,22 @@ namespace SplitAndMerge
                 GoToNextStatement();
             }
         }
+
+        public ParsingScript GetTempScript(string str, int startIndex = 0)
+        {
+            ParsingScript tempScript  = new ParsingScript(str, startIndex);
+            tempScript.Filename       = this.Filename;
+            tempScript.InTryBlock     = this.InTryBlock;
+            tempScript.ParentScript   = this;
+            tempScript.Char2Line      = this.Char2Line;
+            tempScript.OriginalScript = this.OriginalScript;
+            tempScript.InTryBlock     = this.InTryBlock;
+            //tempScript.Debugger       = this.Debugger;
+
+            return tempScript;
+        }
     }
+
     public class ParsingException : Exception
     {
         public ParsingScript ExceptionScript { get; private set; }

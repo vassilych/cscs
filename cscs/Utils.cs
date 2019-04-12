@@ -99,6 +99,23 @@ namespace SplitAndMerge
                                             " in function [" + realName + "]");
             }
         }
+        public static void CheckNotNull(string name, ParserFunction func)
+        {
+            if (func == null)
+            {
+                string realName = Constants.GetRealName(name);
+                throw new ArgumentException("Variable or function [" + realName + "] doesn't exist");
+            }
+        }
+        public static void CheckNotNull(object obj, string name, ParsingScript script)
+        {
+            if (obj == null)
+            {
+                string realName = Constants.GetRealName(name);
+                ThrowErrorMsg("Object [" + realName + "] doesn't exist.", script, 2);
+            }
+        }
+
         public static void CheckNotEnd(ParsingScript script)
         {
             if (!script.StillValid())
@@ -114,15 +131,6 @@ namespace SplitAndMerge
                 throw new ArgumentException("Incomplete arguments for [" + realName + "]");
             }
         }
-        public static void CheckNotNull(string name, ParserFunction func)
-        {
-            if (func == null)
-            {
-                string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Variable or function [" + realName + "] doesn't exist");
-            }
-        }
-
         public static void CheckForValidName(string name, ParsingScript script)
         {
             string illegals = "\"'?!";
@@ -132,40 +140,53 @@ namespace SplitAndMerge
                 if (name.Contains(ch))
                 {
                     ThrowErrorMsg("Variable [" + name + "] contains illegal character [" + ch + "]",
-                                  script.OriginalScript, script.OriginalLineNumber);
+                                  script);
                 }
             }
         }
 
-        static void ThrowErrorMsg(string msg, string script, int lineNumber, string filename = "")
+        static void ThrowErrorMsg(string msg, ParsingScript script, int minLines = 1)
+        {
+            string code = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
+            int lineNumber = script == null ? 0 : script.OriginalLineNumber;
+            string filename = script == null || string.IsNullOrWhiteSpace(script.Filename) ? "" : script.Filename;
+            ThrowErrorMsg(msg, code, lineNumber, filename, minLines);
+        }
+
+        static void ThrowErrorMsg(string msg, string script, int lineNumber, string filename = "", int minLines = 1)
         {
             string [] lines = script.Split('\n');
-            if (lines.Length <= 1)
+            lineNumber = lines.Length <= lineNumber ? -1 : lineNumber;
+            if (lineNumber < 0)
             {
-                throw new ArgumentException(msg);
+                throw new ParsingException(msg);
             }
 
             var currentLineNumber = lineNumber;
             var line = lines[lineNumber].Trim();
-            var collectMore = line.Length < 3;
+            var collectMore = line.Length < 3 || minLines > 1;
             var lineContents = line;
 
             while (collectMore && currentLineNumber > 0)
             {
                 line = lines[--currentLineNumber].Trim();
-                collectMore = line.Length < 2;
+                collectMore = line.Length < 2 || (minLines > lineNumber - currentLineNumber + 1);
                 lineContents = line + "  " + lineContents;
             }
 
-            string lineStr = currentLineNumber == lineNumber ? "Line " + (lineNumber + 1) :
-                             "Lines " + (currentLineNumber + 1) + "-" + (lineNumber + 1);
+            if (lines.Length > 1)
+            {
+                string lineStr = currentLineNumber == lineNumber ? "Line " + (lineNumber + 1) :
+                                 "Lines " + (currentLineNumber + 1) + "-" + (lineNumber + 1);
+                msg += " " + lineStr + ": " + lineContents;
+            }
 
             StringBuilder stack = new StringBuilder();
-            stack.AppendLine("" + lineNumber);
+            stack.AppendLine("" + currentLineNumber);
             stack.AppendLine(filename);
             stack.AppendLine(line);
 
-            throw new ParsingException(msg + " " + lineStr + ": " + lineContents, stack.ToString());
+            throw new ParsingException(msg, stack.ToString());
         }
 
         static void ThrowErrorMsg(string msg, string code, int level, int lineStart, int lineEnd, string filename)
@@ -235,7 +256,7 @@ namespace SplitAndMerge
             catch (Exception ex)
             {
                 throw new ArgumentException("Couldn't read file [" + filename +
-                                            "] from disk: " + ex.Message);
+                                           "] from disk: " + ex.Message);
             }
         }
 
@@ -459,7 +480,7 @@ namespace SplitAndMerge
             if (!CanConvertToDouble(str, out num) &&
                 script != null)
             {
-                ThrowErrorMsg(str, script);
+                ProcessErrorMsg(str, script);
             }
             return num;
         }
@@ -472,17 +493,19 @@ namespace SplitAndMerge
                                         CultureInfo.InvariantCulture, out num);
         }
 
-        public static void ThrowErrorMsg(string str, ParsingScript script)
+        public static void ProcessErrorMsg(string str, ParsingScript script)
         {
             char ch = script.TryPrev();
             string entity = ch == '(' ? "function":
                             ch == '[' ? "array"   :
                             ch == '{' ? "operand" :
                                         "variable";
-            string lineExpr = str.Length < script.OriginalLine.Length - 2 ? " in [ " + 
-                              script.OriginalLine.Trim() + " ]" : "";
             string token    = Constants.GetRealName(str);
-            throw new ArgumentException("Couldn't find " + entity + " [" + token + "]" + lineExpr);
+
+            string msg = "Couldn't find " + entity + " [" + token + "].";
+
+            int checkLines = script.OriginalLine.ToLower().Contains(str.ToLower()) ? 1 : 2;
+            ThrowErrorMsg(msg, script, checkLines);
         }
 
         public static bool ConvertToBool(object obj)
@@ -580,7 +603,7 @@ namespace SplitAndMerge
                 string[] readText = Utils.GetFileLines(filename);
                 return string.Join("\n", readText);
             }
-            catch (ArgumentException exc)
+            catch (Exception exc)
             {
                 Console.WriteLine(exc.Message);
                 return "";

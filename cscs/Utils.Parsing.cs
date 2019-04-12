@@ -314,9 +314,10 @@ namespace SplitAndMerge
                 return args;
             }
 
-            ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
+            ParsingScript tempScript = script.GetTempScript(script.String, script.Pointer);
+            /*ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
             tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;
+            tempScript.InTryBlock = script.InTryBlock;*/
 
             if (script.Current != start && script.TryPrev() != start &&
                (script.Current == ' ' || script.TryPrev() == ' '))
@@ -371,9 +372,10 @@ namespace SplitAndMerge
                 return args;
             }
 
-            ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
+            ParsingScript tempScript = script.GetTempScript(script.String, script.Pointer);
+            /*ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
             tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;
+            tempScript.InTryBlock = script.InTryBlock;*/
 
             if (script.Current != start && script.TryPrev() != start &&
                (script.Current == ' ' || script.TryPrev() == ' '))
@@ -492,11 +494,7 @@ namespace SplitAndMerge
 
         public static Variable GetVariableFromString(string str, ParsingScript script, int startIndex = 0)
         {
-            ParsingScript tempScript = new ParsingScript(str, startIndex);
-            tempScript.Filename      = script.Filename;
-            tempScript.InTryBlock    = script.InTryBlock;
-            tempScript.Debugger      = script.Debugger;
-
+            ParsingScript tempScript = script.GetTempScript(str, startIndex);
             Variable result          = Utils.GetItem(tempScript);
             return result;
         }
@@ -686,8 +684,8 @@ namespace SplitAndMerge
             for (int i = 0; i < source.Length; i++)
             {
                 char ch = source[i];
-                //char prev = i - 1 >= 0 ? source[i - 1] : Constants.EMPTY;
                 char next = i + 1 < source.Length ? source[i + 1] : Constants.EMPTY;
+                char last = sb.Length > 0  ? sb[sb.Length - 1] : Constants.EMPTY;
 
                 if (ch == '\n')
                 {
@@ -695,11 +693,14 @@ namespace SplitAndMerge
                     {
                         char2Line[sb.Length - 1] = lineNumber;
                         lastScriptLength = sb.Length;
-
-                        //result += lineNumber + ": " + (sb.Length - 1) + " " +
-                        //          source.Substring(i - Math.Min(i, 6), Math.Min(i, 6)) + "\n";
                     }
                     lineNumber++;
+                    if (simpleComments)
+                    {
+                        inComments = simpleComments = false;
+                    }
+                    spaceOK = false;
+                    continue;
                 }
 
                 if (inComments && ((simpleComments && ch != '\n') ||
@@ -731,6 +732,10 @@ namespace SplitAndMerge
                         {
                             ch = '"';
                             inQuotes = inQuotes1 = !inQuotes1;
+                            if (inQuotes && (prev == '"' && lineNumberQuote == 0))
+                            {
+                                lineNumberQuote = lineNumber;
+                            }
                         }
                         break;
                     case '“':
@@ -741,6 +746,10 @@ namespace SplitAndMerge
                         if (!inComments && !inQuotes1 && (prev != '\\' || prevprev == '\\'))
                         {
                             inQuotes = inQuotes2 = !inQuotes2;
+                            if (inQuotes && (prev == '"' && lineNumberQuote == 0))
+                            {
+                                lineNumberQuote = lineNumber;
+                            }
                         }
                         else if (inQuotes1)
                         {
@@ -768,13 +777,6 @@ namespace SplitAndMerge
                     case '\t':
                     case '\r':
                         if (inQuotes) sb.Append(ch);
-                        continue;
-                    case '\n':
-                        if (simpleComments)
-                        {
-                            inComments = simpleComments = false;
-                        }
-                        spaceOK = false;
                         continue;
                     case Constants.START_ARG:
                         if (!inQuotes && !inComments)
@@ -1086,12 +1088,13 @@ namespace SplitAndMerge
                     break;
                 }
 
-                ParsingScript tempScript = new ParsingScript(varName, argStart);
+                ParsingScript tempScript = script.GetTempScript(varName, argStart);
+                /*ParsingScript tempScript = new ParsingScript(varName, argStart);
                 tempScript.ParentScript = script;
                 tempScript.Char2Line = script.Char2Line;
                 tempScript.Filename = script.Filename;
                 tempScript.OriginalScript = script.OriginalScript;
-                tempScript.InTryBlock = script.InTryBlock;
+                tempScript.InTryBlock = script.InTryBlock;*/
 
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
@@ -1130,12 +1133,13 @@ namespace SplitAndMerge
                     break;
                 }
 
-                ParsingScript tempScript = new ParsingScript(varName, argStart);
+                ParsingScript tempScript = script.GetTempScript(varName, argStart);
+                /*ParsingScript tempScript = new ParsingScript(varName, argStart);
                 tempScript.ParentScript = script;
                 tempScript.Char2Line = script.Char2Line;
                 tempScript.Filename = script.Filename;
                 tempScript.OriginalScript = script.OriginalScript;
-                tempScript.InTryBlock = script.InTryBlock;
+                tempScript.InTryBlock = script.InTryBlock;*/
 
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 

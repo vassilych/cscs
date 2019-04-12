@@ -1,10 +1,11 @@
 include("functions.cscs");
 Start = pstime;
-
 Print("Testing LoaderMain:", LoaderMain);
 Test(LoaderMain, true);
 
 Print("Testing strings");
+Test(1 + " " + 2, "1 2");
+
 txt = "lu";
 txt += txt;
 txt = txt + "_";

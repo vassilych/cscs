@@ -82,9 +82,10 @@ namespace SplitAndMerge
             string[] commands = data.Split(new char[] { '\n' });
             foreach (string dataCmd in commands)
             {
-                if (!string.IsNullOrWhiteSpace(dataCmd))
+                var cmd = dataCmd.Replace("\r", "\n").Trim();
+                if (!string.IsNullOrWhiteSpace(cmd))
                 {
-                    await ProcessClientCommand(dataCmd);
+                    await ProcessClientCommand(cmd);
                 }
             }
         }
@@ -493,6 +494,7 @@ namespace SplitAndMerge
             int varsCount = vars.Split('\n').Length;
 
             string result = "exc\n" + exc.Message + "\n";
+            //result += exc. + "\n";
             result += varsCount + "\n";
             result += vars + "\n";
             result += stack + "\n";
