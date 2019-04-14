@@ -283,8 +283,10 @@ namespace SplitAndMerge
         static void GetVariables(Dictionary<string, ParserFunction> variablesScope,
                                  StringBuilder sb, bool isLocal = false)
         {
-            foreach (var variable in variablesScope.Values.ToList())
+            var all = variablesScope.Values.ToList();
+            for (int i = 0; i < all.Count; i++)
             {
+                var variable = all[i];
                 string varData = CreateVariableEntry(variable, isLocal);
                 if (!string.IsNullOrWhiteSpace(varData))
                 {

@@ -828,7 +828,6 @@ namespace SplitAndMerge
                                 lineNumberBrack = lineNumber;
                             }
                             levelBrackets++;
-                            lineNumberBrack = lineNumber;
                         }
                         break;
                     case Constants.END_ARRAY:

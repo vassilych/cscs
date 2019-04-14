@@ -1,3 +1,4 @@
+
 include("functions.cscs");
 Start = pstime;
 Print("Testing LoaderMain:", LoaderMain);
@@ -247,28 +248,49 @@ Test(d, 8);
 Test(i, 4);
 
 n=1.5;
+exceptionThrown = false;
 try {
   c = catalan(n);
   Print("catalan(", n, ")=", c);
   Print("ERROR. Exception needed for n=", n);
 } catch(exc) {
   Print("OK. Caught: " + exc);
+  exceptionThrown = true;
 }
+Test(exceptionThrown, true);
+
 n=-10;
+exceptionThrown = false;
 try {
   c = catalan(n);
   Print("catalan(", n, ")=", c);
   Print("ERROR. Exception needed for n=", n);
 } catch(exc) {
   Print("OK. Caught: " + exc);
+  exceptionThrown = true;
 }
+Test(exceptionThrown, true);
+
 n=10;
+exceptionThrown = false;
 try {
   c = catalan(n);
   Print("catalan(", n, ")=", c);
 } catch(exc) {
   Print("ERROR. Caught: " + exc);
+  exceptionThrown = true;
 }
+Test(exceptionThrown, false);
+
+exceptionThrown = false;
+try {
+  var = blah.unknown;
+  Print("ERROR. Exception needed for non existing variable.");
+} catch(exc) {
+  Print("OK. Caught: " + exc);
+  exceptionThrown = true;
+}
+Test(exceptionThrown, true);
 
 f = fibonacci(n);
 Print("fibonacci(", n, ")=", f);
@@ -805,7 +827,12 @@ ct.Extra = "New property";
 props = ct.properties;
 Test(props.contains("Extra"), true);
 print("Properties:", props);
-Test(props.size, 8);
+Test(props.size, 5);
+
+xxx.blah = 10;
+xxx.size  = 33;
+Test(xxx.size, 33);
+print(xxx, xxx.properties);
 
 function CreateArray(size, initValue = 0) {
     result = {};

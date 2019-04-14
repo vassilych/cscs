@@ -112,7 +112,7 @@ namespace SplitAndMerge
             if (obj == null)
             {
                 string realName = Constants.GetRealName(name);
-                ThrowErrorMsg("Object [" + realName + "] doesn't exist.", script, 2);
+                ThrowErrorMsg("Object [" + realName + "] doesn't exist.", script, realName);
             }
         }
 
@@ -140,16 +140,18 @@ namespace SplitAndMerge
                 if (name.Contains(ch))
                 {
                     ThrowErrorMsg("Variable [" + name + "] contains illegal character [" + ch + "]",
-                                  script);
+                                  script, name);
                 }
             }
         }
 
-        static void ThrowErrorMsg(string msg, ParsingScript script, int minLines = 1)
+        static void ThrowErrorMsg(string msg, ParsingScript script, string token)
         {
-            string code = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
-            int lineNumber = script == null ? 0 : script.OriginalLineNumber;
+            string code     = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
+            int lineNumber  = script == null ? 0 : script.OriginalLineNumber;
             string filename = script == null || string.IsNullOrWhiteSpace(script.Filename) ? "" : script.Filename;
+            int minLines    = script == null || script.OriginalLine.ToLower().Contains(token.ToLower()) ? 1 : 2;
+
             ThrowErrorMsg(msg, code, lineNumber, filename, minLines);
         }
 
@@ -504,8 +506,7 @@ namespace SplitAndMerge
 
             string msg = "Couldn't find " + entity + " [" + token + "].";
 
-            int checkLines = script.OriginalLine.ToLower().Contains(str.ToLower()) ? 1 : 2;
-            ThrowErrorMsg(msg, script, checkLines);
+            ThrowErrorMsg(msg, script, str);
         }
 
         public static bool ConvertToBool(object obj)

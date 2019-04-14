@@ -522,8 +522,9 @@ namespace SplitAndMerge
                            Constants.START_GROUP.ToString());
 
                 List<string> allProps = GetAllProperties();
-                foreach (string prop in allProps)
+                for (int i = 0;  i < allProps.Count; i++)
                 {
+                    string prop = allProps[i];
                     if (prop.Equals(Constants.OBJECT_PROPERTIES, StringComparison.OrdinalIgnoreCase))
                     {
                         sb.Append(prop);
@@ -544,7 +545,11 @@ namespace SplitAndMerge
                             value = ": " + value;
                         }
                     }
-                    sb.Append(prop + value + ", ");
+                    sb.Append(prop + value);
+                    if (i < allProps.Count - 1)
+                    {
+                        sb.Append(", ");
+                    }
                 }
 
                 sb.Append(Constants.END_GROUP.ToString());
@@ -975,21 +980,9 @@ namespace SplitAndMerge
 
             all.Sort();
 
-            if (!allSet.Contains(Constants.OBJECT_PROPERTIES.ToLower()))
-            {
-                all.Add(Constants.OBJECT_PROPERTIES);
-            }
             if (!allSet.Contains(Constants.OBJECT_TYPE.ToLower()))
             {
                 all.Add(Constants.OBJECT_TYPE);
-            }
-            if (!allSet.Contains(Constants.SIZE.ToLower()))
-            {
-                all.Add(Constants.SIZE);
-            }
-            if (!allSet.Contains(Constants.STRING.ToLower()))
-            {
-                all.Add(Constants.STRING);
             }
 
             return all;
