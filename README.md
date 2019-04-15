@@ -459,7 +459,7 @@ Let's see an example how to do that with a random number generator function.
     protected override Variable Evaluate(ParsingScript script)
     {
         // Extract all passed function args:
-        List<Variable> args = script.GetFunctionArgs();
+        List&lt;Variable&gt; args = script.GetFunctionArgs();
 
         // Check that we should have at least one argument:
         Utils.CheckArgs(args.Count, 1, m_name);
