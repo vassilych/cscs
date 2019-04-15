@@ -18,13 +18,13 @@ The Visual Studio Code Extension to debug CSCS code is available [here](https://
 
 <br>
 
-Decription of CSCS
+Description of CSCS
 ======
 
 * The syntax is a mixture between C#, JavaScript, and Python.
-* All statements must finish with a semicolon ";".
+* All statements must end with a semicolon ";".
 * Identation and new lines are not used in parsing (unlike Python).
-* All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, type, size, and string. E.g. after setting n=10; n.properties will return {properties, type, size, string}.
+* All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, type, size, and string.
 * Variables and arrays are all defined implicitly, e.g. x=5, b[7]=11<br>
   An example of a list initialization: c = {"aa", "bb", "xxx"};<br>
   You can also define it explicitely: c[0]="aa"; c[1]="bb"; <br>
