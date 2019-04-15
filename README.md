@@ -218,15 +218,15 @@ CSCS Math Functions
 | **Asin** (*value*)                  | Returns arcsine function   
 | **Ceil** (*value*)                  | Returns the smallest integral value which is greater than or equal to the specified decimal value
 | **Cos** (*value*)                   | Cosine function   
-| **Exp** (*value*)                   | Returns constant e (2.718281828...) to the power of the specified value   
+| **Exp** (*value*)                   | Returns the constant e (2.718281828...) to the power of the specified value   
 | **Floor** (*value*)                 | Returns the largest integral value less than or equal to the specified decimal value
+| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. If limit >= numberOfRandoms, each number will be present at most once|
 | **Log** (*base, power*)             | Returns the natural logarithm of a specified number.
-| **Pi**                              | Returns pi constant (3.14159265358979...)
+| **Pi**                              | Returns the constant pi (3.14159265358979...)
 | **Pow** (*base, power*)             | Returns base to the specified power.
-| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. Id limit >= numberOfRandoms, each number will be present at most once|
-| **Round** (*number, digits=0*)             | Rounds number according to the specified number of digits.
-| **Sqrt** (*number*)             | Returns squared root of the specified number.
+| **Round** (*number, digits=0*)      | Rounds a number according to the specified number of digits.
 | **Sin** (*value*)                   | Sine function   
+| **Sqrt** (*number*)                 | Returns the squared root of the specified number.
 
 <br>
 
@@ -437,3 +437,55 @@ CSCS Extended Miscellaneous Functions
 | **StopWatchElapsed** (*format=secs*)          | Returns elapsed time according to the specified format. A format is either of this form: "hh::mm:ss.fff" or "secs" or "ms".|
 | **Timestamp** (*doubleValue, format="yyyy/MM/dd HH:mm:ss.fff"*)   | Converts specified number of milliseconds since 01/01/1970 to a date time string according to the passed format. |
 
+<br>
+
+Extending CSCS with new Functions
+------
+
+To extend CSCS language with a new function, we need to perform two tasks. First, we define a new class, deriving from the ParserFunction class.
+
+Second, we register the newly created class with the parser in an initialization phase as follows: 
+  ParserFunction.RegisterFunction(FunctionName, FunctionImplementation);
+
+Let's see an example how to do that with a random number generator function.
+<br>
+
+### A CSCS Function Implementing a Random Number Generator
+
+<pre><code>class GetRandomFunction : ParserFunction
+{
+    static Random m_random = new Random();
+
+    protected override Variable Evaluate(ParsingScript script)
+    {
+        // Extract all passed function args:
+        List<Variable> args = script.GetFunctionArgs();
+
+        // Check that we should have at least one argument:
+        Utils.CheckArgs(args.Count, 1, m_name);
+
+        // Check that the limit is a positive integer:
+        Utils.CheckPosInt(args[0]);
+
+        int limit = args[0].AsInt();
+        return new Variable(m_random.Next(0, limit));
+    }
+}
+</code></pre>
+
+<br>
+
+
+
+### Registering A CSCS Function with the Parser
+
+<pre><code>ParserFunction.RegisterFunction("Random", new GetRandomFunction());</code></pre>
+
+
+That's it! Now inside of CSCS we can just execute the following statement:
+
+ <pre><code>x = Random(100);</code></pre>
+ 
+ 
+ 
+ and x will get a random value between 0 and 100.
