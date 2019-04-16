@@ -836,9 +836,6 @@ namespace SplitAndMerge
             int blockStart = script.Pointer;
             Variable result = null;
 
-            //StackLevel stackLevel = new StackLevel(script.Rest);
-            //ParserFunction.AddLocalVariables(stackLevel);
-
             if (script.Debugger != null)
             {
                 bool done = false;
@@ -865,8 +862,6 @@ namespace SplitAndMerge
                     return result;
                 }
             }
-
-            //ParserFunction.PopLocalVariables();
             return result;
         }
 
@@ -874,9 +869,6 @@ namespace SplitAndMerge
         {
             int blockStart = script.Pointer;
             Variable result = null;
-
-            //StackLevel stackLevel = new StackLevel(script.Rest);
-            //ParserFunction.AddLocalVariables(stackLevel);
 
             if (script.Debugger != null)
             {
@@ -904,8 +896,6 @@ namespace SplitAndMerge
                     return result;
                 }
             }
-
-            //ParserFunction.PopLocalVariables();
             return result;
         }
 

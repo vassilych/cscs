@@ -258,7 +258,7 @@ namespace SplitAndMerge
             catch (Exception ex)
             {
                 throw new ArgumentException("Couldn't read file [" + filename +
-                                           "] from disk: " + ex.Message);
+                                            "] from disk: " + ex.Message);
             }
         }
 
