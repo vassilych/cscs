@@ -868,29 +868,65 @@ namespace SplitAndMerge
 
     public class WebRequestFunction : ParserFunction
     {
+        static string[] s_allowedMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE" };
+
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 2, m_name);
-            string uri = args[0].AsString();
-            string onSuccess = args[1].AsString();
-            string onFailure = Utils.GetSafeString(args, 2, onSuccess);
-            string tracking = Utils.GetSafeString(args, 3);
-            int timeoutMs = Utils.GetSafeInt(args, 4, 15 * 1000);
-            bool justFire = Utils.GetSafeInt(args, 5) > 0;
+            string method       = args[0].AsString().ToUpper();
+            string uri          = args[1].AsString();
+            string load         = Utils.GetSafeString(args, 2);
+            string tracking     = Utils.GetSafeString(args, 3);
+            string onSuccess    = Utils.GetSafeString(args, 4);
+            string onFailure    = Utils.GetSafeString(args, 5, onSuccess);
+            string contentType  = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
+            Variable headers    = Utils.GetSafeVariable(args, 7);
+            int timeoutMs       = Utils.GetSafeInt(args, 8, 15 * 1000);
+            bool justFire       = Utils.GetSafeInt(args, 9) > 0;
 
-            await ProcessWebRequest(uri, onSuccess, onFailure, tracking, timeoutMs, justFire);
+            if (!s_allowedMethods.Contains(method))
+            {
+                throw new ArgumentException("Unknown web request method: " + method);
+            }
+
+            await ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
 
             return Variable.EmptyInstance;
         }
 
-        static async Task ProcessWebRequest(string uri, string onSuccess, string onFailure,
-                                            string tracking, int timeout,
+        static async Task ProcessWebRequest(string uri, string method, string load,
+                                            string onSuccess, string onFailure,
+                                            string tracking, string contentType,
+                                            Variable headers, int timeout,
                                             bool justFire = false)
         {
             try
             {
-                WebRequest request = WebRequest.Create(uri);
+                WebRequest request = WebRequest.CreateHttp(uri);
+                request.Method = method;
+                request.ContentType = contentType;
+
+                if (!string.IsNullOrWhiteSpace(load))
+                {
+                    var bytes = Encoding.UTF8.GetBytes(load);
+                    request.ContentLength = bytes.Length;
+
+                    using (var requestStream = request.GetRequestStream())
+                    {
+                        requestStream.Write(bytes, 0, bytes.Length);
+                    }
+                }
+
+                if (headers != null && headers.Tuple != null)
+                {
+                    var keys = headers.GetKeys();
+                    foreach (var header in keys)
+                    {
+                        var headerValue = headers.GetVariable(header).AsString();
+                        request.Headers.Add(header, headerValue);
+                    }
+                }
 
                 Task<WebResponse> task = request.GetResponseAsync();
                 Task finishTask = FinishRequest(onSuccess, onFailure,
@@ -903,11 +939,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                string body = string.Format("{0}({1},{2});", onFailure,
-                       "\"" + tracking + "\"", "\"" + exc.Message + "\"");
-
-                ParsingScript tempScript = new ParsingScript(body);
-                tempScript.ExecuteTo();
+                await CustomFunction.RunAsync(onFailure, new Variable(tracking), new Variable(exc.Message));
             }
         }
 
@@ -928,10 +960,6 @@ namespace SplitAndMerge
                 }
 
                 HttpWebResponse response = await responseTask as HttpWebResponse;
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    throw new Exception(response.StatusDescription);
-                }
                 using (StreamReader sr = new StreamReader(response.GetResponseStream()))
                 {
                     result = sr.ReadToEnd();
@@ -943,12 +971,7 @@ namespace SplitAndMerge
                 method = onFailure;
             }
 
-            result = result.Replace("\"", "\\\"");
-            string body = string.Format("{0}({1},{2});", method,
-                   "\"" + tracking + "\"", "\"" + result + "\"");
-
-            ParsingScript tempScript = new ParsingScript(body);
-            tempScript.ExecuteTo();
+            await CustomFunction.RunAsync(method, new Variable(tracking), new Variable(result));
         }
 
         protected override Variable Evaluate(ParsingScript script)
