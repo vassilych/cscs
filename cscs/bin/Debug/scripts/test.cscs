@@ -92,6 +92,16 @@ Test(c, 3);
 b*=5;
 Test(b/=2, 5);
 
+Print("Testing cases");
+heaDers["mEssage1"] = "Data1";
+heADErs["Message2"] = "Data2";
+keys = headers.Keys;
+Test(headers.Keys.Size, 2);
+Test(keys[0], "mEssage1");
+Test(keys[1], "Message2");
+Test(HeaDers["MESSaGe1"], "Data1");
+Test(HeaDers["messaGE2"], "Data2");
+
 Print("Testing factorial(5): ");
 Test(factorial(5), 120);
 

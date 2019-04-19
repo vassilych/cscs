@@ -790,7 +790,8 @@ namespace SplitAndMerge
             return result;
         }
 
-        public static Task<Variable> Run(string functionName, Variable arg1 = null, Variable arg2 = null)
+        public static Task<Variable> Run(string functionName,
+             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null)
         {
             CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
 
@@ -807,12 +808,18 @@ namespace SplitAndMerge
             if (arg2 != null)
             {
                 args.Add(arg2);
+            }
+            if (arg3 != null)
+            {
+                args.Add(arg3);
             }
 
             Variable result = customFunction.Run(args);
             return Task.FromResult( result );
         }
-        public static async Task<Variable> RunAsync(string functionName, Variable arg1 = null, Variable arg2 = null)
+
+        public static async Task<Variable> RunAsync(string functionName,
+             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null)
         {
             CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
 
@@ -829,6 +836,10 @@ namespace SplitAndMerge
             if (arg2 != null)
             {
                 args.Add(arg2);
+            }
+            if (arg3 != null)
+            {
+                args.Add(arg3);
             }
 
             Variable result = await customFunction.RunAsync(args);
@@ -1499,6 +1510,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            m_name = Constants.GetRealName(m_name);
             script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
 
@@ -1541,13 +1553,13 @@ namespace SplitAndMerge
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
+            m_name = Constants.GetRealName(m_name);
             script.CurrentAssign = m_name;
             Variable varValue = await Utils.GetItemAsync(script);
 
             // First try processing as an object (with a dot notation):
             Variable result = await ProcessObjectAsync(script, varValue);
-    
-                    if (result != null)
+            if (result != null)
             {
                 return result;
             }
