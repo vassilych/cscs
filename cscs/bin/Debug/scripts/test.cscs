@@ -756,13 +756,16 @@ class Stuff2 {
 
 class CoolStuff : Stuff1, Stuff2 {
   z = 3;
-  CoolStuff(a, b, c) {
+  CoolStuff(a=1, b=2, c=3) {
     x = a;
     y = b;
     z = c;
   } 
   function addCoolStuff() {
     return x + addStuff2(z);
+  }
+  function ToString() {
+    return "{" + x + "," + y + "," + z + "}";
   }
 }
 
@@ -782,6 +785,19 @@ Test(newObj.z, 17);
 Test(newObj.addCoolStuff(), 41);
 Test(newObj.addStuff1(addition), 111);
 Test(newObj.addStuff2(addition), 113);
+
+obj1 = new CoolStuff();
+obj2 = new CoolStuff(10);
+obj3 = new CoolStuff(10, 20);
+obj4 = new CoolStuff(10, 20, 30);
+
+for( x : {obj1, obj2, obj3, obj4}) {
+  print( x );
+}
+Test(obj1.ToString(), "{1,2,3}");
+Test(obj2.ToString(), "{10,2,3}");
+Test(obj3.ToString(), "{10,20,3}");
+Test(obj4.ToString(), "{10,20,30}");
 
 Print("Testing Dot Notation");
 numVar = 1234.56;

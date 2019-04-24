@@ -219,6 +219,10 @@ namespace SplitAndMerge
             if (name == m_name)
             {
                 m_constructors[args.Length] = method;
+                for (int i = 0; i < method.DefaultArgsCount && i < args.Length; i++)
+                {
+                    m_constructors[args.Length - i - 1] = method;
+                }
             }
             else
             {
@@ -285,7 +289,15 @@ namespace SplitAndMerge
 
             public override string ToString()
             {
-                return m_cscsClass.Name + "." + InstanceName;
+                CustomFunction customFunction = null;
+                if (!m_cscsClass.m_customFunctions.TryGetValue(Constants.PROP_TO_STRING.ToLower(),
+                     out customFunction))
+                {
+                    return m_cscsClass.Name + "." + InstanceName;
+                }
+
+                Variable result = customFunction.Run(null, null, this); 
+                return result.ToString();
             }
 
             public Task<Variable> SetProperty(string name, Variable value)
@@ -570,6 +582,11 @@ namespace SplitAndMerge
         public void RegisterArguments(List<Variable> args,
                                       List<KeyValuePair<string, Variable>> args2 = null)
         {
+            if (args == null)
+            {
+                return;
+            }
+
             int missingArgs = m_args.Length - args.Count;
 
             bool namedParameters = false;
@@ -695,7 +712,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        public Variable Run(List<Variable> args, ParsingScript script = null,
+        public Variable Run(List<Variable> args = null, ParsingScript script = null,
                             CSCSClass.ClassInstance instance = null)
         {
             List<KeyValuePair<string, Variable>> args2 = instance == null ? null : instance.GetPropList();
@@ -742,7 +759,7 @@ namespace SplitAndMerge
 
             return result;
         }
-        public async Task<Variable> RunAsync(List<Variable> args, ParsingScript script = null,
+        public async Task<Variable> RunAsync(List<Variable> args = null, ParsingScript script = null,
                             CSCSClass.ClassInstance instance = null)
         {
             List<KeyValuePair<string, Variable>> args2 = instance == null ? null : instance.GetPropList();
@@ -852,6 +869,14 @@ namespace SplitAndMerge
 
         public int ArgumentCount { get { return m_args.Length; } }
         public string Argument(int nIndex) { return m_args[nIndex]; }
+
+        public int DefaultArgsCount
+        {
+            get
+            {
+                return m_defaultArgs.Count;
+            }
+        }
 
         public string Header
         {

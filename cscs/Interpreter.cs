@@ -292,7 +292,8 @@ namespace SplitAndMerge
             forScript.ParentScript = script;
             forScript.Filename = script.Filename;
             forScript.Debugger = script.Debugger;
-            Variable arrayValue = forScript.ExecuteFrom(index + 1);
+            forScript.Pointer = index + 1;
+            Variable arrayValue = Utils.GetItem(forScript);
 
             int cycles = arrayValue.Count;
             if (cycles == 0)
@@ -334,7 +335,8 @@ namespace SplitAndMerge
             forScript.ParentScript = script;
             forScript.Filename = script.Filename;
             forScript.Debugger = script.Debugger;
-            Variable arrayValue = await forScript.ExecuteFromAsync(index + 1);
+            forScript.Pointer = index + 1;
+            Variable arrayValue = await Utils.GetItemAsync(forScript);
 
             int cycles = arrayValue.Count;
             if (cycles == 0)

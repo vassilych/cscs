@@ -167,7 +167,7 @@ namespace SplitAndMerge
         public string GetOriginalLine(out int lineNumber)
         {
             lineNumber = GetOriginalLineNumber();
-            if (lineNumber < 0)
+            if (lineNumber < 0 || m_originalScript == null)
             {
                 return "";
             }

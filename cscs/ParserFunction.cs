@@ -299,7 +299,10 @@ namespace SplitAndMerge
                         {
                             var val = gvf.Value.GetProperty(var.AsString());
                             varData = CreateVariableEntry(val, variable.Name + "." + var.AsString(), isLocal);
-                            sb.AppendLine(varData);
+                            if (!string.IsNullOrWhiteSpace(varData))
+                            {
+                                sb.AppendLine(varData);
+                            }
                         }
                     }
                 }

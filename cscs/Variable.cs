@@ -716,7 +716,8 @@ namespace SplitAndMerge
                     {
                         args = new List<Variable>();
                     }
-                    result = obj.GetProperty(match, args, script).Result;
+                    var task = obj.GetProperty(match, args, script);
+                    result   = task != null ? task.Result : null;
                     if (result != null)
                     {
                         return result;

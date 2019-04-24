@@ -160,6 +160,9 @@ namespace SplitAndMerge
         public const string TRIM        = "Trim";
         public const string UPPER       = "Upper";
 
+        // Special property for converting an object to a string:
+        public const string PROP_TO_STRING    = "ToString";
+
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();
 
