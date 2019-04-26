@@ -914,6 +914,10 @@ Test(existingEnum.Object > 0, true);
 Test(newlyDefined.Vertical > newlyDefined.Horizontal, true);
 Test(newlyDefined.Orthogonal, 3);
 
+Print("Testing Misc. Functions...");
+Test(NameExists(IamABrandNewName), false);
+Test(NameExists(arr), true);
+
 Timeout = 100;
 MySender = "Tester";
 print(Now(), "Scheduling to run in ", Timeout, "ms.");

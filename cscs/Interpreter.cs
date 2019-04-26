@@ -110,6 +110,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
+            ParserFunction.RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
             ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
             ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
             ParserFunction.RegisterFunction(Constants.POW, new PowFunction());

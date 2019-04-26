@@ -368,6 +368,18 @@ namespace SplitAndMerge
         }
     }
 
+    class NameExistsFunction : ParserFunction, INumericFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string funcName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            funcName = Constants.ConvertName(funcName);
+
+            ParserFunction function = ParserFunction.GetFunction(funcName, script);
+            return new Variable(function != null);
+        }
+    }
+
     class EnumFunction : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)

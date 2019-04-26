@@ -92,6 +92,7 @@ namespace SplitAndMerge
         public const string HELP = "help";
         public const string LOCK = "lock";
         public const string LOG = "log";
+        public const string NAME_EXISTS = "NameExists";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
