@@ -829,7 +829,7 @@ Test(strVar.Replace(strVar, strVar.lower), strVar.lower);
 Test(strVar.At(strVar.size-1), "!");
 
 testStr = "Let's tokenize this.";
-tokens = testStr.tokenize();
+tokens = testStr.split();
 Test(tokens.first, "Let's");
 Test(tokens.last, "this.");
 Test(tokens.size, 3);
@@ -917,6 +917,11 @@ Test(newlyDefined.Orthogonal, 3);
 Print("Testing Misc. Functions...");
 Test(NameExists(IamABrandNewName), false);
 Test(NameExists(arr), true);
+
+strArray = {"z3", "b2", "a1"};
+numArray = {51, 39, 33};
+Test(strArray.Sort(), {"a1", "b2", "z3"});
+Test(numArray.Sort(), {33, 39, 51});
 
 Timeout = 100;
 MySender = "Tester";
