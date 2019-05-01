@@ -918,6 +918,19 @@ Print("Testing Misc. Functions...");
 Test(NameExists(IamABrandNewName), false);
 Test(NameExists(arr), true);
 
+for (i = 0; i < 2; i++) {
+  if( !NameExists( MyNewFunction )) {
+    function MyNewFunction(object) { 
+      print( "MyNewFunction");
+    };
+    print( "Just defined MyNewFunction");
+    Test(i, 0);
+  } else {
+    print( "MyNewFunction Exists" );
+    Test(i >= 0, true);
+  }
+}
+
 strArray = {"z3", "b2", "a1"};
 numArray = {51, 39, 33};
 Test(strArray.Sort(), {"a1", "b2", "z3"});

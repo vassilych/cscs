@@ -147,6 +147,7 @@ namespace SplitAndMerge
             }
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
+            script.MoveForwardIf(Constants.END_GROUP);
 
             CustomFunction customFunc = new CustomFunction(funcName, body, args, script);
             customFunc.ParentScript = script;
@@ -526,6 +527,8 @@ namespace SplitAndMerge
 
             string scriptExpr = Utils.GetBodyBetween(script, Constants.START_GROUP,
                                                      Constants.END_GROUP);
+            script.MoveForwardIf(Constants.END_GROUP);
+
             Dictionary<int, int> char2Line;
             string body = Utils.ConvertToScript(scriptExpr, out char2Line);
 
