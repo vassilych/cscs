@@ -599,7 +599,7 @@ namespace SplitAndMerge
         {
             if (args == null)
             {
-                return;
+                args = new List<Variable>();
             }
 
             int missingArgs = m_args.Length - args.Count;
