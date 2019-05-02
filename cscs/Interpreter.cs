@@ -154,6 +154,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+            ParserFunction.RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
 
             ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
 

@@ -42,7 +42,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.STOPWATCH_STOP, new StopWatchFunction(StopWatchFunction.Mode.STOP));
             ParserFunction.RegisterFunction(Constants.TAIL, new TailFunction());
             ParserFunction.RegisterFunction(Constants.TIMESTAMP, new TimestampFunction());
-            ParserFunction.RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
             ParserFunction.RegisterFunction(Constants.WRITE, new PrintFunction(false));
             ParserFunction.RegisterFunction(Constants.WRITELINE, new WriteLineFunction());
             ParserFunction.RegisterFunction(Constants.WRITELINES, new WriteLinesFunction());

@@ -401,4 +401,118 @@ namespace SplitAndMerge
             return result;
         }
     }
+
+    public class WebRequestFunction : ParserFunction
+    {
+        static string[] s_allowedMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE" };
+
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+            string method = args[0].AsString().ToUpper();
+            string uri = args[1].AsString();
+            string load = Utils.GetSafeString(args, 2);
+            string tracking = Utils.GetSafeString(args, 3);
+            string onSuccess = Utils.GetSafeString(args, 4);
+            string onFailure = Utils.GetSafeString(args, 5, onSuccess);
+            string contentType = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
+            Variable headers = Utils.GetSafeVariable(args, 7);
+            int timeoutMs = Utils.GetSafeInt(args, 8, 15 * 1000);
+            bool justFire = Utils.GetSafeInt(args, 9) > 0;
+
+            if (!s_allowedMethods.Contains(method))
+            {
+                throw new ArgumentException("Unknown web request method: " + method);
+            }
+
+            await ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
+
+            return Variable.EmptyInstance;
+        }
+
+        static async Task ProcessWebRequest(string uri, string method, string load,
+                                            string onSuccess, string onFailure,
+                                            string tracking, string contentType,
+                                            Variable headers, int timeout,
+                                            bool justFire = false)
+        {
+            try
+            {
+                WebRequest request = WebRequest.CreateHttp(uri);
+                request.Method = method;
+                request.ContentType = contentType;
+
+                if (!string.IsNullOrWhiteSpace(load))
+                {
+                    var bytes = Encoding.UTF8.GetBytes(load);
+                    request.ContentLength = bytes.Length;
+
+                    using (var requestStream = request.GetRequestStream())
+                    {
+                        requestStream.Write(bytes, 0, bytes.Length);
+                    }
+                }
+
+                if (headers != null && headers.Tuple != null)
+                {
+                    var keys = headers.GetKeys();
+                    foreach (var header in keys)
+                    {
+                        var headerValue = headers.GetVariable(header).AsString();
+                        request.Headers.Add(header, headerValue);
+                    }
+                }
+
+                Task<WebResponse> task = request.GetResponseAsync();
+                Task finishTask = FinishRequest(onSuccess, onFailure,
+                                                tracking, task, timeout);
+                if (justFire)
+                {
+                    return;
+                }
+                await finishTask;
+            }
+            catch (Exception exc)
+            {
+                await CustomFunction.RunAsync(onFailure, new Variable(tracking), new Variable(exc.Message));
+            }
+        }
+
+        static async Task FinishRequest(string onSuccess, string onFailure,
+                                        string tracking, Task<WebResponse> responseTask,
+                                        int timeoutMs)
+        {
+            string result = "";
+            string method = onSuccess;
+            Task timeoutTask = Task.Delay(timeoutMs);
+            try
+            {
+                Task first = await Task.WhenAny(timeoutTask, responseTask);
+                if (first == timeoutTask)
+                {
+                    await timeoutTask;
+                    throw new Exception("Timeout waiting for response.");
+                }
+
+                HttpWebResponse response = await responseTask as HttpWebResponse;
+                using (StreamReader sr = new StreamReader(response.GetResponseStream()))
+                {
+                    result = sr.ReadToEnd();
+                }
+            }
+            catch (Exception exc)
+            {
+                result = exc.Message;
+                method = onFailure;
+            }
+
+            await CustomFunction.RunAsync(method, new Variable(tracking), new Variable(result));
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return EvaluateAsync(script).Result;
+        }
+    }
 }
