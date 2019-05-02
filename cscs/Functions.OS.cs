@@ -475,7 +475,8 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                await CustomFunction.RunAsync(onFailure, new Variable(tracking), new Variable(exc.Message));
+                await CustomFunction.RunAsync(onFailure, new Variable(tracking),
+                                              new Variable(""),  new Variable(exc.Message));
             }
         }
 
@@ -485,7 +486,9 @@ namespace SplitAndMerge
         {
             string result = "";
             string method = onSuccess;
+            HttpWebResponse response = null;
             Task timeoutTask = Task.Delay(timeoutMs);
+
             try
             {
                 Task first = await Task.WhenAny(timeoutTask, responseTask);
@@ -495,7 +498,12 @@ namespace SplitAndMerge
                     throw new Exception("Timeout waiting for response.");
                 }
 
-                HttpWebResponse response = await responseTask as HttpWebResponse;
+                response = await responseTask as HttpWebResponse;
+                if ((int)response.StatusCode >= 400)
+                {
+                    throw new Exception(response.StatusDescription);
+                }
+
                 using (StreamReader sr = new StreamReader(response.GetResponseStream()))
                 {
                     result = sr.ReadToEnd();
@@ -507,7 +515,9 @@ namespace SplitAndMerge
                 method = onFailure;
             }
 
-            await CustomFunction.RunAsync(method, new Variable(tracking), new Variable(result));
+            string responseCode = response == null ? "" : response.StatusCode.ToString();
+            await CustomFunction.RunAsync(method, new Variable(tracking),
+                                          new Variable(responseCode), new Variable(result));
         }
 
         protected override Variable Evaluate(ParsingScript script)
