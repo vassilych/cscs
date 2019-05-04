@@ -93,6 +93,7 @@ namespace SplitAndMerge
         public const string LOCK = "lock";
         public const string LOG = "log";
         public const string NAME_EXISTS = "NameExists";
+        public const string NAMESPACE = "Namespace";
         public const string NOW = "Now";
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
@@ -197,7 +198,7 @@ namespace SplitAndMerge
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
+            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NAMESPACE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
             TAIL, THREAD, TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else

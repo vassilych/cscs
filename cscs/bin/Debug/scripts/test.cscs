@@ -471,16 +471,6 @@ Print("factorial(", n, ")=", f);
 variableTest();
 Print("After function, n=", n);
 
-слова = {"Это", "написано", "по-русски"};
-размер = size(слова);
-и = 0;
-while(и < размер) {
-  if (и  % 2 == 0) {
-    Print(слова[и]);
-  }
-  и++;
-}
-
 for (i = 10; i >= 0; i--) {
   Print(i, " ");
   arr[i] = 2*i;

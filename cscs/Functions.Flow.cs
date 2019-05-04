@@ -561,6 +561,56 @@ namespace SplitAndMerge
         }
     }
 
+    public class NamespaceFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string namespaceName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+            //Utils.CheckNotEnd(script, m_name);
+            Variable result = null;
+
+            ParserFunction.AddNamespace(namespaceName);
+            try
+            {
+                string scriptExpr = Utils.GetBodyBetween(script, Constants.START_GROUP,
+                                                         Constants.END_GROUP);
+                script.MoveForwardIf(Constants.END_GROUP);
+
+                Dictionary<int, int> char2Line;
+                string body = Utils.ConvertToScript(scriptExpr, out char2Line);
+
+                ParsingScript tempScript = new ParsingScript(body);
+                //tempScript.ScriptOffset = newClass.ParentOffset;
+                tempScript.Char2Line = script.Char2Line;
+                tempScript.Filename = script.Filename;
+                tempScript.OriginalScript = script.OriginalScript;
+                tempScript.ParentScript = script;
+                tempScript.InTryBlock = script.InTryBlock;
+                tempScript.DisableBreakpoints = true;
+                tempScript.MoveForwardIf(Constants.START_GROUP);
+
+                Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
+                if (debugger != null)
+                {
+                    result = debugger.StepInFunctionIfNeeded(tempScript).Result;
+                }
+
+                while (tempScript.Pointer < body.Length - 1 &&
+                      (result == null || !result.IsReturn))
+                {
+                    result = tempScript.ExecuteTo();
+                    tempScript.GoToNextStatement();
+                }
+            }
+            finally
+            {
+                ParserFunction.PopNamespace();
+            }
+
+            return result;
+        }
+    }
+
     public class CustomFunction : ParserFunction
     {
         internal CustomFunction(string funcName,
@@ -685,6 +735,18 @@ namespace SplitAndMerge
                 var arg = new GetVarFunction(args[i]);
                 arg.Name = m_args[i];
                 stackLevel.Variables[m_args[i]] = arg;
+            }
+
+            if (NamespaceData  != null)
+            {
+                var vars = NamespaceData.Variables;
+                string prefix = NamespaceData.Name + ".";
+                foreach (KeyValuePair<string, ParserFunction> elem in vars)
+                {
+                    string key = elem.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?
+                        elem.Key.Substring(prefix.Length) : elem.Key;
+                    stackLevel.Variables[key] = elem.Value;
+                }
             }
 
             ParserFunction.AddLocalVariables(stackLevel);
@@ -884,6 +946,8 @@ namespace SplitAndMerge
 
         public int ArgumentCount { get { return m_args.Length; } }
         public string Argument(int nIndex) { return m_args[nIndex]; }
+
+        public StackLevel NamespaceData { get; set; }
 
         public int DefaultArgsCount
         {
@@ -1661,6 +1725,11 @@ namespace SplitAndMerge
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
 
+            if (ParserFunction.TryAddToNamespace(prop, name, varValue))
+            {
+                return varValue.DeepClone();
+            }
+
             ParserFunction existing = ParserFunction.GetFunction(name, script);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
             baseValue.SetProperty(prop, varValue, name);
@@ -1695,6 +1764,11 @@ namespace SplitAndMerge
 
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
+
+            if (ParserFunction.TryAddToNamespace(prop, name, varValue))
+            {
+                return varValue.DeepClone();
+            }
 
             ParserFunction existing = ParserFunction.GetFunction(name, script);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
