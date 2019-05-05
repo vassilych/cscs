@@ -155,6 +155,7 @@ namespace SplitAndMerge
         public const string LAST        = "Last";
         public const string LOWER       = "Lower";
         public const string REPLACE     = "Replace";
+        public const string REVERSE     = "Reverse";
         public const string SORT        = "Sort";
         public const string SPLIT       = "Split";
         public const string STRING      = "String";

@@ -144,6 +144,8 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Trim()** | Returns a new variable without leading or trailing white spaces.|
 | *variable*.**Lower()** | Returns a variable converted to the lower case.|
 | *variable*.**Upper()** | Returns a variable converted to the upper case.|
+| *variable*.**Sort()** | Sorts underlying array.|
+| *variable*.**Reverse()** | Reverses the contents of the underlying array or string.|
 | **GetProperty** (*objectName, propertyName*)  | Returns variable.propertyName.|
 | **GetPropertyStrings** (*objectName*)  | Same as calling variable.properties.|
 | **SetProperty** (*objectName, propertyName, propertyValue*)  | Same as variable.propertyName = propertyValue.|

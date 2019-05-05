@@ -841,12 +841,26 @@ namespace SplitAndMerge
 
                 return new Variable(AsString().Substring(startFrom, length));
             }
+            else if (script != null && propName.Equals(Constants.REVERSE, StringComparison.OrdinalIgnoreCase))
+            {
+                script.GetFunctionArgs();
+                if (Tuple != null)
+                {
+                    Tuple.Reverse();
+                }
+                else if (Type == VarType.STRING)
+                {
+                    char[] charArray = AsString().ToCharArray();
+                    Array.Reverse(charArray);
+                    String = new string(charArray);
+                }
+
+                return this;
+            }
             else if (script != null && propName.Equals(Constants.SORT, StringComparison.OrdinalIgnoreCase))
             {
-                List<Variable> args = script.GetFunctionArgs();
+                script.GetFunctionArgs();
                 Sort();
-                string sep = Utils.GetSafeString(args, 0, " ");
-                var option = Utils.GetSafeString(args, 1);
 
                 return this;
             }

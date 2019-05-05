@@ -202,6 +202,12 @@ namespace SplitAndMerge
 
         public static void RegisterClass(string className, CSCSClass obj)
         {
+            obj.Namespace = ParserFunction.GetCurrentNamespace;
+            if (!string.IsNullOrWhiteSpace(obj.Namespace))
+            {
+                className = obj.Namespace + "." + className;
+            }
+
             obj.Name = className;
             className = Constants.ConvertName(className);
             s_allClasses[className] = obj;
@@ -238,6 +244,16 @@ namespace SplitAndMerge
 
         public static CSCSClass GetClass(string name)
         {
+            string currNamespace = ParserFunction.GetCurrentNamespace;
+            if (!string.IsNullOrWhiteSpace(currNamespace))
+            {
+                bool namespacePresent = name.Contains(".");
+                if (!namespacePresent)
+                {
+                    name = currNamespace + "." + name;
+                }
+            }
+
             CSCSClass theClass = null;
             s_allClasses.TryGetValue(name, out theClass);
             return theClass;
@@ -255,6 +271,8 @@ namespace SplitAndMerge
 
         public ParsingScript ParentScript = null;
         public int ParentOffset = 0;
+
+        public string Namespace { get; private set; }
 
         public class ClassInstance : ScriptObject
         {
@@ -1622,6 +1640,7 @@ namespace SplitAndMerge
             Variable result = ProcessObject(script, varValue);
             if (result != null)
             {
+                ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result));
                 return result;
             }
 

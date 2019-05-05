@@ -303,13 +303,15 @@ namespace SplitAndMerge
         public static void AddGlobalOrLocalVariable(string name, GetVarFunction function)
         {
             name          = Constants.ConvertName(name);
-            if (!string.IsNullOrWhiteSpace(s_namespace))
+
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (lastLevel != null && s_locals.Peek().IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
             {
                 name = s_namespacePrefix + name;
             }
 
             function.Name = Constants.GetRealName(name);
-            if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
+            if (LocalNameExists(name) || !GlobalNameExists(name))
             {
                 AddLocalVariable(function);
             }
@@ -404,16 +406,27 @@ namespace SplitAndMerge
             return sb.ToString().Trim();
         }
 
-        static bool LocalNameExists(string name)
+        static Dictionary<string, ParserFunction> GetLastLevel()
         {
             if (s_locals.Count <= StackLevelDelta)
+            {
+                return null;
+            }
+            var result = s_locals.Peek().Variables;
+            return result;
+        }
+
+        static bool LocalNameExists(string name)
+        {
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (lastLevel == null)
             {
                 return false;
             }
             name = Constants.ConvertName(name);
-            var vars = s_locals.Peek().Variables;
-            return vars.ContainsKey(name);
+            return lastLevel.ContainsKey(name);
         }
+
         static bool GlobalNameExists(string name)
         {
             name = Constants.ConvertName(name);
@@ -435,27 +448,18 @@ namespace SplitAndMerge
         public static void RegisterFunction(string name, ParserFunction function,
                                             bool isNative = true)
         {
-            TryRegisterFunctionInNamespace(s_namespace, function);
-            var dot = name.IndexOf('.');
-            if (dot > 0)
-            {
-                TryRegisterFunctionInNamespace(name.Substring(0, dot), function);
-            }
-
-            AddGlobal(name, function, isNative);
-        }
-
-        public static void TryRegisterFunctionInNamespace(string nameSpace, ParserFunction function)
-        {
-            if (!string.IsNullOrWhiteSpace(nameSpace))
+            if (!string.IsNullOrWhiteSpace(s_namespace))
             {
                 StackLevel level;
-                if (s_namespaces.TryGetValue(nameSpace, out level) &&
+                if (s_namespaces.TryGetValue(s_namespace, out level) &&
                    function is CustomFunction)
                 {
                     ((CustomFunction)function).NamespaceData = level;
+                    name = s_namespacePrefix + name;
                 }
             }
+
+            AddGlobal(name, function, isNative);
         }
 
         public static bool RemoveGlobal(string name)
@@ -537,18 +541,19 @@ namespace SplitAndMerge
 
         public static void AddNamespace(string namespaceName)
         {
-            if (s_namespaces.ContainsKey(namespaceName))
-            {
-                throw new ArgumentException("Namespace [" + namespaceName + "] already exists!");
-            }
             if (!string.IsNullOrWhiteSpace(s_namespace))
             {
                 throw new ArgumentException("Already inside of namespace [" + s_namespace + "].");
             }
 
-            var newLevel = new StackLevel(namespaceName, true);
-            s_locals.Push(newLevel);
-            s_namespaces[namespaceName] = newLevel;
+            StackLevel level;
+            if (!s_namespaces.TryGetValue(namespaceName, out level))
+            {
+                level = new StackLevel(namespaceName, true); ;
+            }
+
+            s_locals.Push(level);
+            s_namespaces[namespaceName] = level;
 
             s_namespace = namespaceName;
             s_namespacePrefix = namespaceName + ".";
@@ -722,6 +727,8 @@ namespace SplitAndMerge
         static Dictionary<string, StackLevel> s_namespaces = new Dictionary<string, StackLevel>();
         static string s_namespace;
         static string s_namespacePrefix;
+
+        public static string GetCurrentNamespace { get { return s_namespace; } }
 
         static StringOrNumberFunction s_strOrNumFunction =
           new StringOrNumberFunction();
