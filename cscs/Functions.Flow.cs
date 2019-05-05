@@ -1665,6 +1665,7 @@ namespace SplitAndMerge
             Variable result = await ProcessObjectAsync(script, varValue);
             if (result != null)
             {
+                ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result)); 
                 return result;
             }
 
