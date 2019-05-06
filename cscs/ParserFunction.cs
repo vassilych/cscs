@@ -311,7 +311,7 @@ namespace SplitAndMerge
             }
 
             function.Name = Constants.GetRealName(name);
-            if (LocalNameExists(name) || !GlobalNameExists(name))
+            if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
             {
                 AddLocalVariable(function);
             }
