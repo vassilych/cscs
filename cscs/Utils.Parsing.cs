@@ -679,6 +679,9 @@ namespace SplitAndMerge
             int lineNumberQuote = 0;
 
             int lastScriptLength = 0;
+
+            // Remove these two lines for quality time debugging in case the user has special
+            // spaces with code 160. See https://en.wikipedia.org/wiki/Non-breaking_space
             char extraSpace = Convert.ToChar(160);
             source = source.Replace(extraSpace, ' ');
 
