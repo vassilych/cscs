@@ -590,6 +590,7 @@ namespace SplitAndMerge
             ParserFunction.AddNamespace(namespaceName);
             try
             {
+                script.MoveForwardIf(Constants.START_GROUP);
                 string scriptExpr = Utils.GetBodyBetween(script, Constants.START_GROUP,
                                                          Constants.END_GROUP);
                 script.MoveForwardIf(Constants.END_GROUP);

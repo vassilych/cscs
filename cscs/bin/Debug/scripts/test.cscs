@@ -926,6 +926,70 @@ numArray = {51, 39, 33};
 Test(strArray.Sort(), {"a1", "b2", "z3"});
 Test(numArray.Sort(), {33, 39, 51});
 
+Print("Testing Namespaces...");
+namespace ns1 {
+  a=1;
+  b=2;
+  function func(x) {
+    return x + a + b;
+  }
+  z= func(10);
+  print(z);
+}
+
+ns1.w = 44;
+Test(ns1.func(20), 23);
+
+namespace ns1 {
+  function another(x=0) {
+    return 100 + x + ns1.a + ns1.b + w;
+  }
+  Test(b, 2);
+  Test(w, 44);
+}
+
+Test(ns1.another(), 147);
+
+namespace ns1 {
+  class CurrentDate {
+    day = "";
+    month = "";
+    year = "";
+    function setDay(n) {
+      day = n;
+    }
+    function setMonth(n) {
+      month = n;
+    }
+    function setYear(n) {
+      year = n;
+    }
+
+    function setCompositDate(value){
+      // incoming value 8/23/2017
+      items = value.split("/");
+      Test(items.size, 3);
+      setMonth(items[0]);
+      setDay(items[1]);
+      setYear(items[2]);
+    }
+
+    function toString() {
+      return month + "/" + day + "/" + year;
+    }
+  }
+
+  date = "8/23/2017";
+  dt = new CurrentDate();
+  dt.setCompositDate(date);
+  Test(dt, date);
+}
+date = "8/23/2017";
+mydate = new ns1.CurrentDate();
+mydate.setCompositDate(ns1.date);
+Test(mydate, ns1.date);
+
+
 Timeout = 100;
 MySender = "Tester";
 print(Now(), "Scheduling to run in ", Timeout, "ms.");
@@ -933,8 +997,7 @@ print(Now(), "Scheduling to run in ", Timeout, "ms.");
 function timer_timeout(Sender, Arg) {
   print(Now(), "Running script from [" + SENDER + "] with argument [" + ARG + "]");
 }
-ScheduleRun(timeout, "timer_timeout", MySender, Timeout);
-ScheduleRun(timeout*2, "timer_timeout", 'MySender', 'Arg with "double quotes"');
+ScheduleRun(timeout, "timer_timeout", MySender, 'Arg with "double quotes"');
 
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
