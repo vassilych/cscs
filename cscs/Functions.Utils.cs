@@ -634,30 +634,20 @@ namespace SplitAndMerge
         {
             string pathname = Utils.GetItem(script).AsString();
 
-            bool isFile = File.Exists(pathname);
-            bool isDir = Directory.Exists(pathname);
-            if (!isFile && !isDir)
-            {
-                throw new ArgumentException("[" + pathname + "] doesn't exist");
-            }
             bool exists = false;
             try
             {
-                if (isFile)
-                {
-                    exists = File.Exists(pathname);
-                }
-                else
+                exists = File.Exists(pathname);
+                if (!exists)
                 {
                     exists = Directory.Exists(pathname);
                 }
             }
-            catch (Exception exc)
+            catch (Exception)
             {
-                throw new ArgumentException("Couldn't delete [" + pathname + "] :" + exc.Message);
             }
 
-            return new Variable(Convert.ToDouble(exists));
+            return new Variable(exists);
         }
     }
 
