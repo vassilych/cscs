@@ -679,8 +679,9 @@ namespace SplitAndMerge
             int lineNumberQuote = 0;
 
             int lastScriptLength = 0;
+            char extraSpace = Convert.ToChar(160);
+            source = source.Replace(extraSpace, ' ');
 
-            //string result = "";
             for (int i = 0; i < source.Length; i++)
             {
                 char ch = source[i];
@@ -846,7 +847,8 @@ namespace SplitAndMerge
                             spaceOK = false;
                         }
                         break;
-                    default: break;
+                    default:
+                        break;
                 }
                 if (!inComments)
                 {
