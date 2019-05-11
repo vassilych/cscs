@@ -78,6 +78,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
+            string result = "";
 
             switch(m_mode)
             {
@@ -88,13 +89,13 @@ namespace SplitAndMerge
                     Subscribe(args);
                     break;
                 case DataMode.SEND:
-                    SendData(s_data.ToString());
+                    result = SendData(s_data.ToString());
                     Interpreter.Instance.AppendData(s_data.ToString());
                     s_data.Clear();
                     break;
             }
 
-            return Variable.EmptyInstance;
+            return new Variable(result);
         }
 
         public void Subscribe(List<Variable> args)
@@ -125,10 +126,15 @@ namespace SplitAndMerge
             }
         }
 
-        public void SendData(string data)
+        public string SendData(string data)
         {
-            CustomFunction.Run(s_method, new Variable(s_tracking),
-                               new Variable(data));
+            if (!string.IsNullOrWhiteSpace(s_method))
+            {
+                CustomFunction.Run(s_method, new Variable(s_tracking),
+                                   new Variable(data));
+                return "";
+            }
+            return data;
         }
     }
 

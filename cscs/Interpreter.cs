@@ -52,12 +52,12 @@ namespace SplitAndMerge
             }
         }
 
-        public event EventHandler<OutputAvailableEventArgs> GetOutput;
-        public event EventHandler<OutputAvailableEventArgs> GetData;
+        public event EventHandler<OutputAvailableEventArgs> OnOutput;
+        public event EventHandler<OutputAvailableEventArgs> OnData;
 
         public void AppendOutput(string text, bool newLine = false)
         {
-            EventHandler<OutputAvailableEventArgs> handler = GetOutput;
+            EventHandler<OutputAvailableEventArgs> handler = OnOutput;
             if (handler != null)
             {
                 OutputAvailableEventArgs args = new OutputAvailableEventArgs(text +
@@ -68,7 +68,7 @@ namespace SplitAndMerge
 
         public void AppendData(string text, bool newLine = false)
         {
-            EventHandler<OutputAvailableEventArgs> handler = GetData;
+            EventHandler<OutputAvailableEventArgs> handler = OnData;
             if (handler != null)
             {
                 OutputAvailableEventArgs args = new OutputAvailableEventArgs(text +
