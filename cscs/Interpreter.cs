@@ -53,10 +53,22 @@ namespace SplitAndMerge
         }
 
         public event EventHandler<OutputAvailableEventArgs> GetOutput;
+        public event EventHandler<OutputAvailableEventArgs> GetData;
 
         public void AppendOutput(string text, bool newLine = false)
         {
             EventHandler<OutputAvailableEventArgs> handler = GetOutput;
+            if (handler != null)
+            {
+                OutputAvailableEventArgs args = new OutputAvailableEventArgs(text +
+                                     (newLine ? Environment.NewLine : string.Empty));
+                handler(this, args);
+            }
+        }
+
+        public void AppendData(string text, bool newLine = false)
+        {
+            EventHandler<OutputAvailableEventArgs> handler = GetData;
             if (handler != null)
             {
                 OutputAvailableEventArgs args = new OutputAvailableEventArgs(text +
@@ -156,6 +168,10 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
             ParserFunction.RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
+
+            ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
+            ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
+            ParserFunction.RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
 
             ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
 

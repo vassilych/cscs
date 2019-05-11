@@ -59,6 +59,79 @@ namespace SplitAndMerge
         private bool m_newLine = true;
     }
 
+    class DataFunction : ParserFunction
+    {
+        internal enum DataMode { ADD, SUBSCRIBE, SEND};
+
+        DataMode      m_mode;
+
+        static string s_method;
+        static string s_tracking;
+        static bool   s_updateImmediate = false;
+
+        static StringBuilder s_data = new StringBuilder();
+
+        internal DataFunction(DataMode mode = DataMode.ADD)
+        {
+            m_mode = mode;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            switch(m_mode)
+            {
+                case DataMode.ADD:
+                    Collect(args);
+                    break;
+                case DataMode.SUBSCRIBE:
+                    Subscribe(args);
+                    break;
+                case DataMode.SEND:
+                    SendData(s_data.ToString());
+                    Interpreter.Instance.AppendData(s_data.ToString());
+                    s_data.Clear();
+                    break;
+            }
+
+            return Variable.EmptyInstance;
+        }
+
+        public void Subscribe(List<Variable> args)
+        {
+            s_data.Clear();
+
+            s_method          = Utils.GetSafeString(args, 0);
+            s_tracking        = Utils.GetSafeString(args, 1);
+            s_updateImmediate = Utils.GetSafeDouble(args, 2) > 0;
+        }
+
+        public void Collect(List<Variable> args)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var arg in args)
+            {
+                sb.Append(arg.AsString());
+            }
+            if (s_updateImmediate)
+            {
+                SendData(sb.ToString());
+                // In case there are subcribers to this in C# code.
+                Interpreter.Instance.AppendData(sb.ToString());
+            }
+            else
+            {
+                s_data.AppendLine(sb.ToString());
+            }
+        }
+
+        public void SendData(string data)
+        {
+            CustomFunction.Run(s_method, new Variable(s_tracking),
+                               new Variable(data));
+        }
+    }
+
     // Returns how much processor time has been spent on the current process
     class ProcessorTimeFunction : ParserFunction, INumericFunction
     {

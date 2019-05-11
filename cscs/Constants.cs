@@ -144,6 +144,10 @@ namespace SplitAndMerge
         public const string STOP_DEBUGGER  = "StopDebugger";
         public const string GET_FILE_FROM_DEBUGGER = "GetFileFromDebugger";
 
+        public const string ADD_DATA     = "AddDataToCollection";
+        public const string COLLECT_DATA = "StartCollectingData";
+        public const string GET_DATA     = "GetCollectedData";
+
         // Properties, returned after the variable dot:
         public const string AT          = "At";
         public const string ENDS_WITH   = "EndsWith";

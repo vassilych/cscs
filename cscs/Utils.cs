@@ -599,6 +599,10 @@ namespace SplitAndMerge
         }
         public static string GetFileContents(string filename)
         {
+            if (string.IsNullOrWhiteSpace(filename))
+            {
+                return "";
+            }
             try
             {
                 string[] readText = Utils.GetFileLines(filename);

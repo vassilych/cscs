@@ -18,7 +18,7 @@ namespace SplitAndMerge
         public const string CONNECTSRV = "connectsrv";
         public const string CONSOLE_CLR = "clr";
         public const string DIR = "dir";
-        public const string DELETE = "del";
+        public const string DELETE = "delete";
         public const string EXISTS = "exists";
         public const string FINDFILES = "findfiles";
         public const string FINDSTR = "findstr";
