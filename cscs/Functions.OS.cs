@@ -90,7 +90,6 @@ namespace SplitAndMerge
                     break;
                 case DataMode.SEND:
                     result = SendData(s_data.ToString());
-                    Interpreter.Instance.AppendData(s_data.ToString());
                     s_data.Clear();
                     break;
             }
@@ -117,13 +116,12 @@ namespace SplitAndMerge
             if (s_updateImmediate)
             {
                 SendData(sb.ToString());
-                // In case there are subcribers to this in C# code.
-                Interpreter.Instance.AppendData(sb.ToString());
             }
             else
             {
                 s_data.AppendLine(sb.ToString());
             }
+            Interpreter.Instance.AppendData(s_data.ToString());
         }
 
         public string SendData(string data)
