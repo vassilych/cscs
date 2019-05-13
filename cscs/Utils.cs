@@ -719,5 +719,52 @@ namespace SplitAndMerge
 
             return newValue;
         }
+
+        public static string GetFullPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+            try
+            {
+                path = Path.GetFullPath(path);
+            }
+            catch(Exception exc)
+            {
+                Console.WriteLine("Exception converting path {0}: {1}", path, exc.Message);
+            }
+            return path;
+        }
+
+        public static string GetDirectoryName(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return GetCurrentDirectory();
+            }
+            try
+            {
+                return Path.GetDirectoryName(path);
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine("Exception getting directory name {0}: {1}", path, exc.Message);
+            }
+            return GetCurrentDirectory();
+        }
+
+        public static string GetCurrentDirectory()
+        {
+            try
+            {
+                return Directory.GetCurrentDirectory();
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine("Exception getting current directory: {0}", exc.Message);
+            }
+            return "";
+        }
     }
 }

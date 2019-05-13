@@ -107,7 +107,6 @@ namespace SplitAndMerge
                 throw new ArgumentException("Couldn't start [" + processName + "]: " + exc.Message);
             }
 
-            Interpreter.Instance.AppendOutput("Process " + processName + " started, id: " + processId, true);
             return new Variable(processId);
         }
     }
@@ -213,7 +212,6 @@ namespace SplitAndMerge
                 // Receive the response from the remote device.
                 int bytesRec = sender.Receive(bytes);
                 string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
-                Interpreter.Instance.AppendOutput("Received [" + received + "]", true);
 
                 sender.Shutdown(SocketShutdown.Both);
                 sender.Close();
@@ -234,8 +232,6 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             string path = Directory.GetCurrentDirectory();
-            Interpreter.Instance.AppendOutput(path, true);
-
             return new Variable(path);
         }
     }
@@ -316,7 +312,6 @@ namespace SplitAndMerge
             string[] lines = Utils.GetFileLines(filename);
 
             List<Variable> results = Utils.ConvertToResults(lines);
-            Interpreter.Instance.AppendOutput("Read " + lines.Length + " line(s).", true);
 
             return new Variable(results);
         }

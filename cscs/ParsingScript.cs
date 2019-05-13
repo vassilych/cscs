@@ -48,23 +48,14 @@ namespace SplitAndMerge
             get { return m_filename; }
             set
             {
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    value = Path.GetFullPath(value);
-                }
-                m_filename = value;
+                m_filename = Utils.GetFullPath(value);
             }
         }
         public string PWD
         {
             get
             {
-                if (!string.IsNullOrWhiteSpace(m_filename))
-                {
-                    return Path.GetDirectoryName(m_filename);
-                }
-
-                return Directory.GetCurrentDirectory();
+                return Utils.GetDirectoryName(m_filename);
             }
         }
         public string OriginalScript
@@ -150,7 +141,7 @@ namespace SplitAndMerge
                 int pointer = script == this ? script.Pointer + firstOffset : script.Pointer;
                 int lineNumber = script.GetOriginalLineNumber(pointer);
                 string filename = string.IsNullOrWhiteSpace(script.Filename) ? "" :
-                                  Path.GetFullPath(script.Filename);
+                                  Utils.GetFullPath(script.Filename);
                 string line = string.IsNullOrWhiteSpace(filename) ? "" :
                               File.ReadLines(filename).Skip(lineNumber).Take(1).First();
 

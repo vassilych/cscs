@@ -925,6 +925,28 @@ namespace SplitAndMerge
 
                 return new Variable(AsString().Replace(oldVal, newVal));
             }
+            else if (script != null && propName.Equals(Constants.EMPTY_WHITE, StringComparison.OrdinalIgnoreCase))
+            {
+                script.GetFunctionArgs();
+                bool isEmpty = string.IsNullOrWhiteSpace(AsString());
+
+                return new Variable(isEmpty);
+            }
+            else if (script != null && propName.Equals(Constants.REPLACE_TRIM, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 2, propName);
+                string currentValue = AsString();
+
+                for (int i = 0; i < args.Count; i += 2)
+                {
+                    string oldVal = Utils.GetSafeString(args, i);
+                    string newVal = Utils.GetSafeString(args, i + 1);
+                    currentValue  = currentValue.Replace(oldVal, newVal);
+                }
+
+                return new Variable(currentValue.Trim());
+            }
             else if (script != null && propName.Equals(Constants.CONTAINS, StringComparison.OrdinalIgnoreCase))
             {
                 List<Variable> args = script.GetFunctionArgs();
@@ -941,6 +963,33 @@ namespace SplitAndMerge
                     contains = m_dictionary.ContainsKey(lower);
                 }
                 return new Variable(contains);
+            }
+            else if (script != null && propName.Equals(Constants.CONTAINS_MULT, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string comparParam = Utils.GetSafeString(args, args.Count - 1);
+
+                StringComparison comp = comparParam.Equals("case_sensitive", StringComparison.OrdinalIgnoreCase) ?
+                    StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
+
+                string thisValue = AsString();
+                Variable tupleResult = new Variable(VarType.ARRAY);
+                tupleResult.Tuple.Add(new Variable(false));
+                bool containsGlobal = false;
+
+                for (int i = 0; i < args.Count; i++)
+                {
+                    string val = args[i].AsString();
+                    bool contains = val != "" && thisValue.IndexOf(val, comp) >= 0;
+                    tupleResult.SetHashVariable(val, new Variable(contains));
+                    containsGlobal = containsGlobal || contains;
+                }
+                if (containsGlobal)
+                {
+                    tupleResult.Tuple[0].Value = 1.0;
+                }
+                return tupleResult;
             }
             else if (script != null && propName.Equals(Constants.EQUALS, StringComparison.OrdinalIgnoreCase))
             {

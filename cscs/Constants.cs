@@ -149,25 +149,28 @@ namespace SplitAndMerge
         public const string GET_DATA     = "GetCollectedData";
 
         // Properties, returned after the variable dot:
-        public const string AT          = "At";
-        public const string ENDS_WITH   = "EndsWith";
-        public const string EQUALS      = "Equals";
-        public const string FIRST       = "First";
-        public const string INDEX_OF    = "IndexOf";
-        public const string JOIN        = "Join";
-        public const string KEYS        = "Keys";
-        public const string LAST        = "Last";
-        public const string LOWER       = "Lower";
-        public const string REPLACE     = "Replace";
-        public const string REVERSE     = "Reverse";
-        public const string SORT        = "Sort";
-        public const string SPLIT       = "Split";
-        public const string STRING      = "String";
-        public const string STARTS_WITH = "StartsWith";
-        public const string SUBSTRING   = "Substring";
-        public const string TOKENIZE    = "Tokenize";
-        public const string TRIM        = "Trim";
-        public const string UPPER       = "Upper";
+        public const string AT            = "At";
+        public const string CONTAINS_MULT = "ContainsMultiple";
+        public const string EMPTY_WHITE   = "EmptyOrWhite";
+        public const string ENDS_WITH     = "EndsWith";
+        public const string EQUALS        = "Equals";
+        public const string FIRST         = "First";
+        public const string INDEX_OF      = "IndexOf";
+        public const string JOIN          = "Join";
+        public const string KEYS          = "Keys";
+        public const string LAST          = "Last";
+        public const string LOWER         = "Lower";
+        public const string REPLACE       = "Replace";
+        public const string REPLACE_TRIM  = "ReplaceAndTrim";
+        public const string REVERSE       = "Reverse";
+        public const string SORT          = "Sort";
+        public const string SPLIT         = "Split";
+        public const string STRING        = "String";
+        public const string STARTS_WITH   = "StartsWith";
+        public const string SUBSTRING     = "Substring";
+        public const string TOKENIZE      = "Tokenize";
+        public const string TRIM          = "Trim";
+        public const string UPPER         = "Upper";
 
         // Special property for converting an object to a string:
         public const string PROP_TO_STRING    = "ToString";

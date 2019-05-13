@@ -830,7 +830,7 @@ namespace SplitAndMerge
             tempScript.ClassInstance = instance;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
-            if (debugger != null)
+            if (script != null && debugger != null)
             {
                 result = debugger.StepInFunctionIfNeeded(tempScript).Result;
             }
