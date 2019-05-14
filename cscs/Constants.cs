@@ -150,7 +150,6 @@ namespace SplitAndMerge
 
         // Properties, returned after the variable dot:
         public const string AT            = "At";
-        public const string CONTAINS_MULT = "ContainsMultiple";
         public const string EMPTY_WHITE   = "EmptyOrWhite";
         public const string ENDS_WITH     = "EndsWith";
         public const string EQUALS        = "Equals";
