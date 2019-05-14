@@ -136,6 +136,14 @@ namespace SplitAndMerge
         }
     }
 
+    class CurrentPathFunction : ParserFunction, INumericFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return new Variable(script.PWD);
+        }
+    }
+
     // Returns how much processor time has been spent on the current process
     class ProcessorTimeFunction : ParserFunction, INumericFunction
     {
