@@ -35,10 +35,10 @@ namespace SplitAndMerge
             // Subscribe to the printing events from the interpreter.
             // A printing event will be triggered after each successful statement
             // execution. On error an exception will be thrown.
-            Interpreter.Instance.GetOutput += Print;
+            Interpreter.Instance.OnOutput += Print;
 
             string scriptFilename = "scripts/temp.cscs";
-            //scriptFilename = "";
+            scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
             DebuggerServer.BaseDirectory = "";
