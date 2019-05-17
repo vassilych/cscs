@@ -358,32 +358,11 @@ namespace SplitAndMerge
             return endGroupRead;
         }
 
-        public Variable ExecuteTo(char to = '\0')
+        public Variable Execute(char[] toArray = null, int from = -1)
         {
-            return ExecuteFrom(Pointer, to);
-        }
-        public async Task<Variable> ExecuteToAsync(char to = '\0')
-        {
-            return await ExecuteFromAsync(Pointer, to);
-        }
+            toArray = toArray == null ? Constants.END_PARSE_ARRAY : toArray;
+            Pointer = from < 0 ? Pointer : from;
 
-        public Variable ExecuteFrom(int from, char to = '\0')
-        {
-            Pointer = from;
-            char[] toArray = to == '\0' ? Constants.END_PARSE_ARRAY :
-                                          to.ToString().ToCharArray();
-            return Execute(toArray);
-        }
-        public async Task<Variable> ExecuteFromAsync(int from, char to = '\0')
-        {
-            Pointer = from;
-            char[] toArray = to == '\0' ? Constants.END_PARSE_ARRAY :
-                                          to.ToString().ToCharArray();
-            return await ExecuteAsync(toArray);
-        }
-
-        public Variable Execute(char[] toArray)
-        {
             if (!m_data.EndsWith(Constants.END_STATEMENT.ToString()))
             {
                 m_data += Constants.END_STATEMENT;
@@ -432,8 +411,11 @@ namespace SplitAndMerge
             return result;
         }
 
-        public async Task<Variable> ExecuteAsync(char[] toArray)
+        public async Task<Variable> ExecuteAsync(char[] toArray = null, int from = -1)
         {
+            toArray = toArray == null ? Constants.END_PARSE_ARRAY : toArray;
+            Pointer = from < 0 ? Pointer : from;
+
             if (!m_data.EndsWith(Constants.END_STATEMENT.ToString()))
             {
                 m_data += Constants.END_STATEMENT;
@@ -486,7 +468,7 @@ namespace SplitAndMerge
         {
             while (StillValid())
             {
-                ExecuteTo(Constants.END_LINE);
+                Execute(Constants.END_LINE_ARRAY);
                 GoToNextStatement();
             }
         }

@@ -1102,7 +1102,7 @@ namespace SplitAndMerge
 
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
-                Variable index = tempScript.ExecuteTo(Constants.END_ARRAY);
+                Variable index = tempScript.Execute(Constants.END_ARRAY_ARRAY);
 
                 indices.Add(index);
                 argStart = argEnd + 1;
@@ -1147,7 +1147,7 @@ namespace SplitAndMerge
 
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
-                Variable index = await tempScript.ExecuteToAsync(Constants.END_ARRAY);
+                Variable index = await tempScript.ExecuteAsync(Constants.END_ARRAY_ARRAY);
 
                 indices.Add(index);
                 argStart = argEnd + 1;

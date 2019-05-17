@@ -121,7 +121,10 @@ namespace SplitAndMerge
             {
                 s_data.AppendLine(sb.ToString());
             }
-            Interpreter.Instance.AppendData(s_data.ToString());
+            if (Interpreter.Instance.AppendData(s_data.ToString()))
+            {
+                s_data.Clear();
+            }
         }
 
         public string SendData(string data)

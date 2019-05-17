@@ -571,7 +571,7 @@ namespace SplitAndMerge
             while (tempScript.Pointer < body.Length - 1 &&
                   (result == null || !result.IsReturn))
             {
-                result = tempScript.ExecuteTo();
+                result = tempScript.Execute();
                 tempScript.GoToNextStatement();
             }
 
@@ -617,7 +617,7 @@ namespace SplitAndMerge
                 while (tempScript.Pointer < body.Length - 1 &&
                       (result == null || !result.IsReturn))
                 {
-                    result = tempScript.ExecuteTo();
+                    result = tempScript.Execute();
                     tempScript.GoToNextStatement();
                 }
             }
@@ -838,7 +838,7 @@ namespace SplitAndMerge
             while (tempScript.Pointer < m_body.Length - 1 &&
                   (result == null || !result.IsReturn))
             {
-                result = tempScript.ExecuteTo();
+                result = tempScript.Execute();
                 tempScript.GoToNextStatement();
             }
 
@@ -885,7 +885,7 @@ namespace SplitAndMerge
             while (tempScript.Pointer < m_body.Length - 1 &&
                   (result == null || !result.IsReturn))
             {
-                result = await tempScript.ExecuteToAsync();
+                result = await tempScript.ExecuteAsync();
                 tempScript.GoToNextStatement();
             }
 
@@ -1230,11 +1230,11 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            return script.ExecuteTo(Constants.END_ARG);
+            return script.Execute(Constants.END_ARG_ARRAY);
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
-            return await script.ExecuteToAsync(Constants.END_ARG);
+            return await script.ExecuteAsync(Constants.END_ARG_ARRAY);
         }
     }
 
@@ -1292,7 +1292,7 @@ namespace SplitAndMerge
 
             while (tempScript.Pointer < includeScript.Length)
             {
-                result = tempScript.ExecuteTo();
+                result = tempScript.Execute();
                 tempScript.GoToNextStatement();
             }
             return result == null ? Variable.EmptyInstance : result;
@@ -1312,7 +1312,7 @@ namespace SplitAndMerge
 
             while (tempScript.Pointer < includeScript.Length)
             {
-                result = await tempScript.ExecuteToAsync();
+                result = await tempScript.ExecuteAsync();
                 tempScript.GoToNextStatement();
             }
             return result == null ? Variable.EmptyInstance : result;
@@ -2313,7 +2313,7 @@ namespace SplitAndMerge
                               "\"" + arg + "\"", "\"" + timerId + "\"");
 
                 ParsingScript tempScript = new ParsingScript(body);
-                tempScript.ExecuteTo();
+                tempScript.Execute();
             };
             pauseTimer.AutoReset = autoReset;
             m_timers[timerId] = pauseTimer;
@@ -2345,7 +2345,7 @@ namespace SplitAndMerge
             }
 
             ParsingScript tempScript = new ParsingScript(expr);
-            result = tempScript.ExecuteTo();
+            result = tempScript.Execute();
 
             m_singletons[expr] = result;
 

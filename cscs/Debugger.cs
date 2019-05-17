@@ -101,7 +101,7 @@ namespace SplitAndMerge
             End = false;
             string responseToken = DebuggerUtils.ResponseMainToken(action);
 
-            Trace("REQUEST: " + data);
+            //Trace("REQUEST: " + data);
             if (action == DebuggerUtils.DebugAction.REPL ||
                 action == DebuggerUtils.DebugAction._REPL)
             {
@@ -208,9 +208,9 @@ namespace SplitAndMerge
                 else
                 {
                     Variable res = await ProcessNext();
-                    Trace("MAIN Ret:" + (LastResult != null && LastResult.IsReturn) +
-                          " NULL:" + (res == null) + " db.sb=" + m_debugging.Debugger.SendBackResult +
-                          " PTR:" + m_debugging.Pointer + "/" + m_script.Length);
+                    //Trace("MAIN Ret:" + (LastResult != null && LastResult.IsReturn) +
+                    //      " NULL:" + (res == null) + " db.sb=" + m_debugging.Debugger.SendBackResult +
+                    //      " PTR:" + m_debugging.Pointer + "/" + m_script.Length);
                     if (End)
                     {
                         responseToken = DebuggerUtils.ResponseMainToken(DebuggerUtils.DebugAction.END);
@@ -301,7 +301,7 @@ namespace SplitAndMerge
 
         public void SendBack(string str, bool sendLength = true)
         {
-            Trace("SEND_BACK: " + str);
+            //Trace("SEND_BACK");
             OnResult?.Invoke(str, sendLength);
 
             Output = "";
@@ -433,7 +433,6 @@ namespace SplitAndMerge
             {
                 LastResult = null;
                 End = true;
-                Trace("END of parsing");
                 return true;
             }
 
@@ -546,13 +545,11 @@ namespace SplitAndMerge
             tempScript.InTryBlock = stepInScript.InTryBlock;
             /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
 
-            Trace("Started ProcessBlock");
             await StepIn(stepInScript);
 
             ProcessingBlock = false;
             done = stepInScript.Pointer >= tempScript.Pointer;
 
-            Trace("Finished ProcessBlock");
             doneEvent(done);
             return LastResult;
         }
@@ -565,10 +562,10 @@ namespace SplitAndMerge
                 return null;
             }
 
-            Trace("Starting StepIn");
+            //Trace("Starting StepIn");
             await StepIn(stepInScript);
 
-            Trace("Finished StepIn");
+            //Trace("Finished StepIn");
             return LastResult;
         }
 
@@ -596,10 +593,8 @@ namespace SplitAndMerge
             m_startFilename = filename;
             m_startLine = line;
 
-            Trace("Starting StepInBreakpoint");
             await StepIn(stepInScript, true);
 
-            Trace("Finished StepInBreakpoint");
             SendBackResult = true;
             return LastResult;
         }
@@ -613,10 +608,8 @@ namespace SplitAndMerge
             }
             m_firstBlock = false;
 
-            Trace("Starting StepInInclude");
             await StepIn(stepInScript);
 
-            Trace("Finished StepInInclude");
             SendBackResult = true;
             return LastResult;
         }
@@ -657,7 +650,7 @@ namespace SplitAndMerge
                 MainInstance.m_steppingIns.Push(stepIn);
             }
 
-            stepIn.Trace("Started StepIn, this: " + Id);
+            //stepIn.Trace("Started StepIn, this: " + Id);
             CreateResultAndSendBack("next", Output, stepInScript);
 
             bool done = false;
@@ -665,7 +658,7 @@ namespace SplitAndMerge
             {
                 stepIn.m_completedStepIn.WaitOne();
 
-                stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
+                //stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
                 if (Debugger.SteppingOut || aBreakpoint)
                 {
                     break;
@@ -681,7 +674,7 @@ namespace SplitAndMerge
 
                 if (!done)
                 {
-                    stepIn.Trace("Completed one StepIn, this: " + Id);
+                    //stepIn.Trace("Completed one StepIn, this: " + Id);
                     CreateResultAndSendBack("next", Output, stepInScript);
                 }
             }
@@ -691,7 +684,7 @@ namespace SplitAndMerge
                 MainInstance.m_steppingIns.Pop();
             }
             
-            stepIn.Trace("Finished StepIn, this: " + Id);
+            //stepIn.Trace("Finished StepIn, this: " + Id);
             ProcessingClientRequest = aBreakpoint;
         }
 

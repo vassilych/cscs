@@ -66,7 +66,7 @@ namespace SplitAndMerge
             }
         }
 
-        public void AppendData(string text, bool newLine = false)
+        public bool AppendData(string text, bool newLine = false)
         {
             EventHandler<OutputAvailableEventArgs> handler = OnData;
             if (handler != null)
@@ -74,7 +74,9 @@ namespace SplitAndMerge
                 OutputAvailableEventArgs args = new OutputAvailableEventArgs(text +
                                      (newLine ? Environment.NewLine : string.Empty));
                 handler(this, args);
+                return true;
             }
+            return false;
         }
 
         public void Init()
@@ -228,7 +230,7 @@ namespace SplitAndMerge
 
             while (toParse.Pointer < data.Length)
             {
-                result = toParse.ExecuteTo();
+                result = toParse.Execute();
                 toParse.GoToNextStatement();
             }
 
@@ -256,7 +258,7 @@ namespace SplitAndMerge
 
             while (toParse.Pointer < data.Length)
             {
-                result = await toParse.ExecuteToAsync();
+                result = await toParse.ExecuteAsync();
                 toParse.GoToNextStatement();
             }
 
@@ -403,14 +405,14 @@ namespace SplitAndMerge
             condScript.ParentScript = script;
             loopScript.ParentScript = script;
 
-            initScript.ExecuteFrom(0);
+            initScript.Execute(null, 0);
 
             int cycles = 0;
             bool stillValid = true;
 
             while (stillValid)
             {
-                Variable condResult = condScript.ExecuteFrom(0);
+                Variable condResult = condScript.Execute(null, 0);
                 stillValid = Convert.ToBoolean(condResult.Value);
                 if (!stillValid)
                 {
@@ -432,7 +434,7 @@ namespace SplitAndMerge
                     //return;
                     break;
                 }
-                loopScript.ExecuteFrom(0);
+                loopScript.Execute(null, 0);
             }
 
             script.Pointer = startForCondition;
@@ -456,14 +458,14 @@ namespace SplitAndMerge
             condScript.ParentScript = script;
             loopScript.ParentScript = script;
 
-            await initScript.ExecuteFromAsync(0);
+            await initScript.ExecuteAsync(null, 0);
 
             int cycles = 0;
             bool stillValid = true;
 
             while (stillValid)
             {
-                Variable condResult = await condScript.ExecuteFromAsync(0);
+                Variable condResult = await condScript.ExecuteAsync(null, 0);
                 stillValid = Convert.ToBoolean(condResult.Value);
                 if (!stillValid)
                 {
@@ -485,7 +487,7 @@ namespace SplitAndMerge
                     //return;
                     break;
                 }
-                await loopScript.ExecuteFromAsync(0);
+                await loopScript.ExecuteAsync(null, 0);
             }
 
             script.Pointer = startForCondition;
@@ -505,7 +507,7 @@ namespace SplitAndMerge
                 script.Pointer = startWhileCondition;
 
                 //int startSkipOnBreakChar = from;
-                Variable condResult = script.ExecuteTo(Constants.END_ARG);
+                Variable condResult = script.Execute(Constants.END_ARG_ARRAY);
                 stillValid = Convert.ToBoolean(condResult.Value);
                 if (!stillValid)
                 {
@@ -545,7 +547,7 @@ namespace SplitAndMerge
                 script.Pointer = startWhileCondition;
 
                 //int startSkipOnBreakChar = from;
-                Variable condResult = await script.ExecuteToAsync(Constants.END_ARG);
+                Variable condResult = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
                 stillValid = Convert.ToBoolean(condResult.Value);
                 if (!stillValid)
                 {
@@ -577,7 +579,7 @@ namespace SplitAndMerge
         {
             int startIfCondition = script.Pointer;
 
-            Variable result = script.ExecuteTo(Constants.END_ARG);
+            Variable result = script.Execute(Constants.END_ARG_ARRAY);
             bool isTrue = Convert.ToBoolean(result.Value);
 
             if (isTrue)
@@ -627,7 +629,7 @@ namespace SplitAndMerge
         {
             int startIfCondition = script.Pointer;
 
-            Variable result = await script.ExecuteToAsync(Constants.END_ARG);
+            Variable result = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
             bool isTrue = Convert.ToBoolean(result.Value);
 
             if (isTrue)
@@ -875,7 +877,7 @@ namespace SplitAndMerge
                     return result != null ? result : new Variable();
                 }
 
-                result = script.ExecuteTo();
+                result = script.Execute();
 
                 if (result.IsReturn ||
                     result.Type == Variable.VarType.BREAK ||
@@ -909,7 +911,7 @@ namespace SplitAndMerge
                     return result != null ? result : new Variable();
                 }
 
-                result = await script.ExecuteToAsync();
+                result = await script.ExecuteAsync();
 
                 if (result.IsReturn ||
                     result.Type == Variable.VarType.BREAK ||
