@@ -929,6 +929,7 @@ Test(numArray.Sort(), {33, 39, 51});
 
 Print("Testing Namespaces...");
 namespace ns1 {
+  AllMonths = Enum {January, February, March, April, May, June, July, August, September, October, November, December};
   a=1;
   b=2;
   function func(x) {
@@ -937,9 +938,10 @@ namespace ns1 {
   z= func(10);
   print(z);
 }
-
+x=ns1.b;
 ns1.w = 44;
 Test(ns1.func(20), 23);
+test(NS1.AllMonths.July, NS1.AllMonths.May + 2);
 
 namespace ns1 {
   function another(x=0) {

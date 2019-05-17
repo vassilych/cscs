@@ -123,13 +123,24 @@ namespace SplitAndMerge
             {
                 name = script.ClassInstance.InstanceName + "." + name;
             }
-            int ind = name.IndexOf(".");
+            //int ind = name.LastIndexOf('.');
+            int ind = name.IndexOf('.');
             if (ind <= 0)
             {
                 return null;
             }
             string baseName = name.Substring(0, ind);
-            string prop     = name.Substring(ind + 1);
+            if (s_namespaces.ContainsKey(baseName))
+            {
+                int ind2 = name.IndexOf('.', ind + 1);
+                if (ind2 > 0)
+                {
+                    ind = ind2;
+                    baseName = name.Substring(0, ind);
+                }
+            }
+
+            string prop = name.Substring(ind + 1);
 
             ParserFunction pf = ParserFunction.GetFunctionNamespace(prop, baseName, script);
             if (pf != null)
@@ -194,33 +205,38 @@ namespace SplitAndMerge
                 return null;
             }
 
+            int ind = nameSpace.IndexOf('.');
+            string prop = "";
+            if (ind >= 0)
+            {
+                prop      = name; 
+                name      = nameSpace.Substring(ind + 1);
+                nameSpace = nameSpace.Substring(0, ind);
+            }
+
             StackLevel level;
             if  (!s_namespaces.TryGetValue(nameSpace, out level))
             {
                 return null;
             }
 
-            var vars = level.Variables;
-            ParserFunction impl;
-            if (vars.TryGetValue(name, out impl))
-            {
-                return impl;
-            }
-
             if (!name.StartsWith(nameSpace, StringComparison.OrdinalIgnoreCase))
             {
                 name = nameSpace + "." + name;
-                if (vars.TryGetValue(name, out impl))
-                {
-                    return impl;
-                }
-                if (s_functions.TryGetValue(name, out impl))
-                {
-                    return impl;
-                }
             }
 
-            return null;
+            var vars = level.Variables;
+            ParserFunction impl;
+            if (!vars.TryGetValue(name, out impl) && !s_functions.TryGetValue(name, out impl))
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(prop) &&  impl is GetVarFunction)
+            {
+                ((GetVarFunction) impl).PropertyName = prop;
+            }
+            return impl;
         }
 
         public static ParserFunction GetFunction(string name, ParsingScript script)
@@ -541,9 +557,10 @@ namespace SplitAndMerge
 
         public static void AddNamespace(string namespaceName)
         {
-            if (!string.IsNullOrWhiteSpace(s_namespace))
+            namespaceName = Constants.ConvertName(namespaceName);
+            if (!string.IsNullOrWhiteSpace(s_namespace) && namespaceName != s_namespace)
             {
-                throw new ArgumentException("Already inside of namespace [" + s_namespace + "].");
+                throw new ArgumentException("Already inside of namespace [" + s_namespace + "]. Cannot have nested namespaces.");
             }
 
             StackLevel level;

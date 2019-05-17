@@ -121,10 +121,6 @@ namespace SplitAndMerge
             {
                 s_data.AppendLine(sb.ToString());
             }
-            if (Interpreter.Instance.AppendData(s_data.ToString()))
-            {
-                s_data.Clear();
-            }
         }
 
         public string SendData(string data)
@@ -155,7 +151,7 @@ namespace SplitAndMerge
             Process pr = Process.GetCurrentProcess();
             TimeSpan ts = pr.TotalProcessorTime;
 
-            return new Variable(ts.TotalMilliseconds);
+            return new Variable(Math.Round(ts.TotalMilliseconds, 0));
         }
     }
 
