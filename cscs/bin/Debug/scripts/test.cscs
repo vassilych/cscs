@@ -1,6 +1,7 @@
 
-Print("Starting tests");
+Print("Starting tests.", now("yyyy/MM/dd HH:mm:ss.fff"));
 Start = pstime;
+
 include("functions.cscs");
 Print("Testing LoaderMain:", LoaderMain);
 Test(LoaderMain, true);
@@ -171,7 +172,9 @@ function f(x) {
   counter++;
   return x;
 }
-counter = 0; Test(f(0) && f(1), 0); Test(counter, 1);
+counter = 0; 
+Test(f(0) && f(1), 0);
+Test(counter, 1);
 counter = 0; Test(f(1) && f(0), 0); Test(counter, 2);
 counter = 0; Test(f(1) || f(2), 1); Test(counter, 1);
 counter = 0; Test(f(0) || f(3), 1); Test(counter, 2);
@@ -1004,4 +1007,7 @@ ScheduleRun(timeout, "timer_timeout", MySender, 'Arg with "double quotes"');
 
 end = pstime;
 Print("Process CPU Time: ", end, " ms. Script execution: ", end - start, " ms.");
+now = now("yyyy/MM/dd HH:mm:ss.fff");
+print("Finished.", now);
+
 Sleep(2000);

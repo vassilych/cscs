@@ -28,7 +28,7 @@ function factorial(n) {
 
   return n * factorial(n - 1);
 }
-
+/*
 функция факториал (n) {
   если(!isInteger(n) || n < 0) {
     exc = "Factorial is for nonnegative integers only (n=" + n + ")";
@@ -39,7 +39,7 @@ function factorial(n) {
   }
   вернуть n * факториал(n - 1);
 }
-
+*/
 // Catalan numbers function implemented in CSCS.
 // C(0) = 1, C(n + 1) = Sum(C(i) * C(n - i)), i: 0 --> n, for n >= 0
 // Equivalent to: C(n) = 2 * (2*n - 1) / (n + 1) * C(n - 1), n > 0

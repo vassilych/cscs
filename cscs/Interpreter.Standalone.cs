@@ -58,7 +58,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
 #endif
 #endif
-            ReadConfig();
+            //ReadConfig();
         }
 
         void ReadConfig()

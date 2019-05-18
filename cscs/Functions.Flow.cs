@@ -111,7 +111,7 @@ namespace SplitAndMerge
 
             string funcName = args[0].AsString();
 
-            ParserFunction function = ParserFunction.GetFunction(funcName, script);
+            ParserFunction function = ParserFunction.GetVariable(funcName, script);
             CustomFunction custFunc = function as CustomFunction;
             Utils.CheckNotNull(funcName, custFunc);
 
@@ -391,11 +391,12 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string funcName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-            funcName = Constants.ConvertName(funcName);
+            string varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            varName = Constants.ConvertName(varName);
 
-            ParserFunction function = ParserFunction.GetFunction(funcName, script);
-            return new Variable(function != null);
+            bool result = ParserFunction.GetVariable(varName, script) != null ||
+                          ParserFunction.GetFunction(varName, script) != null;
+            return new Variable(result);
         }
     }
 
@@ -1065,7 +1066,7 @@ namespace SplitAndMerge
             string varName = args[0].AsString();
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             Utils.CheckNotNull(varName, func);
             Variable currentValue = func.GetValue(script);
             Utils.CheckArray(currentValue, varName);
@@ -1089,7 +1090,7 @@ namespace SplitAndMerge
             Utils.CheckNotEnd(script, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             Utils.CheckNotNull(varName, func);
             Variable currentValue = func.GetValue(script);
             Utils.CheckArray(currentValue, varName);
@@ -1117,7 +1118,7 @@ namespace SplitAndMerge
             // 2. Get the current value of the variable.
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, varName, (newVarName) => { varName = newVarName; } );
 
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             Utils.CheckNotNull(varName, func);
             Variable currentValue = func.GetValue(script);
 
@@ -1490,7 +1491,7 @@ namespace SplitAndMerge
             double newValue = 0;
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
 
-            ParserFunction func = ParserFunction.GetFunction(m_name, script);
+            ParserFunction func = ParserFunction.GetVariable(m_name, script);
             Utils.CheckNotNull(m_name, func);
 
             Variable currentValue = func.GetValue(script);
@@ -1538,7 +1539,7 @@ namespace SplitAndMerge
 
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
 
-            ParserFunction func = ParserFunction.GetFunction(m_name, script);
+            ParserFunction func = ParserFunction.GetVariable(m_name, script);
             Utils.CheckNotNull(func, m_name, script);
 
             Variable currentValue = func.GetValue(script);
@@ -1660,7 +1661,7 @@ namespace SplitAndMerge
 
             Variable array;
 
-            ParserFunction pf = ParserFunction.GetFunction(m_name, script);
+            ParserFunction pf = ParserFunction.GetVariable(m_name, script);
             if (pf != null)
             {
                 array = pf.GetValue(script);
@@ -1704,7 +1705,7 @@ namespace SplitAndMerge
 
             Variable array;
 
-            ParserFunction pf = ParserFunction.GetFunction(m_name, script);
+            ParserFunction pf = ParserFunction.GetVariable(m_name, script);
             if (pf != null)
             {
                 array = await pf.GetValueAsync(script);
@@ -1751,7 +1752,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = ParserFunction.GetFunction(name, script);
+            ParserFunction existing = ParserFunction.GetVariable(name, script);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
             baseValue.SetProperty(prop, varValue, name);
 
@@ -1791,7 +1792,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = ParserFunction.GetFunction(name, script);
+            ParserFunction existing = ParserFunction.GetVariable(name, script);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
             await baseValue.SetPropertyAsync(prop, varValue, name);
 
@@ -1880,7 +1881,7 @@ namespace SplitAndMerge
             }
             char[] sep = sepStr.ToCharArray();
 
-            // var function = ParserFunction.GetFunction(varName, script);
+            // var function = ParserFunction.GetVariable(varName, script);
             Variable allTokensVar = new Variable(Variable.VarType.ARRAY);
 
             for (int counter = fromLine; counter < lines.Tuple.Count; counter++)
@@ -1925,7 +1926,7 @@ namespace SplitAndMerge
             }
             char[] sep = sepStr.ToCharArray();
 
-            var function = ParserFunction.GetFunction(varName, script);
+            var function = ParserFunction.GetVariable(varName, script);
             Variable mapVar = function != null ? function.GetValue(script) :
                                         new Variable(Variable.VarType.ARRAY);
 
@@ -1960,7 +1961,7 @@ namespace SplitAndMerge
             Variable toAdd = Utils.GetSafeVariable(args, 1);
             string hash = Utils.GetSafeString(args, 2);
 
-            var function = ParserFunction.GetFunction(varName, script);
+            var function = ParserFunction.GetVariable(varName, script);
             Variable mapVar = function != null ? function.GetValue(script) :
                                         new Variable(Variable.VarType.ARRAY);
 
@@ -1992,7 +1993,7 @@ namespace SplitAndMerge
             string varName = Utils.GetSafeString(args, 1);
             int index = Utils.GetSafeInt(args, 2);
 
-            // var function = ParserFunction.GetFunction(varName, script);
+            // var function = ParserFunction.GetVariable(varName, script);
             Variable mapVar = new Variable(Variable.VarType.ARRAY);
 
             if (all.Tuple == null)
@@ -2068,7 +2069,7 @@ namespace SplitAndMerge
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, varName, (newName) => { varName = newName; } );
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             Utils.CheckNotNull(varName, func);
             Variable currentValue = func.GetValue(script);
             Variable element = currentValue;

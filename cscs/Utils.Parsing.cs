@@ -1228,7 +1228,7 @@ namespace SplitAndMerge
             {
                 script = new ParsingScript("");
             }
-            ParserFunction function = ParserFunction.GetFunction(paramName, script);
+            ParserFunction function = ParserFunction.GetVariable(paramName, script);
             if (function == null)
             {
                 throw new ArgumentException("Variable [" + paramName + "] not found.");

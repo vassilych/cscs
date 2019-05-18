@@ -304,7 +304,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Get the value to be added or appended.
