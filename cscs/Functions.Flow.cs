@@ -2396,7 +2396,7 @@ namespace SplitAndMerge
         }
     }
 
-    class CheckLoaderMainFunction : ParserFunction, IArrayFunction
+    class CheckLoaderMainFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
@@ -2404,6 +2404,17 @@ namespace SplitAndMerge
                            script.MainFilename == script.Filename;
 
             return new Variable(isMain);
+        }
+    }
+
+    class ResetVariablesFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            ParserFunction.CleanUpVariables();
+            Interpreter.Instance.RegisterEnums();
+
+            return Variable.EmptyInstance;
         }
     }
 }

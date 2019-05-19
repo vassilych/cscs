@@ -1,7 +1,9 @@
 
-Print("Starting tests.", now("yyyy/MM/dd HH:mm:ss.fff"));
-Start = pstime;
+now = now("yyyy/MM/dd HH:mm:ss.fff");
+Print("Starting tests.", now);
+ResetVariables();
 
+Start = pstime;
 include("functions.cscs");
 Print("Testing LoaderMain:", LoaderMain);
 Test(LoaderMain, true);

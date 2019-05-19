@@ -706,10 +706,18 @@ namespace SplitAndMerge
 
         public static void CleanUp()
         {
-            s_variables.Clear();
+            s_functions.Clear();
             s_actions.Clear();
+            CleanUpVariables();
+        }
+
+        public static void CleanUpVariables()
+        {
+            s_variables.Clear();
             s_locals.Clear();
             s_localScope.Clear();
+            s_namespaces.Clear();
+            s_namespace = s_namespacePrefix = "";
         }
 
         protected string m_name;

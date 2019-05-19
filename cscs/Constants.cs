@@ -105,6 +105,7 @@ namespace SplitAndMerge
         public const string RANDOM = "GetRandom";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
+        public const string RESET_VARS = "ResetVariables";
         public const string ROUND = "round";
         public const string SCHEDULE_RUN = "ScheduleRun";
         public const string SETENV = "setenv";
@@ -246,10 +247,6 @@ namespace SplitAndMerge
         public static string STATEMENT_SEPARATOR = ";{}";
         public static string STATEMENT_TOKENS = " ";
         public static string NUMBER_OPERATORS = "+-*/%";
-
-        public static List<string> ELSE_LIST = new List<string>();
-        public static List<string> ELSE_IF_LIST = new List<string>();
-        public static List<string> CATCH_LIST = new List<string>();
 
         public static string ALL_FILES = "*.*";
 

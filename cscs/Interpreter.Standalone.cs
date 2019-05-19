@@ -192,13 +192,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.WRITELINE, tr1, tr2);
                 Translation.Add(languageSection, Constants.WRITELINES, tr1, tr2);
                 Translation.Add(languageSection, Constants.WRITE_CONSOLE, tr1, tr2);
-
-                // Special dealing for else, elif since they are not separate
-                // functions but are part of the if statement block.
-                // Same for and, or, not.
-                Translation.AddSubstatement(languageSection, Constants.ELSE, Constants.ELSE_LIST, tr1, tr2);
-                Translation.AddSubstatement(languageSection, Constants.ELSE_IF, Constants.ELSE_IF_LIST, tr1, tr2);
-                Translation.AddSubstatement(languageSection, Constants.CATCH, Constants.CATCH_LIST, tr1, tr2);
             }
 #endif
         }

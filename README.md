@@ -130,7 +130,9 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, Type, and Properties. |
 | *variable*.**Size** | Returns either a number of elements in an array if variable is of type ARRAY or a number of characters in a string representation of this variable. |
 | *variable*.**Type** | Returns this variable's type (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT). |
-| *variable*.**Contains(value)** | If variable is a list, whether it contains this value.|
+| *variable*.**Add(value)** | Adds passed value to the underlying array or to the internal string representation.|
+| *variable*.**At(index)** | If the underlying data is an array returns an array element at this index. Otherwise returns a character at this index.|
+| *variable*.**Contains(value)** | If variable is a list, returns whether it contains this value.|
 | *variable*.**StartsWith(value)** | Whether the variable, converted to a string, starts with this value.|
 | *variable*.**EndsWith(value)** | Whether the variable, converted to a string, ends with this value.|
 | *variable*.**Replace(oldValue, newValue)** | Replaces oldValue with the newValue.|
@@ -140,11 +142,11 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Last**  | Returns the last character or last element of this string or list. |
 | *variable*.**Keys** | If the underlying variable is a dictionary, returns all the dictionary keys.|
 | *variable*.**Substring(value, from, size)** | Returns a substring of a given string.|
-| *variable*.**Tokenize(sep=" ")** | Returns a new list based on the string separation token.|
+| *variable*.**Split(sep=" ")** | Returns a new list based on the string separation token.|
 | *variable*.**Trim()** | Returns a new variable without leading or trailing white spaces.|
 | *variable*.**Lower()** | Returns a variable converted to the lower case.|
 | *variable*.**Upper()** | Returns a variable converted to the upper case.|
-| *variable*.**Sort()** | Sorts underlying array.|
+| *variable*.**Sort()** | Sorts the underlying array.|
 | *variable*.**Reverse()** | Reverses the contents of the underlying array or string.|
 | **GetProperty** (*objectName, propertyName*)  | Returns variable.propertyName.|
 | **GetPropertyStrings** (*objectName*)  | Same as calling variable.properties.|

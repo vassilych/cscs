@@ -81,6 +81,16 @@ namespace SplitAndMerge
 
         public void Init()
         {
+            RegisterFunctions();
+            RegisterEnums();
+            RegisterActions();
+
+            InitStandalone();
+            CompiledClass.Init();
+        }
+
+        public void RegisterFunctions()
+        {
             ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
             ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
             ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());
@@ -135,6 +145,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
+            ParserFunction.RegisterFunction(Constants.RESET_VARS, new ResetVariablesFunction());
             ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
             ParserFunction.RegisterFunction(Constants.SCHEDULE_RUN, new ScheduleRunFunction(true));
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
@@ -175,24 +186,23 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
             ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
             ParserFunction.RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
+        }
 
+        public void RegisterEnums()
+        {
             ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
+        }
 
+        public void RegisterActions()
+        {
             ParserFunction.AddAction(Constants.ASSIGNMENT, new AssignFunction());
-            ParserFunction.AddAction(Constants.INCREMENT,  new IncrementDecrementFunction());
-            ParserFunction.AddAction(Constants.DECREMENT,  new IncrementDecrementFunction());
+            ParserFunction.AddAction(Constants.INCREMENT, new IncrementDecrementFunction());
+            ParserFunction.AddAction(Constants.DECREMENT, new IncrementDecrementFunction());
 
             for (int i = 0; i < Constants.OPER_ACTIONS.Length; i++)
             {
                 ParserFunction.AddAction(Constants.OPER_ACTIONS[i], new OperatorAssignFunction());
             }
-
-            Constants.ELSE_LIST.Add(Constants.ELSE);
-            Constants.ELSE_IF_LIST.Add(Constants.ELSE_IF);
-            Constants.CATCH_LIST.Add(Constants.CATCH);
-
-            InitStandalone();
-            CompiledClass.Init();
         }
 
         public Variable ProcessFile(string filename, bool mainFile = false)
@@ -608,12 +618,12 @@ namespace SplitAndMerge
 
             string nextToken = Utils.GetNextToken(nextData);
 
-            if (Constants.ELSE_IF_LIST.Contains(nextToken))
+            if (Constants.ELSE_IF == nextToken)
             {
                 script.Pointer = nextData.Pointer + 1;
                 result = ProcessIf(script);
             }
-            else if (Constants.ELSE_LIST.Contains(nextToken))
+            else if (Constants.ELSE == nextToken)
             {
                 script.Pointer = nextData.Pointer + 1;
                 result = ProcessBlock(script);
@@ -658,12 +668,12 @@ namespace SplitAndMerge
 
             string nextToken = Utils.GetNextToken(nextData);
 
-            if (Constants.ELSE_IF_LIST.Contains(nextToken))
+            if (Constants.ELSE_IF == nextToken)
             {
                 script.Pointer = nextData.Pointer + 1;
                 result = await ProcessIfAsync(script);
             }
-            else if (Constants.ELSE_LIST.Contains(nextToken))
+            else if (Constants.ELSE == nextToken)
             {
                 script.Pointer = nextData.Pointer + 1;
                 result = await ProcessBlockAsync(script);
@@ -712,7 +722,7 @@ namespace SplitAndMerge
             string catchToken = Utils.GetNextToken(script);
             script.Forward(); // skip opening parenthesis
                               // The next token after the try block must be a catch.
-            if (!Constants.CATCH_LIST.Contains(catchToken))
+            if (Constants.CATCH != catchToken)
             {
                 throw new ArgumentException("Expecting a 'catch()' but got [" +
                     catchToken + "]");
@@ -778,7 +788,7 @@ namespace SplitAndMerge
             string catchToken = Utils.GetNextToken(script);
             script.Forward(); // skip opening parenthesis
                               // The next token after the try block must be a catch.
-            if (!Constants.CATCH_LIST.Contains(catchToken))
+            if (Constants.CATCH != catchToken)
             {
                 throw new ArgumentException("Expecting a 'catch()' but got [" +
                     catchToken + "]");
@@ -985,8 +995,8 @@ namespace SplitAndMerge
                 int endOfToken = script.Pointer;
                 ParsingScript nextData = new ParsingScript(script);
                 string nextToken = Utils.GetNextToken(nextData);
-                if (!Constants.ELSE_IF_LIST.Contains(nextToken) &&
-                      !Constants.ELSE_LIST.Contains(nextToken))
+                if (Constants.ELSE_IF != nextToken &&
+                    Constants.ELSE    != nextToken)
                 {
                     return;
                 }
