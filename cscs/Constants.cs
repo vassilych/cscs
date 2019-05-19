@@ -212,7 +212,7 @@ namespace SplitAndMerge
         };
 #else
         public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            CLASS, FUNCTION, HELP, NEW, SHOW, THREAD
+            CLASS, FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
         };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but
