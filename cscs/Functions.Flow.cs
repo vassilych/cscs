@@ -2412,8 +2412,6 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             ParserFunction.CleanUpVariables();
-            Interpreter.Instance.RegisterEnums();
-
             return Variable.EmptyInstance;
         }
     }

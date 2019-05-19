@@ -155,6 +155,11 @@ namespace SplitAndMerge
             }
 
             pf = ParserFunction.GetVariable(baseName, script, true);
+            if (pf == null || !(pf is GetVarFunction))
+            {
+                pf = ParserFunction.GetFunction(baseName, script);
+            }
+
             GetVarFunction varFunc = pf as GetVarFunction;
             if (varFunc == null)
             {
@@ -476,7 +481,7 @@ namespace SplitAndMerge
                 return enumVar;
             }
 
-            AddGlobalOrLocalVariable(varName, new GetVarFunction(enumVar));
+            RegisterFunction(varName, new GetVarFunction(enumVar));
             return enumVar;
         }
 
