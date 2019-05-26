@@ -634,19 +634,15 @@ namespace SplitAndMerge
         static Variable ExtractObject(ParsingScript script)
         {
             Variable newValue = new Variable(Variable.VarType.ARRAY);
-            script.Forward();
 
-            while (script.StillValid())
+            while (script.StillValid() && (newValue.Count == 0 || script.Current == ','))
             {
+                script.Forward();
                 string key = Utils.GetToken(script, SEP);
                 script.MoveForwardIf(':');
+
                 Variable valueVar = ExtractValue(script);
                 newValue.SetHashVariable(key, valueVar);
-                if (script.TryCurrent() != ',')
-                {
-                    break;
-                }
-                script.Forward();
             }
             script.MoveForwardIf('}');
 
@@ -656,17 +652,12 @@ namespace SplitAndMerge
         static Variable ExtractArray(ParsingScript script)
         {
             Variable newValue = new Variable(Variable.VarType.ARRAY);
-            script.MoveForwardIf('[');
 
-            while (script.StillValid() && script.TryCurrent() != ']')
+            while (script.StillValid() && (newValue.Count == 0 || script.Current == ','))
             {
+                script.Forward();
                 Variable addVariable = ExtractValue(script);
                 newValue.AddVariable(addVariable);
-                if (script.TryCurrent() != ',')
-                {
-                    break;
-                }
-                script.Forward();
             }
             script.MoveForwardIf(']');
 
