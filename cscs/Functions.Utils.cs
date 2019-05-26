@@ -835,10 +835,8 @@ namespace SplitAndMerge
         }
     }
 
-    class GetVariableFromJSONFunction : ParserFunction
+    class GetVariableFromJSONNewtonsoftFunction : ParserFunction
     {
-        static char[] SEP = "\",:]}".ToCharArray();
-
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
@@ -847,82 +845,8 @@ namespace SplitAndMerge
             string json = args[0].AsString();
 
             Variable newVariable = Utils.CreateVariableFromJsonString(json);
-
-            Dictionary<int, int> d;
-            json = Utils.ConvertToScript(json, out d);
-
-            var tempScript = script.GetTempScript(json);
-            tempScript.MoveForwardIf('{');
-            Variable result = GetVariable(tempScript);
             return newVariable;
         }
 
-        static Variable GetVariable(ParsingScript script)
-        {
-            Variable aVariable = new Variable(Variable.VarType.ARRAY);
-            while(true)
-            {
-                string key = Utils.GetToken(script, SEP);
-                script.MoveForwardIf('"');
-                script.MoveForwardIf(':');
-                AddToVariable(aVariable, key, script);
-                if (script.TryCurrent() != ',')
-                {
-                    break;
-                }
-                script.Forward();
-            }
-
-            return aVariable;
-        }
-
-        static void AddToVariable(Variable aVariable, string key, ParsingScript script)
-        {
-            if (script.TryCurrent() != '{' && script.TryCurrent() != '[')
-            {
-                var token = Utils.GetToken(script, SEP);
-                aVariable.SetHashVariable(key, new Variable(token));
-                return;
-            }
-
-            /*ParsingScript tempScript = script;
-            int advance = 0;
-            while (tempScript.TryCurrent() == '{' || tempScript.TryCurrent() == '[')
-            {
-                char start = tempScript.Current;
-                char end   = start == '{' ? '}' : ']';
-                tempScript = script.GetTempScript(tempScript.String, tempScript.Pointer);
-                tempScript.MoveForwardIf(start);
-                tempScript = new ParsingScript(Utils.GetBodyBetween(tempScript, start, end));
-                if (advance <= 0)
-                {
-                    advance += tempScript.String.Length + 2;
-                }
-            }
-            tempScript.Pointer = 0;*/
-            int startPointer = script.Pointer;
-            int advance = 0;
-            string body = "";
-            while (script.TryCurrent() == '{' || script.TryCurrent() == '[')
-            {
-                char start = script.Current;
-                char end   = start == '{' ? '}' : ']';
-                script.Forward();
-                body = Utils.GetBodyBetween(script, start, end);
-                if (advance <= 0)
-                {
-                    advance += body.Length + 2;
-                }
-                script.Pointer -= body.Length;
-            }
-
-            ParsingScript tempScript = new ParsingScript(body);
-            Variable objectVar = GetVariable(tempScript);
-            aVariable.SetHashVariable(key, objectVar);
-
-            script.Pointer = startPointer + advance;
-
-            script.MoveForwardIf('"');
-        }
     }
 }

@@ -133,6 +133,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
             ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
+            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
             ParserFunction.RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());

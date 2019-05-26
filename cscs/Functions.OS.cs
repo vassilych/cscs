@@ -609,4 +609,82 @@ namespace SplitAndMerge
             return EvaluateAsync(script).Result;
         }
     }
+
+    class GetVariableFromJSONFunction : ParserFunction
+    {
+        static char[] SEP = "\",:]}".ToCharArray();
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            string json = args[0].AsString();
+
+            Variable newVariable = Utils.CreateVariableFromJsonString(json);
+
+            Dictionary<int, int> d;
+            json = Utils.ConvertToScript(json, out d);
+
+            var tempScript = script.GetTempScript(json);
+            Variable result = ExtractObject(tempScript);
+            return result;
+        }
+
+        static Variable ExtractObject(ParsingScript script)
+        {
+            Variable newValue = new Variable(Variable.VarType.ARRAY);
+            script.Forward();
+
+            while (script.StillValid())
+            {
+                string key = Utils.GetToken(script, SEP);
+                script.MoveForwardIf(':');
+                Variable valueVar = ExtractValue(script);
+                newValue.SetHashVariable(key, valueVar);
+                if (script.TryCurrent() != ',')
+                {
+                    break;
+                }
+                script.Forward();
+            }
+            script.MoveForwardIf('}');
+
+            return newValue;
+        }
+
+        static Variable ExtractArray(ParsingScript script)
+        {
+            Variable newValue = new Variable(Variable.VarType.ARRAY);
+            script.MoveForwardIf('[');
+
+            while (script.StillValid() && script.TryCurrent() != ']')
+            {
+                Variable addVariable = ExtractValue(script);
+                newValue.AddVariable(addVariable);
+                if (script.TryCurrent() != ',')
+                {
+                    break;
+                }
+                script.Forward();
+            }
+            script.MoveForwardIf(']');
+
+            return newValue;
+        }
+
+        static Variable ExtractValue(ParsingScript script)
+        {
+            if (script.TryCurrent() == '{')
+            {
+                return ExtractObject(script);
+            }
+            if (script.TryCurrent() == '[')
+            {
+                return ExtractArray(script);
+            }
+            var token = Utils.GetToken(script, SEP);
+            return new Variable(token);
+        }
+    }
 }
