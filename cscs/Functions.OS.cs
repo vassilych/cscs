@@ -621,8 +621,6 @@ namespace SplitAndMerge
 
             string json = args[0].AsString();
 
-            Variable newVariable = Utils.CreateVariableFromJsonString(json);
-
             Dictionary<int, int> d;
             json = Utils.ConvertToScript(json, out d);
 
