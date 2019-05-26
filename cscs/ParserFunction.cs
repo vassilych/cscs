@@ -488,7 +488,9 @@ namespace SplitAndMerge
         public static void RegisterFunction(string name, ParserFunction function,
                                             bool isNative = true)
         {
-            name = Constants.ConvertName(name); 
+            name = Constants.ConvertName(name);
+            function.Name = Constants.GetRealName(name);
+
             if (!string.IsNullOrWhiteSpace(s_namespace))
             {
                 StackLevel level;
@@ -499,8 +501,9 @@ namespace SplitAndMerge
                     name = s_namespacePrefix + name;
                 }
             }
+
             s_functions[name] = function;
-            //AddGlobal(name, function, isNative);
+            function.isNative = isNative;
         }
 
         public static bool RemoveGlobal(string name)
