@@ -62,12 +62,6 @@ namespace SplitAndMerge
                 return;
             }
 
-            m_impl = GetFunction(item, script);
-            if (m_impl != null)
-            {
-                return;
-            }
-
             if (m_impl == s_strOrNumFunction && string.IsNullOrWhiteSpace(item))
             {
                 string problem = (!string.IsNullOrWhiteSpace(action) ? action : ch.ToString());
@@ -257,7 +251,7 @@ namespace SplitAndMerge
         {
             if (!force && script.TryPrev() == Constants.START_ARG)
             {
-                return null;
+                return GetFunction(name, script);
             }
             name = Constants.ConvertName(name);
             ParserFunction impl;
@@ -283,7 +277,7 @@ namespace SplitAndMerge
                 return impl.NewInstance();
             }
 
-            return GetFromNamespace(name, script);
+            return GetFunction(name, script);
         }
 
         public static ParserFunction GetFunction(string name, ParsingScript script)
