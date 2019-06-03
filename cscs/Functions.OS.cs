@@ -625,7 +625,7 @@ namespace SplitAndMerge
             json = Utils.ConvertToScript(json, out d);
 
             var tempScript = script.GetTempScript(json);
-            Variable result = ExtractObject(tempScript);
+            Variable result = ExtractValue(tempScript);
             return result;
         }
 
