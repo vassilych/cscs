@@ -26,7 +26,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.FINDFILES, new FindfilesFunction());
             ParserFunction.RegisterFunction(Constants.FINDSTR, new FindstrFunction());
             ParserFunction.RegisterFunction(Constants.GET_NATIVE, new GetNativeFunction());
-            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
+            ParserFunction.RegisterFunction(Constants.JSON_NS, new GetVariableFromJSONNewtonsoftFunction());
             ParserFunction.RegisterFunction(Constants.KILL, new KillFunction());
             ParserFunction.RegisterFunction(Constants.MKDIR, new MkdirFunction());
             ParserFunction.RegisterFunction(Constants.MORE, new MoreFunction());

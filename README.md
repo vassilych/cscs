@@ -130,13 +130,15 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, Type, and Properties. |
 | *variable*.**Size** | Returns either a number of elements in an array if variable is of type ARRAY or a number of characters in a string representation of this variable. |
 | *variable*.**Type** | Returns this variable's type (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT). |
+| *variable*.**EmptyOrWhite** | Returns true if and only if the underlying string is empty or contains only white characters.|
 | *variable*.**Add(value)** | Adds passed value to the underlying array or to the internal string representation.|
 | *variable*.**At(index)** | If the underlying data is an array returns an array element at this index. Otherwise returns a character at this index.|
-| *variable*.**Contains(value)** | If variable is a list, returns whether it contains this value.|
+| *variable*.**Contains(value)** | If variable is a list, returns whether it contains this value. Otherwise converts current variable to a string and returns whether it contains passed value.|
 | *variable*.**StartsWith(value)** | Whether the variable, converted to a string, starts with this value.|
 | *variable*.**EndsWith(value)** | Whether the variable, converted to a string, ends with this value.|
 | *variable*.**Replace(oldValue, newValue)** | Replaces oldValue with the newValue.|
-| *variable*.**IndexOf(value, from)** | Returns index of the value in the variable (-1 if not found).|
+| *variable*.**ReplaceAndTrim(oldValue1, newValue1, oldValue2, newValue2, ... )** | Replaces all oldValueX with the corresponding newValueX. Returns string without leading or trailing white spaces.|
+| *variable*.**IndexOf(value, from=0)** | Returns index of the value in the variable (-1 if not found).|
 | *variable*.**Join(sep=" ")** | Converts a list to a string, based on the string separation token.|
 | *variable*.**First** | Returns the first character or first element of this string or list.|
 | *variable*.**Last**  | Returns the last character or last element of this string or list. |
@@ -352,21 +354,23 @@ CSCS Debugger
 CSCS Core Miscellaneous Functions
 ------
 
-| **CSCS Function**                   | **Description**                                 |
-| :-----------------------------------|:------------------------------------------------|
-| **Env** (*variableName*)            | Returns value of the specified environment variable.|
-| **Lock** { *statements;* }          | Uses a global lock object to lock the execution of code in curly braces.|
-| **Now** (*format="HH:mm:ss.fff"*)   | Returns current date and time according to the specified format.|
-| **Print** (*var1="", var2="", ...*) | Prints specified parameters, converting them all to strings. |
-| **PsTime**                          | Returns current process CPU time. Used for measuring the script execution time. |
-| **SetEnv** (*variableName, value*)  | Sets value of the specified environment variable.  |
-| **Show** (*funcName*)               | Prints contents of a specified CSCS function. |
-| **Singleton** (*code*)              | Creates a singleton Variable. The code is executed only once. See an example below.|
-| **Signal** ()                       | Signals waiting threads. |
-| **Sleep** (*millisecs*)             | Sleeps specified number of milliseconds.
+| **CSCS Function**                    | **Description**                                 |
+| :------------------------------------|:------------------------------------------------|
+| **Env** (*variableName*)             | Returns value of the specified environment variable.|
+| **GetVariableFromJSON** (*jsonText*) | Parses a json string into the CSCS Array-Dictionary. See example below.|
+| **Lock** { *statements;* }           | Uses a global lock object to lock the execution of code in curly braces.|
+| **Now** (*format="HH:mm:ss.fff"*)    | Returns current date and time according to the specified format.|
+| **Print** (*var1="", var2="", ...*)  | Prints specified parameters, converting them all to strings. |
+| **PsTime**                           | Returns current process CPU time. Used for measuring the script execution time. |
+| **SetEnv** (*variableName, value*)   | Sets value of the specified environment variable.  |
+| **Show** (*funcName*)                | Prints contents of a specified CSCS function. |
+| **Singleton** (*code*)               | Creates a singleton Variable. The code is executed only once. See an example below.|
+| **Signal** ()                        | Signals waiting threads. |
+| **Sleep** (*millisecs*)              | Sleeps specified number of milliseconds.
 | **Thread** (*functionName*) OR { *statements;* } | Starts a new thread. The thread will either execute a specified CSCS function or all the statements between the curly brackets. |
 | **ThreadId** () | Returns current thread Id. |
 | **Wait** ()         | Waits for a signal.  | 
+| **WebRequest** (method, URL, load, trackingId, OnSuccess, OnFailure);  | Submits a WebRequest to a given URL. The method can be any of GET, PUT, POST, DELETE, TRACE, OPTIONS. Either OnSuccess or OnFailure function is called when completed, with trackingID passed there as the first parameter. See an example below.  | 
 
 <br>
 
@@ -384,6 +388,47 @@ uniqueArray = Singleton(pattern);
 uniqueArray[2] = "Extra";
 arr = Singleton(pattern);
 print("array=", arr); // {Test, Test, Extra, Test, Test}
+</code></pre>
+<br>
+
+###  JSON and WebRequest Example
+<pre><code>jsonString = '{ "eins" : 1, "zwei" : 2, "drei": "dreiString", "vier": 4.9, "mehr" : { "uno": "uno in spanish" },
+                "arrayValue" : [ "une", "deux" ] }';
+a = GetVariableFromJSON(jsonString);
+print(a.size);        // prints 6
+print(a["vier"]);     // prints 4.9;
+mehr = a["mehr"]; 
+print(mehr["uno"]);   // prints "uno in spanish"
+arrayValue = a["arrayValue"];
+print(arrayValue[0]); // prints  "une";
+print(arrayValue[1]); // prints  "deux);
+
+// Testing a WebRequest:
+place      = "8001,ch";
+units      = "&units=metric";
+key        = "5a548a234f9a28212d0e4b18a96e7a51";
+weatherURL = "https://api.openweathermap.org/data/2.5/weather?zip=" + place + units + "&APPID=" + key;
+
+function OnSuccess( object, errorCode, text )
+{
+    // text is: {"coord":{"lon":8.54,"lat":47.37},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03n"}],"base":"stations","main":{"temp":9.92,"pressure":1015,"humidity":87,"temp_min":7.78,"temp_max":12.22},"visibility":10000,"wind":{"speed":1.5,"deg":320},"clouds":{"all":40},"dt":1559861701,"sys":{"type":1,"id":6941,"message":0.0094,"country":"CH","sunrise":1559878231,"sunset":1559935141},"timezone":7200,"id":180002468,"name":"Zurich","cod":200}"
+    
+    jsonFromText = GetVariableFromJSON( text );
+    main = jsonFromText["main"];
+    city = jsonFromText["name"];
+    wind = jsonFromText["wind"];
+    sys  = jsonFromText["sys"];
+    country = sys["country"];
+    print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
+          "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
+    Test(city, "Zurich");
+    Test(country, "CH");
+}
+function OnFailure( object, errorCode, text )
+{
+    print( "Failure " + errorCode + ": " + text );
+}
+WebRequest( "GET", weatherURL, "", "", "OnSuccess", "OnFailure" );
 </code></pre>
 <br>
 

@@ -1034,22 +1034,24 @@ place      = "8001,ch";
 units      = "&units=metric";
 key        = "5a548a234f9a28212d0e4b18a96e7a51";
 weatherURL = "https://api.openweathermap.org/data/2.5/weather?zip=" + place + units + "&APPID=" + key;
+
 function OnSuccess( object, errorCode, text )
 {
-    jsonFromText = GetVariableFromJSON( text );
-    main = jsonFromText["main"];
-    city = jsonFromText["name"];
-    wind = jsonFromText["wind"];
-    sys  = jsonFromText["sys"];
-    country = sys["country"];
-    print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
-          "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
-    Test(city, "Zurich");
-    Test(country, "CH");
+  // text is: {"coord":{"lon":8.54,"lat":47.37},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03n"}],"base":"stations","main":{"temp":9.92,"pressure":1015,"humidity":87,"temp_min":7.78,"temp_max":12.22},"visibility":10000,"wind":{"speed":1.5,"deg":320},"clouds":{"all":40},"dt":1559861701,"sys":{"type":1,"id":6941,"message":0.0094,"country":"CH","sunrise":1559878231,"sunset":1559935141},"timezone":7200,"id":180002468,"name":"Zurich","cod":200}"
+  jsonFromText = GetVariableFromJSON( text );
+  main = jsonFromText["main"];
+  city = jsonFromText["name"];
+  wind = jsonFromText["wind"];
+  sys  = jsonFromText["sys"];
+  country = sys["country"];
+  print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
+        "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
+  Test(city, "Zurich");
+  Test(country, "CH");
 }
 function OnFailure( object, errorCode, text )
 {
-    print( "Failure " + errorCode + ": " + text );
+  print( "Failure " + errorCode + ": " + text );
 }
 WebRequest( "GET", weatherURL, "", "", "OnSuccess", "OnFailure" );
 
