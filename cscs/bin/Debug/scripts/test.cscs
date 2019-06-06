@@ -997,6 +997,61 @@ mydate = new ns1.CurrentDate();
 mydate.setCompositDate(ns1.date);
 Test(mydate, ns1.date);
 
+Print("Testing WebRequests with JSON");
+jsonString = "{}";
+a = GetVariableFromJSON(jsonString);
+Test(a.type, VariableType.ARRAY);
+Test(a.size, 1);
+Test(a[0], "");
+
+jsonString = "[1, 2, 3]";
+a = GetVariableFromJSON(jsonString);
+Test(a.size, 3);
+Test(a[0], "1");
+Test(a[1], "2");
+Test(a[2], "3");
+
+jsonString = '{ "One" : "Eins", "Two": "Zwei"}';
+a = GetVariableFromJSON(jsonString);
+Test(a.size, 2);
+Test(a["One"], "Eins");
+Test(a["Two"], "Zwei");
+
+jsonString = '{ "eins" : 1, "zwei" : 2, "drei": "dreiString", "vier": 4.9, "mehr" : { "uno": "uno in spanish" },
+                "arrayValue" : [ "une", "deux" ] }';
+a = GetVariableFromJSON(jsonString);
+Test(a.size, 6);
+Test(a["vier"], 4.9);
+mehr = a["mehr"];
+Test(mehr["uno"], "uno in spanish");
+arrayValue = a["arrayValue"];
+Test(arrayValue.size, 2);
+Test(arrayValue[0], "une");
+Test(arrayValue[1], "deux");
+
+Print("Testing WebRequests with JSON");
+place      = "8001,ch";
+units      = "&units=metric";
+key        = "5a548a234f9a28212d0e4b18a96e7a51";
+weatherURL = "https://api.openweathermap.org/data/2.5/weather?zip=" + place + units + "&APPID=" + key;
+function OnSuccess( object, errorCode, text )
+{
+    jsonFromText = GetVariableFromJSON( text );
+    main = jsonFromText["main"];
+    city = jsonFromText["name"];
+    wind = jsonFromText["wind"];
+    sys  = jsonFromText["sys"];
+    country = sys["country"];
+    print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
+          "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
+    Test(city, "Zurich");
+    Test(country, "CH");
+}
+function OnFailure( object, errorCode, text )
+{
+    print( "Failure " + errorCode + ": " + text );
+}
+WebRequest( "GET", weatherURL, "", "", "OnSuccess", "OnFailure" );
 
 Timeout = 100;
 MySender = "Tester";
