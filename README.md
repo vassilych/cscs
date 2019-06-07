@@ -1,4 +1,4 @@
-CSCS (Customized Scripting in C#) is a scripting language, which is very easy to integrate into any C# project and adjust according to your needs. Basically, the concept of CSCS is not only a language, but also a framework that you can use to create your own language. Since the compiler will be inside of your project you can do with the language whatever you want: add new features, modify existing ones, etc. How to do that and the CSCS Framework itself have been described in:
+CSCS (Customized Scripting in C#) is a scripting language framework, which is very easy to integrate into any C# project and adjust according to your needs. Basically, the concept of CSCS is not only a language, but also a framework that you can use to create your own language. Since the compiler will be inside of your project, you can do whatever you want with the language: add new features, modify existing ones, etc. How to do that and the CSCS Framework itself, have been described in:
 
 * [Customized Scripting in C#](https://msdn.microsoft.com/en-us/magazine/mt632273.aspx),  MSDN
 * [Programming your own language in C#](http://www.codemag.com/Article/1607081),  CODE Magazine
@@ -14,7 +14,7 @@ The usage of CSCS in Unity has been described in:
 
 * [Using Custom Scripting and Modding in Unity Game and App Development](https://www.codemag.com/Article/1903081),  CODE Magazine
 
-The Visual Studio Code Extension to debug CSCS code is available [here](https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debugger).
+You can use Visual Studio Code as an IDE for developing and debugging CSCS code. The Visual Studio Code Extension to debug CSCS code is available [here](https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debugger).
 
 <br>
 
@@ -27,7 +27,7 @@ Description of CSCS
 * All CSCS variables have at least 3 properties that can be accessed using the dot notation: properties, type, size, and string.
 * Variables and arrays are all defined implicitly, e.g. x=5, b[7]=11<br>
   An example of a list initialization: c = {"aa", "bb", "xxx"};<br>
-  You can also define it explicitely: c[0]="aa"; c[1]="bb"; <br>
+  You can also define it explicitly: c[0]="aa"; c[1]="bb"; <br>
   Definition in index form doesn't have to start from index 0, or even from the first dimension: not defined elements will have a type NONE.
   E.g.: b[5][3][5][3]=15;<br>
   Similarly, when defining dictionaries, e.g.: x["bla"]["blu"]="wichtig";
@@ -44,7 +44,7 @@ CSCS Control Flow Functions
 | **CSCS Statement**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
 | **include** (*pathToFile*)                    | Includes another scripting file, e.g. include("functions.cscs");   
-| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitly (e.g. sine(10)), or explicitely (e.g. func(param2=value2, param1=value1)).  |
+| **function** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom function with 0 or more parameters. Parameters can optionally have default values. When calling a function, parameters can be specified either implicitly (e.g. sine(10)), or explicitly (e.g. func(param2=value2, param1=value1)).  |
 | **cfunction** *funcName* (*param1*, *param2=value2*, *param3=value3*) { *statements;* } | Declares a custom precomplied function with 0 or more parameters. Doesn't work on iOS and Android.  |
 | **return** or **return** *variable*;      | Finishes execution of a function and optionally can return a value.|
 | **while** (*condition*) { *statements;* } | Execute loop as long as the condition is true. <br><b>Curly brackets are mandatory.</b>|
@@ -125,9 +125,9 @@ CSCS Object-Oriented Functions and Named Properties
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **class** *className : Class1, Class2, ... { }*     | A definition of a new class. it can optionaly inherit from one or more classes. Inside of a class definition you can have constructors, functions, and variable definitions. You access these variables and functions using the dot notation (all of them are public).|
-| **new** *className(param1, param2, ...)*  | Creates and returns an instance (object) of class className. There can be a zero or more parameters passed to the class constructor (depending on the class constructer prameter definitions).|
-| *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, Type, and Properties. |
+| **class** *className : Class1, Class2, ... { }*     | A definition of a new class. It can optionally inherit from one or more classes. Inside of a class definition you can have constructors, functions, and variable definitions. You access these variables and functions using the dot notation (all of them are public).|
+| **new** *className(param1, param2, ...)*  | Creates and returns an instance (object) of class className. There can be a zero or more parameters passed to the class constructor (depending on the class constructor parameter definitions).|
+| *variable*.**Properties** | Returns a list of all properties that this variable implements. For each of these properties is legal to call variable.property. Each variable implements at least the following properties: Size, String, Type, and Properties. |
 | *variable*.**Size** | Returns either a number of elements in an array if variable is of type ARRAY or a number of characters in a string representation of this variable. |
 | *variable*.**Type** | Returns this variable's type (e.g. NONE, STRING, NUMBER, ARRAY, OBJECT). |
 | *variable*.**EmptyOrWhite** | Returns true if and only if the underlying string is empty or contains only white characters.|
@@ -140,8 +140,8 @@ CSCS Object-Oriented Functions and Named Properties
 | *variable*.**ReplaceAndTrim(oldValue1, newValue1, oldValue2, newValue2, ... )** | Replaces all oldValueX with the corresponding newValueX. Returns string without leading or trailing white spaces.|
 | *variable*.**IndexOf(value, from=0)** | Returns index of the value in the variable (-1 if not found).|
 | *variable*.**Join(sep=" ")** | Converts a list to a string, based on the string separation token.|
-| *variable*.**First** | Returns the first character or first element of this string or list.|
-| *variable*.**Last**  | Returns the last character or last element of this string or list. |
+| *variable*.**First** | Returns the first character of this string or first element of the list.|
+| *variable*.**Last**  | Returns the last character of this string or last element of the list. |
 | *variable*.**Keys** | If the underlying variable is a dictionary, returns all the dictionary keys.|
 | *variable*.**Substring(value, from, size)** | Returns a substring of a given string.|
 | *variable*.**Split(sep=" ")** | Returns a new list based on the string separation token.|
@@ -219,19 +219,19 @@ CSCS Math Functions
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **Abs** (*value*)                   | Returns absolute value   
-| **Acos** (*value*)                  | Returns arccosine function   
-| **Asin** (*value*)                  | Returns arcsine function   
-| **Ceil** (*value*)                  | Returns the smallest integral value which is greater than or equal to the specified decimal value
-| **Cos** (*value*)                   | Cosine function   
-| **Exp** (*value*)                   | Returns the constant e (2.718281828...) to the power of the specified value   
-| **Floor** (*value*)                 | Returns the largest integral value less than or equal to the specified decimal value
-| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. If limit >= numberOfRandoms, each number will be present at most once|
+| **Abs** (*value*)                   | Returns absolute value.   
+| **Acos** (*value*)                  | Returns arccosine function.   
+| **Asin** (*value*)                  | Returns arcsine function.   
+| **Ceil** (*value*)                  | Returns the smallest integral value which is greater than or equal to the specified decimal value.
+| **Cos** (*value*)                   | Cosine function.   
+| **Exp** (*value*)                   | Returns the constant e (2.718281828...) to the power of the specified value.   
+| **Floor** (*value*)                 | Returns the largest integral value less than or equal to the specified decimal value.
+| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. If limit >= numberOfRandoms, each number will be present at most once.|
 | **Log** (*base, power*)             | Returns the natural logarithm of a specified number.
 | **Pi**                              | Returns the constant pi (3.14159265358979...)
 | **Pow** (*base, power*)             | Returns base to the specified power.
 | **Round** (*number, digits=0*)      | Rounds a number according to the specified number of digits.
-| **Sin** (*value*)                   | Sine function   
+| **Sin** (*value*)                   | Sine function.   
 | **Sqrt** (*number*)                 | Returns the squared root of the specified number.
 
 <br>
@@ -243,12 +243,12 @@ CSCS Variable and Array Functions
 | :------------------------------------------- |:------------------------------------------------|
 | **Add**(*variable, value, index = -1*)  | Appends value to the current variable array. If index is greater or equal to zero, inserts it at the index.|
 | **AddVariableToHash** (*variable, value, hashKey*)                    | Appends a value to the list of values of a given hash key.|
-| **AddAllToHash** (*variable, values, startFrom, hashKey, sep = "\t"*)  | Add all of the values in values list to the hash map variable. E.g. AddAllToHash("categories", lines, startWords, "all");  |
+| **AddAllToHash** (*variable, values, startFrom, hashKey, sep = "\t"*)  | Adds all of the values in values list to the hash map variable. E.g. AddAllToHash("categories", lines, startWords, "all");  |
 | **Contains** (*variable, value*)    | Checks if the current variable contains another variable. Makes sense only if curent variable is an array.|
-| **DeepCopy** (*variable*)    | Makes a deep copy of the passed object, assigning new memory to all of it array members.|
+| **DeepCopy** (*variable*)    | Makes a deep copy of the passed object, assigning new memory to all of its array members.|
 | **DefineLocal** (*variable, value=""*)    | Defines a variable in local scope. Makes sense only if a global variable with this name already exists (without this function, a global variable will be used and modified).|
 | **FindIndex** (*variable, value*)    | Looks for the value in the specified variable array and returns its index if found, or -1 otherwise.|
-| **GetColumn** (*variable, column, fromRow=0*)    | Goes over all rows of the variable array starting from the specified row and return a specified column.|
+| **GetColumn** (*variable, column, fromRow=0*)    | Goes over all the rows of the variable array starting from the specified row and returns a specified column.|
 | **GetKeys** (*variable*)    |If the underlying variable is a dictionary, returns all the dictionary keys.|
 | **Remove** (*variable, value*)    | Removes specified value from the variable array. Returns true on success and false otherwise.|
 | **RemoveAt** (*variable, index*)    | Removes a value from the variable array at specified index. Returns true on success and false otherwise.|
@@ -305,10 +305,10 @@ CSCS String Functions
 
 | **CSCS Function**                  | **Description**                                 |
 | :----------------------------------|:------------------------------------------------|
-| **Size** (*variableName*)          | Returns length of the string (for arrays returns number of elemnts in an array). |
+| **Size** (*variableName*)          | Returns the length of the string (for arrays returns the number of elements in an array). |
 | **StrBetween** (*string, from, to*) | Returns a substring with characters between substrings from and to.  
-| **StrBetweenAny** (*string, from, to*) | Returns a substring with characters between any of the cgars in from and any of the chars in to.|
-| **StrContains** (*string, argument, case=case*) | Returns whether a string contains a specified substring. The case parameter can be either "case" (default) or "nocase. |
+| **StrBetweenAny** (*string, from, to*) | Returns a substring with characters between any of the characters in the from string and any of the characters in the to string.|
+| **StrContains** (*string, argument, case=case*) | Returns whether a string contains a specified substring. The case parameter can be either "case" (default) or "nocase". |
 | **StrEndsWith** (*string, argument, case=case*) | Returns whether a string ends with a specified substring. |
 | **StrEqual** (*string, argument, case=case*) |  Returns whether a string is equal to a specified string. |
 | **StrIndexOf** (*string, substring, case=case*)   | Searches for index of a specified substring in a string. Returns -1 if substring is not found. |
@@ -319,7 +319,7 @@ CSCS String Functions
 | **StrUpper** (*string*)   | Returns string in upper case. |
 | **Substring** (*string, from=0, length=StringLength*)   | Returns a substring of specified string starting from a specified index and of specified length. |
 | **Tokenize** (*string, separator="\t", option=""*)   | Converts string to a list of tokens based on the specified token separator. If option="prev", will convert all empty tokens to their previous token values.|
-| **TokenizeLines** (*newVariableName, variableWithLines, fromLine=0, separator="\t"*)   | Converts a list of string in variableWithLines to the list of tokens based on the specified token separator. Adds result to a new variable newVariableName.|
+| **TokenizeLines** (*newVariableName, variableWithLines, fromLine=0, separator="\t"*)   | Converts a list of strings in variableWithLines to the list of tokens based on the specified token separator. Adds the result to the new variable newVariableName.|
 
 <br>
 
@@ -356,8 +356,8 @@ CSCS Core Miscellaneous Functions
 
 | **CSCS Function**                    | **Description**                                 |
 | :------------------------------------|:------------------------------------------------|
-| **Env** (*variableName*)             | Returns value of the specified environment variable.|
-| **GetVariableFromJSON** (*jsonText*) | Parses a json string into the CSCS Array-Dictionary. See example below.|
+| **Env** (*variableName*)             | Returns the value of the specified environment variable.|
+| **GetVariableFromJSON** (*jsonText*) | Parses a JSON string into the CSCS Array-Dictionary. See examples below.|
 | **Lock** { *statements;* }           | Uses a global lock object to lock the execution of code in curly braces.|
 | **Now** (*format="HH:mm:ss.fff"*)    | Returns current date and time according to the specified format.|
 | **Print** (*var1="", var2="", ...*)  | Prints specified parameters, converting them all to strings. |
@@ -391,7 +391,7 @@ print("array=", arr); // {Test, Test, Extra, Test, Test}
 </code></pre>
 <br>
 
-###  JSON and WebRequest Example
+###  JSON and WebRequest Examples
 <pre><code>jsonString = '{ "eins" : 1, "zwei" : 2, "drei": "dreiString", "vier": 4.9, "mehr" : { "uno": "uno in spanish" },
                 "arrayValue" : [ "une", "deux" ] }';
 a = GetVariableFromJSON(jsonString);
@@ -411,8 +411,8 @@ weatherURL = "https://api.openweathermap.org/data/2.5/weather?zip=" + place + un
 
 function OnSuccess( object, errorCode, text )
 {
-    // text is: {"coord":{"lon":8.54,"lat":47.37},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03n"}],"base":"stations","main":{"temp":9.92,"pressure":1015,"humidity":87,"temp_min":7.78,"temp_max":12.22},"visibility":10000,"wind":{"speed":1.5,"deg":320},"clouds":{"all":40},"dt":1559861701,"sys":{"type":1,"id":6941,"message":0.0094,"country":"CH","sunrise":1559878231,"sunset":1559935141},"timezone":7200,"id":180002468,"name":"Zurich","cod":200}"
-    
+    // text='{"coord":{"lon":8.54,"lat":47.37},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03n"}],"base":"stations","main":{"temp":9.92,"pressure":1015,"humidity":87,"temp_min":7.78,"temp_max":12.22},"visibility":10000,"wind":{"speed":1.5,"deg":320},"clouds":{"all":40},"dt":1559861701,"sys":{"type":1,"id":6941,"message":0.0094,"country":"CH","sunrise":1559878231,"sunset":1559935141},"timezone":7200,"id":180002468,"name":"Zurich","cod":200}'
+
     jsonFromText = GetVariableFromJSON( text );
     main = jsonFromText["main"];
     city = jsonFromText["name"];
