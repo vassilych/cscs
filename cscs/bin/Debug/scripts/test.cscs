@@ -856,6 +856,27 @@ xxx.size  = 33;
 Test(xxx.size, 33);
 print(xxx, xxx.properties);
 
+propsBefore = TestObject.properties;
+TestObject.Color = "blue";
+TestObject.Name  = "Testing";
+Test(TestObject.Type, VariableType.OBJECT);
+Test(TestObject.ColoR, "blue");
+Test(TestObject.NaME,  "Testing");
+Test(TestObject.properties, propsBefore);
+
+exceptionThrown = false;
+try {
+  x = TestObject.MyNewProperty;
+  Print("ERROR. Exception needed for non-existing property MyNewProperty");
+} catch(exc) {
+  Print("OK. Caught: " + exc);
+  exceptionThrown = true;
+}
+Test(exceptionThrown, true);
+
+TestObject.MyNewProperty     = "NeW";
+Test(TestObject.MyneWproperty, "NeW");
+
 function CreateArray(size, initValue = 0) {
     result = {};
     for (i = 0; i < size; i++) {

@@ -131,7 +131,9 @@ namespace SplitAndMerge
             IsReturn = false;
             Type = VarType.NONE;
             m_dictionary.Clear();
+            m_keyMappings.Clear();
             m_propertyMap.Clear();
+            m_propertyStringMap.Clear();
         }
 
         public bool Equals(Variable other)
@@ -579,8 +581,6 @@ namespace SplitAndMerge
 
         public Variable SetProperty(string propName, Variable value, string baseName = "")
         {
-            propName = Constants.ConvertName(propName);
-
             int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
@@ -595,9 +595,6 @@ namespace SplitAndMerge
 
         public async Task<Variable> SetPropertyAsync(string propName, Variable value, string baseName = "")
         {
-            Variable result = Variable.EmptyInstance;
-            propName = Constants.ConvertName(propName);
-
             int ind = propName.IndexOf('.');
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
@@ -605,23 +602,37 @@ namespace SplitAndMerge
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = await GetPropertyAsync(varName);
                 Utils.CheckNotNull(property, varName);
-                result = await property.SetPropertyAsync(actualPropName, value, baseName);
+                Variable result = await property.SetPropertyAsync(actualPropName, value, baseName);
                 return result;
             }
             return FinishSetProperty(propName, value, baseName);
         }
 
+        string GetRealName(string name)
+        {
+            string realName;
+            string converted = Constants.ConvertName(name);
+            if (!m_propertyStringMap.TryGetValue(converted, out realName))
+            {
+                realName = name;
+            }
+            return realName;
+        }
+
         public Variable FinishSetProperty(string propName, Variable value, string baseName = "")
         {
             Variable result = Variable.EmptyInstance;
-            string match = GetActualPropertyName(propName, GetAllProperties(), baseName, this);
-            m_propertyMap[match] = value;
+            m_propertyMap[propName] = value;
+
+            string converted = Constants.ConvertName(propName);
+            m_propertyStringMap[converted] = propName;
+
             Type = VarType.OBJECT;
 
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(match, value).Result;
+                result = obj.SetProperty(propName, value).Result;
             }
             return result;
         }
@@ -629,6 +640,9 @@ namespace SplitAndMerge
         public void SetEnumProperty(string propName, Variable value, string baseName = "")
         {
             m_propertyMap[propName] = value;
+
+            string converted = Constants.ConvertName(propName);
+            m_propertyStringMap[converted] = propName;
 
             if (m_enumMap == null)
             {
@@ -773,7 +787,8 @@ namespace SplitAndMerge
         {
             Variable result = Variable.EmptyInstance;
 
-            if (m_propertyMap.TryGetValue(propName, out result))
+            if (m_propertyMap.TryGetValue(propName, out result) ||
+                m_propertyMap.TryGetValue(GetRealName(propName), out result))
             {
                 return result;
             }
@@ -1194,6 +1209,7 @@ namespace SplitAndMerge
         List<Variable> m_tuple;
         Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
         Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
+        Dictionary<string, string> m_propertyStringMap = new Dictionary<string, string>();
 
         Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
         Dictionary<int, string> m_enumMap;
