@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -674,6 +675,38 @@ namespace SplitAndMerge
             }
             var token = Utils.GetToken(script, SEP);
             return new Variable(token);
+        }
+    }
+
+    class RegexFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            Utils.CheckArgs(args.Count, 2, m_name);
+            string pattern = Utils.GetSafeString(args, 0);
+            string text    = Utils.GetSafeString(args, 1);
+
+            Variable result = new Variable(Variable.VarType.ARRAY);
+
+            Regex rx = new Regex(pattern,
+                        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+            MatchCollection matches = rx.Matches(text);
+
+            foreach (Match match in matches)
+            {
+                result.AddVariableToHash("matches", new Variable(match.Value));
+
+                var groups = match.Groups;
+                foreach (var group in groups)
+                {
+                    result.AddVariableToHash("groups", new Variable(group.ToString()));
+                }
+            }
+
+            return result;
         }
     }
 }

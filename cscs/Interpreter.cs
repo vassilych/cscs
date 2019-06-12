@@ -144,6 +144,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
             ParserFunction.RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
             ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
+            ParserFunction.RegisterFunction(Constants.REGEX, new RegexFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.RESET_VARS, new ResetVariablesFunction());

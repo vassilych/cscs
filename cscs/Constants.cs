@@ -103,6 +103,7 @@ namespace SplitAndMerge
         public const string PRINT = "print";
         public const string PSTIME = "pstime";
         public const string RANDOM = "GetRandom";
+        public const string REGEX = "Regex";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string RESET_VARS = "ResetVariables";
