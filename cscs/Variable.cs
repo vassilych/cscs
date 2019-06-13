@@ -969,11 +969,27 @@ namespace SplitAndMerge
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
-                bool contains = val != "" && AsString().IndexOf(val, comp) >= 0;
-                if (!contains && (Type == Variable.VarType.ARRAY && m_dictionary != null))
+                bool contains = false; 
+                if (Type == Variable.VarType.ARRAY)
                 {
                     string lower = val.ToLower();
-                    contains = m_dictionary.ContainsKey(lower);
+                    contains = m_dictionary != null && m_dictionary.ContainsKey(lower);
+                    if (!contains && Tuple != null)
+                    {
+                        foreach (var item in Tuple)
+                        {
+                            if (item.AsString().Equals(val, comp))
+                            {
+                                contains = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    var str = AsString();
+                    contains = val != "" && str.IndexOf(val, comp) >= 0;
                 }
                 return new Variable(contains);
             }
