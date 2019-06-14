@@ -988,8 +988,7 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    var str = AsString();
-                    contains = val != "" && str.IndexOf(val, comp) >= 0;
+                    contains = val != "" && AsString().IndexOf(val, comp) >= 0;
                 }
                 return new Variable(contains);
             }

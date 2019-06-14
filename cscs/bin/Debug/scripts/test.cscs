@@ -836,12 +836,16 @@ arr2["Xxx"]=12;
 arr2["yYy"]=13;
 arr2["zzZ"]=14;
 Test(arr2.keys.size, 3);
-Test(arr2.keys.contains("xXx"), true);
-Test(arr2.keys.contains("Xx"), false);
-Test(arr2.keys.contains("xxx"), true);
-Test(arr2.keys.contains("xxxx"), false);
+Test(arr2.contains("xXx"), true);
+Test(arr2.contains("Xx"), false);
+Test(arr2.contains("xxx"), true);
+Test(arr2.contains("xxxx"), false);
 
 Test(arr2["zzZ"].size, 2);
+
+arr2[0] = "item";
+Test(arr2.contains("item"), true);
+Test(arr2.contains("ite"), false);
 
 ct = new CompiledTestAsync();
 ct.NaMe="Lala";
