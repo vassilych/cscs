@@ -15,7 +15,7 @@ namespace SplitAndMerge
 {
     public class Precompiler
     {
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
+//#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
         static Dictionary<string, Variable.VarType> m_returnTypes = new Dictionary<string, Variable.VarType>();
 
         string m_functionName;
@@ -77,19 +77,24 @@ namespace SplitAndMerge
             CompilerParams.GenerateExecutable = false;
             CompilerParams.CompilerOptions = "/optimize";
 
+            var assemblyPath = new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath;
+            CompilerParams.ReferencedAssemblies.Add(assemblyPath);
+
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (Assembly asm in assemblies)
             {
                 AssemblyName asmName = asm.GetName();
-                if (asmName == null || asmName.CodeBase == null ||
-                  (!asmName.CodeBase.EndsWith(".exe") && asmName.GetPublicKeyToken().Length == 0))
+                if (asmName == null || string.IsNullOrWhiteSpace(asmName.CodeBase))
                 {
                     continue;
                 }
-                string suffix = asmName.CodeBase.EndsWith(".exe") ? ".exe" : "";
-                CompilerParams.ReferencedAssemblies.Add(asmName.Name + suffix);
+                assemblyPath = new Uri(asmName.CodeBase).LocalPath;
+                if (!File.Exists(assemblyPath))
+                {
+                    continue;
+                }
+                CompilerParams.ReferencedAssemblies.Add(assemblyPath);
             }
-
             var provider = new CSharpCodeProvider();
             var compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
 
@@ -242,7 +247,7 @@ namespace SplitAndMerge
                             "";
             }
 
-            m_converted.AppendLine("using System; using System.Collections; using System.Collections.Generic; using static System.Math;\n\n" +
+            m_converted.AppendLine("using System; using System.Collections; using System.Collections.Generic; using static System.Math; using SplitAndMerge; \n\n" +
                            "namespace SplitAndMerge {\n" +
                            "  public partial class Precompiler {\n" +
                            "    public static Variable " + m_functionName +
@@ -880,6 +885,6 @@ namespace SplitAndMerge
                 default: return typeof(string);
             }
         }
-#endif
+//#endif
     }
 }
