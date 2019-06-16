@@ -142,7 +142,7 @@ namespace SplitAndMerge
                 int lineNumber = script.GetOriginalLineNumber(pointer);
                 string filename = string.IsNullOrWhiteSpace(script.Filename) ? "" :
                                   Utils.GetFullPath(script.Filename);
-                string line = string.IsNullOrWhiteSpace(filename) ? "" :
+                string line = string.IsNullOrWhiteSpace(filename) || !File.Exists(filename) ? "" :
                               File.ReadLines(filename).Skip(lineNumber).Take(1).First();
 
                 result.AppendLine("" + lineNumber);

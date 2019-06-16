@@ -242,7 +242,7 @@ namespace SplitAndMerge
                             "";
             }
 
-            m_converted.AppendLine("using System; using System.Collections; using System.Collections.Generic;\n\n" +
+            m_converted.AppendLine("using System; using System.Collections; using System.Collections.Generic; using static System.Math;\n\n" +
                            "namespace SplitAndMerge {\n" +
                            "  public partial class Precompiler {\n" +
                            "    public static Variable " + m_functionName +
@@ -315,6 +315,17 @@ namespace SplitAndMerge
             }
 
             GetExpressionType(tokens);
+            if (m_numericExpression && tokens.Count > 1 && tokens[1] == "=")
+            {
+                result = m_depth;
+                if (!m_newVariables.Contains(tokens[0]))
+                {
+                    result += "var ";
+                    m_newVariables.Add(tokens[0]);
+                }
+                result += statement + ";\n";
+                return result;
+            }
             m_tokenId = 0;
             while (m_tokenId < tokens.Count)
             {
@@ -355,10 +366,10 @@ namespace SplitAndMerge
             {
                 result += "\n";
             }
-            for (int i = 0; i < statementVars.Count; i++)
+            /*for (int i = 0; i < statementVars.Count; i++)
             {
                 result += RegisterVariableString(statementVars[i]);
-            }
+            }*/
 
             return result;
         }
@@ -436,7 +447,7 @@ namespace SplitAndMerge
             m_statementId++;
 
             m_depth += "  ";
-            converted += RegisterVariableString(varName);
+            //converted += RegisterVariableString(varName);
 
             return true;
         }
