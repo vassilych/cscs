@@ -190,6 +190,11 @@ namespace SplitAndMerge
             return result;
         }
 
+        protected override Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Task.FromResult(Evaluate(script));
+        }
+
         public Variable Run(List<Variable> args)
         {
             RegisterArguments(args);
