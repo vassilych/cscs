@@ -709,4 +709,143 @@ namespace SplitAndMerge
             return result;
         }
     }
+
+    class CompiledFunctionCreator : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            string funcReturn, funcName;
+            Utils.GetCompiledArgs(script, out funcReturn, out funcName);
+
+            Precompiler.RegisterReturnType(funcName, funcReturn);
+
+            Dictionary<string, Variable> argsMap;
+            string[] args = Utils.GetCompiledFunctionSignature(script, out argsMap);
+
+            script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
+            int parentOffset = script.Pointer;
+
+            string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
+
+            Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
+            precompiler.Compile();
+
+            CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap, script);
+            customFunc.ParentScript = script;
+            customFunc.ParentOffset = parentOffset;
+
+            ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
+
+            return new Variable(funcName);
+        }
+    }
+
+    class CustomCompiledFunction : CustomFunction
+    {
+        internal CustomCompiledFunction(string funcName,
+                                        string body, string[] args,
+                                        Precompiler precompiler,
+                                        Dictionary<string, Variable> argsMap,
+                                        ParsingScript script)
+          : base(funcName, body, args, script)
+        {
+            m_precompiler = precompiler;
+            m_argsMap = argsMap;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            script.MoveBackIf(Constants.START_GROUP);
+
+            if (args.Count != m_args.Length)
+            {
+                throw new ArgumentException("Function [" + m_name + "] arguments mismatch: " +
+                                    m_args.Length + " declared, " + args.Count + " supplied");
+            }
+
+            Variable result = Run(args);
+            return result;
+        }
+
+        protected override Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Task.FromResult(Evaluate(script));
+        }
+
+        public Variable Run(List<Variable> args)
+        {
+            RegisterArguments(args);
+
+            List<string> argsStr = new List<string>();
+            List<double> argsNum = new List<double>();
+            List<List<string>> argsArrStr = new List<List<string>>();
+            List<List<double>> argsArrNum = new List<List<double>>();
+            List<Dictionary<string, string>> argsMapStr = new List<Dictionary<string, string>>();
+            List<Dictionary<string, double>> argsMapNum = new List<Dictionary<string, double>>();
+
+            for (int i = 0; i < m_args.Length; i++)
+            {
+                Variable typeVar = m_argsMap[m_args[i]];
+                if (typeVar.Type == Variable.VarType.STRING)
+                {
+                    argsStr.Add(args[i].AsString());
+                }
+                else if (typeVar.Type == Variable.VarType.NUMBER)
+                {
+                    argsNum.Add(args[i].AsDouble());
+                }
+                else if (typeVar.Type == Variable.VarType.ARRAY_STR)
+                {
+                    List<string> subArrayStr = new List<string>();
+                    var tuple = args[i].Tuple;
+                    for (int j = 0; j < tuple.Count; j++)
+                    {
+                        subArrayStr.Add(tuple[j].AsString());
+                    }
+                    argsArrStr.Add(subArrayStr);
+                }
+                else if (typeVar.Type == Variable.VarType.ARRAY_NUM)
+                {
+                    List<double> subArrayNum = new List<double>();
+                    var tuple = args[i].Tuple;
+                    for (int j = 0; j < tuple.Count; j++)
+                    {
+                        subArrayNum.Add(tuple[j].AsDouble());
+                    }
+                    argsArrNum.Add(subArrayNum);
+                }
+                else if (typeVar.Type == Variable.VarType.MAP_STR)
+                {
+                    Dictionary<string, string> subMapStr = new Dictionary<string, string>();
+                    var tuple = args[i].Tuple;
+                    var keys = args[i].GetKeys();
+                    for (int j = 0; j < tuple.Count; j++)
+                    {
+                        subMapStr.Add(keys[j], tuple[j].AsString());
+                    }
+                    argsMapStr.Add(subMapStr);
+                }
+                else if (typeVar.Type == Variable.VarType.MAP_NUM)
+                {
+                    Dictionary<string, double> subMapNum = new Dictionary<string, double>();
+                    var tuple = args[i].Tuple;
+                    var keys = args[i].GetKeys();
+                    for (int j = 0; j < tuple.Count; j++)
+                    {
+                        subMapNum.Add(keys[j], tuple[j].AsDouble());
+                    }
+                    argsMapNum.Add(subMapNum);
+                }
+            }
+
+            Variable result = m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false);
+            ParserFunction.PopLocalVariables();
+
+            return result;
+        }
+
+        Precompiler m_precompiler;
+        Dictionary<string, Variable> m_argsMap;
+    }
 }
