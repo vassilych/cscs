@@ -373,9 +373,6 @@ namespace SplitAndMerge
             }
 
             ParsingScript tempScript = script.GetTempScript(script.String, script.Pointer);
-            /*ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
-            tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;*/
 
             if (script.Current != start && script.TryPrev() != start &&
                (script.Current == ' ' || script.TryPrev() == ' '))
@@ -594,7 +591,13 @@ namespace SplitAndMerge
                 return false;
             }
 
-            return EndsWithFunction(sb.ToString(), Constants.FUNCT_WITH_SPACE_ONCE);
+            string str = sb.ToString();
+            char last = str.Length < 1 ? Constants.EMPTY : str.Last();
+            if (char.IsLetterOrDigit(last) && char.IsLetterOrDigit(next))
+            {
+                return true;
+            }
+            return EndsWithFunction(str, Constants.FUNCT_WITH_SPACE_ONCE);
         }
 
         public static List<string> GetCompiledArgs(string source)
@@ -680,6 +683,10 @@ namespace SplitAndMerge
 
             int lastScriptLength = 0;
 
+            bool precompiledPart = false;
+            int  precompiledCounter = 0;
+            StringBuilder lastToken = new StringBuilder();
+
             // Remove these two lines for quality time debugging in case the user has special
             // spaces with code 160. See https://en.wikipedia.org/wiki/Non-breaking_space
             char extraSpace = Convert.ToChar(160);
@@ -690,6 +697,13 @@ namespace SplitAndMerge
                 char ch = source[i];
                 char next = i + 1 < source.Length ? source[i + 1] : Constants.EMPTY;
                 char last = sb.Length > 0  ? sb[sb.Length - 1] : Constants.EMPTY;
+
+                if (string.IsNullOrWhiteSpace(ch.ToString()))
+                {
+                    precompiledPart = precompiledPart || 
+                        lastToken.ToString().Equals(Constants.COMPILED_FUNCTION, StringComparison.OrdinalIgnoreCase);
+                    lastToken.Clear();
+                }
 
                 if (ch == '\n')
                 {
@@ -703,7 +717,8 @@ namespace SplitAndMerge
                     {
                         inComments = simpleComments = false;
                     }
-                    spaceOK = false;
+                    spaceOK = precompiledPart;
+                    lastToken.Clear();
                     continue;
                 }
 
@@ -811,6 +826,7 @@ namespace SplitAndMerge
                                 lineNumberCurly = lineNumber;
                             }
                             levelCurly++;
+                            precompiledCounter = precompiledPart ? precompiledCounter +  1 : 0;
                         }
                         break;
                     case Constants.END_GROUP:
@@ -821,6 +837,11 @@ namespace SplitAndMerge
                             if (levelCurly < 0)
                             {
                                 ThrowErrorMsg(curlyErrorMsg, source, levelCurly, lineNumberCurly, lineNumber, filename);
+                            }
+                            if (precompiledPart && --precompiledCounter <= 0)
+                            {
+                                precompiledPart = false;
+                                precompiledCounter = 0;
                             }
                         }
                         break;
@@ -856,6 +877,7 @@ namespace SplitAndMerge
                 if (!inComments)
                 {
                     sb.Append(ch);
+                    lastToken.Append(ch);
                 }
                 prevprev = prev;
                 prev = ch;
