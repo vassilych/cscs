@@ -197,6 +197,23 @@ namespace SplitAndMerge
             ThrowErrorMsg(msg, code, lineNumber, filename);
         }
 
+        public static bool ExtractParameterNames(List<Variable> args, string functionName, ParsingScript script)
+        {
+            CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
+            if (custFunc == null)
+            {
+                return false;
+            }
+
+            var realArgs = custFunc.RealArgs;
+            for (int i = 0; i < args.Count && i < realArgs.Length; i++)
+            {
+                string name = args[i].CurrentAssign;
+                args[i].ParamName = string.IsNullOrWhiteSpace(name) ? realArgs[i] : name;
+            }
+            return true;
+        }
+
         public static string GetLine(int chars = 40)
         {
             return string.Format("-").PadRight(chars, '-');

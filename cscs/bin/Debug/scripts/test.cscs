@@ -890,14 +890,14 @@ function calculateNormal(n) {
 
 startTest = pstime;
 total  = 0;
-for (count = 0; count < 100; count++) {
+for (count = 0; count < 10; count++) {
   total += calculateNormal(100);
 }
 endTest = pstime;
 Print("Normal calculation: ", endTest - startTest, "ms. Total:", total);
 startTest = pstime;
 total  = 0;
-for (count = 0; count < 100; count++) {
+for (count = 0; count < 10; count++) {
   total += calculateCompiled(100);
 }
 endTest = pstime;

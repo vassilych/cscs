@@ -18,7 +18,7 @@ namespace SplitAndMerge
         }
 
         // A "virtual" Constructor
-        internal ParserFunction(ParsingScript script, string item, char ch, ref string action)
+        public ParserFunction(ParsingScript script, string item, char ch, ref string action)
         {
             if (item.Length == 0 && (ch == Constants.START_ARG || !script.StillValid()))
             {
@@ -350,6 +350,7 @@ namespace SplitAndMerge
             }
 
             function.Name = Constants.GetRealName(name);
+            function.Value.ParamName = function.Name;
             if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
             {
                 AddLocalVariable(function);
@@ -537,6 +538,10 @@ namespace SplitAndMerge
             name = Constants.ConvertName(name);
             variable.isNative = false;
             variable.Name = Constants.GetRealName(name);
+            if (variable is GetVarFunction)
+            {
+                ((GetVarFunction)variable).Value.ParamName = variable.Name;
+            }
 
             if (scopeName == null)
             {
@@ -639,6 +644,10 @@ namespace SplitAndMerge
 
             var name = Constants.ConvertName(local.Name);
             local.Name = Constants.GetRealName(name);
+            if (local is GetVarFunction)
+            {
+                ((GetVarFunction)local).Value.ParamName = local.Name;
+            }
             locals.Variables[name] = local;
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             Translation.AddTempKeyword(name);

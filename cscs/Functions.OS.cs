@@ -839,7 +839,9 @@ namespace SplitAndMerge
                 }
             }
 
-            Variable result = m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false);
+            Variable result = Precompiler.AsyncMode ?
+                m_precompiler.RunAsync(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false) :
+                m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false);
             ParserFunction.PopLocalVariables();
 
             return result;

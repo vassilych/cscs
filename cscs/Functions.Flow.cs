@@ -109,11 +109,10 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
-            string funcName = args[0].AsString();
+            string functionName = args[0].AsString();
 
-            ParserFunction function = ParserFunction.GetVariable(funcName, script);
-            CustomFunction custFunc = function as CustomFunction;
-            Utils.CheckNotNull(funcName, custFunc);
+            CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
+            Utils.CheckNotNull(functionName, custFunc);
 
             string body = Utils.BeautifyScript(custFunc.Body, custFunc.Header);
             Utils.PrintScript(body, script);
@@ -180,6 +179,8 @@ namespace SplitAndMerge
         {
             Name = className;
             RegisterClass(className, this);
+
+            RegisterClass(obj: this, className : className);
 
             foreach (string baseClass in baseClasses)
             {
@@ -638,7 +639,7 @@ namespace SplitAndMerge
         {
             Name = funcName;
             m_body = body;
-            m_args = args;
+            m_args = RealArgs = args;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -646,7 +647,8 @@ namespace SplitAndMerge
                 int ind = arg.IndexOf('=');
                 if (ind > 0)
                 {
-                    m_args[i] = arg.Substring(0, ind).Trim().ToLower();
+                    RealArgs[i] = arg.Substring(0, ind).Trim();
+                    m_args[i] = RealArgs[i].ToLower();
                     string defValue = ind >= arg.Length - 1 ? "" : arg.Substring(ind + 1).Trim();
 
                     Variable defVariable = Utils.GetVariableFromString(defValue, script);
@@ -658,9 +660,10 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    m_args[i] = arg.ToLower();
+                    m_args[i] = RealArgs[i].ToLower();
                 }
-                m_argMap[m_args[i]] = i;
+
+                ArgMap[m_args[i]] = i;
             }
         }
 
@@ -679,7 +682,7 @@ namespace SplitAndMerge
             {
                 var arg = args[i];
                 int argIndex = -1;
-                if (m_argMap.TryGetValue(arg.CurrentAssign, out argIndex))
+                if (ArgMap.TryGetValue(arg.CurrentAssign, out argIndex))
                 {
                     namedParameters = true;
                     if (i != argIndex)
@@ -695,7 +698,7 @@ namespace SplitAndMerge
                 else if (namedParameters)
                 {
                     throw new ArgumentException("All arguments in function [" + m_name +
-                     "] must be arg=value form.");
+                     "] must be in arg=value form.");
                 }
             }
 
@@ -779,6 +782,8 @@ namespace SplitAndMerge
                 Utils.GetFunctionArgsAsStrings(script) :
                 script.GetFunctionArgs();
 
+            Utils.ExtractParameterNames(args, m_name, script);
+
             script.MoveBackIf(Constants.START_GROUP);
 
             if (args.Count + m_defaultArgs.Count < m_args.Length)
@@ -796,6 +801,8 @@ namespace SplitAndMerge
                 // Special case of extracting args.
                 Utils.GetFunctionArgsAsStrings(script) :
                 await script.GetFunctionArgsAsync();
+
+            Utils.ExtractParameterNames(args, m_name, script);
 
             script.MoveBackIf(Constants.START_GROUP);
 
@@ -993,8 +1000,10 @@ namespace SplitAndMerge
         protected int m_parentOffset = 0;
 
         List<Variable> m_defaultArgs = new List<Variable>();
-        Dictionary<string, int> m_argMap = new Dictionary<string, int>();
         Dictionary<int, int> m_defArgMap = new Dictionary<int, int>();
+
+        public Dictionary<string, int> ArgMap { get; private set; } = new Dictionary<string, int>();
+        public string[] RealArgs { get; private set; }
     }
 
     class StringOrNumberFunction : ParserFunction

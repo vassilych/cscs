@@ -1215,6 +1215,7 @@ namespace SplitAndMerge
         public string ParsingToken { get; set; }
         public int Index { get; set; }
         public string CurrentAssign { get; set; } = "";
+        public string ParamName { get; set; } = "";
 
         public static Variable EmptyInstance = new Variable();
 
