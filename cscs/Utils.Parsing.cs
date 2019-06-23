@@ -537,7 +537,7 @@ namespace SplitAndMerge
             var sep = new char[] { ' ' };
             for (int i = 0; i < args.Count; i++)
             {
-                string[] pair = args[i].Trim().Split(sep, StringSplitOptions.RemoveEmptyEntries);
+                string[] pair = args[i].ToLower().Trim().Split(sep, StringSplitOptions.RemoveEmptyEntries);
                 Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair[0]) : Variable.VarType.STRING;
                 dict.Add(pair[pair.Length - 1], new Variable(type));
                 args[i] = pair[pair.Length - 1];

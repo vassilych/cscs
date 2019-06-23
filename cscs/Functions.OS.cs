@@ -783,6 +783,7 @@ namespace SplitAndMerge
             List<List<double>> argsArrNum = new List<List<double>>();
             List<Dictionary<string, string>> argsMapStr = new List<Dictionary<string, string>>();
             List<Dictionary<string, double>> argsMapNum = new List<Dictionary<string, double>>();
+            List<Variable> argsVar = new List<Variable>();
 
             for (int i = 0; i < m_args.Length; i++)
             {
@@ -837,11 +838,15 @@ namespace SplitAndMerge
                     }
                     argsMapNum.Add(subMapNum);
                 }
+                else if (typeVar.Type == Variable.VarType.VARIABLE)
+                {
+                    argsVar.Add(args[i]);
+                }
             }
 
             Variable result = Precompiler.AsyncMode ?
-                m_precompiler.RunAsync(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false) :
-                m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, false);
+                m_precompiler.RunAsync(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false) :
+                m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false);
             ParserFunction.PopLocalVariables();
 
             return result;

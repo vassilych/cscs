@@ -329,6 +329,7 @@ namespace SplitAndMerge
                 case "ARRAY": return Variable.VarType.ARRAY;
                 case "BREAK": return Variable.VarType.BREAK;
                 case "CONTINUE": return Variable.VarType.CONTINUE;
+                case "VARIABLE": return Variable.VarType.VARIABLE;
                 default: return Variable.VarType.NONE;
             }
         }

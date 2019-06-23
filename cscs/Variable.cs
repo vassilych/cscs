@@ -12,7 +12,7 @@ namespace SplitAndMerge
         {
             NONE, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
-            BREAK, CONTINUE, OBJECT, ENUM
+            BREAK, CONTINUE, OBJECT, ENUM, VARIABLE
         };
 
         public Variable()
