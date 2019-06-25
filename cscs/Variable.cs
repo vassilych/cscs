@@ -764,7 +764,8 @@ namespace SplitAndMerge
                 if (!string.IsNullOrWhiteSpace(match))
                 {
                     List<Variable> args = null;
-                    if (script != null && script.TryPrev() == Constants.START_ARG)
+                    if (script != null && 
+                       (script.Pointer == 0 || script.TryPrev() == Constants.START_ARG))
                     {
                         args = await script.GetFunctionArgsAsync();
                     }
