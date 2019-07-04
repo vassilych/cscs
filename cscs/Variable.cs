@@ -654,7 +654,7 @@ namespace SplitAndMerge
         public Variable GetEnumProperty(string propName, ParsingScript script, string baseName = "")
         {
             propName = Constants.ConvertName(propName);
-            if (script.TryPrev() == Constants.START_ARG)
+            if (script.Prev == Constants.START_ARG)
             {
                 Variable value = Utils.GetItem(script);
                 if (propName == Constants.TO_STRING)
@@ -722,7 +722,8 @@ namespace SplitAndMerge
                 if (!string.IsNullOrWhiteSpace(match))
                 {
                     List<Variable> args = null;
-                    if (script != null && script.TryPrev() == Constants.START_ARG)
+                    if (script != null &&
+                       (script.Pointer == 0 || script.Prev == Constants.START_ARG))
                     {
                         args = script.GetFunctionArgs();
                     }
@@ -765,7 +766,7 @@ namespace SplitAndMerge
                 {
                     List<Variable> args = null;
                     if (script != null && 
-                       (script.Pointer == 0 || script.TryPrev() == Constants.START_ARG))
+                       (script.Pointer == 0 || script.Prev == Constants.START_ARG))
                     {
                         args = await script.GetFunctionArgsAsync();
                     }
