@@ -75,6 +75,14 @@ Test(x, 4e+15);
 
 Print;
 
+a = 10;
+d = (c=a++) + 1;
+Test(c, 10);
+Test(d, 11);
+d = c=a++ + 1;
+Test(c, 12);
+Test(d, 12);
+
 n = 10;
 getPrimes(n);
 Test(isPrime(5), 1);
