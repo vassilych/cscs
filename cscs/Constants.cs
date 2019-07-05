@@ -21,7 +21,7 @@ namespace SplitAndMerge
         public const char END_GROUP = '}';
         public const char VAR_START = '$';
         public const char END_STATEMENT = ';';
-        public const char FOR_EACH = ':';
+        public const string FOR_EACH = ":"; //All of them should be string, because if I want to use IN, it wouldn't be possible.
         public const char CONTINUE_LINE = '\\';
         public const char EMPTY = '\0';
         public const char TERNARY_OPERATOR = '?';
