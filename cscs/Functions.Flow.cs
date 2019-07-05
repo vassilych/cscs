@@ -180,8 +180,6 @@ namespace SplitAndMerge
             Name = className;
             RegisterClass(className, this);
 
-            RegisterClass(obj: this, className : className);
-
             foreach (string baseClass in baseClasses)
             {
                 var bc = CSCSClass.GetClass(baseClass);
@@ -1491,6 +1489,8 @@ namespace SplitAndMerge
                 Name = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
             }
 
+            Utils.CheckForValidName(Name, script);
+
             // Value to be added to the variable:
             int valueDelta = m_action == Constants.INCREMENT ? 1 : -1;
             int returnDelta = prefix ? valueDelta : 0;
@@ -1690,6 +1690,8 @@ namespace SplitAndMerge
             m_name = Constants.GetRealName(m_name);
             script.CurrentAssign = m_name;
             Variable varValue = await Utils.GetItemAsync(script);
+
+            script.MoveBackIfPrevious(Constants.END_ARG);
 
             // First try processing as an object (with a dot notation):
             Variable result = await ProcessObjectAsync(script, varValue);

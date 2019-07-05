@@ -131,16 +131,31 @@ namespace SplitAndMerge
                 throw new ArgumentException("Incomplete arguments for [" + realName + "]");
             }
         }
+
         public static void CheckForValidName(string name, ParsingScript script)
         {
-            string illegals = "\"'?!";
-            for (int i = 0; i < illegals.Length; i++)
+            if (string.IsNullOrWhiteSpace(name) || (!Char.IsLetter(name[0]) && name[0] != '_'))
             {
-                char ch = illegals[i];
-                if (name.Contains(ch))
+                ThrowErrorMsg("Illegal variable name: [" + name + "]",
+                              script, name);
+            }
+
+            string illegals = "\"'?!";
+            int first = name.IndexOfAny(illegals.ToCharArray());
+            if (first >= 0)
+            {
+                var ind = name.IndexOf('[');
+                if (ind < 0 || ind > first)
                 {
-                    ThrowErrorMsg("Variable [" + name + "] contains illegal character [" + ch + "]",
-                                  script, name);
+                    for (int i = 0; i < illegals.Length; i++)
+                    {
+                        char ch = illegals[i];
+                        if (name.Contains(ch))
+                        {
+                            ThrowErrorMsg("Variable [" + name + "] contains illegal character [" + ch + "]",
+                                          script, name);
+                        }
+                    }
                 }
             }
         }
