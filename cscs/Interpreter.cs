@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static SplitAndMerge.ParserFunction;
@@ -327,8 +328,13 @@ namespace SplitAndMerge
             forScript.ParentScript = script;
             forScript.Filename = script.Filename;
             forScript.Debugger = script.Debugger;
-            forScript.Pointer = index + 1;
+            forScript.Pointer = index + Constants.FOR_EACH.Length;
             Variable arrayValue = Utils.GetItem(forScript);
+
+            if (arrayValue.Type == Variable.VarType.STRING)
+            {
+                arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
+            }
 
             int cycles = arrayValue.Count;
             if (cycles == 0)
@@ -366,12 +372,18 @@ namespace SplitAndMerge
 
             string varName = forString.Substring(0, index);
 
+
             ParsingScript forScript = new ParsingScript(forString, 0, script.Char2Line);
             forScript.ParentScript = script;
             forScript.Filename = script.Filename;
             forScript.Debugger = script.Debugger;
-            forScript.Pointer = index + 1;
+            forScript.Pointer = index + Constants.FOR_EACH.Length;
             Variable arrayValue = await Utils.GetItemAsync(forScript);
+
+            if (arrayValue.Type == Variable.VarType.STRING)
+            {
+                arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
+            }
 
             int cycles = arrayValue.Count;
             if (cycles == 0)
