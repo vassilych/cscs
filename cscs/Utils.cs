@@ -160,7 +160,7 @@ namespace SplitAndMerge
             }
         }
 
-        static void ThrowErrorMsg(string msg, ParsingScript script, string token)
+        public static void ThrowErrorMsg(string msg, ParsingScript script, string token)
         {
             string code     = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
             int lineNumber  = script == null ? 0 : script.OriginalLineNumber;

@@ -1693,6 +1693,12 @@ namespace SplitAndMerge
 
             script.MoveBackIfPrevious(Constants.END_ARG);
 
+            if (script.Current == ' ' || script.Prev == ' ')
+            {
+                Utils.ThrowErrorMsg("Can't process expression [" + script.Rest + "].",
+                                    script, m_name);
+            }
+
             // First try processing as an object (with a dot notation):
             Variable result = await ProcessObjectAsync(script, varValue);
             if (result != null)
