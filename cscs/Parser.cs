@@ -654,6 +654,10 @@ namespace SplitAndMerge
                     leftCell.Value = Convert.ToDouble(
                         Convert.ToBoolean(leftCell.Value) || Convert.ToBoolean(rightCell.Value));
                     break;
+                case ")":
+                    Utils.ThrowErrorMsg("Can't process last token [" + rightCell.Value + "] in the expression.",
+                         script, script.Current.ToString());
+                    break;
                 default:
                     Utils.ThrowErrorMsg("Can't process operation [" + leftCell.Action + "] in the expression.",
                          script, leftCell.Action);
