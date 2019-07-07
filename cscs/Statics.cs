@@ -42,15 +42,15 @@ namespace SplitAndMerge
             return new Variable(result);
         }
 
-        public static Object GetVariableValue(string name)
+        public static Object GetVariableValue(string name, ParsingScript script)
         {
             var field = typeof(Statics).GetField(name);
-            Utils.CheckNotNull(field, name);
+            Utils.CheckNotNull(field, name, script);
             Object result = field.GetValue(null);
             return result;
         }
 
-        public static bool SetVariableValue(string name, Object value)
+        public static bool SetVariableValue(string name, Object value, ParsingScript script)
         {
             Type type   = typeof(Statics);
             var props   = type.GetProperties();
@@ -58,7 +58,7 @@ namespace SplitAndMerge
             var methods = type.GetMethods();
             var fields  = type.GetFields();
             var field   = type.GetField(name);
-            Utils.CheckNotNull(field, name);
+            Utils.CheckNotNull(field, name, script);
             field.SetValue(null, Convert.ChangeType(value, field.FieldType));
             return true;
         }
@@ -99,7 +99,7 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name);
 
             string name = Utils.GetSafeString(args, 0);
-            var objValue = Statics.GetVariableValue(name);
+            var objValue = Statics.GetVariableValue(name, script);
 
             return new Variable(objValue.ToString());
         }
@@ -114,7 +114,7 @@ namespace SplitAndMerge
 
             string name  = Utils.GetSafeString(args, 0);
             string value = Utils.GetSafeString(args, 1);
-            bool isSet   = Statics.SetVariableValue(name, value);
+            bool isSet   = Statics.SetVariableValue(name, value, script);
 
             return new Variable(isSet);
         }
