@@ -247,7 +247,7 @@ namespace SplitAndMerge
 
             if (indexVar.Type == VarType.NUMBER)
             {
-                Utils.CheckNonNegativeInt(indexVar);
+                Utils.CheckNonNegativeInt(indexVar, null);
                 return (int)indexVar.Value;
             }
 
@@ -579,7 +579,7 @@ namespace SplitAndMerge
             return Count;
         }
 
-        public Variable SetProperty(string propName, Variable value, string baseName = "")
+        public Variable SetProperty(string propName, Variable value, ParsingScript script, string baseName = "")
         {
             int ind = propName.IndexOf('.');
             if (ind > 0)
@@ -587,13 +587,13 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = GetProperty(varName);
-                Utils.CheckNotNull(property, varName);
-                return property.SetProperty(actualPropName, value, baseName);
+                Utils.CheckNotNull(property, varName, script);
+                return property.SetProperty(actualPropName, value, script, baseName);
             }
             return FinishSetProperty(propName, value, baseName);
         }
 
-        public async Task<Variable> SetPropertyAsync(string propName, Variable value, string baseName = "")
+        public async Task<Variable> SetPropertyAsync(string propName, Variable value, ParsingScript script, string baseName = "")
         {
             int ind = propName.IndexOf('.');
             if (ind > 0)
@@ -601,8 +601,8 @@ namespace SplitAndMerge
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
                 Variable property = await GetPropertyAsync(varName);
-                Utils.CheckNotNull(property, varName);
-                Variable result = await property.SetPropertyAsync(actualPropName, value, baseName);
+                Utils.CheckNotNull(property, varName, script);
+                Variable result = await property.SetPropertyAsync(actualPropName, value, script, baseName);
                 return result;
             }
             return FinishSetProperty(propName, value, baseName);

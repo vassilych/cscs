@@ -182,8 +182,8 @@ namespace SplitAndMerge
         public static string NULL_ACTION = END_ARG.ToString();
 
         public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=" };
-        public static string[] MATH_ACTIONS = { "&&", "||", "==", "!=", "<=", ">=", "++", "--",
-                                            "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
+        public static string[] MATH_ACTIONS = { "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
+                                                "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
         // Actions: always decreasing by the number of characters.
         public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
 

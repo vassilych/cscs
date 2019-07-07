@@ -348,7 +348,7 @@ c =  !!(!y || !n && y);
 Test(c, 1);
 
 a = 1+(25-2*3);
-arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-++a), ++a/(a/3), 2 * sqrt(pow(2, 2))};
+arr = {++a-a--, ++a*exp(0)/a--, -2*(--a-(++a)), ++a/(a/3), 2 * sqrt(pow(2, 2))};
 Print(arr);
 i = 0;
 while(i < size(arr)) {

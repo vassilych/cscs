@@ -190,6 +190,13 @@ namespace SplitAndMerge
             result = result.Replace("\\\\", "\\");
             result = result.Replace("\\\"", "\"");
             result = result.Replace("\\'", "'");
+
+            if (string.IsNullOrWhiteSpace(result) && Utils.IsAction(script.Prev) && Utils.IsAction(script.PrevPrev))
+            {
+                Utils.ThrowErrorMsg("Can't process token [" + script.PrevPrev + script.Prev + script.Current +
+                                    "].", script, script.Current.ToString());
+            }
+
             return result;
         }
 
@@ -654,6 +661,9 @@ namespace SplitAndMerge
                     leftCell.Value = Convert.ToDouble(
                         Convert.ToBoolean(leftCell.Value) || Convert.ToBoolean(rightCell.Value));
                     break;
+                case "**":
+                    leftCell.Value = Math.Pow(leftCell.Value, rightCell.Value);
+                    break;
                 case ")":
                     Utils.ThrowErrorMsg("Can't process last token [" + rightCell.Value + "] in the expression.",
                          script, script.Current.ToString());
@@ -715,22 +725,23 @@ namespace SplitAndMerge
         {
             switch (action)
             {
+                case "**":
                 case "++":
                 case "--": return 11;
                 case "%":
                 case "*":
-                case "/": return 10;
+                case "/":  return 10;
                 case "+":
-                case "-": return 9;
+                case "-":  return 9;
                 case "<":
                 case ">":
                 case ">=":
                 case "<=": return 8;
                 case "==":
                 case "!=": return 7;
-                case "&": return 6;
-                case "|": return 5;
-                case "^": return 4;
+                case "&":  return 6;
+                case "|":  return 5;
+                case "^":  return 4;
                 case "&&": return 3;
                 case "||": return 2;
                 case "+=":
@@ -738,7 +749,7 @@ namespace SplitAndMerge
                 case "*=":
                 case "/=":
                 case "%=":
-                case "=": return 1;
+                case "=":  return 1;
             }
             return 0; // NULL action has priority 0.
         }

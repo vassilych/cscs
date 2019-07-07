@@ -37,6 +37,10 @@ namespace SplitAndMerge
         {
             get { return m_from >= 1 ? m_data[m_from - 1] : Constants.EMPTY; }
         }
+        public char PrevPrev
+        {
+            get { return m_from >= 2 ? m_data[m_from - 2] : Constants.EMPTY; }
+        }
         public char Next
         {
             get { return m_from + 1 < m_data.Length ? m_data[m_from + 1] : Constants.EMPTY; }

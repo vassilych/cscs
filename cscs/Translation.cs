@@ -225,7 +225,7 @@ namespace SplitAndMerge
             }
 
             ParserFunction origFunction = ParserFunction.GetFunction(origName, null);
-            Utils.CheckNotNull(origName, origFunction);
+            Utils.CheckNotNull(origName, origFunction, null);
             ParserFunction.RegisterFunction(translation, origFunction);
 
             // Also add the translation to the list of functions after which there

@@ -1071,6 +1071,11 @@ namespace SplitAndMerge
             return action;
         }
 
+        public static bool IsAction(char ch)
+        {
+            return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%' || ch == '&' || ch == '|' || ch == '^';
+        }
+
         public static string StartsWith(string data, string[] items)
         {
             foreach (string item in items)

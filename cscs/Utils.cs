@@ -20,16 +20,16 @@ namespace SplitAndMerge
                     " arguments but got " + args + " in " + msg);
             }
         }
-        public static void CheckPosInt(Variable variable)
+        public static void CheckPosInt(Variable variable, ParsingScript script)
         {
-            CheckInteger(variable);
+            CheckInteger(variable, script);
             if (variable.Value <= 0)
             {
-                throw new ArgumentException("Expected a positive integer instead of [" +
-                                               variable.Value + "]");
+                ThrowErrorMsg("Expected a positive integer instead of [" +
+                              variable.Value + "].", script, script.Current.ToString());
             }
         }
-        public static void CheckPosInt(int number, string name)
+        /*public static void CheckPosInt(int number, string name)
         {
             if (number < 0)
             {
@@ -37,31 +37,31 @@ namespace SplitAndMerge
                 throw new ArgumentException("Expected a positive integer instead of [" +
                                                number + "] in [" + realName + "]");
             }
-        }
-        public static void CheckNonNegativeInt(Variable variable)
+        }*/
+        public static void CheckNonNegativeInt(Variable variable, ParsingScript script)
         {
-            CheckInteger(variable);
+            CheckInteger(variable, script);
             if (variable.Value < 0)
             {
-                throw new ArgumentException("Expected a non-negative integer instead of [" +
-                                               variable.Value + "]");
+                ThrowErrorMsg("Expected a non-negative integer instead of [" +
+                              variable.Value + "].", script, script.Current.ToString());
             }
         }
-        public static void CheckInteger(Variable variable)
+        public static void CheckInteger(Variable variable, ParsingScript script)
         {
-            CheckNumber(variable);
+            CheckNumber(variable, script);
             if (variable.Value % 1 != 0.0)
             {
-                throw new ArgumentException("Expected an integer instead of [" +
-                                               variable.Value + "]");
+                ThrowErrorMsg("Expected an integer instead of [" +
+                              variable.Value + "].", script, script.Current.ToString());
             }
         }
-        public static void CheckNumber(Variable variable)
+        public static void CheckNumber(Variable variable, ParsingScript script)
         {
             if (variable.Type != Variable.VarType.NUMBER)
             {
-                throw new ArgumentException("Expected a number instead of [" +
-                                               variable.AsString() + "]");
+                ThrowErrorMsg("Expected a number instead of [" +
+                              variable.AsString() + "].", script, script.Current.ToString());
             }
         }
         public static void CheckArray(Variable variable, string name)
@@ -78,33 +78,26 @@ namespace SplitAndMerge
             if (!script.StillValid() || string.IsNullOrWhiteSpace(varName))
             {
                 string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Incomplete arguments for [" + realName + "]");
+                ThrowErrorMsg("Incomplete arguments for [" + realName + "].", script, name);
             }
         }
-        public static void CheckNotEnd(ParsingScript script, string name)
-        {
-            if (!script.StillValid())
-            {
-                string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Incomplete arguments for [" + realName + "]");
-            }
-        }
-        public static void CheckNotNull(object obj, string name, int index = -1)
+
+        public static void CheckNotNull(object obj, string name, ParsingScript script, int index = -1)
         {
             if (obj == null)
             {
                 string indexStr = index >= 0 ? " in position " + (index + 1) : "";
                 string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Invalid argument " + indexStr +
-                                            " in function [" + realName + "]");
+                ThrowErrorMsg("Invalid argument " + indexStr +
+                                            " in function [" + realName + "].", script, name);
             }
         }
-        public static void CheckNotNull(string name, ParserFunction func)
+        public static void CheckNotNull(string name, ParserFunction func, ParsingScript script)
         {
             if (func == null)
             {
                 string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Variable or function [" + realName + "] doesn't exist");
+                ThrowErrorMsg("Variable or function [" + realName + "] doesn't exist.", script, name);
             }
         }
         public static void CheckNotNull(object obj, string name, ParsingScript script)
@@ -112,17 +105,26 @@ namespace SplitAndMerge
             if (obj == null)
             {
                 string realName = Constants.GetRealName(name);
-                ThrowErrorMsg("Object [" + realName + "] doesn't exist.", script, realName);
+                ThrowErrorMsg("Object [" + realName + "] doesn't exist.", script, name);
             }
         }
 
+        public static void CheckNotEnd(ParsingScript script, string name)
+        {
+            if (!script.StillValid())
+            {
+                string realName = Constants.GetRealName(name);
+                ThrowErrorMsg("Incomplete arguments for [" + realName + "]", script, script.Prev.ToString());
+            }
+        }
         public static void CheckNotEnd(ParsingScript script)
         {
             if (!script.StillValid())
             {
-                throw new ArgumentException("Incomplete function definition.");
+                ThrowErrorMsg("Incomplete function definition.", script, script.Prev.ToString());
             }
         }
+
         public static void CheckNotEmpty(string varName, string name)
         {
             if (string.IsNullOrEmpty(varName))
@@ -488,9 +490,9 @@ namespace SplitAndMerge
             {
                 return null;
             }
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable varValue = func.GetValue(script);
-            Utils.CheckNotNull(varValue, varName);
+            Utils.CheckNotNull(varValue, varName, script);
             return varValue;
         }
         public static async Task<Variable> GetVariableAsync(string varName, ParsingScript script, bool testNull = true)
@@ -500,9 +502,9 @@ namespace SplitAndMerge
             {
                 return null;
             }
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable varValue = await func.GetValueAsync(script);
-            Utils.CheckNotNull(varValue, varName);
+            Utils.CheckNotNull(varValue, varName, script);
             return varValue;
         }
 

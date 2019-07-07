@@ -374,7 +374,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             Variable sleepms = Utils.GetItem(script);
-            Utils.CheckPosInt(sleepms);
+            Utils.CheckPosInt(sleepms, script);
 
             Thread.Sleep((int)sleepms.Value);
 

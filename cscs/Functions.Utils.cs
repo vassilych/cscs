@@ -67,7 +67,7 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
             Variable id = args[0];
-            Utils.CheckPosInt(id);
+            Utils.CheckPosInt(id, script);
 
             int processId = (int)id.Value;
             try
@@ -117,7 +117,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             Variable portRes = Utils.GetItem(script);
-            Utils.CheckPosInt(portRes);
+            Utils.CheckPosInt(portRes, script);
             int port = (int)portRes.Value;
 
             try
@@ -181,7 +181,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
 
             Utils.CheckArgs(args.Count, 3, Constants.CONNECTSRV);
-            Utils.CheckPosInt(args[1]);
+            Utils.CheckPosInt(args[1], script);
 
             string hostname = args[0].String;
             int port = (int)args[1].Value;
@@ -330,7 +330,7 @@ namespace SplitAndMerge
             if (sizeAvailable)
             {
                 Variable length = Utils.GetItem(script);
-                Utils.CheckPosInt(length);
+                Utils.CheckPosInt(length, script);
                 size = (int)length.Value;
             }
 
@@ -353,7 +353,7 @@ namespace SplitAndMerge
             if (sizeAvailable)
             {
                 Variable length = Utils.GetItem(script);
-                Utils.CheckPosInt(length);
+                Utils.CheckPosInt(length, script);
                 size = (int)length.Value;
             }
 

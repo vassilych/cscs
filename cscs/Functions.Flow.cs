@@ -112,7 +112,7 @@ namespace SplitAndMerge
             string functionName = args[0].AsString();
 
             CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
-            Utils.CheckNotNull(functionName, custFunc);
+            Utils.CheckNotNull(functionName, custFunc, script);
 
             string body = Utils.BeautifyScript(custFunc.Body, custFunc.Header);
             Utils.PrintScript(body, script);
@@ -1074,7 +1074,7 @@ namespace SplitAndMerge
 
             // 2. Get the current value of the variable.
             ParserFunction func = ParserFunction.GetVariable(varName, script);
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable currentValue = func.GetValue(script);
             Utils.CheckArray(currentValue, varName);
 
@@ -1098,13 +1098,13 @@ namespace SplitAndMerge
 
             // 2. Get the current value of the variable.
             ParserFunction func = ParserFunction.GetVariable(varName, script);
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable currentValue = func.GetValue(script);
             Utils.CheckArray(currentValue, varName);
 
             // 3. Get the variable to remove.
             Variable item = Utils.GetItem(script);
-            Utils.CheckNonNegativeInt(item);
+            Utils.CheckNonNegativeInt(item, script);
 
             currentValue.Tuple.RemoveAt(item.AsInt());
 
@@ -1126,7 +1126,7 @@ namespace SplitAndMerge
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, varName, (newVarName) => { varName = newVarName; } );
 
             ParserFunction func = ParserFunction.GetVariable(varName, script);
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable currentValue = func.GetValue(script);
 
             // 2b. Special dealings with arrays:
@@ -1386,7 +1386,7 @@ namespace SplitAndMerge
                 script.Forward();
                 m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
                 Variable propValue = result.GetProperty(m_propName, script);
-                Utils.CheckNotNull(propValue, m_propName);
+                Utils.CheckNotNull(propValue, m_propName, script);
                 return propValue;
             }
 
@@ -1398,7 +1398,7 @@ namespace SplitAndMerge
                 Variable propValue = m_value.Type == Variable.VarType.ENUM ?
                                      m_value.GetEnumProperty(temp, script) :
                                      m_value.GetProperty(temp, script);
-                Utils.CheckNotNull(propValue, temp);
+                Utils.CheckNotNull(propValue, temp, script);
                 return propValue;
             }
 
@@ -1436,7 +1436,7 @@ namespace SplitAndMerge
                 script.Forward();
                 m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
                 Variable propValue = await result.GetPropertyAsync(m_propName, script); 
-                Utils.CheckNotNull(propValue, m_propName);
+                Utils.CheckNotNull(propValue, m_propName, script);
                 return propValue;
             }
 
@@ -1501,7 +1501,7 @@ namespace SplitAndMerge
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
 
             ParserFunction func = ParserFunction.GetVariable(m_name, script);
-            Utils.CheckNotNull(m_name, func);
+            Utils.CheckNotNull(m_name, func, script);
 
             Variable currentValue = func.GetValue(script);
             currentValue = currentValue.DeepClone();
@@ -1771,7 +1771,7 @@ namespace SplitAndMerge
 
             ParserFunction existing = ParserFunction.GetVariable(name, script);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
-            baseValue.SetProperty(prop, varValue, name);
+            baseValue.SetProperty(prop, varValue, script, name);
 
             ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
             //ParserFunction.AddGlobal(name, new GetVarFunction(baseValue), false);
@@ -1811,7 +1811,7 @@ namespace SplitAndMerge
 
             ParserFunction existing = ParserFunction.GetVariable(name, script);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
-            await baseValue.SetPropertyAsync(prop, varValue, name);
+            await baseValue.SetPropertyAsync(prop, varValue, script, name);
 
             ParserFunction.AddGlobalOrLocalVariable(name, new GetVarFunction(baseValue));
             //ParserFunction.AddGlobal(name, new GetVarFunction(baseValue), false);
@@ -2087,7 +2087,7 @@ namespace SplitAndMerge
 
             // 2. Get the current value of the variable.
             ParserFunction func = ParserFunction.GetVariable(varName, script);
-            Utils.CheckNotNull(varName, func);
+            Utils.CheckNotNull(varName, func, script);
             Variable currentValue = func.GetValue(script);
             Variable element = currentValue;
 
@@ -2157,7 +2157,7 @@ namespace SplitAndMerge
             string propName = Utils.GetSafeString(args, 1);
 
             Variable propValue = baseValue.GetProperty(propName, script);
-            Utils.CheckNotNull(propValue, propName);
+            Utils.CheckNotNull(propValue, propName, script);
 
             return new Variable(propValue);
         }
@@ -2170,7 +2170,7 @@ namespace SplitAndMerge
             string propName = Utils.GetSafeString(args, 1);
 
             Variable propValue = await baseValue.GetPropertyAsync(propName, script);
-            Utils.CheckNotNull(propValue, propName);
+            Utils.CheckNotNull(propValue, propName, script);
 
             return new Variable(propValue);
         }
@@ -2182,7 +2182,7 @@ namespace SplitAndMerge
             Variable baseValue = args[0];
 
             Variable propValue = baseValue.GetProperty(sPropertyName, script);
-            Utils.CheckNotNull(propValue, sPropertyName);
+            Utils.CheckNotNull(propValue, sPropertyName, script);
 
             return new Variable(propValue);
         }
@@ -2194,7 +2194,7 @@ namespace SplitAndMerge
             Variable baseValue = args[0];
 
             Variable propValue = await baseValue.GetPropertyAsync(sPropertyName, script);
-            Utils.CheckNotNull(propValue, sPropertyName);
+            Utils.CheckNotNull(propValue, sPropertyName, script);
 
             return new Variable(propValue);
         }
@@ -2211,7 +2211,7 @@ namespace SplitAndMerge
             string propName = Utils.GetSafeString(args, 1);
             Variable propValue = Utils.GetSafeVariable(args, 2);
 
-            Variable result = baseValue.SetProperty(propName, propValue);
+            Variable result = baseValue.SetProperty(propName, propValue, script);
 
             ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
                                                     new GetVarFunction(baseValue));
@@ -2226,7 +2226,7 @@ namespace SplitAndMerge
             string propName = Utils.GetSafeString(args, 1);
             Variable propValue = Utils.GetSafeVariable(args, 2);
 
-            Variable result = await baseValue.SetPropertyAsync(propName, propValue);
+            Variable result = await baseValue.SetPropertyAsync(propName, propValue, script);
 
             ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
                                                     new GetVarFunction(baseValue));
@@ -2241,7 +2241,7 @@ namespace SplitAndMerge
             Variable baseValue = args[0];
             Variable propValue = Utils.GetSafeVariable(args, 1);
 
-            Variable result = baseValue.SetProperty(sPropertyName, propValue);
+            Variable result = baseValue.SetProperty(sPropertyName, propValue, script);
 
             ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
                                                     new GetVarFunction(baseValue));
@@ -2255,7 +2255,7 @@ namespace SplitAndMerge
             Variable baseValue = args[0];
             Variable propValue = Utils.GetSafeVariable(args, 1);
 
-            Variable result = await baseValue.SetPropertyAsync(sPropertyName, propValue);
+            Variable result = await baseValue.SetPropertyAsync(sPropertyName, propValue, script);
 
             ParserFunction.AddGlobalOrLocalVariable(baseValue.ParsingToken,
                                                     new GetVarFunction(baseValue));
@@ -2405,7 +2405,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             Variable varName = Utils.GetItem(script);
-            Utils.CheckNotNull(varName, m_name);
+            Utils.CheckNotNull(varName, m_name, script);
 
             List<Variable> results = varName.GetAllKeys();
 
