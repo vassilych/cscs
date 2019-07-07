@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using static System.Math;
 using System.Threading.Tasks;
 
 namespace SplitAndMerge
@@ -24,7 +25,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
             Variable arg = args[0];
-            arg.Value = Math.Exp(arg.Value);
+            arg.Value = Exp(arg.Value);
             return arg;
         }
     }
@@ -50,7 +51,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
             Variable arg = args[0];
-            arg.Value = Math.Sin(arg.Value);
+            arg.Value = Sin(arg.Value);
             return arg;
         }
     }
@@ -172,7 +173,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
             int limit = args[0].AsInt();
-            Utils.CheckPosInt(args[0]);
+            Utils.CheckPosInt(args[0], script);
             int numberRandoms = Utils.GetSafeInt(args, 1, 1);
 
             if (numberRandoms <= 1)
