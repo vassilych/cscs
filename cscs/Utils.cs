@@ -29,15 +29,7 @@ namespace SplitAndMerge
                               variable.Value + "].", script, script.Current.ToString());
             }
         }
-        /*public static void CheckPosInt(int number, string name)
-        {
-            if (number < 0)
-            {
-                string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Expected a positive integer instead of [" +
-                                               number + "] in [" + realName + "]");
-            }
-        }*/
+
         public static void CheckNonNegativeInt(Variable variable, ParsingScript script)
         {
             CheckInteger(variable, script);
