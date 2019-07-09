@@ -468,7 +468,8 @@ namespace SplitAndMerge
             //processed = m_debugging.Substr(startPointer, endPointer - startPointer);
 
             return Completed(m_debugging) || (ProcessingBlock && endGroupRead > 0) ||
-                   LastResult.Type == Variable.VarType.CONTINUE;
+                   LastResult.Type == Variable.VarType.CONTINUE ||
+                   LastResult.IsReturn;
         }
 
         public static void ProcessException(ParsingScript script, ParsingException exc)
@@ -550,7 +551,8 @@ namespace SplitAndMerge
             await StepIn(stepInScript);
 
             ProcessingBlock = false;
-            done = stepInScript.Pointer >= tempScript.Pointer;
+            done = stepInScript.Pointer >= tempScript.Pointer ||
+                LastResult.IsReturn;
 
             doneEvent(done);
             return LastResult;
