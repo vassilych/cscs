@@ -526,6 +526,7 @@ namespace SplitAndMerge
             // A check against an infinite loop.
             int cycles = 0;
             bool stillValid = true;
+            Variable result = Variable.EmptyInstance;
 
             while (stillValid)
             {
@@ -546,7 +547,7 @@ namespace SplitAndMerge
                         cycles + " cycles.");
                 }
 
-                Variable result = ProcessBlock(script);
+                result = ProcessBlock(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     script.Pointer = startWhileCondition;
@@ -557,8 +558,9 @@ namespace SplitAndMerge
             // The while condition is not true anymore: must skip the whole while
             // block before continuing with next statements.
             SkipBlock(script);
-            return Variable.EmptyInstance;
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
+
         internal async Task<Variable> ProcessWhileAsync(ParsingScript script)
         {
             int startWhileCondition = script.Pointer;
@@ -566,6 +568,7 @@ namespace SplitAndMerge
             // A check against an infinite loop.
             int cycles = 0;
             bool stillValid = true;
+            Variable result = Variable.EmptyInstance;
 
             while (stillValid)
             {
@@ -586,7 +589,7 @@ namespace SplitAndMerge
                         cycles + " cycles.");
                 }
 
-                Variable result = await ProcessBlockAsync(script);
+                result = await ProcessBlockAsync(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     script.Pointer = startWhileCondition;
@@ -597,7 +600,7 @@ namespace SplitAndMerge
             // The while condition is not true anymore: must skip the whole while
             // block before continuing with next statements.
             SkipBlock(script);
-            return Variable.EmptyInstance;
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
         internal Variable ProcessIf(ParsingScript script)
@@ -621,8 +624,10 @@ namespace SplitAndMerge
                 }
                 SkipRestBlocks(script);
 
-                return result;
-                //return Variable.EmptyInstance;
+                //return result;
+                return result.IsReturn ||
+                       result.Type == Variable.VarType.BREAK ||
+                       result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
             }
 
             // We are in Else. Skip everything in the If statement.
@@ -644,12 +649,11 @@ namespace SplitAndMerge
                 result = ProcessBlock(script);
             }
 
-            if (result.IsReturn)
-            {
-                return result;
-            }
-            return Variable.EmptyInstance;
+            return result.IsReturn ||
+                   result.Type == Variable.VarType.BREAK ||
+                   result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
         }
+
         internal async Task<Variable> ProcessIfAsync(ParsingScript script)
         {
             int startIfCondition = script.Pointer;
@@ -671,8 +675,10 @@ namespace SplitAndMerge
                 }
                 SkipRestBlocks(script);
 
-                return result;
-                //return Variable.EmptyInstance;
+                //return result;
+                return result.IsReturn ||
+                       result.Type == Variable.VarType.BREAK ||
+                       result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
             }
 
             // We are in Else. Skip everything in the If statement.
@@ -694,11 +700,9 @@ namespace SplitAndMerge
                 result = await ProcessBlockAsync(script);
             }
 
-            if (result.IsReturn)
-            {
-                return result;
-            }
-            return Variable.EmptyInstance;
+            return result.IsReturn ||
+                   result.Type == Variable.VarType.BREAK ||
+                   result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
         }
 
         internal Variable ProcessTry(ParsingScript script)
