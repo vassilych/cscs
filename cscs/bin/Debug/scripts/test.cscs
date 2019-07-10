@@ -375,7 +375,8 @@ while(i < 13)
   } else {
     continue;
   }
-  //Print("this is never reached");
+  Print("this is never reached");
+  Test(true, false);
 }
 Test(b, "bla-137");
 
