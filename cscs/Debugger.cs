@@ -464,12 +464,13 @@ namespace SplitAndMerge
 
             endGroupRead = m_debugging.GoToNextStatement();
 
-            //int endPointer = m_debugging.Pointer;
-            //processed = m_debugging.Substr(startPointer, endPointer - startPointer);
+            // Check if after this statement the Step In is completed and we can unwind the stack:
+            bool completedSteppingIn = Completed(m_debugging) || (ProcessingBlock && endGroupRead > 0) ||
+                                       LastResult.Type == Variable.VarType.CONTINUE ||
+                                       LastResult.Type == Variable.VarType.BREAK ||
+                                       LastResult.IsReturn;
 
-            return Completed(m_debugging) || (ProcessingBlock && endGroupRead > 0) ||
-                   LastResult.Type == Variable.VarType.CONTINUE ||
-                   LastResult.IsReturn;
+            return completedSteppingIn;
         }
 
         public static void ProcessException(ParsingScript script, ParsingException exc)
@@ -552,7 +553,9 @@ namespace SplitAndMerge
 
             ProcessingBlock = false;
             done = stepInScript.Pointer >= tempScript.Pointer ||
-                LastResult.IsReturn;
+                   LastResult.IsReturn ||
+                   LastResult.Type == Variable.VarType.BREAK ||
+                   LastResult.Type == Variable.VarType.CONTINUE;
 
             doneEvent(done);
             return LastResult;
