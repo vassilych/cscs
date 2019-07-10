@@ -1,0 +1,86 @@
+include("functions.cscs");
+
+function stepin1(ii) {
+  while (ii > 0) {
+    if (ii < 3) {
+      print("returning from stepin1, ii=", ii);
+      return ii;
+    }
+    ii--;
+  }
+  print("still in stepin1, ii="ii);
+  return 100 + ii;
+}
+// Step in into the function call below:
+res = stepin1(2);
+print("Done calling stepin1");
+Test(res, 2);
+
+i = 0;
+while(i < 4)
+{
+  i++;
+  if (i < 3) {
+    break;
+  }
+  print("Error: In loop!");
+  Test(true, false); // this is to throw an exception
+}
+print("Out of break testing loop.");
+Test(i, 1);
+
+i = 0;
+while(i < 4)
+{
+  i++;
+  if (i < 3) {
+    continue;
+  }
+}
+print("Out of continue loop.");
+Test(i, 4);
+
+b = "bla";
+i = 0;
+while(i < 13)
+{
+  b += (i*4 - 1);
+  i++;
+  Print("  looping i=", i);
+  if ( i == 3) {
+    print("Breaking out of the loop, i=", i);
+    break;
+  } else {
+    Test(i < 3, true);
+    continue;
+  }
+  Print("this is never reached");
+  Test(true, false); // this is to throw an exception
+}
+print("out of loop, b=", b);
+Test(b, "bla-137");
+
+function WhileInWhile(ind) {
+  i = 0;
+  while(i < ind) {
+    i++;
+    j = 0;
+    while(j < i) {
+      j++;
+      if (j == 1) {
+        print("  returning j=",j, ",i=", i);
+        return i;
+      }
+      print("  End of j loop, j=", j);
+      Test(true, false);
+    }
+    print("End of i loop, i=", i)
+    Test(true, false);
+  }
+  print("End of WhileInWhile.");
+  return 100+i;
+}
+// Step in into the function below:
+res = WhileInWhile(6);
+print("Done:", res);
+Test(res, 1);
