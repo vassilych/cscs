@@ -717,6 +717,7 @@ namespace SplitAndMerge
             string funcReturn, funcName;
             Utils.GetCompiledArgs(script, out funcReturn, out funcName);
 
+#if __ANDROID__ == false && __IOS__ == false
             Precompiler.RegisterReturnType(funcName, funcReturn);
 
             Dictionary<string, Variable> argsMap;
@@ -735,11 +736,12 @@ namespace SplitAndMerge
             customFunc.ParentOffset = parentOffset;
 
             ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
-
+#endif
             return new Variable(funcName);
         }
     }
 
+#if __ANDROID__ == false && __IOS__ == false
     class CustomCompiledFunction : CustomFunction
     {
         internal CustomCompiledFunction(string funcName,
@@ -855,4 +857,5 @@ namespace SplitAndMerge
         Precompiler m_precompiler;
         Dictionary<string, Variable> m_argsMap;
     }
+#endif
 }

@@ -51,8 +51,6 @@ namespace SplitAndMerge
         public const string WRITE_CONSOLE = "WriteConsole";
         public const string WRITE = "write";
 
-        public const string JSON_NS = "GetVariableFromJsonNS";
-
         public const string ENGLISH = "en";
         public const string GERMAN = "de";
         public const string RUSSIAN = "ru";

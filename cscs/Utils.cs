@@ -477,7 +477,7 @@ namespace SplitAndMerge
 
         public static Variable GetVariable(string varName, ParsingScript script, bool testNull = true)
         {
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             if (!testNull && func == null)
             {
                 return null;
@@ -487,9 +487,10 @@ namespace SplitAndMerge
             Utils.CheckNotNull(varValue, varName, script);
             return varValue;
         }
+
         public static async Task<Variable> GetVariableAsync(string varName, ParsingScript script, bool testNull = true)
         {
-            ParserFunction func = ParserFunction.GetFunction(varName, script);
+            ParserFunction func = ParserFunction.GetVariable(varName, script);
             if (!testNull && func == null)
             {
                 return null;
