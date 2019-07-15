@@ -191,7 +191,8 @@ namespace SplitAndMerge
             result = result.Replace("\\\"", "\"");
             result = result.Replace("\\'", "'");
 
-            if (string.IsNullOrWhiteSpace(result) && Utils.IsAction(script.Prev) && Utils.IsAction(script.PrevPrev))
+            if (string.IsNullOrWhiteSpace(result) && action != "++" && action != "--" &&
+                Utils.IsAction(script.Prev) && Utils.IsAction(script.PrevPrev))
             {
                 Utils.ThrowErrorMsg("Can't process token [" + script.PrevPrev + script.Prev + script.Current +
                                     "].", script, script.Current.ToString());
