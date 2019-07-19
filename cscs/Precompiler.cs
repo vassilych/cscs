@@ -724,7 +724,17 @@ namespace SplitAndMerge
                 {
                     token = ProcessElIf(token);
                 }
-                result += token;
+                if (token == "new")
+                {
+                    var argsStr = "";
+                    for (int i = id + 1; i < tokens.Count; i++)
+                    {
+                        argsStr += tokens[i].Trim().Replace("\"", "\\\"");
+                    }
+                    string tempFunc = GetCSCSFunction(argsStr, token);
+                    id = tokens.Count - 1;
+                    result = tempFunc + result + " __current;";
+                }
                 return token;
             }
             if (Array.IndexOf(Constants.ACTIONS, token) >= 0)
@@ -865,19 +875,7 @@ namespace SplitAndMerge
                 sb.AppendLine("    __action =\"\";");
             }
 
-            sb.AppendLine("    __argsStr =\"" + argsStr + "\";");
-            sb.AppendLine("    __script = new ParsingScript(__argsStr);");
-            sb.AppendLine("    __func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
-
-            if (AsyncMode)
-            {
-                sb.AppendLine("    __tempVar = await __func.GetValueAsync(__script);");
-                sb.AppendLine("    __current = __tempVar.AsString();");
-            }
-            else
-            {
-                sb.AppendLine("    __current = __func.GetValue(__script).AsString();");
-            }
+            sb.AppendLine(GetCSCSFunction(argsStr,  functionName, ch));
 
             token = sb.ToString();
             if (tokens.Count >= 3 && tokens[1] == "=" && !string.IsNullOrWhiteSpace(result))
@@ -891,6 +889,30 @@ namespace SplitAndMerge
             }
 
             return token;
+        }
+
+        string GetCSCSFunction(string argsStr, string functionName, char ch = '(')
+        {
+            StringBuilder sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(argsStr) && argsStr.Last() == '"' && argsStr.First() == '"')
+            {
+                argsStr = "\\\"" + argsStr.Substring(1, argsStr.Length - 2) + "\\\"";
+            }
+
+            sb.AppendLine("    __argsStr =\"" + argsStr + "\";");
+            sb.AppendLine("    __script = new ParsingScript(__argsStr);");
+            sb.AppendLine("    __func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
+
+            if (AsyncMode)
+            {
+                sb.AppendLine("    __tempVar = await __func.GetValueAsync(__script);");
+                sb.AppendLine("    __current = __tempVar.AsString();");
+            }
+            else
+            {
+                sb.AppendLine("    __current = __func.GetValue(__script).AsString();");
+            }
+            return sb.ToString();
         }
 
         bool ProcessArray(string paramName, string functionName, ref string result)
@@ -911,7 +933,7 @@ namespace SplitAndMerge
         {
             arrayName = paramName;
             arrayArg = "";
-            int paramStart = paramName.IndexOf("[");
+            int paramStart = paramName.IndexOf('[');
             if (paramStart > 0)
             {
                 arrayName = paramName.Substring(0, paramStart);
