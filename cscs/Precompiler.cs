@@ -470,11 +470,13 @@ namespace SplitAndMerge
             }
             if (m_numericExpression && (tokens.Count > 1 && tokens[1] == "="))
             {
+                bool newVarAdded = false;
                 result = m_depth;
                 if (cscsStyle && !m_newVariables.Contains(tokens[0]))
                 {
                     result += "var ";
                     m_newVariables.Add(tokens[0]);
+                    newVarAdded = true;
                 }
 
                 result += statement;
@@ -483,6 +485,11 @@ namespace SplitAndMerge
                     result += ";";
                 }
                 result += "\n";
+
+                if (newVarAdded)
+                {
+                    result += RegisterVariableString(tokens[0]);
+                }
 
                 return result;
             }
