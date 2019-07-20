@@ -295,12 +295,12 @@ namespace SplitAndMerge
 
         public string RegisterVariableString(string paramName, string paramValue = "")
         {
-            if (string.IsNullOrEmpty(paramValue))
+            if (string.IsNullOrWhiteSpace(paramValue))
             {
-                paramValue = "new Variable(" + paramName + ")";
+                paramValue = paramName;
             }
             return m_depth + "ParserFunction.AddGlobalOrLocalVariable(\"" + paramName +
-                             "\", new GetVarFunction(" + paramValue + "));\n";
+                     "\", new GetVarFunction(Variable.ConvertToVariable(" + paramValue + ")));\n";
         }
 
         string ConvertScript(bool cscsStyle = true)

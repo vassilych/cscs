@@ -121,6 +121,23 @@ namespace SplitAndMerge
             return new Variable();
         }
 
+        public static Variable ConvertToVariable(object obj)
+        {
+            if (obj == null)
+            {
+                return Variable.EmptyInstance;
+            }
+            if (obj is Variable)
+            {
+                return (Variable)obj;
+            }
+            if (obj is string)
+            {
+                return new Variable(((string)obj));
+            }
+            return new Variable(obj);
+        }
+
         public void Reset()
         {
             m_value = Double.NaN;
