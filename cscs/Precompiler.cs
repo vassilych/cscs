@@ -297,10 +297,10 @@ namespace SplitAndMerge
         {
             if (string.IsNullOrEmpty(paramValue))
             {
-                paramValue = paramName;
+                paramValue = "new Variable(" + paramName + ")";
             }
             return m_depth + "ParserFunction.AddGlobalOrLocalVariable(\"" + paramName +
-              "\", new GetVarFunction(new Variable(" + paramValue + ")));\n";
+                             "\", new GetVarFunction(" + paramValue + "));\n";
         }
 
         string ConvertScript(bool cscsStyle = true)
@@ -534,7 +534,7 @@ namespace SplitAndMerge
             }
             for (int i = 0; i < statementVars.Count; i++)
             {
-                result += RegisterVariableString(statementVars[i]);
+                result += RegisterVariableString(statementVars[i], statementVars[i]);
             }
 
             return result;
@@ -645,7 +645,7 @@ namespace SplitAndMerge
             string varName = GetFunctionName(exceptionVar.Substring(1), ref suffix, ref isArray);
 
             string result = "catch(Exception " + varName + ") {\n";
-            result += RegisterVariableString(varName, varName + ".ToString()");
+            result += RegisterVariableString(varName, "new Variable(" + varName + ".ToString())");
             m_statementId++;
             return result;
         }
@@ -730,7 +730,7 @@ namespace SplitAndMerge
                     }
                     string tempFunc = GetCSCSFunction(argsStr, token);
                     id = tokens.Count - 1;
-                    result = tempFunc + result + " __current;";
+                    result = tempFunc + result + " __tempVar;";
                 }
                 else
                 {
@@ -907,12 +907,12 @@ namespace SplitAndMerge
             if (AsyncMode)
             {
                 sb.AppendLine("    __tempVar = await __func.GetValueAsync(__script);");
-                sb.AppendLine("    __current = __tempVar.AsString();");
             }
             else
             {
-                sb.AppendLine("    __current = __func.GetValue(__script).AsString();");
+                sb.AppendLine("    __tempVar = __func.GetValue(__script);");
             }
+            sb.AppendLine("    __current = __tempVar.AsString();");
             return sb.ToString();
         }
 

@@ -1,3 +1,33 @@
+startDebugger();
+while(true) { sleep(1000000); };
+
+cycles = 1000; i = 0;
+start = pstime();
+while ( i++ < cycles) {
+    str = " la la ";
+    str = StrTrim(str);
+    str = StrReplace(str, "la", "lu");
+    if (str != "lu lu") {    
+      throw "Wrong result: [" + str + "] instead of [lu lu]";
+    }
+}
+end = pstime();
+print("Total CPU time of", cycles, "loops:", end-start, "ms.");
+
+c = {"aa", "bb", "xxx"};
+for (i=0; i < c.size; i++) {
+  print(i, c[i]);
+}
+
+n = 10;
+print(n.type);
+print(n.size);
+print(n.properties);
+props=n.properties;
+for (i=0; i < props.size; i++) {
+  print(i, props[i]);
+}
+
 class Stuff1 {
   x = 2;
   Stuff1(a) {
@@ -43,8 +73,7 @@ print("y=", obj2.y, " addStuff2=", obj2.addStuff2(addition));
 newObj = new CoolStuff(11, 13, 17);
 print("х=", newObj.x, " y=", newObj.y, " z=", newObj.z, " addCoolStuff=", newObj.addCoolStuff());
 print("newObj.addStuff1=", newObj.addStuff1(addition), " newObj.addStuff2=", newObj.addStuff2(addition));
-
-/*      
+/*
 myText = CreateText( "khm" );
 myText.visible = true;
 myText.name = "kiborg";
