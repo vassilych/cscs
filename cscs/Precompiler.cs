@@ -357,13 +357,11 @@ namespace SplitAndMerge
                            " List<Variable> __varVar) {\n");
             m_depth = "      ";
 
-            m_converted.AppendLine("     string __current = \"\";");
             m_converted.AppendLine("     string __argsStr = \"\";");
             m_converted.AppendLine("     string __action = \"\";");
             m_converted.AppendLine("     ParsingScript __script = null;");
             m_converted.AppendLine("     ParserFunction __func = null;");
             m_converted.AppendLine("     Variable __tempVar = null;");
-            m_newVariables.Add("__current");
             m_newVariables.Add("__argsStr");
             m_newVariables.Add("__action");
             m_newVariables.Add("__script");
@@ -565,8 +563,18 @@ namespace SplitAndMerge
                 bool newVarAdded = false;
                 m_tokenId = 2;
                 string result = "";
-                string token = cscsStyle ? ProcessToken(tokens, ref m_tokenId, ref result, ref newVarAdded) : tokens[m_tokenId];
-                converted += CreateReturnStatement(token);
+
+                string token = cscsStyle ? "__tempVar" : tokens[m_tokenId];
+                if (cscsStyle)
+                {
+                    ProcessToken(tokens, ref m_tokenId, ref result, ref newVarAdded);
+                    if (!result.Contains(";"))
+                    {
+                        token = result;
+                        result = "";
+                    }
+                }
+                converted += result + CreateReturnStatement(token);
                 return true;
             }
 
@@ -580,7 +588,10 @@ namespace SplitAndMerge
 
         string CreateReturnStatement(string toReturn)
         {
-            string result = "";
+            if (toReturn.Contains("__tempVar"))
+            {
+                return m_depth + "return __tempVar;\n";
+            }
             if (!toReturn.Contains("Variable.EmptyInstance"))
             {
                 toReturn = "new Variable(" + toReturn + ")";
@@ -590,8 +601,8 @@ namespace SplitAndMerge
                 return m_depth + "return " + toReturn + ";\n"; 
             }
 
-            result += " __tempVar = " + toReturn + ";\n";
-            result += "  return __tempVar;\n";
+            string result = " __tempVar = " + toReturn + ";\n";
+            result       += "  return __tempVar;\n";
             //result += "  return Task.FromResult(__tempVar);\n";
             return result;
         }
@@ -881,7 +892,7 @@ namespace SplitAndMerge
             token = sb.ToString();
             if (tokens.Count >= 3 && tokens[1] == "=" && !string.IsNullOrWhiteSpace(result))
             {
-                result = token + result + " __current;\n";
+                result = token + result + " __tempVar;\n";
                 newVarAdded = true;
             }
             else
@@ -900,19 +911,18 @@ namespace SplitAndMerge
                 argsStr = "\\\"" + argsStr.Substring(1, argsStr.Length - 2) + "\\\"";
             }
 
-            sb.AppendLine("    __argsStr =\"" + argsStr + "\";");
-            sb.AppendLine("    __script = new ParsingScript(__argsStr);");
-            sb.AppendLine("    __func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
+            sb.AppendLine(m_depth + "    __argsStr =\"" + argsStr + "\";");
+            sb.AppendLine(m_depth + "    __script = new ParsingScript(__argsStr);");
+            sb.AppendLine(m_depth + "    __func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
 
             if (AsyncMode)
             {
-                sb.AppendLine("    __tempVar = await __func.GetValueAsync(__script);");
+                sb.AppendLine(m_depth + "    __tempVar = await __func.GetValueAsync(__script);");
             }
             else
             {
-                sb.AppendLine("    __tempVar = __func.GetValue(__script);");
+                sb.AppendLine(m_depth + "    __tempVar = __func.GetValue(__script);");
             }
-            sb.AppendLine("    __current = __tempVar.AsString();");
             return sb.ToString();
         }
 
@@ -923,7 +933,7 @@ namespace SplitAndMerge
             {
                 return false;
             }
-            if (functionName == "size")
+            if (functionName.ToLower() == "size")
             {
                 result = mappingName + ".Count";
                 return true;
