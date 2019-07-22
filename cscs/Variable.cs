@@ -131,11 +131,20 @@ namespace SplitAndMerge
             {
                 return (Variable)obj;
             }
-            if (obj is string)
+            if (obj is string || obj is char)
             {
-                return new Variable(((string)obj));
+                return new Variable(Convert.ToString(obj));
+            }
+            if (obj is double || obj is float || obj is int || obj is long)
+            {
+                return new Variable(Convert.ToDouble(obj));
+            }
+            if (obj is bool)
+            {
+                return new Variable(((bool)obj));
             }
             return new Variable(obj);
+
         }
 
         public void Reset()

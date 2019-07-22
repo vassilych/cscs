@@ -468,30 +468,22 @@ namespace SplitAndMerge
             }
             if (m_numericExpression && (tokens.Count > 1 && tokens[1] == "="))
             {
-                bool newVarAdded = false;
                 result = m_depth;
                 if (cscsStyle && !m_newVariables.Contains(tokens[0]))
                 {
                     result += "var ";
                     m_newVariables.Add(tokens[0]);
-                    newVarAdded = true;
                 }
 
                 result += statement;
                 if (nextStatement == ";" || !"(){}[]".Contains(statement.Last()))
                 {
-                    result += ";";
+                    result += ";\n";
                 }
-                result += "\n";
-
-                if (newVarAdded)
-                {
-                    result += RegisterVariableString(tokens[0]);
-                }
+                result += RegisterVariableString(tokens[0]);
 
                 return result;
-            }
-            m_tokenId = 0;
+            }            m_tokenId = 0;
             while (m_tokenId < tokens.Count)
             {
                 bool newVarAdded = false;
@@ -542,7 +534,9 @@ namespace SplitAndMerge
                                     ref string converted)
         {
             string suffix = "";
+            string defaultReturn = "__tempVar";
             bool isArray = false;
+
             string paramName = tokens.Count > 0 ? GetFunctionName(tokens[0], ref suffix, ref isArray).Trim() : "";
             if (paramName != Constants.RETURN)
             {
@@ -564,7 +558,7 @@ namespace SplitAndMerge
                 m_tokenId = 2;
                 string result = "";
 
-                string token = cscsStyle ? "__tempVar" : tokens[m_tokenId];
+                string token = cscsStyle ? defaultReturn : tokens[m_tokenId];
                 if (cscsStyle)
                 {
                     ProcessToken(tokens, ref m_tokenId, ref result, ref newVarAdded);
@@ -581,14 +575,22 @@ namespace SplitAndMerge
             string remaining = string.Join("", tokens.GetRange(2, tokens.Count - 2));
             string returnToken = ProcessStatement(remaining, "", false);
 
-            converted = CreateReturnStatement(returnToken);
+            if (!returnToken.Contains(";"))
+            {
+                converted = CreateReturnStatement(returnToken);
+            }
+            else
+            {
+                converted = returnToken;
+                converted += CreateReturnStatement(defaultReturn);
+            }
 
             return true;
         }
 
         string CreateReturnStatement(string toReturn)
         {
-            if (toReturn.Contains("__tempVar"))
+            if (toReturn == "__tempVar")
             {
                 return m_depth + "return __tempVar;\n";
             }
