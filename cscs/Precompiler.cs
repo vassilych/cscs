@@ -23,7 +23,6 @@ namespace SplitAndMerge
         string m_functionName;
         string m_originalCode;
         string m_cscsCode;
-        string m_csCode;
         string[] m_defArgs;
         StringBuilder m_converted = new StringBuilder();
         Dictionary<string, Variable> m_argsMap;
@@ -44,6 +43,7 @@ namespace SplitAndMerge
         bool m_lastStatementReturn;
 
         ParsingScript m_parentScript;
+        public string CSCode { get; private set; }
 
         Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> m_compiledFunc;
@@ -112,16 +112,16 @@ namespace SplitAndMerge
 
             var provider = new CSharpCodeProvider();
 
-            /*m_csCode = ConvertScript(false);
-            var compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
+            /*CSCode = ConvertScript(false);
+            var compile = provider.CompileAssemblyFromSource(CompilerParams, CSCode);
             if (compile.Errors.HasErrors)
             {
-                m_csCode = ConvertScript();
-                compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
+                CSCode = ConvertScript();
+                compile = provider.CompileAssemblyFromSource(CompilerParams, CSCode);
             }*/
 
-            m_csCode = ConvertScript();
-            var compile = provider.CompileAssemblyFromSource(CompilerParams, m_csCode);
+            CSCode = ConvertScript();
+            var compile = provider.CompileAssemblyFromSource(CompilerParams, CSCode);
             if (compile.Errors.HasErrors)
             {
                 string text = "Compile error: ";
@@ -418,7 +418,7 @@ namespace SplitAndMerge
                 m_converted.AppendLine(CreateReturnStatement("Variable.EmptyInstance"));
             }
 
-            m_converted.AppendLine("\n    }\n  }\n}");
+            m_converted.AppendLine("\n    }\n    }\n}");
             return m_converted.ToString();
         }
 
@@ -448,7 +448,7 @@ namespace SplitAndMerge
             List<string> tokens = TokenizeStatement(statement);
             List<string> statementVars = new List<string>();
 
-            string result = "";
+            string result = m_depth;
             m_lastStatementReturn = ProcessReturnStatement(tokens, cscsStyle, ref result);
             if (m_lastStatementReturn)
             {
@@ -639,8 +639,8 @@ namespace SplitAndMerge
                 return m_depth + "return " + toReturn + ";\n"; 
             }
 
-            string result = " __tempVar = " + toReturn + ";\n";
-            result       += "  return __tempVar;\n";
+            string result = m_depth + "__tempVar = " + toReturn + ";\n";
+            result       += m_depth + "return __tempVar;\n";
             //result += "  return Task.FromResult(__tempVar);\n";
             return result;
         }
@@ -876,6 +876,9 @@ namespace SplitAndMerge
             int paramStart = token.IndexOf(Constants.START_ARG) + 1;
             string result = "";
             string rest = token.Substring(paramStart).Trim();
+
+            var funcName = token.Substring(0, paramStart);
+            funcName = funcName[0].ToString().ToUpperInvariant() + funcName.Substring(1).ToLower();
             if (rest.EndsWith(";"))
             {
                 rest = rest.Substring(0, rest.Length - 1);
@@ -892,7 +895,7 @@ namespace SplitAndMerge
             }
             if (paramStart > 0)
             {
-                result = token.Substring(0, paramStart) + result;
+                result = funcName + result;
             }
             return result;
         }
@@ -942,13 +945,13 @@ namespace SplitAndMerge
             {
                 //functionName = "SetProperty";
                 argsStr = tokens[id + 2];
-                sb.AppendLine("    __action =\"=\";");
+                sb.AppendLine(m_depth + "__action =\"=\";");
                 ch = '=';
                 id = tokens.Count;
             }
             else
             {
-                sb.AppendLine("    __action =\"\";");
+                sb.AppendLine(m_depth + "__action =\"\";");
             }
 
             sb.AppendLine(GetCSCSFunction(argsStr,  functionName, ch));
@@ -956,7 +959,7 @@ namespace SplitAndMerge
             token = sb.ToString();
             if (tokens.Count >= 3 && tokens[1] == "=" && !string.IsNullOrWhiteSpace(result))
             {
-                result = token + result + " __tempVar;\n";
+                result = m_depth + token + result + " __tempVar;\n";
                 newVarAdded = true;
             }
             else
@@ -975,17 +978,17 @@ namespace SplitAndMerge
                 argsStr = "\\\"" + argsStr.Substring(1, argsStr.Length - 2) + "\\\"";
             }
 
-            sb.AppendLine(m_depth + "    __argsStr =\"" + argsStr + "\";");
-            sb.AppendLine(m_depth + "    __script = new ParsingScript(__argsStr);");
-            sb.AppendLine(m_depth + "    __func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
+            sb.AppendLine(m_depth + "__argsStr =\"" + argsStr + "\";");
+            sb.AppendLine(m_depth + "__script = new ParsingScript(__argsStr);");
+            sb.AppendLine(m_depth + "__func = new ParserFunction(__script, \"" + functionName + "\", '" + ch + "', ref __action);");
 
             if (AsyncMode)
             {
-                sb.AppendLine(m_depth + "    __tempVar = await __func.GetValueAsync(__script);");
+                sb.AppendLine(m_depth + "__tempVar = await __func.GetValueAsync(__script);");
             }
             else
             {
-                sb.AppendLine(m_depth + "    __tempVar = __func.GetValue(__script);");
+                sb.AppendLine(m_depth + "__tempVar = __func.GetValue(__script);");
             }
             return sb.ToString();
         }
@@ -1191,6 +1194,8 @@ namespace SplitAndMerge
 
         public static bool IsMathFunction(string name)
         {
+            name = name[0].ToString().ToUpperInvariant() + name.Substring(1).ToLower();
+
             Type mathType = typeof(System.Math);
             try
             {

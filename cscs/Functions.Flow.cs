@@ -114,6 +114,12 @@ namespace SplitAndMerge
             CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
             Utils.CheckNotNull(functionName, custFunc, script);
 
+            CustomCompiledFunction comp = custFunc as CustomCompiledFunction;
+            if (comp != null)
+            {
+                return new Variable(comp.Precompiler.CSCode);
+            }
+
             string body = Utils.BeautifyScript(custFunc.Body, custFunc.Header);
             Utils.PrintScript(body, script);
 

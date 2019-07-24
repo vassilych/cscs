@@ -856,6 +856,8 @@ namespace SplitAndMerge
 
         Precompiler m_precompiler;
         Dictionary<string, Variable> m_argsMap;
+
+        public Precompiler Precompiler { get { return m_precompiler; } }
     }
 #endif
 }
