@@ -264,6 +264,38 @@ namespace SplitAndMerge
             return m_tuple.Count - 1;
         }
 
+        public int RemoveItem(string item)
+        {
+            string lower = item.ToLower();
+            if (m_dictionary.Count > 0)
+            {
+                int index = 0;
+                if (!m_dictionary.TryGetValue(lower, out index))
+                {
+                    return 0;
+                }
+
+                m_tuple.RemoveAt(index);
+                m_keyMappings.Remove(lower);
+                m_dictionary.Remove(lower);
+
+                // "Rehash" the dictionary so that it points correctly to the indices after removed.
+                foreach (var key in m_dictionary.Keys.ToList())
+                {
+                    int value = m_dictionary[key];
+                    if (value > index)
+                    {
+                        m_dictionary[key] = value - 1;
+                    }
+                }
+
+                return 1;
+            }
+
+            int removed = m_tuple.RemoveAll(p => p.AsString() == item);
+            return removed;
+        }
+
         public int GetArrayIndex(Variable indexVar)
         {
             if (this.Type != VarType.ARRAY)
@@ -931,10 +963,20 @@ namespace SplitAndMerge
             {
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
+
                 Variable var = Utils.GetSafeVariable(args, 0);
+                int index    = Utils.GetSafeInt(args, 1, -1);
+
                 if (Tuple != null)
                 {
-                    Tuple.Add(var);
+                    if (index >= 0)
+                    {
+                        Tuple.Insert(index, var);
+                    }
+                    else
+                    {
+                        Tuple.Add(var);
+                    }
                 }
                 else if (Type == VarType.NUMBER)
                 {
@@ -945,6 +987,30 @@ namespace SplitAndMerge
                     String += var.AsString();
                 }
                 return var;
+            }
+            else if (script != null && propName.Equals(Constants.REMOVE_AT, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                int index = Utils.GetSafeInt(args, 0);
+
+                int removed = 0;
+                if (m_dictionary.Count == 0 && m_tuple != null && m_tuple.Count > index && index >= 0)
+                {
+                    m_tuple.RemoveAt(index);
+                    removed = 1;
+                }
+
+                return new Variable(removed);
+            }
+            else if (script != null && propName.Equals(Constants.REMOVE_ITEM, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+                string oldVal = Utils.GetSafeString(args, 0);
+
+                int removed = RemoveItem(oldVal);
+                return new Variable(removed);
             }
             else if (script != null && propName.Equals(Constants.AT, StringComparison.OrdinalIgnoreCase))
             {

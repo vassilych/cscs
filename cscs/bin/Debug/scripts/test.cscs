@@ -257,6 +257,28 @@ Print(x["blabla"]["blablu"]++);
 Print(x["blabla"]["blablu"]++);
 Print(x["blabla"]["blablu"]++);
 
+rem["param1"] = 1;
+rem["param2"] = 2;
+Test(rem.size, 2);
+rem.remove("param1");
+Test(rem.size, 1);
+Test(rem["param2"], 2);
+rem.remove("param2");
+Test(rem.size, 0);
+
+rem = { "item1", "item1", "item2", "item2"};
+rem.Add("item0", 0);
+Test(rem[0], "item0");
+Test(rem.size, 5);
+rem.remove("item1");
+rem.remove("item0");
+Test(rem.size, 2);
+Test(rem[0], "item2");
+rem.removeAt(0);
+Test(rem.size, 1);
+rem.removeAt(0);
+Test(rem.size, 0);
+
 x = 20 * sin(pow(pi,2));
 cache["if"] = -10 * x;
 cache["else"] = 10 * x;

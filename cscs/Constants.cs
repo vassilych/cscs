@@ -163,6 +163,7 @@ namespace SplitAndMerge
         public const string KEYS          = "Keys";
         public const string LAST          = "Last";
         public const string LOWER         = "Lower";
+        public const string REMOVE_ITEM   = "Remove";
         public const string REPLACE       = "Replace";
         public const string REPLACE_TRIM  = "ReplaceAndTrim";
         public const string REVERSE       = "Reverse";

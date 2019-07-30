@@ -114,11 +114,13 @@ namespace SplitAndMerge
             CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
             Utils.CheckNotNull(functionName, custFunc, script);
 
+#if __ANDROID__ == false && __IOS__ == false
             CustomCompiledFunction comp = custFunc as CustomCompiledFunction;
             if (comp != null)
             {
                 return new Variable(comp.Precompiler.CSCode);
             }
+#endif
 
             string body = Utils.BeautifyScript(custFunc.Body, custFunc.Header);
             Utils.PrintScript(body, script);
@@ -399,8 +401,7 @@ namespace SplitAndMerge
             string varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
             varName = Constants.ConvertName(varName);
 
-            bool result = ParserFunction.GetVariable(varName, script) != null ||
-                          ParserFunction.GetFunction(varName, script) != null;
+            bool result = ParserFunction.GetVariable(varName, script) != null;
             return new Variable(result);
         }
     }
