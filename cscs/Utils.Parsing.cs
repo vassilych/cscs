@@ -1204,7 +1204,8 @@ namespace SplitAndMerge
         }
 
         public static Variable ExtractArrayElement(Variable array,
-                                                   List<Variable> indices)
+                                                   List<Variable> indices,
+                                                   ParsingScript script)
         {
             Variable currLevel = array;
 
@@ -1216,8 +1217,8 @@ namespace SplitAndMerge
                 int tupleSize = currLevel.Tuple != null ? currLevel.Tuple.Count : 0;
                 if (arrayIndex < 0 || arrayIndex >= tupleSize)
                 {
-                    throw new ArgumentException("Unknown index [" + index.AsString() +
-                                       "] for tuple of size " + tupleSize);
+                    ThrowErrorMsg("Unknown index [" + index.AsString() +
+                                  "] for tuple of size " + tupleSize, script, index.AsString());
                 }
                 currLevel = currLevel.Tuple[arrayIndex];
             }
