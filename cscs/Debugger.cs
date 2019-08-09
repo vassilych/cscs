@@ -360,6 +360,7 @@ namespace SplitAndMerge
 
             Variable result = null;
             bool excThrown = false;
+            string stringRes = "";
 
             try
             {
@@ -377,10 +378,15 @@ namespace SplitAndMerge
                 {
                     return "";
                 }
+
+                stringRes = string.IsNullOrEmpty(Output) ? "" : Output + (Output.EndsWith("\n") ? "" : "\n");
+
+                stringRes += result == null ? "" : result.AsString();
+                stringRes += (stringRes.EndsWith("\n") ? "" : "\n");
             }
             catch (Exception exc)
             {
-                Console.WriteLine("ProcessRepl Exception: " + exc); 
+                Console.WriteLine("ProcessRepl Exception: " + exc);
                 return ""; // The exception was already thrown and sent back.
             }
             finally
@@ -388,10 +394,6 @@ namespace SplitAndMerge
                 ReplMode = false;
             }
 
-            string stringRes = string.IsNullOrEmpty(Output) ? "" : Output + (Output.EndsWith("\n") ? "" : "\n");
-            
-            stringRes += result == null ? "" : result.AsString();
-            stringRes += (stringRes.EndsWith("\n") ? "" : "\n");
 
             return stringRes;
         }

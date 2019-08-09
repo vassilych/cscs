@@ -1884,7 +1884,7 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             Variable varValue = Utils.GetItem(script);
-            return varValue.DeepClone(); ;
+            return varValue.DeepClone();
         }
     }
 
