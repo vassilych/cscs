@@ -88,7 +88,7 @@ x++;
 
 if (x < 10) {
   for (i = 1; i < 3; i++) {
-    print("if-for, x=", i);
+    print("if-for, i=", i);
   }
 } else {
   print("This never happens!");
@@ -113,6 +113,15 @@ while (x < 7) {
     Test(True, False);
   }
   x++;
+}
+
+for (i = 0; i < 1; i++) {
+  if (x < 11) {
+    print("for-if, x=", x);
+  } else {
+    print("This never happens!");
+    Test(True, False);
+  }
 }
 
 while (x < 9) {

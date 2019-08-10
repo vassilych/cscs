@@ -20,6 +20,8 @@ namespace SplitAndMerge
         static string m_startFilename;
         static int m_startLine;
         static bool m_firstBlock;
+        static int m_blockLevel;
+        static int m_maxBlockLevel;
 
         public static bool CheckBreakpointsNeeded { get; private set; }
         public static bool Continue { get; private set; }
@@ -29,9 +31,6 @@ namespace SplitAndMerge
         public static bool ProcessingClientRequest { get; private set; }
         public static Breakpoints TheBreakpoints
         { get { return (MainInstance == null ? Breakpoints.Instance : MainInstance.m_breakpoints); } }
-
-        static int m_blockLevel;
-        static int m_maxBlockLevel;
 
         public bool InInclude { get; private set; }
         public int Id { get; private set; }
@@ -161,6 +160,11 @@ namespace SplitAndMerge
                 m_debugging.MainFilename = m_debugging.Filename;
                 m_debugging.OriginalScript = rawScript;
                 m_debugging.Debugger = this;
+
+                m_steppingIns.Clear();
+                m_completedStepIn.Reset();
+                ProcessingBlock = SendBackResult = InInclude = End =  false;      
+                m_blockLevel = m_maxBlockLevel = 0;
             }
             else if (action == DebuggerUtils.DebugAction.VARS)
             {
@@ -562,7 +566,6 @@ namespace SplitAndMerge
 
             await StepIn(stepInScript);
 
-            ProcessingBlock = false;
             done = stepInScript.Pointer >= tempScript.Pointer ||
                    LastResult == null ||
                    LastResult.IsReturn ||
@@ -571,6 +574,8 @@ namespace SplitAndMerge
 
             m_blockLevel--;
             m_maxBlockLevel = m_blockLevel == 0 ? m_blockLevel : m_maxBlockLevel;
+
+            ProcessingBlock = m_blockLevel > 0;
 
             doneEvent(done);
             return LastResult == null ? Variable.EmptyInstance : LastResult;
@@ -664,7 +669,7 @@ namespace SplitAndMerge
         {
             return m_maxBlockLevel > 1 && debugger.m_debugging.StillValid() &&
                    Constants.CORE_OPERATORS.Contains(debugger.LastResult.ParsingToken) &&
-                   (debugger.m_debugging.Current == Constants.END_GROUP ||
+                   (debugger.m_debugging.PrevPrev == Constants.END_GROUP ||
                     debugger.m_debugging.Prev == Constants.END_GROUP);
         }
 
