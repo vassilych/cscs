@@ -30,6 +30,9 @@ namespace SplitAndMerge
         public static Breakpoints TheBreakpoints
         { get { return (MainInstance == null ? Breakpoints.Instance : MainInstance.m_breakpoints); } }
 
+        static int m_blockLevel;
+        static int m_maxBlockLevel;
+
         public bool InInclude { get; private set; }
         public int Id { get; private set; }
         public bool ProcessingBlock { get; set; }
@@ -301,7 +304,6 @@ namespace SplitAndMerge
 
         public void SendBack(string str, bool sendLength = true)
         {
-            //Trace("SEND_BACK");
             OnResult?.Invoke(str, sendLength);
 
             Output = "";
@@ -456,6 +458,10 @@ namespace SplitAndMerge
             }
             catch (ParsingException exc)
             {
+                if (m_debugging.InTryBlock)
+                {
+                    throw exc;
+                }
                 ProcessException(m_debugging, exc);
                 return true;
             }
@@ -551,17 +557,25 @@ namespace SplitAndMerge
             tempScript.InTryBlock = stepInScript.InTryBlock;
             /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
 
+            m_blockLevel++;
+            m_maxBlockLevel = Math.Max(m_maxBlockLevel, m_blockLevel);
+
             await StepIn(stepInScript);
 
             ProcessingBlock = false;
             done = stepInScript.Pointer >= tempScript.Pointer ||
+                   LastResult == null ||
                    LastResult.IsReturn ||
                    LastResult.Type == Variable.VarType.BREAK ||
                    LastResult.Type == Variable.VarType.CONTINUE;
 
+            m_blockLevel--;
+            m_maxBlockLevel = m_blockLevel == 0 ? m_blockLevel : m_maxBlockLevel;
+
             doneEvent(done);
-            return LastResult;
+            return LastResult == null ? Variable.EmptyInstance : LastResult;
         }
+
         public async Task<Variable> StepInFunctionIfNeeded(ParsingScript stepInScript)
         {
             stepInScript.Debugger = this;
@@ -646,6 +660,14 @@ namespace SplitAndMerge
             Output += output;
         }
 
+        static bool UnwindTheStack(Debugger debugger)
+        {
+            return m_maxBlockLevel > 1 && debugger.m_debugging.StillValid() &&
+                   Constants.CORE_OPERATORS.Contains(debugger.LastResult.ParsingToken) &&
+                   (debugger.m_debugging.Current == Constants.END_GROUP ||
+                    debugger.m_debugging.Prev == Constants.END_GROUP);
+        }
+
         async Task StepIn(ParsingScript stepInScript, bool aBreakpoint = false)
         {
             Debugger stepIn = new Debugger();
@@ -654,47 +676,47 @@ namespace SplitAndMerge
             stepIn.ProcessingBlock = ProcessingBlock;
             stepInScript.Debugger = stepIn;
 
-            if (MainInstance != null)
+            MainInstance?.m_steppingIns.Push(stepIn);
+
+            try
             {
-                MainInstance.m_steppingIns.Push(stepIn);
+                CreateResultAndSendBack("next", Output, stepInScript);
+
+                bool done = false;
+                while (!done)
+                {
+                    stepIn.m_completedStepIn.WaitOne();
+
+                    //stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
+                    if (Debugger.SteppingOut || aBreakpoint)
+                    {
+                        break;
+                    }
+                    done = await stepIn.ExecuteNextStatement();
+
+                    if (stepIn.LastResult == null)
+                    {
+                        continue;
+                    }
+
+                    LastResult = stepIn.LastResult;
+                    if (UnwindTheStack(this))
+                    {
+                        break;
+                    }
+
+                    if (!done)
+                    {
+                        //stepIn.Trace("Completed one StepIn, this: " + Id);
+                        CreateResultAndSendBack("next", Output, stepInScript);
+                    }
+                }
             }
-
-            //stepIn.Trace("Started StepIn, this: " + Id);
-            CreateResultAndSendBack("next", Output, stepInScript);
-
-            bool done = false;
-            while (!done)
+            finally
             {
-                stepIn.m_completedStepIn.WaitOne();
-
-                //stepIn.Trace("StepIn WakedUp. SteppingOut:" + SteppingOut + ", this: " + Id);
-                if (Debugger.SteppingOut || aBreakpoint)
-                {
-                    break;
-                }
-                done = await stepIn.ExecuteNextStatement();
-
-                if (stepIn.LastResult == null)
-                {
-                    continue;
-                }
-
-                LastResult = stepIn.LastResult;
-
-                if (!done)
-                {
-                    //stepIn.Trace("Completed one StepIn, this: " + Id);
-                    CreateResultAndSendBack("next", Output, stepInScript);
-                }
+                MainInstance?.m_steppingIns.Pop();
+                ProcessingClientRequest = aBreakpoint;
             }
-
-            if (MainInstance != null)
-            {
-                MainInstance.m_steppingIns.Pop();
-            }
-            
-            //stepIn.Trace("Finished StepIn, this: " + Id);
-            ProcessingClientRequest = aBreakpoint;
         }
 
         async Task<string> DebugScript()

@@ -188,6 +188,8 @@ namespace SplitAndMerge
         // Actions: always decreasing by the number of characters.
         public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
 
+        public static string[] CORE_OPERATORS = (new List<string> { IF, TRY, FOR, WHILE }).ToArray();
+
         public static char[] TERNARY_SEPARATOR = { ':' };
         public static char[] NEXT_ARG_ARRAY = NEXT_ARG.ToString().ToCharArray();
         public static char[] END_ARG_ARRAY = END_ARG.ToString().ToCharArray();

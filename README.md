@@ -228,10 +228,10 @@ CSCS Math Functions
 | **Cos** (*value*)                   | Cosine function.   
 | **Exp** (*value*)                   | Returns the constant e (2.718281828...) to the power of the specified value.   
 | **Floor** (*value*)                 | Returns the largest integral value less than or equal to the specified decimal value.
-| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a random variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a random number between 0 and limit. If limit >= numberOfRandoms, each number will be present at most once.|
+| **GetRandom** (*limit, numberOfRandoms=1*)        | If numberOfRandoms = 1, returns a pseudorandom variable between 0 and limit. Otherwise returns a list of numberOfRandoms integers, where each element is a pseudorandom number between 0 and limit. If limit >= numberOfRandoms, each number will be present at most once.|
 | **Log** (*base, power*)             | Returns the natural logarithm of a specified number.
 | **Pi**                              | Returns the constant pi (3.14159265358979...)
-| **Pow** (*base, power*)             | Returns base to the specified power.
+| **Pow** (*base, power*)             | Raises the base to the specified power.
 | **Round** (*number, digits=0*)      | Rounds a number according to the specified number of digits.
 | **Sin** (*value*)                   | Sine function.   
 | **Sqrt** (*number*)                 | Returns the squared root of the specified number.
@@ -243,7 +243,7 @@ CSCS Variable and Array Functions
 
 | **CSCS Function**                  | **Description**                                     |
 | :------------------------------------------- |:------------------------------------------------|
-| **Add**(*variable, value, index = -1*)  | Appends value to the current variable array. If index is greater or equal to zero, inserts it at the index.|
+| **Add** (*variable, value, index = -1*)  | Appends value to the current variable array. If index is greater or equal to zero, inserts it at the index.|
 | **AddVariableToHash** (*variable, value, hashKey*)                    | Appends a value to the list of values of a given hash key.|
 | **AddAllToHash** (*variable, values, startFrom, hashKey, sep = "\t"*)  | Adds all of the values in values list to the hash map variable. E.g. AddAllToHash("categories", lines, startWords, "all");  |
 | **Contains** (*variable, value*)    | Checks if the current variable contains another variable. Makes sense only if curent variable is an array.|
