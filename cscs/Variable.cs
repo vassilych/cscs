@@ -112,6 +112,12 @@ namespace SplitAndMerge
                 }
 
                 newVar.Tuple = newTuple;
+
+                newVar.m_dictionary = new Dictionary<string, int>(m_dictionary);
+                newVar.m_keyMappings = new Dictionary<string, string>(m_keyMappings);
+                newVar.m_propertyStringMap = new Dictionary<string, string>(m_propertyStringMap);
+                newVar.m_propertyMap = new Dictionary<string, Variable>(m_propertyMap);
+                newVar.m_enumMap = m_enumMap == null ? null : new Dictionary<int, string>(m_enumMap);
             }
             return newVar;
         }
@@ -526,7 +532,7 @@ namespace SplitAndMerge
                 count = maxCount < 0 ? m_dictionary.Count : Math.Min(maxCount, m_dictionary.Count);
                 foreach (KeyValuePair<string, int> entry in m_dictionary)
                 {
-                    if (entry.Value >= 0 || entry.Value < m_tuple.Count)
+                    if (entry.Value >= 0 && entry.Value < m_tuple.Count)
                     {
                         string value = m_tuple[entry.Value].AsString(isList, sameLine, maxCount);
                         string realKey = entry.Key;
@@ -541,6 +547,10 @@ namespace SplitAndMerge
                         {
                             break;
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Error condition: dictionary value {0} out of bounds {1}", entry.Value, m_tuple.Count);
                     }
                 }
             }
@@ -1012,6 +1022,11 @@ namespace SplitAndMerge
                 int removed = RemoveItem(oldVal);
                 return new Variable(removed);
             }
+            else if (script != null && propName.Equals(Constants.DEEP_COPY, StringComparison.OrdinalIgnoreCase))
+            {
+                script.GetFunctionArgs();
+                return DeepClone();
+            }
             else if (script != null && propName.Equals(Constants.AT, StringComparison.OrdinalIgnoreCase))
             {
                 List<Variable> args = script.GetFunctionArgs();
@@ -1323,6 +1338,8 @@ namespace SplitAndMerge
 
         Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
         Dictionary<int, string> m_enumMap;
+
+        //Dictionary<string, Func<ParsingScript, Variable, string, Variable>> m_properties = new Dictionary<string, Func<ParsingScript, Variable, string, Variable>>();
     }
 
     // A Variable supporting "dot-notation" must have an object implementing this interface.
