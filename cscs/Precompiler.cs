@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.IO;
 using Microsoft.CSharp;
 using System.Reflection;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Linq;
@@ -818,21 +816,11 @@ namespace SplitAndMerge
             if (!suffix.Contains('.') && m_argsMap.TryGetValue(functionName, out _))
             {
                 string actualName = m_paramMap[functionName];
-                token = " " + actualName + suffix;
+                token = " " + actualName + ReplaceArgsInString(suffix);
                 result += token;
                 return;
             }
             ProcessFunction(tokens, ref id, ref result, ref newVarAdded);
-        }
-
-        string ReplaceArgsInTokens(List<string> tokens)
-        {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < tokens.Count; i++)
-            {
-                sb.Append(ResolveToken(tokens[i]));
-            }
-            return sb.ToString();
         }
 
         string ResolveToken(string token)
@@ -869,8 +857,8 @@ namespace SplitAndMerge
 
         static bool IsTokenSeparator(char ch)
         {
-            return (ch == ',' || ch == '+' || ch == '-' || ch == '(' || ch == ')' || ch == '%' ||
-                    ch == '*' || ch == '/' || ch == '&' || ch == '|' || ch == '^' || ch == '?');
+            return (ch == ',' || ch == '+' || ch == '-' || ch == '(' || ch == ')' || ch == '[' || ch == ']' ||
+                    ch == '%' || ch == '*' || ch == '/' || ch == '&' || ch == '|' || ch == '^' || ch == '?');
         }
 
         string ReplaceArgsInString(string argStr)
@@ -878,7 +866,6 @@ namespace SplitAndMerge
             StringBuilder sb = new StringBuilder();
             bool inQuotes = false;
             string token = "";
-            string replacement = "";
             int backSlashes = 0;
             for (int i = 0; i < argStr.Length; i++)
             {
