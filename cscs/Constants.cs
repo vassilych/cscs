@@ -244,9 +244,10 @@ namespace SplitAndMerge
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
             NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString()
         };
+
         public static List<string> ARITHMETIC_EXPR = new List<string>
         {
-            "*", "*=" , "+", "+=" , "-", "-=", "/", "/="
+            "*", "*=" , "+", "+=" , "-", "-=", "/", "/=", "%", "%=", ">", "<", ">=", "<="
         };
 
         public static string STATEMENT_SEPARATOR = ";{}";
