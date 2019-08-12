@@ -118,7 +118,7 @@ namespace SplitAndMerge
             CustomCompiledFunction comp = custFunc as CustomCompiledFunction;
             if (comp != null)
             {
-                return new Variable(comp.Precompiler.CSCode);
+                return new Variable(comp.Precompiler.CSharpCode);
             }
 #endif
 

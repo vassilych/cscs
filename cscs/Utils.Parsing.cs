@@ -912,7 +912,7 @@ namespace SplitAndMerge
                 }
             }
 
-            return sb.ToString();
+            return sb.ToString().Trim();
         }
 
         public static string BeautifyScript(string script, string header)

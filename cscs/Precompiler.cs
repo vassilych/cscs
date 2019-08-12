@@ -21,7 +21,7 @@ namespace SplitAndMerge
         string m_functionName;
         string m_originalCode;
         string m_cscsCode;
-        string[] m_defArgs;
+        string[] m_actualArgs;
         StringBuilder m_converted = new StringBuilder();
         Dictionary<string, Variable> m_argsMap;
         HashSet<string> m_numericVars = new HashSet<string>();
@@ -41,7 +41,7 @@ namespace SplitAndMerge
         bool m_lastStatementReturn;
 
         ParsingScript m_parentScript;
-        public string CSCode { get; private set; }
+        public string CSharpCode { get; private set; }
 
         Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> m_compiledFunc;
@@ -88,7 +88,7 @@ namespace SplitAndMerge
                            string cscsCode, ParsingScript parentScript)
         {
             m_functionName = functionName;
-            m_defArgs = args;
+            m_actualArgs = args;
             m_argsMap = argsMap;
             m_originalCode = cscsCode;
             m_returnType = GetReturnType(m_functionName);
@@ -114,18 +114,17 @@ namespace SplitAndMerge
                 }
 
                 var uri = new Uri(asmName.CodeBase);
-                if (uri == null || string.IsNullOrWhiteSpace(uri.LocalPath) || !File.Exists(uri.LocalPath))
+                if (uri != null && File.Exists(uri.LocalPath))
                 {
-                    continue;
+                    CompilerParams.ReferencedAssemblies.Add(uri.LocalPath);
                 }
-
-                CompilerParams.ReferencedAssemblies.Add(uri.LocalPath);
             }
 
-            var provider = new CSharpCodeProvider();
+            CSharpCode = ConvertScript();
 
-            CSCode = ConvertScript();
-            var compile = provider.CompileAssemblyFromSource(CompilerParams, CSCode);
+            var provider = new CSharpCodeProvider();
+            var compile = provider.CompileAssemblyFromSource(CompilerParams, CSharpCode);
+
             if (compile.Errors.HasErrors)
             {
                 string text = "Compile error: ";
@@ -335,10 +334,10 @@ namespace SplitAndMerge
             int mapStrIndex = 0;
             int varIndex = 0;
             // Create a mapping from the original function argument to the element array it is in.
-            for (int i = 0; i < m_defArgs.Length; i++)
+            for (int i = 0; i < m_actualArgs.Length; i++)
             {
-                Variable typeVar = m_argsMap[m_defArgs[i]];
-                m_paramMap[m_defArgs[i]] =
+                Variable typeVar = m_argsMap[m_actualArgs[i]];
+                m_paramMap[m_actualArgs[i]] =
                     typeVar.Type == Variable.VarType.STRING ? STRING_VAR_ARG + "[" + (strIndex++) + "]" :
                     typeVar.Type == Variable.VarType.NUMBER ? NUMERIC_VAR_ARG + "[" + (numIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_STR ? STRING_ARRAY_ARG + "[" + (arrStrIndex++) + "]" :
@@ -389,21 +388,7 @@ namespace SplitAndMerge
             m_newVariables.Add(VARIABLE_TEMP_VAR);
 
             m_cscsCode = Utils.ConvertToScript(m_originalCode, out _);
-            ParsingScript script = new ParsingScript(m_cscsCode);
-
-            m_cscsCode = m_cscsCode.Trim();
-            if (m_cscsCode.Length > 0 &&  m_cscsCode.First() == '{')
-            {
-                m_cscsCode = m_cscsCode.Remove(0, 1);
-                while (m_cscsCode.Length > 0 && m_cscsCode.Last() == ';')
-                {
-                    m_cscsCode = m_cscsCode.Remove(m_cscsCode.Length - 1, 1);
-                }
-                if (m_cscsCode.Length > 0 && m_cscsCode.Last() == '}')
-                {
-                    m_cscsCode = m_cscsCode.Remove(m_cscsCode.Length - 1, 1 );
-                }
-            }
+            RemoveIrrelevant(m_cscsCode);
 
             m_statements = TokenizeScript(m_cscsCode);
             m_statementId = 0;
@@ -412,11 +397,10 @@ namespace SplitAndMerge
                 m_currentStatement = m_statements[m_statementId];
                 m_nextStatement = m_statementId < m_statements.Count - 1 ? m_statements[m_statementId + 1] : "";
                 string converted = ProcessStatement(m_currentStatement, m_nextStatement, true);
-                if (!string.IsNullOrWhiteSpace(converted) && !converted.StartsWith(m_depth))
+                if (!string.IsNullOrWhiteSpace(converted))
                 {
-                    m_converted.Append(m_depth);
+                    m_converted.Append(m_depth + converted);
                 }
-                m_converted.Append(converted);
                 m_statementId++;
             }
 
@@ -427,6 +411,22 @@ namespace SplitAndMerge
 
             m_converted.AppendLine("\n    }\n    }\n}");
             return m_converted.ToString();
+        }
+
+        static void RemoveIrrelevant(string code)
+        {
+            if (code.Length > 0 && code.First() == '{')
+            { // Remove redundant braces and semi-colons.
+                code = code.Remove(0, 1);
+                while (code.Length > 0 && code.Last() == ';')
+                {
+                    code = code.Remove(code.Length - 1, 1);
+                }
+                if (code.Length > 0 && code.Last() == '}')
+                {
+                    code = code.Remove(code.Length - 1, 1);
+                }
+            }
         }
 
         bool ProcessSpecialCases(string statement)
@@ -1215,7 +1215,7 @@ namespace SplitAndMerge
                     {
                         string token = scriptText.Substring(startIndex, i - startIndex);
                         if (token.EndsWith("=") && scriptText.Substring(i).StartsWith("{};"))
-                        {
+                        { // Special degenerate case.
                             tokens.Add(token + "{};");
                             i += 3;
                             startIndex = i;
