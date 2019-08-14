@@ -267,7 +267,7 @@ namespace SplitAndMerge
                 return Variable.VarType.NUMBER;
             }
 
-            string resolved = ResolveToken(paramName);
+            string resolved = ResolveToken(paramName, out _);
             if (resolved.StartsWith(NUMERIC_VAR_ARG, StringComparison.InvariantCulture))
             {
                 return Variable.VarType.NUMBER;
@@ -824,8 +824,9 @@ namespace SplitAndMerge
             ProcessFunction(tokens, ref id, ref result, ref newVarAdded);
         }
 
-        string ResolveToken(string token)
+        string ResolveToken(string token, out bool resolved)
         {
+            resolved = true;
             if (IsString(token) || IsNumber(token))
             {
                 return token;
@@ -853,6 +854,8 @@ namespace SplitAndMerge
                 return replacement + arrayArg;
             }
 
+            resolved = !string.IsNullOrWhiteSpace(arrayArg) ||
+                        m_newVariables.Contains(token);
             return token + arrayArg;
         }
 
@@ -904,7 +907,7 @@ namespace SplitAndMerge
                 }
                 else if (IsTokenSeparator(ch))
                 {
-                    sb.Append(ResolveToken(token));
+                    sb.Append(ResolveToken(token, out _));
                     sb.Append(ch);
                     token = "";
                 }
@@ -914,7 +917,7 @@ namespace SplitAndMerge
                 }
             }
 
-            sb.Append(ResolveToken(token));
+            sb.Append(ResolveToken(token, out _));
             return sb.ToString();
         }
 
@@ -1150,6 +1153,11 @@ namespace SplitAndMerge
             for (int i = 0; i < tokens.Count; i++)
             {
                 string token = tokens[i];
+                string next = i >= tokens.Count - 1 ? "" : tokens[i + 1];
+                if (i == 0 && next == "=")
+                {
+                    continue;
+                }
                 if (string.IsNullOrWhiteSpace(token) || token == Constants.RETURN)
                 {
                     continue;
@@ -1161,6 +1169,7 @@ namespace SplitAndMerge
                 if (Constants.ARITHMETIC_EXPR.Contains(token))
                 {
                     numericCandidate = true;
+                    continue;
                 }
 
                 string suffix = "";
@@ -1176,8 +1185,16 @@ namespace SplitAndMerge
                 if (type == Variable.VarType.NUMBER)
                 {
                     numericCandidate = true;
+                    continue;
                 }
                 if (type == Variable.VarType.STRING)
+                {
+                    return false;
+                }
+
+                bool alreadyDefined;
+                string resolved = ResolveToken(paramName, out alreadyDefined);
+                if (!alreadyDefined)
                 {
                     return false;
                 }
