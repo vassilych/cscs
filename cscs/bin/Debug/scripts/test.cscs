@@ -915,7 +915,7 @@ Test(TestObject.ColoR, "blue");
 Test(TestObject.NaME,  "Testing");
 Test(TestObject.properties, propsBefore);
 
-cfunction double calculateCompiled(double n) {
+cfunction calculateCompiled(double n) {
   returnValue = 0.0;
   x=0.0; y=0.0;
   for (i = 0; i < n; i++) {

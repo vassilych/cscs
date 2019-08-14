@@ -491,7 +491,8 @@ namespace SplitAndMerge
                 {
                     result += ";\n";
                 }
-                if (tokens[1].EndsWith("=") && tokens[1] != "==")
+//                if (tokens[1].EndsWith("=") && tokens[1] != "==")
+                if (tokens[1] == "=")
                 {
                     result += RegisterVariableString(tokens[0]);
                 }
