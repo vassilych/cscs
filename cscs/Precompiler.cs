@@ -24,7 +24,6 @@ namespace SplitAndMerge
         string[] m_actualArgs;
         StringBuilder m_converted = new StringBuilder();
         Dictionary<string, Variable> m_argsMap;
-        HashSet<string> m_numericVars = new HashSet<string>();
         Dictionary<string, string> m_paramMap = new Dictionary<string, string>();
         Dictionary<string, int> m_definitionsMap = new Dictionary<string, int>();
 
@@ -36,7 +35,7 @@ namespace SplitAndMerge
         string m_currentStatement;
         string m_nextStatement;
         string m_depth;
-        bool m_numericExpression;
+        bool m_knownExpression;
         //bool m_assigmentExpression;
         bool m_lastStatementReturn;
 
@@ -466,9 +465,9 @@ namespace SplitAndMerge
                 return result;
             }
 
-            m_numericExpression = IsNumericExpression(tokens);
+            m_knownExpression = IsKnownExpression(tokens);
 
-            if (m_numericExpression && tokens.Count > 1)
+            if (m_knownExpression && tokens.Count > 1)
             {
                 result = m_depth;
                 if (tokens[1] == "=" && !m_newVariables.Contains(tokens[0]))
@@ -491,7 +490,6 @@ namespace SplitAndMerge
                 {
                     result += ";\n";
                 }
-//                if (tokens[1].EndsWith("=") && tokens[1] != "==")
                 if (tokens[1] == "=")
                 {
                     result += RegisterVariableString(tokens[0]);
@@ -499,7 +497,7 @@ namespace SplitAndMerge
 
                 return result;
             }
-            if (m_numericExpression && tokens.Count == 1 &&
+            if (m_knownExpression && tokens.Count == 1 &&
                 (tokens[0].Contains('(') ||
                  tokens[0].Contains(',')))
             {
@@ -516,10 +514,6 @@ namespace SplitAndMerge
                 if (m_tokenId == 0 && addNewVars && newVarAdded)
                 {
                     statementVars.Add(token);
-                    if (m_numericExpression)
-                    {
-                        m_numericVars.Add(token);
-                    }
                 }
                 m_tokenId++;
             }
@@ -586,8 +580,8 @@ namespace SplitAndMerge
 
                 string token = defaultReturn;
 
-                m_numericExpression = IsNumericExpression(tokens);
-                if (m_numericExpression)
+                m_knownExpression = IsKnownExpression(tokens);
+                if (m_knownExpression)
                 {
                     token = ProcessRHS(tokens);
                 }
@@ -621,7 +615,7 @@ namespace SplitAndMerge
         string ProcessRHS(List<string> tokens, int from = 2)
         {
             string remaining = string.Join("", tokens.GetRange(from, tokens.Count - from));
-            if (m_numericExpression)
+            if (m_knownExpression)
             {
                 return ReplaceArgsInString(remaining);
             }
@@ -1147,7 +1141,7 @@ namespace SplitAndMerge
                    arg.Type == Variable.VarType.MAP_NUM;
         }
 
-        bool IsNumericExpression(List<string> tokens)
+        bool IsKnownExpression(List<string> tokens)
         {
             bool numericCandidate = false;
             for (int i = 0; i < tokens.Count; i++)
@@ -1197,10 +1191,6 @@ namespace SplitAndMerge
                 if (!alreadyDefined)
                 {
                     return false;
-                }
-                if (m_numericVars.Contains(paramName))
-                {
-                    numericCandidate = true;
                 }
             }
             return numericCandidate;
