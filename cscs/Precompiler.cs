@@ -818,7 +818,7 @@ namespace SplitAndMerge
             ProcessFunction(tokens, ref id, ref result, ref newVarAdded);
         }
 
-        string ResolveToken(string token, out bool resolved)
+        string ResolveToken(string token, out bool resolved, string arguments = "")
         {
             resolved = true;
             if (IsString(token) || IsNumber(token))
@@ -828,6 +828,12 @@ namespace SplitAndMerge
 
             string replacement;
             if (IsMathFunction(token, out replacement))
+            {
+                return replacement;
+            }
+
+            replacement = GetCSharpFunction(token, arguments);
+            if (!string.IsNullOrEmpty(replacement))
             {
                 return replacement;
             }
@@ -901,7 +907,8 @@ namespace SplitAndMerge
                 }
                 else if (IsTokenSeparator(ch))
                 {
-                    sb.Append(ResolveToken(token, out _));
+                    string arguments = i + 1 < argStr.Length ? argStr.Substring(i + 1) : "";
+                    sb.Append(ResolveToken(token, out _, arguments));
                     sb.Append(ch);
                     token = "";
                 }
@@ -1005,7 +1012,7 @@ namespace SplitAndMerge
                 return;
             }
 
-            var tryCSharp = GetCSharpFunction(argsStr, functionName);
+            var tryCSharp = GetCSharpFunction(functionName, argsStr);
             if (!string.IsNullOrEmpty(tryCSharp))
             {
                 result += tryCSharp + "\n";
@@ -1042,12 +1049,12 @@ namespace SplitAndMerge
             }
         }
 
-        string GetCSharpFunction(string argsStr, string functionName)
+        string GetCSharpFunction(string functionName, string arguments = "")
         {
             if (functionName == "printc")
             {
-                argsStr = ReplaceArgsInString(argsStr.Replace("\\\"", "\""));
-                return "Console.WriteLine(" + argsStr + ");";
+                arguments = ReplaceArgsInString(arguments.Replace("\\\"", "\""));
+                return "Console.WriteLine(" + arguments + ");";
             }
             return "";
         }
@@ -1187,7 +1194,7 @@ namespace SplitAndMerge
                 }
 
                 bool alreadyDefined;
-                string resolved = ResolveToken(paramName, out alreadyDefined);
+                ResolveToken(paramName, out alreadyDefined);
                 if (!alreadyDefined)
                 {
                     return false;
