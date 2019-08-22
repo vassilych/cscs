@@ -41,6 +41,9 @@ namespace SplitAndMerge
             scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
+            Environment.SetEnvironmentVariable("MONO_REGISTRY_PATH",
+                "/Library/Frameworks/Mono.framework/Versions/Current/etc/mono/registry/");
+
             DebuggerServer.BaseDirectory = "";
             if (string.IsNullOrWhiteSpace(script) && (args.Length < 1 || args[1] == "debugger"))
             {

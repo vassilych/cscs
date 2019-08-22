@@ -277,16 +277,16 @@ namespace SplitAndMerge
                 return Variable.VarType.NUMBER;
             }
 
-            var functionReturnType = GetReturnType(paramName);
-            if (functionReturnType != Variable.VarType.NONE)
-            {
-                return functionReturnType;
-            }
-
             Variable arg;
             if (m_argsMap.TryGetValue(paramName, out arg))
             {
                 return arg.Type;
+            }
+
+            /*var functionReturnType = GetReturnType(paramName);
+            if (functionReturnType != Variable.VarType.NONE)
+            {
+                return functionReturnType;
             }
 
             ParserFunction function = ParserFunction.GetFunction(paramName, m_parentScript);
@@ -294,7 +294,6 @@ namespace SplitAndMerge
             {
                 return Variable.VarType.NONE;
             }
-
             if (function is INumericFunction)
             {
                 return Variable.VarType.NUMBER;
@@ -306,7 +305,7 @@ namespace SplitAndMerge
             else if (function is IArrayFunction)
             {
                 return Variable.VarType.ARRAY;
-            }
+            }*/
 
             return Variable.VarType.NONE;
         }
@@ -490,7 +489,7 @@ namespace SplitAndMerge
                 {
                     result += ";\n";
                 }
-                if (tokens[1] == "=")
+                if (IsAssignment(tokens[1]))
                 {
                     result += RegisterVariableString(tokens[0]);
                 }
@@ -989,7 +988,7 @@ namespace SplitAndMerge
             //string restStr = string.Join("", tokens.GetRange(m_tokenId, tokens.Count - m_tokenId).ToArray());
             string restStr = tokens[m_tokenId];
             int paramStart = restStr.IndexOf('(');
-            int paramEnd = paramStart < 0 ? restStr.Length : restStr.IndexOf(')', paramStart + 1);
+            int paramEnd = FindChar(restStr, paramStart, ')');
             while (paramEnd < 0 && ++m_tokenId < tokens.Count)
             {
                 restStr += tokens[m_tokenId];
@@ -1328,6 +1327,37 @@ namespace SplitAndMerge
                 corrected = candidate;
                 return true;
             }
+        }
+
+        static bool IsAssignment(string token)
+        {
+            return token == "=" || Constants.OPER_ACTIONS.Contains(token);
+        }
+
+        static int FindChar(string token, int paramStart, char ch)
+        {
+            if (paramStart < 0)
+            {
+                return token.Length;
+            }
+
+            bool inQuotes = false;
+            char prev = Constants.EMPTY;
+            for (int i = paramStart + 1; i < token.Length; i++)
+            {
+                char current = token[i];
+                if (current == ch && !inQuotes)
+                {
+                    return i;
+                }
+                if (current == '"' && prev != '\\')
+                {
+                    inQuotes = !inQuotes;
+                }
+                prev = ch; 
+            }
+
+            return -1;
         }
 
         public static string TypeToCSString(Variable.VarType type)
