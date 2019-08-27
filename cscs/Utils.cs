@@ -6,8 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Newtonsoft.Json.Linq;
-
 namespace SplitAndMerge
 {
     public partial class Utils
@@ -671,80 +669,6 @@ namespace SplitAndMerge
                 return candidate.Substring(firstSpace + 1);
             }
             return candidate;
-        }
-
-        static Variable GetVariableForJToken(JToken aToken)
-        {
-            JTokenType currentType = aToken.Type;
-            switch (currentType)
-            {
-                case JTokenType.Object:
-                    {
-                        Variable newValue = new Variable(Variable.VarType.ARRAY);
-                        ParseJObjectIntoVariable(aToken as JObject, newValue);
-                        return newValue;
-                    }
-                case JTokenType.Array:
-                    {
-                        Variable newValue = new Variable(Variable.VarType.ARRAY);
-                        foreach (var aa in aToken)
-                        {
-                            Variable addVariable = GetVariableForJToken(aa);
-                            newValue.AddVariable(addVariable);
-                        }
-                        return newValue;
-                    }
-                case JTokenType.Integer:
-                    return new Variable(aToken.ToObject<Int64>());
-                case JTokenType.Float:
-                    return new Variable(aToken.ToObject<float>());
-                case JTokenType.String:
-                    return new Variable(aToken.ToObject<String>());
-                case JTokenType.Boolean:
-                    return new Variable(aToken.ToObject<Boolean>());
-                case JTokenType.Null:
-                    return Variable.EmptyInstance;
-                case JTokenType.None:
-                case JTokenType.Constructor:
-                case JTokenType.Property:
-                case JTokenType.Comment:
-                case JTokenType.Undefined:
-                case JTokenType.Date:
-                case JTokenType.Raw:
-                case JTokenType.Bytes:
-                case JTokenType.Guid:
-                case JTokenType.Uri:
-                case JTokenType.TimeSpan:
-                    return new Variable(aToken.ToString());
-            }
-            return Variable.EmptyInstance;
-        }
-
-        static void ParseJObjectIntoVariable(JObject jsonObject, Variable aVariable)
-        {
-            foreach (var currentToken in jsonObject)
-            {
-                Variable currentVariable = GetVariableForJToken(currentToken.Value);
-                aVariable.SetHashVariable(currentToken.Key, currentVariable);
-            }
-        }
-
-        public static Variable CreateVariableFromJsonString(string aJSONString)
-        {
-            Variable newValue = new Variable(Variable.VarType.ARRAY);
-
-            try
-            {
-                JObject jsonObject = JObject.Parse(aJSONString);
-                ParseJObjectIntoVariable(jsonObject, newValue);
-            }
-            catch (Exception e)
-            {
-                newValue.SetHashVariable("error", new Variable(true));
-                newValue.SetHashVariable("message", new Variable(e.Message));
-            }
-
-            return newValue;
         }
 
         public static string GetFullPath(string path)

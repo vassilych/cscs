@@ -834,19 +834,4 @@ namespace SplitAndMerge
             return elapsed >= 0 ? new Variable(elapsed) : new Variable(elapsedStr);
         }
     }
-
-    class GetVariableFromJSONNewtonsoftFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name);
-
-            string json = args[0].AsString();
-
-            Variable newVariable = Utils.CreateVariableFromJsonString(json);
-            return newVariable;
-        }
-
-    }
 }
