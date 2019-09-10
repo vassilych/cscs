@@ -12,7 +12,7 @@ namespace SplitAndMerge
         {
             NONE, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
-            BREAK, CONTINUE, OBJECT, ENUM, VARIABLE
+            BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME
         };
 
         public Variable()
@@ -38,6 +38,10 @@ namespace SplitAndMerge
         public Variable(string s)
         {
             String = s;
+        }
+        public Variable(DateTime dt)
+        {
+            DateTime = dt;
         }
         public Variable(List<Variable> a)
         {
@@ -479,6 +483,10 @@ namespace SplitAndMerge
 
             return result;
         }
+        public DateTime AsDateTime()
+        {
+            return m_datetime;
+        }
 
         public override string ToString()
         {
@@ -496,6 +504,10 @@ namespace SplitAndMerge
             if (Type == VarType.STRING)
             {
                 return m_string == null ? "" : m_string;
+            }
+            if (Type == VarType.DATETIME)
+            {
+                return DateTime.ToString();
             }
             if (Type == VarType.OBJECT)
             {
@@ -1308,6 +1320,12 @@ namespace SplitAndMerge
             set { m_object = value; Type = VarType.OBJECT; }
         }
 
+        public DateTime DateTime
+        {
+            get { return m_datetime; }
+            set { m_datetime = value; Type = VarType.DATETIME; }
+        }
+
         public List<Variable> Tuple
         {
             get { return m_tuple; }
@@ -1331,6 +1349,7 @@ namespace SplitAndMerge
         double m_value;
         string m_string;
         object m_object;
+        DateTime m_datetime;
         List<Variable> m_tuple;
         Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
         Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
