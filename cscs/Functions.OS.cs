@@ -2,10 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -403,17 +403,90 @@ namespace SplitAndMerge
 
     class DateTimeFunction : ParserFunction, IStringFunction
     {
+        bool m_stringVersion;
+
+        public DateTimeFunction(bool stringVersion = true)
+        {
+            m_stringVersion = stringVersion;
+        }
+
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
-
-            string strFormat = Utils.GetSafeString(args, 0, "HH:mm:ss.fff");
+            string strFormat = m_stringVersion ? Utils.GetSafeString(args, 0, "HH:mm:ss.fff") :
+                                          Utils.GetSafeString(args, 1, "yyyy/MM/dd HH:mm:ss");
             Utils.CheckNotEmpty(strFormat, m_name);
 
-            string when = DateTime.Now.ToString(strFormat);
-            return new Variable(when);
+
+            if (m_stringVersion)
+            {
+                return new Variable(DateTime.Now.ToString(strFormat));
+            }
+
+            var date = DateTime.Now;
+            string when = Utils.GetSafeString(args, 0);
+
+            if (!string.IsNullOrWhiteSpace(when) && !DateTime.TryParseExact(when, strFormat,
+                CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out date))
+            {
+                throw new ArgumentException("Couldn't parse [" + when + "] using format [" +
+                                            strFormat + "].");
+            }
+
+            return new Variable(date);
+        }
+
+        public static DateTime Add(DateTime current, string delta)
+        {
+            int sign = 1;
+            string part = "";
+            int partInt;
+            for (int i = 0; i < delta.Length; i++)
+            {
+                switch (delta[i])
+                {
+                    case '-':
+                        sign *= -1;
+                        continue;
+                    case 'y':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddYears(partInt * sign);
+                        break;
+                    case 'M':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddMonths(partInt * sign);
+                        break;
+                    case 'd':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddDays(partInt * sign);
+                        break;
+                    case 'H':
+                    case 'h':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddHours(partInt * sign);
+                        break;
+                    case 'm':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddMinutes(partInt * sign);
+                        break;
+                    case 's':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddSeconds(partInt * sign);
+                        break;
+                    case 'f':
+                        partInt = string.IsNullOrWhiteSpace(part) ? 1 : !int.TryParse(part, out partInt) ? 0 : partInt;
+                        current = current.AddTicks(partInt * sign);
+                        break;
+                    default:
+                        part += delta[i];
+                        continue;
+                }
+                part = "";
+            }
+            return current;
         }
     }
+
     class DebuggerFunction : ParserFunction
     {
         bool m_start = true;

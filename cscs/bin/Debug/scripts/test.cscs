@@ -1060,6 +1060,19 @@ Test(existingEnum.Object > 0, true);
 Test(newlyDefined.Vertical > newlyDefined.Horizontal, true);
 Test(newlyDefined.Orthogonal, 3);
 
+Print("Testing DateTime...");
+
+someDate = DateTime("9/11/2001 19:31:51", "M/d/yyyy HH:mm:ss");
+someDate.Add("1y3d2M");
+Test(string(someDate, "yyyy/MM/dd"), "2002/11/14");
+someDate.Add("-1h2m3s");
+Test(string(someDate, "HH:mm:ss"), "18:29:48");
+
+dateNow = DateTime();
+dateNow.Add("3y5M");
+dateNow.Add("-3y5M");
+Test(string(dateNow, "M/d/yyyy"), string(DateTime(), "M/d/yyyy"))
+
 Print("Testing Misc. Functions...");
 Test(NameExists(IamABrandNewName), false);
 Test(NameExists(arr), true);

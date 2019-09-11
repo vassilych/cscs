@@ -493,6 +493,16 @@ namespace SplitAndMerge
             return AsString();
         }
 
+        public virtual string AsString(string format)
+        {
+            if (Type == VarType.DATETIME && !string.IsNullOrWhiteSpace(format))
+            {
+                return DateTime.ToString(format);
+            }
+
+            return AsString();
+        }
+
         public virtual string AsString(bool isList = true,
                                        bool sameLine = true,
                                        int maxCount = -1)
@@ -1004,11 +1014,15 @@ namespace SplitAndMerge
                 {
                     Value += var.AsDouble();
                 }
+                else if (Type == VarType.DATETIME)
+                {
+                    DateTime = DateTimeFunction.Add(DateTime, var.AsString());
+                }
                 else
                 {
                     String += var.AsString();
                 }
-                return var;
+                return this;
             }
             else if (script != null && propName.Equals(Constants.REMOVE_AT, StringComparison.OrdinalIgnoreCase))
             {

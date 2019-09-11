@@ -1234,10 +1234,12 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name, true);
-            Variable arg = args[0];
+            Utils.CheckArgs(args.Count, 1, m_name);
 
-            string result = arg.AsString();
+            Variable arg = args[0];
+            string format = Utils.GetSafeString(args, 1);
+
+            string result = arg.AsString(format);
             return new Variable(result);
         }
     }

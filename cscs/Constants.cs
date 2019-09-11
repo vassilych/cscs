@@ -79,6 +79,7 @@ namespace SplitAndMerge
         public const string CONTAINS = "contains";
         public const string COS = "cos";
         public const string CURRENT_PATH = "CurrentPath";
+        public const string DATE_TIME = "DateTime";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
         public const string ENV = "env";
