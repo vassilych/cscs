@@ -224,6 +224,19 @@ namespace SplitAndMerge
                 negated = 0;
             }
 
+            if (script.Current == '.')
+            {
+                bool inQuotes = false;
+                int arrayIndexDepth = 0;
+                script.Forward();
+                string property = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out _, out action);
+
+                Variable propValue = current.Type == Variable.VarType.ENUM ?
+                     current.GetEnumProperty(property, script) :
+                     current.GetProperty(property, script);
+                current = propValue;
+            }
+
             if (action == null)
             {
                 action = UpdateAction(script, to);
