@@ -109,6 +109,9 @@ namespace SplitAndMerge
                     DataColumn col = table.Columns[i++];
                     switch (col.DataType.Name)
                     {
+                        case "Int16":
+                            rowVar.AddVariable(new Variable((Int16)item));
+                            break;
                         case "Int32":
                             rowVar.AddVariable(new Variable((int)item));
                             break;
@@ -130,6 +133,9 @@ namespace SplitAndMerge
                         case "DateTime":
                             rowVar.AddVariable(new Variable((DateTime)item));
                             break;
+                        case "Decimal":
+                            rowVar.AddVariable(new Variable(Decimal.ToDouble((Decimal)item)));
+                            break;
                         default:
                             throw new ArgumentException("Unknown type: " + col.DataType.Name);
                     }
@@ -145,14 +151,16 @@ namespace SplitAndMerge
         {
             switch(strType)
             {
-                case "Int32": return SqlDbType.Int;
-                case "Int64": return SqlDbType.BigInt;
-                case "String": return SqlDbType.NVarChar;
-                case "Double": return SqlDbType.Float;
-                case "Boolean": return SqlDbType.Bit;
+                case "Int16":    return SqlDbType.SmallInt;
+                case "Int32":    return SqlDbType.Int;
+                case "Int64":    return SqlDbType.BigInt;
+                case "String":   return SqlDbType.NVarChar;
+                case "Single":   return SqlDbType.Real;
+                case "Double":   return SqlDbType.Float;
+                case "Boolean":  return SqlDbType.Bit;
                 case "DateTime": return SqlDbType.DateTime;
-                case "Single": return SqlDbType.Real;
-                case "Binary": return SqlDbType.Binary;
+                case "Binary":   return SqlDbType.Binary;
+                case "Decimal":  return SqlDbType.Decimal;
                 default:
                     throw new ArgumentException("Unknown type: " + strType);
             }
@@ -186,7 +194,7 @@ namespace SplitAndMerge
             var colData = SQLQueryFunction.GetColumnData(tableName);
             if (colData == null || colData.Count == 0)
             {
-                return new Variable("Error: table [" + tableName + "] doesn't exist.");
+                throw new ArgumentException("Error: table [" + tableName + "] doesn't exist.");
             }
 
             var queryStatement = "INSERT INTO " + tableName + " (" + colsStr + ") VALUES ("; //@a,@b,@c);"
@@ -195,36 +203,56 @@ namespace SplitAndMerge
             {
                 if (string.IsNullOrWhiteSpace(cols[i]) || !colData.Keys.Contains(cols[i]))
                 {
-                    return new Variable("Error: column [" + cols[i] + "] doesn't exist.");
+                    throw new ArgumentException("Error: column [" + cols[i] + "] doesn't exist.");
                 }
                 queryStatement += "@" + cols[i] + ",";
             }
-            queryStatement = queryStatement.Remove(queryStatement.Length - 1) + ")"; ;
+            queryStatement = queryStatement.Remove(queryStatement.Length - 1) + ")";
 
             var valsVariable = args[2];
-            if (valsVariable.Type != Variable.VarType.ARRAY || valsVariable.Tuple.Count < cols.Length)
-            {
-                return new Variable("Error: not enough values (" + valsVariable.Tuple.Count +
-                                    ") given for " + cols.Length + " columns.");
-            }
+            bool oneEntry = valsVariable.Type == Variable.VarType.ARRAY && valsVariable.Tuple.Count >= 1 &&
+                            valsVariable.Tuple[0].Type != Variable.VarType.ARRAY;
 
             using (SqlConnection con = new SqlConnection(CSCS_SQL.ConnectionString))
             {
-                using (SqlCommand cmd = new SqlCommand(queryStatement, con))
+                con.Open();
+                if (oneEntry)
                 {
-                    for (int i = 0; i < cols.Length; i++)
+                    using (SqlCommand cmd = new SqlCommand(queryStatement, con))
                     {
-                        var varName = "@" + cols[i];
-                        var varType = colData[cols[i]];
-                        cmd.Parameters.Add(varName, varType);
-                        cmd.Parameters[varName].Value = SQLQueryFunction.SqlDbTypeToType(varType, valsVariable.Tuple[i]);
+                        InsertRow(cmd, colData, valsVariable, cols);
                     }
-
-                    con.Open();
-                    cmd.ExecuteNonQuery();
+                }
+                else
+                {
+                    for (int i = 0; i < valsVariable.Tuple.Count; i++)
+                    {
+                        using (SqlCommand cmd = new SqlCommand(queryStatement, con))
+                        {
+                            InsertRow(cmd, colData, valsVariable.Tuple[i], cols);
+                        }
+                    }
                 }
             }
-            return new Variable("Inserted new row.");
+            return new Variable(oneEntry ? 1 : valsVariable.Tuple.Count);
+        }
+
+        static void InsertRow(SqlCommand cmd, Dictionary<string, SqlDbType> colData, Variable values, string[] cols)
+        {
+            if (values.Type != Variable.VarType.ARRAY || values.Tuple.Count < cols.Length)
+            {
+                throw new ArgumentException("Error: not enough values (" + values.Tuple.Count +
+                                            ") given for " + cols.Length + " columns.");
+            }
+            for (int i = 0; i < cols.Length; i++)
+            {
+                var varName = "@" + cols[i];
+                var varType = colData[cols[i]];
+                cmd.Parameters.Add(varName, varType);
+                cmd.Parameters[varName].Value = SQLQueryFunction.SqlDbTypeToType(varType, values.Tuple[i]);
+            }
+
+            cmd.ExecuteNonQuery();
         }
     }
 
