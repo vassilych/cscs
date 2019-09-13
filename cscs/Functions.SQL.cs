@@ -14,7 +14,7 @@ namespace SplitAndMerge
 
         public static void Init()
         {
-            ParserFunction.RegisterFunction("SQLConnecionString", new SQLConnectionStringFunction());
+            ParserFunction.RegisterFunction("SQLConnectionString", new SQLConnectionStringFunction());
             ParserFunction.RegisterFunction("SQLTableColumns", new SQLColumnsFunction());
             ParserFunction.RegisterFunction("SQLQuery", new SQLQueryFunction());
             ParserFunction.RegisterFunction("SQLNonQuery", new SQLNonQueryFunction());
@@ -170,11 +170,15 @@ namespace SplitAndMerge
         {
             switch (dbType)
             {
-                case SqlDbType.Int:      return var.AsInt();
+                case SqlDbType.SmallInt:
+                case SqlDbType.Int:     
+                case SqlDbType.BigInt:   return var.AsInt();
                 case SqlDbType.NVarChar: return var.AsString();
-                case SqlDbType.Real:     return var.AsDouble();
+                case SqlDbType.Real:
+                case SqlDbType.Decimal:
                 case SqlDbType.Float:    return var.AsDouble();
                 case SqlDbType.Bit:      return var.AsBool();
+                case SqlDbType.SmallDateTime:
                 case SqlDbType.DateTime: return var.AsDateTime();
             }
             return var.AsString();
