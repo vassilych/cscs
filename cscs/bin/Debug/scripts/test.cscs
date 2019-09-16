@@ -1159,6 +1159,7 @@ date = "8/23/2017";
 mydate = new ns1.CurrentDate();
 mydate.setCompositDate(ns1.date);
 Test(mydate, ns1.date);
+Test(mydate.toString().Size, 9);
 
 Print("Testing WebRequests with JSON");
 jsonString = "{}";
