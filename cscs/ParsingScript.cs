@@ -84,6 +84,8 @@ namespace SplitAndMerge
             set;
         }
 
+        public ParserFunction.StackLevel StackLevel { get; set; }
+
         public bool DisableBreakpoints;
         public bool InTryBlock;
         public string MainFilename;
@@ -108,6 +110,10 @@ namespace SplitAndMerge
             m_char2Line = other.Char2Line;
             m_filename = other.Filename;
             m_originalScript = other.OriginalScript;
+            StackLevel = other.StackLevel;
+            CurrentClass = other.CurrentClass;
+            ClassInstance = other.ClassInstance;
+            ScriptOffset = other.ScriptOffset;
             Debugger = other.Debugger;
             InTryBlock = other.InTryBlock;
         }
@@ -119,12 +125,15 @@ namespace SplitAndMerge
 
         public string GetFilePath(string path)
         {
-            if (File.Exists(path) || Path.IsPathRooted(path))
+            if (!Path.IsPathRooted(path))
             {
-                return path;
+                string pathname = Path.Combine(PWD, path);
+                if (File.Exists(pathname))
+                {
+                    return pathname;
+                }
             }
-            string pathname = Path.Combine(PWD, path);
-            return pathname;
+            return path;
         }
 
         public int Find(char ch, int from = -1)
@@ -501,6 +510,7 @@ namespace SplitAndMerge
             tempScript.Char2Line      = this.Char2Line;
             tempScript.OriginalScript = this.OriginalScript;
             tempScript.InTryBlock     = this.InTryBlock;
+            tempScript.StackLevel     = this.StackLevel;
             //tempScript.Debugger       = this.Debugger;
 
             return tempScript;

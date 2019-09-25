@@ -96,6 +96,7 @@ namespace SplitAndMerge
             GetVarFunction varFunc = pf as GetVarFunction;
             if (varFunc == null)
             {
+                pf = ParserFunction.GetVariable(arrayName, script);
                 return null;
             }
 
@@ -255,10 +256,10 @@ namespace SplitAndMerge
             }
             name = Constants.ConvertName(name);
             ParserFunction impl;
-            // First search among local variables.
-            if (s_locals.Count > StackLevelDelta)
+            StackLevel localStack = script.StackLevel != null ? script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            if (localStack != null)
             {
-                Dictionary<string, ParserFunction> local = s_locals.Peek().Variables;
+                Dictionary<string, ParserFunction> local = localStack.Variables;
                 if (local.TryGetValue(name, out impl))
                 {
                     return impl;
@@ -301,16 +302,19 @@ namespace SplitAndMerge
         public static void UpdateFunction(string name, ParserFunction function)
         {
             name = Constants.ConvertName(name);
-            // First search among local variables.
-            if (s_locals.Count > StackLevelDelta)
+            lock (s_variables)
             {
-                Dictionary<string, ParserFunction> local = s_locals.Peek().Variables;
-
-                if (local.ContainsKey(name))
+                // First search among local variables.
+                if (s_lastExecutionLevel != null && s_locals.Count > StackLevelDelta)
                 {
-                    // Local function exists (a local variable)
-                    local[name] = function;
-                    return;
+                    Dictionary<string, ParserFunction> local = s_lastExecutionLevel.Variables;
+
+                    if (local.ContainsKey(name))
+                    {
+                        // Local function exists (a local variable)
+                        local[name] = function;
+                        return;
+                    }
                 }
             }
             // If it's not a local variable, update global.
@@ -344,7 +348,7 @@ namespace SplitAndMerge
             name          = Constants.ConvertName(name);
 
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
-            if (lastLevel != null && s_locals.Peek().IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
+            if (lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
             {
                 name = s_namespacePrefix + name;
             }
@@ -418,9 +422,9 @@ namespace SplitAndMerge
         {
             StringBuilder sb = new StringBuilder();
             // Locals, if any:
-            if (s_locals.Count > 0)
+            if (s_lastExecutionLevel != null)
             {
-                Dictionary<string, ParserFunction> locals = s_locals.Peek().Variables;
+                Dictionary<string, ParserFunction> locals = s_lastExecutionLevel.Variables;
                 GetVariables(locals, sb, true);
             }
 
@@ -443,12 +447,15 @@ namespace SplitAndMerge
 
         static Dictionary<string, ParserFunction> GetLastLevel()
         {
-            if (s_locals.Count <= StackLevelDelta)
+            lock (s_variables)
             {
-                return null;
+                if (s_lastExecutionLevel == null || s_locals.Count <= StackLevelDelta)
+                {
+                    return null;
+                }
+                var result = s_lastExecutionLevel.Variables;
+                return result;
             }
-            var result = s_locals.Peek().Variables;
-            return result;
         }
 
         static bool LocalNameExists(string name)
@@ -579,7 +586,11 @@ namespace SplitAndMerge
 
         public static void AddLocalVariables(StackLevel locals)
         {
-            s_locals.Push(locals);
+            lock (s_variables)
+            {
+                s_locals.Push(locals);
+                s_lastExecutionLevel = locals;
+            }
         }
 
         public static void AddNamespace(string namespaceName)
@@ -596,7 +607,12 @@ namespace SplitAndMerge
                 level = new StackLevel(namespaceName, true); ;
             }
 
-            s_locals.Push(level);
+            lock (s_variables)
+            {
+                s_locals.Push(level);
+                s_lastExecutionLevel = level;
+            }
+
             s_namespaces[namespaceName] = level;
 
             s_namespace = namespaceName;
@@ -606,12 +622,16 @@ namespace SplitAndMerge
         public static void PopNamespace()
         {
             s_namespace = s_namespacePrefix = "";
-            while (s_locals.Count > 0)
+            lock (s_variables)
             {
-                var level = s_locals.Pop();
-                if (level.IsNamespace)
+                while (s_locals.Count > 0)
                 {
-                    return;
+                    var level = s_locals.Pop();
+                    s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
+                    if (level.IsNamespace)
+                    {
+                        return;
+                    }
                 }
             }
         }
@@ -624,7 +644,11 @@ namespace SplitAndMerge
 
         public static void AddStackLevel(string scopeName)
         {
-            s_locals.Push(new StackLevel(scopeName));
+            lock (s_variables)
+            {
+                s_locals.Push(new StackLevel(scopeName));
+                s_lastExecutionLevel = s_locals.Peek();
+            }
         }
 
         public static void AddLocalVariable(ParserFunction local)
@@ -632,14 +656,19 @@ namespace SplitAndMerge
             NormalizeValue(local);
             local.m_isGlobal = false;
             StackLevel locals = null;
-            if (s_locals.Count == 0)
+
+            lock (s_variables)
             {
-                locals = new StackLevel();
-                s_locals.Push(locals);
-            }
-            else
-            {
-                locals = s_locals.Peek();
+
+                if (s_lastExecutionLevel == null)
+                {
+                    s_lastExecutionLevel = new StackLevel();
+                    s_locals.Push(s_lastExecutionLevel);
+                }
+                else
+                {
+                    locals = s_lastExecutionLevel;
+                }
             }
 
             var name = Constants.ConvertName(local.Name);
@@ -654,34 +683,69 @@ namespace SplitAndMerge
 #endif
         }
 
-        public static void PopLocalVariables()
+        public static void PopLocalVariables(int id)
         {
-            if (s_locals.Count > 0)
+            lock (s_variables)
             {
-                s_locals.Pop();
+                if (s_lastExecutionLevel == null)
+                {
+                    return;
+                }
+                if (id < 0 || s_lastExecutionLevel.Id == id)
+                {
+                    s_locals.Pop();
+                    s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
+                    return;
+                }
+
+                var array = s_locals.ToArray();
+                for (int i = 1; i < array.Length; i++)
+                {
+                    var stack = array[i];
+                    if (stack.Id == id)
+                    {
+                        for (int j = 0; j < i + 1 && s_locals.Count > 0; j++)
+                        {
+                            s_locals.Pop();
+                        }
+                        for (int j = 0; j < i; j++)
+                        {
+                            s_locals.Push(array[j]);
+                        }
+                        s_lastExecutionLevel = s_locals.Peek();
+                        return;
+                    }
+                }
             }
         }
 
         public static int GetCurrentStackLevel()
         {
-            return s_locals.Count;
+            lock (s_variables)
+            {
+                return s_locals.Count;
+            }
         }
 
         public static void InvalidateStacksAfterLevel(int level)
         {
-            while (level >= 0 && s_locals.Count > level)
+            lock (s_variables)
             {
-                s_locals.Pop();
+                while (level >= 0 && s_locals.Count > level)
+                {
+                    s_locals.Pop();
+                }
+                s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
             }
         }
 
         public static bool PopLocalVariable(string name)
         {
-            if (s_locals.Count == 0)
+            if (s_lastExecutionLevel == null)
             {
                 return false;
             }
-            Dictionary<string, ParserFunction> locals = s_locals.Peek().Variables;
+            Dictionary<string, ParserFunction> locals = s_lastExecutionLevel.Variables;
             name = Constants.ConvertName(name);
             return locals.Remove(name);
         }
@@ -729,6 +793,7 @@ namespace SplitAndMerge
             s_localScope.Clear();
             s_namespaces.Clear();
             s_namespace = s_namespacePrefix = "";
+            CompiledClass.Init();
         }
 
         protected string m_name;
@@ -767,14 +832,19 @@ namespace SplitAndMerge
 
         public class StackLevel
         {
+            static int s_id;
+
             public StackLevel(string name = null, bool isNamespace = false)
             {
+                Id = ++s_id;
                 Name = name;
                 IsNamespace = isNamespace;
                 Variables = new Dictionary<string, ParserFunction>();
             }
-            public string Name { get; set; }
-            public bool IsNamespace { get; set; }
+
+            public string Name { get; private set; }
+            public bool IsNamespace { get; private set; }
+            public int Id { get; private set; }
 
             public Dictionary<string, ParserFunction> Variables { get; set; }
         }
@@ -783,6 +853,8 @@ namespace SplitAndMerge
         // Stack of the functions being executed:
         static Stack<StackLevel> s_locals = new Stack<StackLevel>();
         public static Stack<StackLevel> ExecutionStack { get { return s_locals; } }
+
+        static StackLevel s_lastExecutionLevel;
 
         static Dictionary<string, StackLevel> s_namespaces = new Dictionary<string, StackLevel>();
         static string s_namespace;

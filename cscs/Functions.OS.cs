@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -576,7 +575,7 @@ namespace SplitAndMerge
             string onFailure = Utils.GetSafeString(args, 5, onSuccess);
             string contentType = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
             Variable headers = Utils.GetSafeVariable(args, 7);
-            int timeoutMs = Utils.GetSafeInt(args, 8, 15 * 1000);
+            int timeoutMs = Utils.GetSafeInt(args, 8, 10 * 1000);
             bool justFire = Utils.GetSafeInt(args, 9) > 0;
 
             if (!s_allowedMethods.Contains(method))
@@ -584,12 +583,86 @@ namespace SplitAndMerge
                 throw new ArgumentException("Unknown web request method: " + method);
             }
 
-            await ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
+            await ProcessWebRequestAsync(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
 
             return Variable.EmptyInstance;
         }
 
-        static async Task ProcessWebRequest(string uri, string method, string load,
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+            string method = args[0].AsString().ToUpper();
+            string uri = args[1].AsString();
+            string load = Utils.GetSafeString(args, 2);
+            string tracking = Utils.GetSafeString(args, 3);
+            string onSuccess = Utils.GetSafeString(args, 4);
+            string onFailure = Utils.GetSafeString(args, 5, onSuccess);
+            string contentType = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
+            Variable headers = Utils.GetSafeVariable(args, 7);
+            int timeoutMs = Utils.GetSafeInt(args, 8, 10 * 1000);
+            bool justFire = Utils.GetSafeInt(args, 9) > 0;
+
+            if (!s_allowedMethods.Contains(method))
+            {
+                throw new ArgumentException("Unknown web request method: " + method);
+            }
+
+            Task.Run(() => ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking,
+                                             contentType, headers));
+
+            return Variable.EmptyInstance;
+        }
+
+        static void ProcessWebRequest(string uri, string method, string load,
+                                            string onSuccess, string onFailure,
+                                            string tracking, string contentType,
+                                            Variable headers)
+        {
+            try
+            {
+                WebRequest request = WebRequest.CreateHttp(uri);
+                request.Method = method;
+                request.ContentType = contentType;
+
+                if (!string.IsNullOrWhiteSpace(load))
+                {
+                    var bytes = Encoding.UTF8.GetBytes(load);
+                    request.ContentLength = bytes.Length;
+
+                    using (var requestStream = request.GetRequestStream())
+                    {
+                        requestStream.Write(bytes, 0, bytes.Length);
+                    }
+                }
+
+                if (headers != null && headers.Tuple != null)
+                {
+                    var keys = headers.GetKeys();
+                    foreach (var header in keys)
+                    {
+                        var headerValue = headers.GetVariable(header).AsString();
+                        request.Headers.Add(header, headerValue);
+                    }
+                }
+                HttpWebResponse resp = request.GetResponse() as HttpWebResponse;
+                string result;
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                {
+                    result = sr.ReadToEnd();
+                }
+                string responseCode = resp == null ? "" : resp.StatusCode.ToString();
+                CustomFunction.Run(onSuccess, new Variable(tracking),
+                                   new Variable(responseCode), new Variable(result));
+            }
+            catch (Exception exc)
+            {
+                CustomFunction.Run(onFailure, new Variable(tracking),
+                                   new Variable(""),  new Variable(exc.Message));
+            }
+        }
+
+        static async Task ProcessWebRequestAsync(string uri, string method, string load,
                                             string onSuccess, string onFailure,
                                             string tracking, string contentType,
                                             Variable headers, int timeout,
@@ -676,11 +749,6 @@ namespace SplitAndMerge
             string responseCode = response == null ? "" : response.StatusCode.ToString();
             await CustomFunction.RunAsync(method, new Variable(tracking),
                                           new Variable(responseCode), new Variable(result));
-        }
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            return EvaluateAsync(script).Result;
         }
     }
 
@@ -922,7 +990,8 @@ namespace SplitAndMerge
             Variable result = Precompiler.AsyncMode ?
                 m_precompiler.RunAsync(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false) :
                 m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false);
-            ParserFunction.PopLocalVariables();
+
+            ParserFunction.PopLocalVariables(m_stackLevel.Id);
 
             return result;
         }

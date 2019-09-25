@@ -325,11 +325,9 @@ namespace SplitAndMerge
 
             string varName = forString.Substring(0, index);
 
-            ParsingScript forScript = new ParsingScript(forString, 0, script.Char2Line);
-            forScript.ParentScript = script;
-            forScript.Filename = script.Filename;
+            ParsingScript forScript = script.GetTempScript(forString, index + Constants.FOR_EACH.Length);
             forScript.Debugger = script.Debugger;
-            forScript.Pointer = index + Constants.FOR_EACH.Length;
+
             Variable arrayValue = Utils.GetItem(forScript);
 
             if (arrayValue.Type == Variable.VarType.STRING)
@@ -374,11 +372,9 @@ namespace SplitAndMerge
             string varName = forString.Substring(0, index);
 
 
-            ParsingScript forScript = new ParsingScript(forString, 0, script.Char2Line);
-            forScript.ParentScript = script;
-            forScript.Filename = script.Filename;
+            ParsingScript forScript = script.GetTempScript(forString, index + Constants.FOR_EACH.Length);
             forScript.Debugger = script.Debugger;
-            forScript.Pointer = index + Constants.FOR_EACH.Length;
+
             Variable arrayValue = await Utils.GetItemAsync(forScript);
 
             if (arrayValue.Type == Variable.VarType.STRING)
@@ -423,13 +419,9 @@ namespace SplitAndMerge
 
             int startForCondition = script.Pointer;
 
-            ParsingScript initScript = new ParsingScript(forTokens[0] + Constants.END_STATEMENT);
-            ParsingScript condScript = new ParsingScript(forTokens[1] + Constants.END_STATEMENT);
-            ParsingScript loopScript = new ParsingScript(forTokens[2] + Constants.END_STATEMENT);
-
-            initScript.ParentScript = script;
-            condScript.ParentScript = script;
-            loopScript.ParentScript = script;
+            ParsingScript initScript = script.GetTempScript(forTokens[0] + Constants.END_STATEMENT);
+            ParsingScript condScript = script.GetTempScript(forTokens[1] + Constants.END_STATEMENT);
+            ParsingScript loopScript = script.GetTempScript(forTokens[2] + Constants.END_STATEMENT);
 
             initScript.Execute(null, 0);
 
@@ -476,13 +468,9 @@ namespace SplitAndMerge
 
             int startForCondition = script.Pointer;
 
-            ParsingScript initScript = new ParsingScript(forTokens[0] + Constants.END_STATEMENT);
-            ParsingScript condScript = new ParsingScript(forTokens[1] + Constants.END_STATEMENT);
-            ParsingScript loopScript = new ParsingScript(forTokens[2] + Constants.END_STATEMENT);
-
-            initScript.ParentScript = script;
-            condScript.ParentScript = script;
-            loopScript.ParentScript = script;
+            ParsingScript initScript = script.GetTempScript(forTokens[0] + Constants.END_STATEMENT);
+            ParsingScript condScript = script.GetTempScript(forTokens[1] + Constants.END_STATEMENT);
+            ParsingScript loopScript = script.GetTempScript(forTokens[2] + Constants.END_STATEMENT);
 
             await initScript.ExecuteAsync(null, 0);
 

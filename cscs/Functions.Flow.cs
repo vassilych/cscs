@@ -143,8 +143,7 @@ namespace SplitAndMerge
             }
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
-            int lineNumber = 0;
-            /*string line = */script.GetOriginalLine(out lineNumber);
+            /*string line = */script.GetOriginalLine(out _);
 
             int parentOffset = script.Pointer;
 
@@ -507,12 +506,19 @@ namespace SplitAndMerge
                 ScriptObject obj = csClass.GetImplementation(args);
                 return new Variable(obj);
             }
+            CompiledClassAsync csClassAsync = CSCSClass.GetClass(className) as CompiledClassAsync;
+            if (csClassAsync != null)
+            {
+                ScriptObject obj = csClassAsync.GetImplementationAsync(args).Result;
+                return new Variable(obj);
+            }
 
             CSCSClass.ClassInstance instance = new
                 CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
             return new Variable(instance);
         }
+
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
             string className = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
@@ -520,10 +526,16 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.START_ARG);
             List<Variable> args = await script.GetFunctionArgsAsync();
 
-            CompiledClassAsync csClass = CSCSClass.GetClass(className) as CompiledClassAsync;
+            CompiledClassAsync csClassAsync = CSCSClass.GetClass(className) as CompiledClassAsync;
+            if (csClassAsync != null)
+            {
+                ScriptObject obj = await csClassAsync.GetImplementationAsync(args);
+                return new Variable(obj);
+            }
+            CompiledClass csClass = CSCSClass.GetClass(className) as CompiledClass;
             if (csClass != null)
             {
-                ScriptObject obj = await csClass.GetImplementationAsync(args);
+                ScriptObject obj = csClass.GetImplementation(args);
                 return new Variable(obj);
             }
 
@@ -547,25 +559,17 @@ namespace SplitAndMerge
 
             newClass.ParentOffset = script.Pointer;
             newClass.ParentScript = script;
-            int lineNumber = 0;
-            /*string line = */script.GetOriginalLine(out lineNumber);
+            /*string line = */script.GetOriginalLine(out _);
 
             string scriptExpr = Utils.GetBodyBetween(script, Constants.START_GROUP,
                                                      Constants.END_GROUP);
             script.MoveForwardIf(Constants.END_GROUP);
 
-            Dictionary<int, int> char2Line;
-            string body = Utils.ConvertToScript(scriptExpr, out char2Line);
+            string body = Utils.ConvertToScript(scriptExpr, out _);
 
             Variable result = null;
-            ParsingScript tempScript = new ParsingScript(body);
-            //tempScript.ScriptOffset = newClass.ParentOffset;
-            tempScript.Char2Line = script.Char2Line;
-            tempScript.Filename = script.Filename;
-            tempScript.OriginalScript = script.OriginalScript;
+            ParsingScript tempScript = script.GetTempScript(body);
             tempScript.CurrentClass = newClass;
-            tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;
             tempScript.DisableBreakpoints = true;
 
             // Uncomment if want to step into the class creation code when the debugger is attached (unlikely)
@@ -605,13 +609,7 @@ namespace SplitAndMerge
                 Dictionary<int, int> char2Line;
                 string body = Utils.ConvertToScript(scriptExpr, out char2Line);
 
-                ParsingScript tempScript = new ParsingScript(body);
-                //tempScript.ScriptOffset = newClass.ParentOffset;
-                tempScript.Char2Line = script.Char2Line;
-                tempScript.Filename = script.Filename;
-                tempScript.OriginalScript = script.OriginalScript;
-                tempScript.ParentScript = script;
-                tempScript.InTryBlock = script.InTryBlock;
+                ParsingScript tempScript = script.GetTempScript(body);
                 tempScript.DisableBreakpoints = true;
                 tempScript.MoveForwardIf(Constants.START_GROUP);
 
@@ -745,7 +743,7 @@ namespace SplitAndMerge
                 }
                 args.Add(m_defaultArgs[defIndex]);
             }
-            StackLevel stackLevel = new StackLevel(m_name);
+            m_stackLevel = new StackLevel(m_name);
 
             if (args2 != null)
             {
@@ -753,7 +751,7 @@ namespace SplitAndMerge
                 {
                     var arg = new GetVarFunction(entry.Value);
                     arg.Name = entry.Key;
-                    stackLevel.Variables[entry.Key] = arg;
+                    m_stackLevel.Variables[entry.Key] = arg;
                 }
             }
 
@@ -762,7 +760,7 @@ namespace SplitAndMerge
             {
                 var arg = new GetVarFunction(args[i]);
                 arg.Name = m_args[i];
-                stackLevel.Variables[m_args[i]] = arg;
+                m_stackLevel.Variables[m_args[i]] = arg;
             }
 
             if (NamespaceData  != null)
@@ -773,11 +771,11 @@ namespace SplitAndMerge
                 {
                     string key = elem.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?
                         elem.Key.Substring(prefix.Length) : elem.Key;
-                    stackLevel.Variables[key] = elem.Value;
+                    m_stackLevel.Variables[key] = elem.Value;
                 }
             }
 
-            ParserFunction.AddLocalVariables(stackLevel);
+            ParserFunction.AddLocalVariables(m_stackLevel);
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -841,6 +839,7 @@ namespace SplitAndMerge
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
+            tempScript.StackLevel = m_stackLevel;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (script != null && debugger != null)
@@ -855,7 +854,7 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
 
-            ParserFunction.PopLocalVariables();
+            ParserFunction.PopLocalVariables(m_stackLevel.Id);
 
             if (result == null)
             {
@@ -888,6 +887,7 @@ namespace SplitAndMerge
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
+            tempScript.StackLevel = m_stackLevel;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
@@ -902,7 +902,7 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
 
-            ParserFunction.PopLocalVariables();
+            ParserFunction.PopLocalVariables(m_stackLevel.Id);
 
             if (result == null)
             {
@@ -972,6 +972,13 @@ namespace SplitAndMerge
             return result;
         }
 
+        public override ParserFunction NewInstance()
+        {
+            var newInstance = (CustomFunction)this.MemberwiseClone();
+            newInstance.m_stackLevel = null;
+            return newInstance;
+        }
+
         public ParsingScript ParentScript { set { m_parentScript = value; } }
         public int ParentOffset { set { m_parentOffset = value; } }
         public string Body { get { return m_body; } }
@@ -1003,6 +1010,7 @@ namespace SplitAndMerge
         protected string[] m_args;
         protected ParsingScript m_parentScript = null;
         protected int m_parentOffset = 0;
+        protected StackLevel m_stackLevel;
 
         List<Variable> m_defaultArgs = new List<Variable>();
         Dictionary<int, int> m_defArgMap = new Dictionary<int, int>();
@@ -1387,13 +1395,18 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices, script);
+                if (script.Prev == '.')
+                {
+                    script.Backward();
+                }
+
                 if (script.TryCurrent() != '.')
                 {
                     return result;
                 }
-
                 script.Forward();
-                m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+
+                m_propName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
                 Variable propValue = result.GetProperty(m_propName, script);
                 Utils.CheckNotNull(propValue, m_propName, script);
                 return propValue;
@@ -1437,6 +1450,10 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices, script);
+                if (script.Prev == '.')
+                {
+                    script.Backward();
+                }
                 if (script.TryCurrent() != '.')
                 {
                     return result;
@@ -1656,6 +1673,14 @@ namespace SplitAndMerge
             script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
 
+            script.MoveBackIfPrevious(Constants.END_ARG);
+
+            if (script.Current == ' ' || script.Prev == ' ')
+            {
+                Utils.ThrowErrorMsg("Can't process expression [" + script.Rest + "].",
+                                    script, m_name);
+            }
+
             // First try processing as an object (with a dot notation):
             Variable result = ProcessObject(script, varValue);
             if (result != null)
@@ -1674,20 +1699,12 @@ namespace SplitAndMerge
                 Variable retVar = varValue.DeepClone();
                 retVar.CurrentAssign = m_name;
                 return retVar;
-                //return varValue.DeepClone();
             }
 
             Variable array;
 
             ParserFunction pf = ParserFunction.GetVariable(m_name, script);
-            if (pf != null)
-            {
-                array = pf.GetValue(script);
-            }
-            else
-            {
-                array = new Variable();
-            }
+            array = pf != null ? (pf.GetValue(script)) : new Variable();
 
             ExtendArray(array, arrayIndices, 0, varValue);
 
@@ -1726,20 +1743,12 @@ namespace SplitAndMerge
                 Variable retVar = varValue.DeepClone();
                 retVar.CurrentAssign = m_name;
                 return retVar;
-                //return varValue.DeepClone();
             }
 
             Variable array;
 
             ParserFunction pf = ParserFunction.GetVariable(m_name, script);
-            if (pf != null)
-            {
-                array = await pf.GetValueAsync(script);
-            }
-            else
-            {
-                array = new Variable();
-            }
+            array = pf != null ? (await pf.GetValueAsync(script)) : new Variable();
 
             ExtendArray(array, arrayIndices, 0, varValue);
 

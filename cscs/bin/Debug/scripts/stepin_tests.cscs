@@ -133,7 +133,7 @@ while (x < 9) {
 
 if (x < 10) {
   try {
-    print("This should fail ...", xxx);
+    print("This should fail ...", xxxxxx);
   } catch(exc) {
     Print("Caught: " + exc);
   }

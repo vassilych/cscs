@@ -148,7 +148,8 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name);
 
             int numberDigits = Utils.GetSafeInt(args, 1, 0);
-            args[0].Value = Math.Round(args[0].Value, numberDigits);
+
+            args[0].Value = Math.Round(args[0].AsDouble(), numberDigits);
             return args[0];
         }
     }

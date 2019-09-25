@@ -315,9 +315,6 @@ namespace SplitAndMerge
             }
 
             ParsingScript tempScript = script.GetTempScript(script.String, script.Pointer);
-            /*ParsingScript tempScript = new ParsingScript(script.String, script.Pointer);
-            tempScript.ParentScript = script;
-            tempScript.InTryBlock = script.InTryBlock;*/
 
             if (script.Current != start && script.TryPrev() != start &&
                (script.Current == ' ' || script.TryPrev() == ' '))
@@ -1120,13 +1117,6 @@ namespace SplitAndMerge
                 }
 
                 ParsingScript tempScript = script.GetTempScript(varName, argStart);
-                /*ParsingScript tempScript = new ParsingScript(varName, argStart);
-                tempScript.ParentScript = script;
-                tempScript.Char2Line = script.Char2Line;
-                tempScript.Filename = script.Filename;
-                tempScript.OriginalScript = script.OriginalScript;
-                tempScript.InTryBlock = script.InTryBlock;*/
-
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
                 Variable index = tempScript.Execute(Constants.END_ARRAY_ARRAY);
@@ -1165,13 +1155,6 @@ namespace SplitAndMerge
                 }
 
                 ParsingScript tempScript = script.GetTempScript(varName, argStart);
-                /*ParsingScript tempScript = new ParsingScript(varName, argStart);
-                tempScript.ParentScript = script;
-                tempScript.Char2Line = script.Char2Line;
-                tempScript.Filename = script.Filename;
-                tempScript.OriginalScript = script.OriginalScript;
-                tempScript.InTryBlock = script.InTryBlock;*/
-
                 tempScript.MoveForwardIf(Constants.START_ARG, Constants.START_ARRAY);
 
                 Variable index = await tempScript.ExecuteAsync(Constants.END_ARRAY_ARRAY);
