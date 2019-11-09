@@ -500,7 +500,10 @@ namespace SplitAndMerge
             if (m_start)
             {
                 int port = Utils.GetSafeInt(args, 0, 13337);
-                res = DebuggerServer.StartServer(port);
+                bool allowRemote = Utils.GetSafeInt(args, 1, 0) == 1;
+                DebuggerServer.AllowedClients = Utils.GetSafeString(args, 2);
+
+                res = DebuggerServer.StartServer(port, allowRemote);
             }
             else
             {
