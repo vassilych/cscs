@@ -145,7 +145,7 @@ namespace SplitAndMerge
             return listToMerge;
         }
 
-        static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes, ref int arrayIndexDepth, ref int negated, out char ch, out string action)
+        public static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes, ref int arrayIndexDepth, ref int negated, out char ch, out string action)
         {
             StringBuilder item = new StringBuilder();
             ch = Constants.EMPTY;

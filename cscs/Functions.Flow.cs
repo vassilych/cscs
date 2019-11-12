@@ -835,11 +835,14 @@ namespace SplitAndMerge
                 tempScript.Char2Line = m_parentScript.Char2Line;
                 tempScript.Filename = m_parentScript.Filename;
                 tempScript.OriginalScript = m_parentScript.OriginalScript;
+                tempScript.AllLabels = m_parentScript.AllLabels;
+                tempScript.LabelToFile = m_parentScript.LabelToFile;
             }
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
             tempScript.StackLevel = m_stackLevel;
+            tempScript.FunctionName = m_name;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (script != null && debugger != null)
@@ -883,11 +886,14 @@ namespace SplitAndMerge
                 tempScript.Char2Line = m_parentScript.Char2Line;
                 tempScript.Filename = m_parentScript.Filename;
                 tempScript.OriginalScript = m_parentScript.OriginalScript;
+                tempScript.AllLabels = m_parentScript.AllLabels;
+                tempScript.LabelToFile = m_parentScript.LabelToFile;
             }
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
             tempScript.StackLevel = m_stackLevel;
+            tempScript.FunctionName = m_name;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
@@ -1348,17 +1354,27 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
             string filename = args[0].AsString();
+            ParsingScript tempScript = GetIncludeFileScript(script, filename);
+            includeScript = tempScript.String;
+            return tempScript;
+        }
+
+        public static ParsingScript GetIncludeFileScript(ParsingScript script, string filename)
+        {
             string pathname = script.GetFilePath(filename);
             string[] lines = Utils.GetFileLines(pathname);
 
             string includeFile = string.Join(Environment.NewLine, lines);
             Dictionary<int, int> char2Line;
-            includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
+            var includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
             ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
             tempScript.Filename = pathname;
             tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
             tempScript.ParentScript = script;
             tempScript.InTryBlock = script.InTryBlock;
+            tempScript.AllLabels = script.AllLabels;
+            tempScript.LabelToFile = script.LabelToFile;
+            Utils.PreprocessScript(tempScript);
 
             return tempScript;
         }
@@ -1887,6 +1903,90 @@ namespace SplitAndMerge
                 }
             }
             return arrayIndex;
+        }
+    }
+
+    class GotoFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+
+            Dictionary<string, int> labels;
+            if (script.AllLabels == null || script.LabelToFile == null |
+               !script.AllLabels.TryGetValue(script.FunctionName, out labels))
+            {
+                Utils.ThrowErrorMsg("Couldn't find labels in function [" + script.FunctionName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            int gotoPointer;
+            if (!labels.TryGetValue(labelName, out gotoPointer))
+            {
+                Utils.ThrowErrorMsg("Couldn't find label [" + labelName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            string filename;
+            if (script.LabelToFile.TryGetValue(labelName, out filename) &&
+                filename != script.Filename && !string.IsNullOrWhiteSpace(filename))
+            {
+                var newScript = IncludeFile.GetIncludeFileScript(script, filename);
+                script.Filename = filename;
+                script.String = newScript.String;
+            }
+
+            script.Pointer = gotoPointer;
+            if (string.IsNullOrWhiteSpace(script.FunctionName))
+            {
+                script.Backward();
+            }
+
+            return Variable.EmptyInstance;
+        }
+    }
+
+    class GosubFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+
+            Dictionary<string, int> labels;
+            if (script.AllLabels == null ||
+               !script.AllLabels.TryGetValue(script.FunctionName, out labels))
+            {
+                Utils.ThrowErrorMsg("Couldn't find labels in function [" + script.FunctionName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            int gotoPointer;
+            if (!labels.TryGetValue(labelName, out gotoPointer))
+            {
+                Utils.ThrowErrorMsg("Couldn't find label [" + labelName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            script.Pointer = gotoPointer;
+            if (string.IsNullOrWhiteSpace(script.FunctionName))
+            {
+                script.Backward();
+            }
+
+            return Variable.EmptyInstance;
+        }
+    }
+
+    class LabelFunction : ActionFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            // Just skip this label. m_name is equal to the lable name.
+            return Variable.EmptyInstance;
         }
     }
 
