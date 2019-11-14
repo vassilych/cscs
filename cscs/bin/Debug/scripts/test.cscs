@@ -1249,6 +1249,17 @@ groups = regex["groups"];
 Test(groups.size, 2);
 Test(groups[1], "MyUserName");
 
+Print("Testing inline initialization");
+valStr = "someValue";
+b = {"Key1" : valStr, "Key2" : "value2", "Key3" : "value3"};
+Test(b["key1"], valStr);
+Test(b["key2"], "value2");
+Test(b.size, 3);
+c = { valStr, "value2" };
+Test(c[0], valStr);
+Test(c[1], "value2");
+Test(c.size, 2);
+
 Timeout = 100;
 MySender = "Tester";
 print(Now(), "Scheduling to run in ", Timeout, "ms.");
