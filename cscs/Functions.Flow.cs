@@ -1689,6 +1689,7 @@ namespace SplitAndMerge
             script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
 
+            varValue.TrySetAsMap();
             script.MoveBackIfPrevious(Constants.END_ARG);
 
             if (script.Current == ' ' || script.Prev == ' ')
@@ -1733,6 +1734,7 @@ namespace SplitAndMerge
             script.CurrentAssign = m_name;
             Variable varValue = await Utils.GetItemAsync(script);
 
+            varValue.TrySetAsMap();
             script.MoveBackIfPrevious(Constants.END_ARG);
 
             if (script.Current == ' ' || script.Prev == ' ')

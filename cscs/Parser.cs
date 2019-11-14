@@ -721,6 +721,9 @@ namespace SplitAndMerge
                     leftCell.Value = Convert.ToDouble(
                       string.Compare(leftCell.AsString(), rightCell.AsString()) != 0);
                     break;
+                case ":":
+                    leftCell.SetHashVariable(leftCell.AsString(), rightCell);
+                    break;
                 case ")":
                     break;
                 default:
