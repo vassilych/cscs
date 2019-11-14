@@ -145,7 +145,8 @@ namespace SplitAndMerge
             return listToMerge;
         }
 
-        static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes, ref int arrayIndexDepth, ref int negated, out char ch, out string action)
+        public static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes,
+            ref int arrayIndexDepth, ref int negated, out char ch, out string action, bool throwExc = true)
         {
             StringBuilder item = new StringBuilder();
             ch = Constants.EMPTY;
@@ -191,7 +192,7 @@ namespace SplitAndMerge
             result = result.Replace("\\\"", "\"");
             result = result.Replace("\\'", "'");
 
-            if (string.IsNullOrWhiteSpace(result) && action != "++" && action != "--" &&
+            if (throwExc && string.IsNullOrWhiteSpace(result) && action != "++" && action != "--" &&
                 Utils.IsAction(script.Prev) && Utils.IsAction(script.PrevPrev))
             {
                 Utils.ThrowErrorMsg("Can't process token [" + script.PrevPrev + script.Prev + script.Current +
@@ -720,6 +721,9 @@ namespace SplitAndMerge
                 case "!=":
                     leftCell.Value = Convert.ToDouble(
                       string.Compare(leftCell.AsString(), rightCell.AsString()) != 0);
+                    break;
+                case ":":
+                    leftCell.SetHashVariable(leftCell.AsString(), rightCell);
                     break;
                 case ")":
                     break;

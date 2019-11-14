@@ -1,3 +1,7 @@
+labStr="labelString1";
+b = {"Key1":labStr, "Key2":"label2"};
+print(b["key1"], b["key2"]);
+
 startDebugger();
 while(true) { sleep(1000000); };
 

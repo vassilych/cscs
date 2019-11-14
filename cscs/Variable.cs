@@ -258,7 +258,8 @@ namespace SplitAndMerge
 
         public int SetHashVariable(string hash, Variable var)
         {
-            int retValue = m_tuple.Count;
+            SetAsArray();
+            int retValue;
             string lower = hash.ToLower();
             if (m_dictionary.TryGetValue(lower, out retValue))
             {
@@ -272,6 +273,31 @@ namespace SplitAndMerge
             m_dictionary[lower] = m_tuple.Count - 1;
 
             return m_tuple.Count - 1;
+        }
+
+        public void TrySetAsMap()
+        {
+            if (m_tuple == null || m_tuple.Count < 1 ||
+                m_tuple[0].m_dictionary.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < m_tuple.Count; i++)
+            {
+                var current = m_tuple[i];
+                if (current.m_tuple == null || current.m_dictionary.Count == 0)
+                {
+                    continue;
+                }
+
+                var key            = current.m_dictionary.First().Key;
+                m_keyMappings[key] = current.m_keyMappings[key];
+                m_dictionary[key]  = i;
+
+                current.m_dictionary.Clear();
+                m_tuple[i] = current.m_tuple[0];
+            }
         }
 
         public int RemoveItem(string item)

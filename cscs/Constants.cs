@@ -24,6 +24,7 @@ namespace SplitAndMerge
         public const char CONTINUE_LINE = '\\';
         public const char EMPTY = '\0';
         public const char TERNARY_OPERATOR = '?';
+        public const string LABEL_OPERATOR = ":";
         public const string FOR_EACH = ":";
 
         public const string ASSIGNMENT = "=";
@@ -63,6 +64,8 @@ namespace SplitAndMerge
         public const string TRY = "try";
         public const string TYPE = "type";
         public const string WHILE = "while";
+        public const string GOTO = "goto";
+        public const string GOSUB = "gosub";
 
         public const string TRUE = "true";
         public const string FALSE = "false";
@@ -183,7 +186,7 @@ namespace SplitAndMerge
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();
 
-        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=" };
+        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", ":" };
         public static string[] MATH_ACTIONS = { "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
                                                 "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
         // Actions: always decreasing by the number of characters.
@@ -204,7 +207,7 @@ namespace SplitAndMerge
         public static char[] END_PARSE_ARRAY = { SPACE, END_STATEMENT, END_ARG, END_GROUP, '\n' };
         public static char[] NEXT_OR_END_ARRAY = { NEXT_ARG, END_ARG, END_GROUP, END_STATEMENT, SPACE };
 
-        public static string TOKEN_SEPARATION_STR = "<>=+-*/%&|^,!()[]{}\t\n; ";
+        public static string TOKEN_SEPARATION_STR = "<>=+-*/%&|^,!()[]{}\t\n;: ";
         public static char[] TOKEN_SEPARATION = TOKEN_SEPARATION_STR.ToCharArray();
 
         // Functions that allow a space separator after them, on top of parentheses. The
