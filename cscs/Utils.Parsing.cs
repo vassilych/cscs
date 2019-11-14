@@ -709,7 +709,7 @@ namespace SplitAndMerge
                 try
                 {
                     string token = Parser.ExtractNextToken(script, Constants.TOKEN_SEPARATION,
-                                 ref inQuotes, ref arrayIndexDepth, ref negated, out _, out _);
+                                 ref inQuotes, ref arrayIndexDepth, ref negated, out _, out _, false);
 
                     if (token == Constants.FUNCTION)
                     {
