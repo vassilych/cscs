@@ -1,3 +1,17 @@
+function gosubTest() {
+  print("starting gosubtest");
+  gosub lala1;
+  print("after gosub lala");
+  return;
+  lala1: print("In label lala");
+  gosub lala2;
+  print("after gosub lala2");
+  return;
+  lala2: print("In label lala2");
+  return;
+}
+gosubTest();
+
 startDebugger();
 while(true) { sleep(1000000); };
 

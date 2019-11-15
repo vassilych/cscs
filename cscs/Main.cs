@@ -38,7 +38,7 @@ namespace SplitAndMerge
             Interpreter.Instance.OnOutput += Print;
 
             string scriptFilename = "scripts/temp.cscs";
-            scriptFilename = "";
+            //scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
             Environment.SetEnvironmentVariable("MONO_REGISTRY_PATH",

@@ -56,6 +56,10 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
 
+            ParserFunction.RegisterFunction(Constants.GOTO, new GotoGosubFunction(true));
+            ParserFunction.RegisterFunction(Constants.GOSUB, new GotoGosubFunction(false));
+            ParserFunction.AddAction(Constants.LABEL_OPERATOR, new LabelFunction());
+
             CSCS_SQL.Init();
 #endif
 #endif

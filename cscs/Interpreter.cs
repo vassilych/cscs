@@ -191,9 +191,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
             ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
             ParserFunction.RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
-
-            ParserFunction.RegisterFunction(Constants.GOTO, new GotoFunction());
-            ParserFunction.RegisterFunction(Constants.GOSUB, new GosubFunction());
         }
 
         public void RegisterEnums()
@@ -211,8 +208,6 @@ namespace SplitAndMerge
             {
                 ParserFunction.AddAction(Constants.OPER_ACTIONS[i], new OperatorAssignFunction());
             }
-
-            ParserFunction.AddAction(Constants.LABEL_OPERATOR, new LabelFunction());
         }
 
         public Variable ProcessFile(string filename, bool mainFile = false)

@@ -25,6 +25,11 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            if (script.ProcessReturn())
+            {
+                return Variable.EmptyInstance;
+            }
+
             script.MoveForwardIf(Constants.SPACE);
             if (!script.FromPrev(Constants.RETURN.Length).Contains(Constants.RETURN))
             {
@@ -40,6 +45,11 @@ namespace SplitAndMerge
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
+            if (script.ProcessReturn())
+            {
+                return Variable.EmptyInstance;
+            }
+
             script.MoveForwardIf(Constants.SPACE);
             if (!script.FromPrev(Constants.RETURN.Length).Contains(Constants.RETURN))
             {
@@ -1905,81 +1915,6 @@ namespace SplitAndMerge
                 }
             }
             return arrayIndex;
-        }
-    }
-
-    class GotoFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-
-            Dictionary<string, int> labels;
-            if (script.AllLabels == null || script.LabelToFile == null |
-               !script.AllLabels.TryGetValue(script.FunctionName, out labels))
-            {
-                Utils.ThrowErrorMsg("Couldn't find labels in function [" + script.FunctionName + "].",
-                                    script, m_name);
-                return Variable.EmptyInstance;
-            }
-
-            int gotoPointer;
-            if (!labels.TryGetValue(labelName, out gotoPointer))
-            {
-                Utils.ThrowErrorMsg("Couldn't find label [" + labelName + "].",
-                                    script, m_name);
-                return Variable.EmptyInstance;
-            }
-
-            string filename;
-            if (script.LabelToFile.TryGetValue(labelName, out filename) &&
-                filename != script.Filename && !string.IsNullOrWhiteSpace(filename))
-            {
-                var newScript = IncludeFile.GetIncludeFileScript(script, filename);
-                script.Filename = filename;
-                script.String = newScript.String;
-            }
-
-            script.Pointer = gotoPointer;
-            if (string.IsNullOrWhiteSpace(script.FunctionName))
-            {
-                script.Backward();
-            }
-
-            return Variable.EmptyInstance;
-        }
-    }
-
-    class GosubFunction : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-
-            Dictionary<string, int> labels;
-            if (script.AllLabels == null ||
-               !script.AllLabels.TryGetValue(script.FunctionName, out labels))
-            {
-                Utils.ThrowErrorMsg("Couldn't find labels in function [" + script.FunctionName + "].",
-                                    script, m_name);
-                return Variable.EmptyInstance;
-            }
-
-            int gotoPointer;
-            if (!labels.TryGetValue(labelName, out gotoPointer))
-            {
-                Utils.ThrowErrorMsg("Couldn't find label [" + labelName + "].",
-                                    script, m_name);
-                return Variable.EmptyInstance;
-            }
-
-            script.Pointer = gotoPointer;
-            if (string.IsNullOrWhiteSpace(script.FunctionName))
-            {
-                script.Backward();
-            }
-
-            return Variable.EmptyInstance;
         }
     }
 

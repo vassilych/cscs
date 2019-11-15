@@ -96,6 +96,8 @@ namespace SplitAndMerge
             set;
         }
 
+        public List<int> PointersBack { get; set; } = new List<int>();
+
         string m_functionName = "";
         public string FunctionName
         {
@@ -156,6 +158,17 @@ namespace SplitAndMerge
                 }
             }
             return path;
+        }
+
+        public bool ProcessReturn()
+        {
+            if (PointersBack.Count > 0)
+            {
+                Pointer = PointersBack[PointersBack.Count - 1];
+                PointersBack.RemoveAt(PointersBack.Count - 1);
+                return true;
+            }
+            return false;
         }
 
         public int Find(char ch, int from = -1)
