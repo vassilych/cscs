@@ -834,6 +834,7 @@ namespace SplitAndMerge
             return elapsed >= 0 ? new Variable(elapsed) : new Variable(elapsedStr);
         }
     }
+
     class GotoGosubFunction : ParserFunction
     {
         bool m_isGoto = true;
@@ -885,6 +886,82 @@ namespace SplitAndMerge
             }
 
             return Variable.EmptyInstance;
+        }
+    }
+
+    class VariableArgsFunction : ParserFunction
+    {
+        bool m_processFirstToken = true;
+        Dictionary<string, Variable> m_parameters;
+
+        public VariableArgsFunction(bool processFirst = true)
+        {
+            m_processFirstToken = processFirst;
+        }
+
+        void GetParameters(ParsingScript script)
+        {
+            m_parameters = new Dictionary<string, Variable>();
+            while (script.Current != Constants.END_STATEMENT)
+            {
+                var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                var value = script.Current == Constants.END_STATEMENT ? Variable.EmptyInstance :
+                                                                        Utils.GetItem(script, false);
+                m_parameters[labelName.ToLower()] = value;
+            }
+        }
+
+        string GetParameter(string key, string defValue = "")
+        {
+            Variable res;
+            if (!m_parameters.TryGetValue(key.ToLower(), out res))
+            {
+                return defValue;
+            }
+            return res.AsString();
+        }
+        double GetDoubleParameter(string key, double defValue = 0.0)
+        {
+            Variable res;
+            if (!m_parameters.TryGetValue(key.ToLower(), out res))
+            {
+                return defValue;
+            }
+            return res.AsDouble();
+        }
+        int GetIntParameter(string key, int defValue = 0)
+        {
+            Variable res;
+            if (!m_parameters.TryGetValue(key.ToLower(), out res))
+            {
+                return defValue;
+            }
+            return res.AsInt();
+        }
+        Variable GetVariableParameter(string key, Variable defValue = null)
+        {
+            Variable res;
+            if (!m_parameters.TryGetValue(key.ToLower(), out res))
+            {
+                return defValue;
+            }
+            return res;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var varName = m_processFirstToken ? Utils.GetItem(script).AsString() : "";
+            GetParameters(script);
+
+            if (Name.ToLower() == "msg")
+            {
+                var caption = GetParameter("caption");
+                var duration = GetIntParameter("duration");
+                return new Variable(caption);
+            }
+
+
+            return new Variable(varName);
         }
     }
 }

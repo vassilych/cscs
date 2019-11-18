@@ -241,8 +241,6 @@ namespace SplitAndMerge
                 toParse.MainFilename = toParse.Filename;
             }
 
-            Utils.PreprocessScript(toParse);
-
             Variable result = null;
 
             while (toParse.Pointer < data.Length)
@@ -270,8 +268,6 @@ namespace SplitAndMerge
             {
                 toParse.MainFilename = toParse.Filename;
             }
-
-            Utils.PreprocessScript(toParse);
 
             Variable result = null;
 

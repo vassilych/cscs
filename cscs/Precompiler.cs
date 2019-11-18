@@ -348,7 +348,7 @@ namespace SplitAndMerge
 
             m_converted.AppendLine("using System; using System.Collections; using System.Collections.Generic; using System.Collections.Specialized; " +
                                    "using System.Globalization; using System.Linq; using System.Linq.Expressions; using System.Reflection; " +
-                                   "using System.Text; using System.Threading; using System.Threading.Tasks; using static System.Math;");
+                                   "using System.Text; using System.Threading; using System.Threading.Tasks;");// using static System.Math;");
             for (int i = 0; i < s_namespaces.Count; i++)
             {
                 m_converted.AppendLine(s_namespaces[i]);
