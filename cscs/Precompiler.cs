@@ -1317,14 +1317,14 @@ namespace SplitAndMerge
                 MethodInfo myMethod = mathType.GetMethod(candidate);
                 if (myMethod != null)
                 {
-                    corrected = candidate;
+                    corrected = "Math." + candidate;
                     return true;
                 }
                 return false;
             }
             catch (AmbiguousMatchException)
             {
-                corrected = candidate;
+                corrected = "Math." + candidate;
                 return true;
             }
         }

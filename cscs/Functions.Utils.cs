@@ -938,6 +938,15 @@ namespace SplitAndMerge
             }
             return res.AsInt();
         }
+        bool GetBoolParameter(string key, bool defValue = false)
+        {
+            Variable res;
+            if (!m_parameters.TryGetValue(key.ToLower(), out res))
+            {
+                return defValue;
+            }
+            return res.AsBool();
+        }
         Variable GetVariableParameter(string key, Variable defValue = null)
         {
             Variable res;
@@ -950,18 +959,33 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            var varName = m_processFirstToken ? Utils.GetItem(script).AsString() : "";
+            var objectName = m_processFirstToken ? Utils.GetItem(script).AsString() : "";
             GetParameters(script);
 
-            if (Name.ToLower() == "msg")
+            if (Name.ToUpper() == "MSG")
             {
-                var caption = GetParameter("caption");
-                var duration = GetIntParameter("duration");
-                return new Variable(caption);
+                string caption = GetParameter("caption");
+                int duration   = GetIntParameter("duration");
+                return new Variable(objectName);
+            }
+            if (Name.ToUpper() == "DEFINE")
+            {
+                string name  = GetParameter("name");
+                double size  = GetIntParameter("size");
+                string type  = GetParameter("type");
+                double value = GetIntParameter("value");
+                string init  = GetParameter("init");
+                Variable dup = GetVariableParameter("dup");
+                return new Variable(objectName);
+            }
+            if (Name.ToUpper() == "SET_OBJECT")
+            {
+                string prop = GetParameter("property");
+                bool val    = GetBoolParameter("value");
+                return new Variable(objectName);
             }
 
-
-            return new Variable(varName);
+            return new Variable(objectName);
         }
     }
 }

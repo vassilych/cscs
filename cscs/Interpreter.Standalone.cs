@@ -60,6 +60,8 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GOSUB, new GotoGosubFunction(false));
 
             ParserFunction.RegisterFunction("MSG", new VariableArgsFunction(true));
+            ParserFunction.RegisterFunction("DEFINE", new VariableArgsFunction(true));
+            ParserFunction.RegisterFunction("SET_OBJECT", new VariableArgsFunction(true));
 
             ParserFunction.AddAction(Constants.LABEL_OPERATOR, new LabelFunction());
 
