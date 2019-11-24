@@ -24,7 +24,6 @@ namespace SplitAndMerge
         public const char CONTINUE_LINE = '\\';
         public const char EMPTY = '\0';
         public const char TERNARY_OPERATOR = '?';
-        public const string LABEL_OPERATOR = ":";
         public const string FOR_EACH = ":";
 
         public const string ASSIGNMENT = "=";
@@ -64,8 +63,6 @@ namespace SplitAndMerge
         public const string TRY = "try";
         public const string TYPE = "type";
         public const string WHILE = "while";
-        public const string GOTO = "goto";
-        public const string GOSUB = "gosub";
 
         public const string TRUE = "true";
         public const string FALSE = "false";

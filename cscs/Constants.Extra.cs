@@ -57,6 +57,10 @@ namespace SplitAndMerge
         public const string SPANISH = "es";
         public const string SYNONYMS = "sy";
 
+        public const string LABEL_OPERATOR = ":";
+        public const string GOTO = "goto";
+        public const string GOSUB = "gosub";
+
         public const string DEFINE = "define";
         public const string MSG = "msg";
         public const string SET_OBJECT = "set_object";
