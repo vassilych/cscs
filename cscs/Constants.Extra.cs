@@ -57,6 +57,10 @@ namespace SplitAndMerge
         public const string SPANISH = "es";
         public const string SYNONYMS = "sy";
 
+        public const string DEFINE = "define";
+        public const string MSG = "msg";
+        public const string SET_OBJECT = "set_object";
+
         public static string Language(string lang)
         {
             switch (lang)
