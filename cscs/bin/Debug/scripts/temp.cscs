@@ -1,3 +1,8 @@
+dauer = 10;
+text = "My caption";
+msg "aFunc" caption text duration dauer;
+
+
 function gosubTest() {
   print("starting gosubtest");
   gosub lala1;
