@@ -89,7 +89,7 @@ namespace SplitAndMerge
                 headerRow.AddVariable(new Variable(col.ColumnName));
                 if (!string.IsNullOrWhiteSpace(tableName))
                 {
-                    tableData[col.ColumnName.ToLower()] = StringToSqlDbType(col.DataType.Name);
+                    tableData[col.ColumnName] = StringToSqlDbType(col.DataType.Name);
                 }
             }
             results.AddVariable(headerRow);
@@ -193,7 +193,7 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 3, m_name);
 
             var tableName = Utils.GetSafeString(args, 0).Trim();
-            var colsStr   = Utils.GetSafeString(args, 1).Trim().ToLower();
+            var colsStr   = Utils.GetSafeString(args, 1).Trim();
 
             var colData = SQLQueryFunction.GetColumnData(tableName);
             if (colData == null || colData.Count == 0)
@@ -288,6 +288,11 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name);
 
             var tableName = Utils.GetSafeString(args, 0);
+            return GetColsData(tableName);
+        }
+
+        public static Variable GetColsData(string tableName)
+        {
             var colData = SQLQueryFunction.GetColumnData(tableName);
 
             if (colData == null || colData.Count == 0)

@@ -91,6 +91,89 @@ namespace SplitAndMerge
             return data;
         }
 
+        public static void PreprocessScript(ParsingScript script)
+        {
+            script.Pointer = 0;
+            int nestedLevel = 0;
+            int functionNestedLevel = 0;
+            int pointerOffset = 0;
+            string currentFunction = "";
+            string prevToken = "";
+
+            bool inQuotes = false;
+            int negated = 0;
+            int arrayIndexDepth = 0;
+
+            if (script.AllLabels == null)
+            {
+                script.AllLabels = new Dictionary<string, Dictionary<string, int>>();
+            }
+            if (script.LabelToFile == null)
+            {
+                script.LabelToFile = new Dictionary<string, string>();
+            }
+
+            while (script.StillValid())
+            {
+                char ch = script.Current;
+                if (ch == '{')
+                {
+                    nestedLevel++;
+                    script.Forward();
+                    continue;
+                }
+                else if (ch == '}')
+                {
+                    nestedLevel--;
+                    if (nestedLevel <= functionNestedLevel)
+                    {
+                        currentFunction = "";
+                        pointerOffset = 0;
+                    }
+                    script.Forward();
+                    continue;
+                }
+                else if (ch == ':' && !string.IsNullOrWhiteSpace(prevToken))
+                {
+                    script.Forward();
+                    Dictionary<string, int> labels;
+                    if (!script.AllLabels.TryGetValue(currentFunction, out labels))
+                    {
+                        labels = new Dictionary<string, int>();
+                    }
+                    labels[prevToken] = script.Pointer + 1 - pointerOffset;
+                    script.AllLabels[currentFunction] = labels;
+                    script.LabelToFile[prevToken] = script.Filename;
+                    continue;
+                }
+
+                try
+                {
+                    string token = Parser.ExtractNextToken(script, Constants.TOKEN_SEPARATION,
+                                 ref inQuotes, ref arrayIndexDepth, ref negated, out _, out _, false);
+
+                    if (token == Constants.FUNCTION)
+                    {
+                        script.Forward();
+                        currentFunction = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                        currentFunction = Constants.ConvertName(currentFunction);
+                        functionNestedLevel = nestedLevel;
+                        var sig = Utils.GetFunctionSignature(script);
+                        pointerOffset = script.Pointer + (currentFunction == "" ? 1 : 2);
+                    }
+                    prevToken = token;
+                }
+                catch (Exception exc)
+                {
+                    Console.WriteLine(exc.Message);
+                    script.Forward();
+                }
+
+            }
+
+            script.Pointer = 0;
+        }
+
         public static List<Variable> GetPathnames(string path)
         {
             string pathname = Path.GetFullPath(path);
@@ -489,6 +572,5 @@ namespace SplitAndMerge
             return Calculate(functionName, argsString);
         }
 #endif
-
     }
 }

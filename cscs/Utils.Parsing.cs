@@ -975,7 +975,23 @@ namespace SplitAndMerge
             return result.ToString();
         }
 
-        public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG, char close = Constants.END_ARG)
+        public static string ReplaceSpaces(ParsingScript script, char replaceChar = ',', char end = Constants.END_STATEMENT)
+        {
+            StringBuilder sb = new StringBuilder(); 
+            while (script.StillValid() && script.TryCurrent() != end)
+            {
+                var token = GetBodyBetween(script, '\0', ' ', end);
+                sb.Append(token + replaceChar);
+            }
+            if (sb.Length > 0 && sb[sb.Length - 1] == replaceChar)
+            {
+                sb.Remove(sb.Length - 1, 1);
+            }
+            return sb.ToString();
+        }
+
+        public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG,
+                                            char close = Constants.END_ARG, char end = '\0')
         {
             // We are supposed to be one char after the beginning of the string, i.e.
             // we must not have the opening char as the first one.
@@ -991,6 +1007,11 @@ namespace SplitAndMerge
             for (; script.StillValid(); script.Forward())
             {
                 char ch = script.Current;
+
+                if (ch == end && !inQuotes)
+                {
+                    break;
+                }
 
                 if (close != Constants.QUOTE)
                 {
