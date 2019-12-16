@@ -57,6 +57,15 @@ namespace SplitAndMerge
         public const string SPANISH = "es";
         public const string SYNONYMS = "sy";
 
+        public const string LABEL_OPERATOR = ":";
+        public const string GOTO = "goto";
+        public const string GOSUB = "gosub";
+
+        public const string INCLUDE_SECURE = "includes";
+
+        public const string ENCODE_FILE = "encodeFile";
+        public const string DECODE_FILE = "decodeFile";
+
         public static string Language(string lang)
         {
             switch (lang)
