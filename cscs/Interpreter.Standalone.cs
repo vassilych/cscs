@@ -56,60 +56,14 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             ParserFunction.RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
 
-            ParserFunction.RegisterFunction(Constants.GOTO, new GotoGosubFunction(true));
-            ParserFunction.RegisterFunction(Constants.GOSUB, new GotoGosubFunction(false));
-            ParserFunction.RegisterFunction(Constants.INCLUDE_SECURE, new IncludeFileSecure());
-
             ParserFunction.RegisterFunction(Constants.ENCODE_FILE, new EncodeFileFunction(true));
             ParserFunction.RegisterFunction(Constants.DECODE_FILE, new EncodeFileFunction(false));
-
-            ParserFunction.AddAction(Constants.LABEL_OPERATOR, new LabelFunction());
 
             CSCS_SQL.Init();
 #endif
 #endif
             //ReadConfig();
-        }
-
-
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-        public Variable ProcessFileExtended(string filename, bool mainFile = false)
-        {
-            string script = Utils.GetFileContents(filename);
-            return ProcessExtended(script, filename, mainFile);
-        }
-
-        public Variable ProcessExtended(string script, string filename = "", bool mainFile = false)
-        {
-            Dictionary<int, int> char2Line;
-            string data = Utils.ConvertToScript(script, out char2Line, filename);
-            if (string.IsNullOrWhiteSpace(data))
-            {
-                return null;
-            }
-
-            ParsingScript toParse = new ParsingScript(data, 0, char2Line);
-            toParse.OriginalScript = script;
-            toParse.Filename = filename;
-
-            if (mainFile)
-            {
-                toParse.MainFilename = toParse.Filename;
-            }
-
-            Utils.PreprocessScript(toParse);
-
-            Variable result = null;
-
-            while (toParse.Pointer < data.Length)
-            {
-                result = toParse.Execute();
-                toParse.GoToNextStatement();
-            }
-
-            return result;
-        }
-#endif
+        }               
 
         void ReadConfig()
         {

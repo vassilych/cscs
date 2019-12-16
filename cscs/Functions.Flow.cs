@@ -1348,12 +1348,19 @@ namespace SplitAndMerge
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
             string filename = args[0].AsString();
+            ParsingScript tempScript = GetIncludeFileScript(script, filename);
+            includeScript = tempScript.String;
+            return tempScript;
+        }
+
+        public static ParsingScript GetIncludeFileScript(ParsingScript script, string filename)
+        {
             string pathname = script.GetFilePath(filename);
             string[] lines = Utils.GetFileLines(pathname);
 
             string includeFile = string.Join(Environment.NewLine, lines);
             Dictionary<int, int> char2Line;
-            includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
+            var includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
             ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
             tempScript.Filename = pathname;
             tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
