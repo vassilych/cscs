@@ -107,7 +107,8 @@ namespace SplitAndMerge
             foreach (Assembly asm in assemblies)
             {
                 AssemblyName asmName = asm.GetName();
-                if (asmName == null || string.IsNullOrWhiteSpace(asmName.CodeBase))
+                if (asmName == null || string.IsNullOrWhiteSpace(asmName.CodeBase) ||
+                    asmName.CodeBase.Contains("mscorlib.dll"))
                 {
                     continue;
                 }
