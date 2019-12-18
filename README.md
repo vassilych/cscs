@@ -14,6 +14,11 @@ The usage of CSCS in Unity has been described in:
 
 * [Using Custom Scripting and Modding in Unity Game and App Development](https://www.codemag.com/Article/1903081),  CODE Magazine
 
+You can also pre-compile CSCS code to speed-up exection. This has been described in:
+
+* [Compiling Scripts to Get Compiled Language Performance](https://www.codemag.com/Article/2001071),  CODE Magazine
+
+
 You can use Visual Studio Code as an IDE for developing and debugging CSCS code. The Visual Studio Code Extension to debug CSCS code is available [here](https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debugger).
 
 <br>
