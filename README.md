@@ -54,7 +54,7 @@ CSCS Control Flow Functions
 | **return** or **return** *variable*;      | Finishes execution of a function and optionally can return a value.|
 | **while** (*condition*) { *statements;* } | Execute loop as long as the condition is true. <br><b>Curly brackets are mandatory.</b>|
 | **for** (*init*; *condition*; *step*) { *statements;* }  | A canonic for loop, e.g. for (i = 0; i < 10; ++i).<br><b>Curly brackets are mandatory.</b>|
-| **for** (*item in listOfValues*) { *statements;* }  | Executes loop for each elemеnt of listOfValues.<br><b>Curly brackets are mandatory.</b>|
+| **for** (*item : listOfValues*) { *statements;* }  | Executes loop for each elemеnt of listOfValues.<br><b>Curly brackets are mandatory.</b>|
 | **break**                                    | Breaks out of a loop.                  |
 | **continue**                                 | Forces the next iteration of the loop. |
 | **if** (*condition*) { *statements;* } <br> **elif** (*condition*) { *statements;* } <br> **else** { *statements;* } |If-else control flow statements.<br><b>Curly brackets are mandatory.</b>|
