@@ -50,7 +50,8 @@ namespace SplitAndMerge
         Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>> m_compiledFuncAsync;
 
-        static List<string> s_namespaces = new List<string>();
+        static List<string> s_definitions = new List<string>();
+        static List<string> s_namespaces  = new List<string>();
 
         public static bool AsyncMode { get; set; } = true;
 
@@ -80,9 +81,21 @@ namespace SplitAndMerge
             return retType;
         }
 
+        public static void AddDefinition(string def)
+        {
+            s_definitions.Add(def);
+        }
         public static void AddNamespace(string ns)
         {
             s_namespaces.Add(ns);
+        }
+        public static void ClearDefinitions()
+        {
+            s_definitions.Clear();
+        }
+        public static void ClearNamespaces()
+        {
+            s_namespaces.Clear();
         }
 
         public Precompiler(string functionName, string[] args, Dictionary<string, Variable> argsMap,
@@ -358,7 +371,7 @@ namespace SplitAndMerge
                                    "using System.Text; using System.Threading; using System.Threading.Tasks;");// using static System.Math;");
             for (int i = 0; i < s_namespaces.Count; i++)
             {
-                var ns = s_namespaces[i];
+                var ns = s_namespaces[i].Trim();
                 if (!ns.StartsWith("using "))
                 {
                     ns = "using " + ns;
@@ -373,6 +386,20 @@ namespace SplitAndMerge
             m_converted.AppendLine("namespace SplitAndMerge {\n" +
                                    "  public partial class Precompiler {");
 
+            for (int i = 0; i < s_definitions.Count; i++)
+            {
+                var def = s_definitions[i].Trim();
+                if (!def.StartsWith("static ") && !def.Contains(" static "))
+                {
+                    def = "static " + def;
+                }
+                if (!def.EndsWith(";"))
+                {
+                    def += ";";
+                }
+
+                m_converted.AppendLine(def);
+            }
             if (AsyncMode)
             {
                 m_converted.AppendLine("    public static async Task<Variable> " + m_functionName);

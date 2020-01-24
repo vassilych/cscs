@@ -63,7 +63,10 @@ namespace SplitAndMerge
         public const string TYPE = "type";
         public const string WHILE = "while";
 
+        public const string ADD_COMP_DEFINITION = "add_comp_definition";
         public const string ADD_COMP_NAMESPACE = "add_comp_namespace";
+        public const string CLEAR_COMP_DEFINITIONS = "clear_comp_definitions";
+        public const string CLEAR_COMP_NAMESPACES = "clear_comp_namespaces";
         public const string COMPILED_FUNCTION = "cfunction";
         public const string CSHARP_FUNCTION = "csfunction";
 

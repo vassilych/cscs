@@ -854,15 +854,35 @@ namespace SplitAndMerge
         }
     }
 
-    class AddCompiledNamespace : ParserFunction
+    class EditCompiledEntry : ParserFunction
     {
+        internal enum EditMode { ADD_DEFINITION, ADD_NAMESPACE, CLEAR_DEFINITIONS, CLEAR_NAMESPACES };
+        EditMode m_mode;
+
+        internal EditCompiledEntry(EditMode mode)
+        {
+            m_mode = mode;
+        }
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
+            string item = Utils.GetSafeString(args, 0);
 
-            Utils.CheckArgs(args.Count, 1, m_name);
-            string ns = Utils.GetSafeString(args, 0);
-            Precompiler.AddNamespace(ns);
+            switch(m_mode)
+            {
+                case EditMode.ADD_DEFINITION:
+                    Precompiler.AddDefinition(item);
+                    break;
+                case EditMode.ADD_NAMESPACE:
+                    Precompiler.AddNamespace(item);
+                    break;
+                case EditMode.CLEAR_DEFINITIONS:
+                    Precompiler.ClearDefinitions();
+                    break;
+                case EditMode.CLEAR_NAMESPACES:
+                    Precompiler.ClearNamespaces();
+                    break;
+            }
 
             return Variable.EmptyInstance;
         }
