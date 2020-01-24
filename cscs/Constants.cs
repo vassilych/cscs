@@ -53,7 +53,6 @@ namespace SplitAndMerge
         public const string FOR = "for";
         public const string FUNCTION = "function";
         public const string CLASS = "class";
-        public const string COMPILED_FUNCTION = "cfunction";
         public const string ENUM = "enum";
         public const string IF = "if";
         public const string INCLUDE = "include";
@@ -63,6 +62,10 @@ namespace SplitAndMerge
         public const string TRY = "try";
         public const string TYPE = "type";
         public const string WHILE = "while";
+
+        public const string ADD_COMP_NAMESPACE = "add_comp_namespace";
+        public const string COMPILED_FUNCTION = "cfunction";
+        public const string CSHARP_FUNCTION = "csfunction";
 
         public const string TRUE = "true";
         public const string FALSE = "false";
@@ -213,12 +216,12 @@ namespace SplitAndMerge
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, HELP, MKDIR, MORE, MOVE, NAMESPACE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
+            FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, HELP, MKDIR, MORE, MOVE, NAMESPACE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
             TAIL, THREAD, TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else
         public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            CLASS, FUNCTION, COMPILED_FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
+            CLASS, FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
         };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but
@@ -233,13 +236,13 @@ namespace SplitAndMerge
         // use in calculation of a result.
         public static List<string> CONTROL_FLOW = new List<string>
         {
-            BREAK, CATCH, CLASS, COMPILED_FUNCTION, CONTINUE, ELSE, ELSE_IF, ELSE, FOR, FUNCTION, IF, INCLUDE, NEW,
+            BREAK, CATCH, CLASS, COMPILED_FUNCTION, CSHARP_FUNCTION, CONTINUE, ELSE, ELSE_IF, ELSE, FOR, FUNCTION, IF, INCLUDE, NEW,
             RETURN, THROW, TRY, WHILE
         };
 
         public static List<string> RESERVED = new List<string>
         {
-            BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
+            BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
             RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,

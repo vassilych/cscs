@@ -854,8 +854,29 @@ namespace SplitAndMerge
         }
     }
 
+    class AddCompiledNamespace : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+
+            Utils.CheckArgs(args.Count, 1, m_name);
+            string ns = Utils.GetSafeString(args, 0);
+            Precompiler.AddNamespace(ns);
+
+            return Variable.EmptyInstance;
+        }
+    }
+
     class CompiledFunctionCreator : ParserFunction
     {
+        bool m_scriptInCSharp;
+
+        public CompiledFunctionCreator(bool scriptInCSharp)
+        {
+            m_scriptInCSharp = scriptInCSharp;
+        }
+
         protected override Variable Evaluate(ParsingScript script)
         {
             string funcReturn, funcName;
@@ -873,7 +894,7 @@ namespace SplitAndMerge
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
             Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
-            precompiler.Compile();
+            precompiler.Compile(m_scriptInCSharp);
 
             CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap, script);
             customFunc.ParentScript = script;

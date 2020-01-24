@@ -96,27 +96,10 @@ namespace SplitAndMerge
             m_parentScript = parentScript;
         }
 
-        CompilerResults TryCompiling(string code, CompilerParameters compilerParameters)
+        public void Compile(bool scriptInCSharp = false)
         {
-            var provider = new CSharpCodeProvider();
-            var compile = provider.CompileAssemblyFromSource(compilerParameters, code);
+            m_scriptInCSharp = scriptInCSharp;
 
-            if (compile.Errors.HasErrors)
-            {
-                string text = "Compile error: ";
-                foreach (var ce in compile.Errors)
-                {
-                    text += ce.ToString() + " -- ";
-                }
-
-                throw new ArgumentException(text);
-            }
-
-            return compile;
-        }
-
-        public void Compile()
-        {
             var compilerParams = new CompilerParameters();
 
             compilerParams.GenerateInMemory = true;
@@ -143,20 +126,20 @@ namespace SplitAndMerge
             m_cscsCode = Utils.ConvertToScript(m_originalCode, out _);
             RemoveIrrelevant(m_cscsCode);
 
-            m_scriptInCSharp = true;
             CSharpCode = ConvertScript();
-            CompilerResults compile = null;
 
-            try
+            var provider = new CSharpCodeProvider();
+            CompilerResults compile = provider.CompileAssemblyFromSource(compilerParams, CSharpCode);
+
+            if (compile.Errors.HasErrors)
             {
-                compile = TryCompiling(CSharpCode, compilerParams);
-            }
-            catch (Exception exc)
-            {
-                Console.WriteLine(exc.Message);
-                m_scriptInCSharp = false;
-                CSharpCode = ConvertScript();
-                compile = TryCompiling(CSharpCode, compilerParams);
+                string text = "Compile error: ";
+                foreach (var ce in compile.Errors)
+                {
+                    text += ce.ToString() + " -- ";
+                }
+
+                throw new ArgumentException(text);
             }
 
             try
@@ -375,7 +358,17 @@ namespace SplitAndMerge
                                    "using System.Text; using System.Threading; using System.Threading.Tasks;");// using static System.Math;");
             for (int i = 0; i < s_namespaces.Count; i++)
             {
-                m_converted.AppendLine(s_namespaces[i]);
+                var ns = s_namespaces[i];
+                if (!ns.StartsWith("using "))
+                {
+                    ns = "using " + ns;
+                }
+                if (!ns.EndsWith(";"))
+                {
+                    ns += ";";
+                }
+
+                m_converted.AppendLine(ns);
             }
             m_converted.AppendLine("namespace SplitAndMerge {\n" +
                                    "  public partial class Precompiler {");
@@ -1288,10 +1281,22 @@ namespace SplitAndMerge
 
             int startIndex = 0;
             int i = 0;
+            bool inQuotes = false;
+            char previous = Constants.EMPTY;
+
             while (i < scriptText.Length)
             {
                 char ch = scriptText[i];
-                if (Constants.STATEMENT_SEPARATOR.IndexOf(ch) >= 0)
+                previous = i> 0 ? scriptText[i - 1] : previous;
+                
+                if (ch == '"' && previous != '\\')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (inQuotes)
+                {
+                }
+                else if (Constants.STATEMENT_SEPARATOR.IndexOf(ch) >= 0)
                 {
                     if (i > startIndex)
                     {
@@ -1327,7 +1332,8 @@ namespace SplitAndMerge
             char previous = Constants.EMPTY;
             while (i < statement.Length)
             {
-                if (statement[i] == '"' && previous != '\\')
+                var ch = statement[i];
+                if (ch == '"' && previous != '\\')
                 {
                     inQuotes = !inQuotes;
                 }
@@ -1336,16 +1342,9 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    if (statement[i] == '(')
-                    {
-
-                    }
                     string candidate = Utils.ValidAction(statement.Substring(i));
-                    if (candidate == null && (Constants.STATEMENT_TOKENS.IndexOf(statement[i]) >= 0))
-                    {
-                        candidate = statement[i].ToString();
-                    }
-                    else if (candidate == null && scriptInCSharp && (statement[i] == '(' || statement[i] == ')'))
+                    if (candidate == null && (Constants.STATEMENT_TOKENS.IndexOf(statement[i]) >= 0 ||
+                                             (scriptInCSharp && (ch == '(' || ch == ')' || ch == ','))))
                     {
                         candidate = statement[i].ToString();
                     }
@@ -1363,7 +1362,7 @@ namespace SplitAndMerge
                         continue;
                     }
                 }
-                previous = statement[i];
+                previous = ch;
                 i++;
             }
 
