@@ -276,6 +276,7 @@ Test(rem.size, 2);
 Test(rem[0], "item2");
 rem.removeAt(0);
 Test(rem.size, 1);
+Test(rem[0].size, 5);
 rem.removeAt(0);
 Test(rem.size, 0);
 

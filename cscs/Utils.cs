@@ -323,6 +323,18 @@ namespace SplitAndMerge
             }
         }
 
+        public static GetVarFunction ExtractArrayElement(string token)
+        {
+            if (!token.Contains(Constants.START_ARRAY))
+            {
+                return null;
+            }
+
+            ParsingScript tempScript = new ParsingScript(token);
+            Variable result = tempScript.Execute();
+            return new GetVarFunction(result);
+        }
+
         public static void AppendFileText(string filename, string text)
         {
             try

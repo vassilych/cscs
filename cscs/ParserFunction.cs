@@ -98,7 +98,6 @@ namespace SplitAndMerge
             GetVarFunction varFunc = pf as GetVarFunction;
             if (varFunc == null)
             {
-                pf = ParserFunction.GetVariable(arrayName, script);
                 return null;
             }
 
@@ -155,6 +154,10 @@ namespace SplitAndMerge
             if (pf == null || !(pf is GetVarFunction))
             {
                 pf = ParserFunction.GetFunction(baseName, script);
+                if (pf == null)
+                {
+                    pf = Utils.ExtractArrayElement(baseName);
+                }
             }
 
             GetVarFunction varFunc = pf as GetVarFunction;
