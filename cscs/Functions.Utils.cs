@@ -812,6 +812,12 @@ namespace SplitAndMerge
                     m_stopwatch.Elapsed.Minutes,
                     m_stopwatch.Elapsed.Seconds, m_stopwatch.Elapsed.Milliseconds);
             }
+            else if (strFormat == "mm:ss")
+            {
+                elapsedStr = string.Format("{0:D2}:{1:D2}",
+                    m_stopwatch.Elapsed.Minutes,
+                    m_stopwatch.Elapsed.Seconds);
+            }
             else if (strFormat == "ss.fff")
             {
                 elapsedStr = string.Format("{0:D2}.{1:D3}",

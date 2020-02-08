@@ -868,7 +868,9 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             string item = Utils.GetSafeString(args, 0);
 
-            switch(m_mode)
+#if __ANDROID__ == false && __IOS__ == false
+
+            switch (m_mode)
             {
                 case EditMode.ADD_DEFINITION:
                     Precompiler.AddDefinition(item);
@@ -883,6 +885,7 @@ namespace SplitAndMerge
                     Precompiler.ClearNamespaces();
                     break;
             }
+#endif
 
             return Variable.EmptyInstance;
         }
