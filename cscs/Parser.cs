@@ -439,15 +439,22 @@ namespace SplitAndMerge
                 return false;
             }
 
+            Variable result;
             Variable arg1 = MergeList(listInput, script);
             script.MoveForwardIf(Constants.TERNARY_OPERATOR);
-            Variable arg2 = script.Execute(Constants.TERNARY_SEPARATOR);
-            script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
-            Variable arg3 = script.Execute(Constants.NEXT_OR_END_ARRAY);
-            script.MoveForwardIf(Constants.NEXT_OR_END_ARRAY);
-
             double condition = arg1.AsDouble();
-            Variable result = condition != 0 ? arg2 : arg3;
+            if (condition != 0)
+            {
+                result = script.Execute(Constants.TERNARY_SEPARATOR);
+                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+                Utils.SkipRestExpr(script, Constants.END_STATEMENT);
+            }
+            else
+            {
+                Utils.SkipRestExpr(script, Constants.TERNARY_SEPARATOR[0]);
+                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+                result = script.Execute(Constants.NEXT_OR_END_ARRAY);
+            }
 
             listInput.Clear();
             listInput.Add(result);
@@ -462,15 +469,22 @@ namespace SplitAndMerge
                 return false;
             }
 
+            Variable result;
             Variable arg1 = MergeList(listInput, script);
             script.MoveForwardIf(Constants.TERNARY_OPERATOR);
-            Variable arg2 = await script.ExecuteAsync(Constants.TERNARY_SEPARATOR);
-            script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
-            Variable arg3 = await script.ExecuteAsync(Constants.NEXT_OR_END_ARRAY);
-            script.MoveForwardIf(Constants.NEXT_OR_END_ARRAY);
-
             double condition = arg1.AsDouble();
-            Variable result = condition != 0 ? arg2 : arg3;
+            if (condition != 0)
+            {
+                result = script.Execute(Constants.TERNARY_SEPARATOR);
+                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+                Utils.SkipRestExpr(script, Constants.END_STATEMENT);
+            }
+            else
+            {
+                Utils.SkipRestExpr(script, Constants.TERNARY_SEPARATOR[0]);
+                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
+                result = script.Execute(Constants.NEXT_OR_END_ARRAY);
+            }
 
             listInput.Clear();
             listInput.Add(result);

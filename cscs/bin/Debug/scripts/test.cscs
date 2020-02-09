@@ -680,6 +680,14 @@ x=c=2;
 Test(c, 2);
 Test(x, 3);
 
+// Testing ternary operators: only one operator must be executed.
+ternary = {};
+ternary[0] = 20; ternary[1] = 40;
+terres = ternary.size >= 2 ? ternary[1] : ternary[100];
+Test(terres, ternary[1]);
+terres = ternary.size > 100 ? ternary[100] : ternary[0];
+Test(terres, ternary[0]);
+
 function compute(base, power, str, extra) {
   x = pow(base, power) * extra;
   newStr = "Hi " + str;

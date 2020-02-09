@@ -163,7 +163,7 @@ namespace SplitAndMerge
             return var;
         }
 
-        public static void SkipRestExpr(ParsingScript script)
+        public static void SkipRestExpr(ParsingScript script, char toChar = Constants.END_STATEMENT)
         {
             int argRead = 0;
             bool inQuotes  = false;
@@ -179,6 +179,10 @@ namespace SplitAndMerge
                 {
                     script.Forward();
                     continue;
+                }
+                if (currentChar == toChar)
+                {
+                    return;
                 }
 
                 switch (currentChar)
