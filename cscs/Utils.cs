@@ -204,6 +204,26 @@ namespace SplitAndMerge
             ThrowErrorMsg(msg, code, lineNumber, filename);
         }
 
+        public static ParsingScript GetTempScript(string str, ParserFunction.StackLevel stackLevel, string name = "",
+            ParsingScript script = null, ParsingScript parentScript = null,
+            int parentOffset = 0, CSCSClass.ClassInstance instance = null)
+        {
+            ParsingScript tempScript = new ParsingScript(str);
+            tempScript.ScriptOffset = parentOffset;
+            if (parentScript != null)
+            {
+                tempScript.Char2Line = parentScript.Char2Line;
+                tempScript.Filename = parentScript.Filename;
+                tempScript.OriginalScript = parentScript.OriginalScript;
+            }
+            tempScript.ParentScript = script;
+            tempScript.InTryBlock = script == null ? false : script.InTryBlock;
+            tempScript.ClassInstance = instance;
+            tempScript.StackLevel = stackLevel;
+
+            return tempScript;
+        }
+
         public static bool ExtractParameterNames(List<Variable> args, string functionName, ParsingScript script)
         {
             CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;

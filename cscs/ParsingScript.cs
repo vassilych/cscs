@@ -515,6 +515,23 @@ namespace SplitAndMerge
 
             return tempScript;
         }
+
+        public ParsingScript GetIncludeFileScript(string filename)
+        {
+            string pathname = GetFilePath(filename);
+            string[] lines = Utils.GetFileLines(pathname);
+
+            string includeFile = string.Join(Environment.NewLine, lines);
+            Dictionary<int, int> char2Line;
+            var includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
+            ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
+            tempScript.Filename = pathname;
+            tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
+            tempScript.ParentScript = this;
+            tempScript.InTryBlock = InTryBlock;
+
+            return tempScript;
+        }
     }
 
     public class ParsingException : Exception

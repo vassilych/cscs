@@ -364,9 +364,9 @@ namespace SplitAndMerge
             {
                 script.StackLevel.Variables[name] = function;
                 var handle = OnVariableChange;
-                if (handle != null && function is GetVarFunction)
+                if (handle != null)
                 {
-                    handle.Invoke(function.Name, ((GetVarFunction)function).Value, false);
+                    handle.Invoke(function.Name, function.Value, false);
                 }
             }
             else if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))

@@ -47,6 +47,12 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.WRITE_CONSOLE, new WriteToConsole());
 
 #if __ANDROID__ == false && __IOS__ == false
+            ParserFunction.RegisterFunction(Constants.ADD_COMP_DEFINITION, new EditCompiledEntry(EditCompiledEntry.EditMode.ADD_DEFINITION));
+            ParserFunction.RegisterFunction(Constants.ADD_COMP_NAMESPACE, new EditCompiledEntry(EditCompiledEntry.EditMode.ADD_NAMESPACE));
+            ParserFunction.RegisterFunction(Constants.CLEAR_COMP_DEFINITIONS, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_DEFINITIONS));
+            ParserFunction.RegisterFunction(Constants.CLEAR_COMP_NAMESPACES, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_NAMESPACES));
+            ParserFunction.RegisterFunction(Constants.CSHARP_FUNCTION, new CompiledFunctionCreator(true));
+
             ParserFunction.RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             ParserFunction.RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));
             ParserFunction.RegisterFunction(Constants.PRINT_GRAY, new PrintColorFunction(ConsoleColor.DarkGray));

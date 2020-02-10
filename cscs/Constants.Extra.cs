@@ -51,6 +51,12 @@ namespace SplitAndMerge
         public const string WRITE_CONSOLE = "WriteConsole";
         public const string WRITE = "write";
 
+        public const string ADD_COMP_DEFINITION = "add_comp_definition";
+        public const string ADD_COMP_NAMESPACE = "add_comp_namespace";
+        public const string CLEAR_COMP_DEFINITIONS = "clear_comp_definitions";
+        public const string CLEAR_COMP_NAMESPACES = "clear_comp_namespaces";
+        public const string CSHARP_FUNCTION = "csfunction";
+
         public const string ENGLISH = "en";
         public const string GERMAN = "de";
         public const string RUSSIAN = "ru";

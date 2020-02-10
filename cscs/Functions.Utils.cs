@@ -909,7 +909,7 @@ namespace SplitAndMerge
             string pathname = script.GetFilePath(filename);
 
             EncodeFileFunction.EncodeDecode(pathname, false);
-            ParsingScript tempScript = IncludeFile.GetIncludeFileScript(script, filename);
+            ParsingScript tempScript = script.GetIncludeFileScript(filename);
             string includeScript = tempScript.String;
             EncodeFileFunction.EncodeDecode(pathname, true);
 
