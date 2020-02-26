@@ -121,7 +121,7 @@ namespace SplitAndMerge
             { // Main processing cycle of the first part.
                 string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
 
-                bool ternary = await UpdateIfTernaryAsync(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
+                bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
                 {
                     return listToMerge;
@@ -433,36 +433,6 @@ namespace SplitAndMerge
         }
 
         static bool UpdateIfTernary(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
-        {
-            if (listInput.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
-            {
-                return false;
-            }
-
-            Variable result;
-            Variable arg1 = MergeList(listInput, script);
-            script.MoveForwardIf(Constants.TERNARY_OPERATOR);
-            double condition = arg1.AsDouble();
-            if (condition != 0)
-            {
-                result = script.Execute(Constants.TERNARY_SEPARATOR);
-                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
-                Utils.SkipRestExpr(script, Constants.END_STATEMENT);
-            }
-            else
-            {
-                Utils.SkipRestExpr(script, Constants.TERNARY_SEPARATOR[0]);
-                script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
-                result = script.Execute(Constants.NEXT_OR_END_ARRAY);
-            }
-
-            listInput.Clear();
-            listInput.Add(result);
-            listToMerge(listInput);
-
-            return true;
-        }
-        static async Task<bool> UpdateIfTernaryAsync(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
         {
             if (listInput.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
             {
