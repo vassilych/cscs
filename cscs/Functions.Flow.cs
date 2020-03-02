@@ -311,6 +311,7 @@ namespace SplitAndMerge
 
             Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
             HashSet<string> m_propSet = new HashSet<string>();
+            HashSet<string> m_propSetLower = new HashSet<string>();
 
             public override string ToString()
             {
@@ -329,19 +330,18 @@ namespace SplitAndMerge
             {
                 m_properties[name] = value;
                 m_propSet.Add(name);
+                m_propSetLower.Add(name.ToLower());
                 return Task.FromResult( Variable.EmptyInstance );
             }
 
             public async Task<Variable> GetProperty(string name, List<Variable> args = null, ParsingScript script = null)
             {
-                Variable value = null;
-                if (m_properties.TryGetValue(name, out value))
+                if (m_properties.TryGetValue(name, out Variable value))
                 {
                     return value;
                 }
 
-                CustomFunction customFunction = null;
-                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out customFunction))
+                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
                 {
                     return null;
                 }
@@ -378,13 +378,12 @@ namespace SplitAndMerge
             }
             public bool PropertyExists(string name)
             {
-                return m_propSet.Contains(name);
+                return m_propSetLower.Contains(name.ToLower());
             }
 
             public bool FunctionExists(string name)
             {
-                CustomFunction customFunction = null;
-                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out customFunction))
+                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
                 {
                     return false;
                 }
@@ -1664,7 +1663,10 @@ namespace SplitAndMerge
             Variable result = ProcessObject(script, varValue);
             if (result != null)
             {
-                ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script);
+                if (script.CurrentClass == null)
+                {
+                    ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script);
+                }
                 return result;
             }
 
@@ -1709,7 +1711,10 @@ namespace SplitAndMerge
             Variable result = await ProcessObjectAsync(script, varValue);
             if (result != null)
             {
-                ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script); 
+                if (script.CurrentClass == null)
+                {
+                    ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script);
+                }
                 return result;
             }
 
@@ -2123,9 +2128,21 @@ namespace SplitAndMerge
                 currentValue = new Variable("");
             }
 
-            string scopeName = Path.GetFileName(script.Filename);
-            ParserFunction.AddLocalScopeVariable(varName, scopeName,
-                                                 new GetVarFunction(currentValue));
+            if (script.StackLevel != null)
+            {
+                ParserFunction.AddLocalVariable(new GetVarFunction(currentValue), varName);
+            }
+            else if (script.CurrentClass != null)
+            {
+                Utils.ThrowErrorMsg(m_name + " function can't be defined inside of a class.",
+                                    script, m_name);
+            }
+            else
+            {
+                string scopeName = Path.GetFileName(script.Filename);
+                ParserFunction.AddLocalScopeVariable(varName, scopeName,
+                                                     new GetVarFunction(currentValue));
+            }
 
             return currentValue;
         }

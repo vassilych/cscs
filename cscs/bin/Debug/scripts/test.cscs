@@ -168,7 +168,7 @@ Print(a[5][3]--);
 Print(a[5][3]--);
 Test(a[5][3], 116);
 
-Test(a[5][3].type, VariableType.NUMBER);
+Test(a[5][3].type, "NUMBER");
 Test(a[5].size, 4);
 
 i=10;
@@ -201,13 +201,13 @@ Test(a, 1);
 
 Print("Testing arrays and maps");
 _arr[2] = 10; _arr[1] = "str";
-Test(_arr.type,    VariableType.ARRAY);
-Test(_arr[0].type, VariableType.NONE);
-Test(_arr[1].type, VariableType.STRING);
-Test(_arr[2].type, VariableType.NUMBER);
+Test(_arr.type,    "ARRAY");
+Test(_arr[0].type, "NONE");
+Test(_arr[1].type, "STRING");
+Test(_arr[2].type, "NUMBER");
 
 num = 10;
-Test(num.type, VariableType.Number);
+Test(num.type, "NUMBER");
 
 Test(VariableType.NONE.string.lower, "none");
 Test(VariableType.NUMBER.String.Upper, "NUMBER");
@@ -229,7 +229,8 @@ Test(size(b), 6);
 Test(size(b[5]), 4);
 Test(size(b[5][3]), 6);
 Test(size(b[5][3][5]), 4);
-Test(size(b[5][3][5][3]), 5);
+Test(size(b[5][3][5][3]), 0);
+Test(b[5][3][5][3].length, 5);
 
 bla="bla";
 x["bla"]=13;
@@ -276,7 +277,7 @@ Test(rem.size, 2);
 Test(rem[0], "item2");
 rem.removeAt(0);
 Test(rem.size, 1);
-Test(rem[0].size, 5);
+Test(rem[0].length, 5);
 rem.removeAt(0);
 Test(rem.size, 0);
 
@@ -540,7 +541,7 @@ for (ch : str) {
   Test(ch, str.at(counter));
   counter++;
 }
-Test(counter, str.Size);
+Test(counter, str.Length);
 
 Test1 = {0,3,5};
 Test1[1][2]=3;
@@ -771,6 +772,7 @@ try {
   Print("OK. Caught: " + exc);
 }
 
+Print("Testing local and global variables");
 function localsHere() {
   localVariable = 10;
   x  = localVariable;
@@ -783,6 +785,35 @@ try {
 } catch(exc) {
   Print("OK. Local Variable not in Global Scope: " + exc);
 }
+
+globScopeVar1 = 10;
+globScopeVar2 = 20;
+function locVarTest() {  
+  DefineLocal("globScopeVar1", 5);
+  DefineLocal("localScopeVar", 15);
+  localVar = 40;
+  globScopeVar1 = 25;
+  globScopeVar2 = 30;  
+}
+locVarTest();
+Test(NameExists(globScopeVar1, true));
+Test(NameExists(globScopeVar2, true));
+Test(NameExists(localScopeVar, false));
+Test(NameExists(localVar, false));
+Test(globScopeVar1, 10); // no change expected
+Test(globScopeVar2, 30); // change expected
+
+class TestScope
+{
+    testValue = 0;
+    TestScope(v) { testValue = v; }
+    function getValue() { return testValue; }
+}
+ 
+t = new TestScope(5);
+Test(NameExists(testValue, false));
+Test(t.getValue(), 5);
+
 
 Print("Testing Classes and Inheritance");
 class Stuff1 {
@@ -855,7 +886,7 @@ numVar = 1234.56;
 strVar = numVar.string;
 Test(strVar.first, "1");
 Test(strVar.last, "6");
-Test(strVar.size, 7);
+Test(strVar.Length, 7);
 
 strVar = "A Simple String!";
 index = strVar.indexOf("S");
@@ -877,7 +908,7 @@ Test(strVar.StartsWith(strVar.upper), true);
 Test(strVar.EndsWith(strVar.lower, "case"), false);
 Test(strVar.Replace("Simple String", "string"), "A string!");
 Test(strVar.Replace(strVar, strVar.lower), strVar.lower);
-Test(strVar.At(strVar.size-1), "!");
+Test(strVar.At(strVar.Length-1), "!");
 
 testStr = "Let's tokenize this.";
 tokens = testStr.split();
@@ -896,7 +927,7 @@ Test(arr2.contains("Xx"), false);
 Test(arr2.contains("xxx"), true);
 Test(arr2.contains("xxxx"), false);
 
-Test(arr2["zzZ"].size, 2);
+Test(arr2["zzZ"].Length, 2);
 
 arr2[0] = "item";
 Test(arr2.contains("item"), true);
@@ -919,7 +950,7 @@ print(xxx, xxx.properties);
 propsBefore = TestObject.properties;
 TestObject.Color = "blue";
 TestObject.Name  = "Testing";
-Test(TestObject.Type, VariableType.OBJECT);
+Test(TestObject.Type, "SplitAndMerge.TestScriptObject");
 Test(TestObject.ColoR, "blue");
 Test(TestObject.NaME,  "Testing");
 Test(TestObject.properties, propsBefore);
@@ -1168,12 +1199,12 @@ date = "8/23/2017";
 mydate = new ns1.CurrentDate();
 mydate.setCompositDate(ns1.date);
 Test(mydate, ns1.date);
-Test(mydate.toString().Size, 9);
+Test(mydate.toString().Length, 9);
 
 Print("Testing WebRequests with JSON");
 jsonString = "{}";
 a = GetVariableFromJSON(jsonString);
-Test(a.type, VariableType.ARRAY);
+Test(a.type, "ARRAY");
 Test(a.size, 1);
 Test(a[0], "");
 

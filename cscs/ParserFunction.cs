@@ -671,7 +671,7 @@ namespace SplitAndMerge
             }
         }
 
-        public static void AddLocalVariable(ParserFunction local)
+        public static void AddLocalVariable(ParserFunction local, string varName = "")
         {
             NormalizeValue(local);
             local.m_isGlobal = false;
@@ -686,7 +686,7 @@ namespace SplitAndMerge
                 }
             }
 
-            var name = Constants.ConvertName(local.Name);
+            var name = Constants.ConvertName(string.IsNullOrWhiteSpace(varName) ? local.Name : varName);
             local.Name = Constants.GetRealName(name);
             if (local is GetVarFunction)
             {

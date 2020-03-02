@@ -916,11 +916,15 @@ namespace SplitAndMerge
             }
             else if (propName.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase))
             {
-                return new Variable((int)Type);
+                return new Variable(GetTypeString());
             }
             else if (propName.Equals(Constants.SIZE, StringComparison.OrdinalIgnoreCase))
             {
                 return new Variable(GetSize());
+            }
+            else if (propName.Equals(Constants.LENGTH, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Variable(GetLength());
             }
             else if (propName.Equals(Constants.UPPER, StringComparison.OrdinalIgnoreCase))
             {
@@ -1249,10 +1253,15 @@ namespace SplitAndMerge
 
         public int GetSize()
         {
-            int size = Type == Variable.VarType.ARRAY ?
-                  Tuple.Count :
-                  AsString().Length;
+            int size = Type == Variable.VarType.ARRAY ? Tuple.Count : 0;
             return size;
+        }
+
+        public int GetLength()
+        {
+            int len = Type == Variable.VarType.ARRAY ?
+                  Tuple.Count : AsString().Length;
+            return len;
         }
 
         public virtual string GetTypeString()

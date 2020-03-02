@@ -163,6 +163,7 @@ namespace SplitAndMerge
         public const string JOIN          = "Join";
         public const string KEYS          = "Keys";
         public const string LAST          = "Last";
+        public const string LENGTH        = "Length";
         public const string LOWER         = "Lower";
         public const string REMOVE_ITEM   = "Remove";
         public const string REPLACE       = "Replace";
