@@ -1663,7 +1663,7 @@ namespace SplitAndMerge
             Variable result = ProcessObject(script, varValue);
             if (result != null)
             {
-                if (script.CurrentClass == null)
+                if (script.CurrentClass == null && script.ClassInstance == null)
                 {
                     ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script);
                 }

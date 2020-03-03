@@ -806,13 +806,16 @@ Test(globScopeVar2, 30); // change expected
 class TestScope
 {
     testValue = 0;
+    testValue2 = globScopeVar2;
     TestScope(v) { testValue = v; }
     function getValue() { return testValue; }
+    function getValue2() { return testValue2; }
 }
  
 t = new TestScope(5);
 Test(NameExists(testValue, false));
 Test(t.getValue(), 5);
+Test(t.getValue2(), globScopeVar2);
 
 
 Print("Testing Classes and Inheritance");
