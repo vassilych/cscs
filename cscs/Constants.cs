@@ -219,7 +219,7 @@ namespace SplitAndMerge
         };
 #else
         public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            CLASS, FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
+            CLASS, FUNCTION, COMPILED_FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
         };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but
@@ -234,13 +234,13 @@ namespace SplitAndMerge
         // use in calculation of a result.
         public static List<string> CONTROL_FLOW = new List<string>
         {
-            BREAK, CATCH, CLASS, COMPILED_FUNCTION, CSHARP_FUNCTION, CONTINUE, ELSE, ELSE_IF, ELSE, FOR, FUNCTION, IF, INCLUDE, NEW,
+            BREAK, CATCH, CLASS, COMPILED_FUNCTION, CONTINUE, ELSE, ELSE_IF, ELSE, FOR, FUNCTION, IF, INCLUDE, NEW,
             RETURN, THROW, TRY, WHILE
         };
 
         public static List<string> RESERVED = new List<string>
         {
-            BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
+            BREAK, CONTINUE, CLASS, NEW, FUNCTION, COMPILED_FUNCTION, IF, ELSE, ELSE_IF, INCLUDE, FOR, WHILE,
             RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
