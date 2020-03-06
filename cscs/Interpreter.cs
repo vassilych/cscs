@@ -191,9 +191,47 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
             ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
             ParserFunction.RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
-        }
 
-        public void RegisterEnums()
+            // Math Functions
+            ParserFunction.RegisterFunction(Constants.MATH_ABS, new AbsFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ACOS, new AcosFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ACOSH, new AcoshFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ASIN, new AsinFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ASINH, new AsinhFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ATAN, new TanFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ATAN2, new Atan2Function());
+            ParserFunction.RegisterFunction(Constants.MATH_ATANH, new AtanhFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_CBRT, new CbrtFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_CEIL, new CeilFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_COS, new CosFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_COSH, new CoshFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_E, new EFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_EXP, new ExpFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_FLOOR, new FloorFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_LN2, new Ln2Function());
+            ParserFunction.RegisterFunction(Constants.MATH_LN10, new Ln10Function());
+            ParserFunction.RegisterFunction(Constants.MATH_LOG, new LogFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_LOG2E, new Log2EFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_LOG10E, new Log10EFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_MIN, new MinFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_MAX, new MaxFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_PI, new PiFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_POW, new PowFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_RANDOM, new GetRandomFunction(true));
+            ParserFunction.RegisterFunction(Constants.MATH_ROUND, new RoundFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_SQRT, new SqrtFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_SQRT1_2, new Sqrt1_2Function());
+            ParserFunction.RegisterFunction(Constants.MATH_SQRT2, new Sqrt2Function());
+            ParserFunction.RegisterFunction(Constants.MATH_SIGN, new SignFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_SIN, new SinFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_SINH, new SinhFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_TAN, new TanFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
+
+    }
+
+    public void RegisterEnums()
         {
             ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
         }
