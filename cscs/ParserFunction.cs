@@ -351,6 +351,10 @@ namespace SplitAndMerge
         public static void AddGlobalOrLocalVariable(string name, GetVarFunction function, ParsingScript script = null)
         {
             name          = Constants.ConvertName(name);
+            if (Constants.CheckReserved(name))
+            {
+                Utils.ThrowErrorMsg(name + " is a reserved name.", script, name);
+            }
 
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
             if (lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))

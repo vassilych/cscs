@@ -282,7 +282,7 @@ namespace SplitAndMerge
             RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
-            NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString()
+            NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString(), "math"
         };
 
         public static List<string> ARITHMETIC_EXPR = new List<string>
@@ -318,6 +318,11 @@ namespace SplitAndMerge
 
             s_realNames[lower] = name;
             return lower;
+        }
+
+        public static bool CheckReserved(string name)
+        {
+            return Constants.RESERVED.Contains(name);
         }
 
         public static string GetRealName(string name)
