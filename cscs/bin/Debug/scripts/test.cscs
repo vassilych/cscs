@@ -8,6 +8,18 @@ include("functions.cscs");
 Print("Testing LoaderMain:", LoaderMain);
 Test(LoaderMain, true);
 
+Print("Testing Math");
+Test(Math.Floor(Math.Pi), Math.Ceil(Math.E));
+Test(Math.Pow(Math.Sqrt2, 2), 2);
+Test(Math.Pow(Math.Cbrt(10), 3), 10);
+Test(Math.Pow(Math.Sin(Math.Pi), 2) + Math.Pow(Math.Cos(Math.Pi), 2), 1);
+Test(Math.Round(Math.Atanh(0.2), 3), 0.203);
+Test(Math.Random() - 1 < 0, true);
+Test(Math.Log(Math.Exp(7)), 7);
+Test(Math.Exp(Math.Log(6)), 6);
+Test(Math.Max(10,5,12,13,9), 13);
+Test(Math.Min(10,5,12,13,9), 5);
+
 Print("Testing strings");
 Test(1 + " " + 2, "1 2");
 

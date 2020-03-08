@@ -139,7 +139,7 @@ function test(calculated, expected) {
   epsilon = 0.000001;
   if ((expected == 0 && abs(calculated) <= epsilon) ||
       (expected != 0 && abs(calculated - expected) / expected <= epsilon)) {
-    print(x, " within epsion to ", expected, ". almost OK");
+    print(calculated, " within epsion to ", expected, ". almost OK");
   } else {
     diff = expected - calculated;
     throw("ERROR. Test failed. Expecting " + expected + " but calculated " + calculated + ", diff=", diff);;
