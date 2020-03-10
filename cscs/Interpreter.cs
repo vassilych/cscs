@@ -22,6 +22,7 @@ namespace SplitAndMerge
     {
 
         private static Interpreter instance;
+        private bool m_bHasBeenInitialized = false;
 
         private Interpreter()
         {
@@ -82,6 +83,10 @@ namespace SplitAndMerge
 
         public void Init()
         {
+            if (m_bHasBeenInitialized)
+                return;
+            m_bHasBeenInitialized = true; // making sure the init gets call only once
+
             RegisterFunctions();
             RegisterEnums();
             RegisterActions();
@@ -113,54 +118,39 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
             ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
 
-            ParserFunction.RegisterFunction(Constants.ABS, new AbsFunction());
-            ParserFunction.RegisterFunction(Constants.ACOS, new AcosFunction());
             ParserFunction.RegisterFunction(Constants.ADD, new AddFunction());
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
             ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
-            ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
             ParserFunction.RegisterFunction(Constants.CANCEL, new CancelFunction());
             ParserFunction.RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
-            ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
             ParserFunction.RegisterFunction(Constants.CHECK_LOADER_MAIN, new CheckLoaderMainFunction());
             ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
-            ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
             ParserFunction.RegisterFunction(Constants.CURRENT_PATH, new CurrentPathFunction());
             ParserFunction.RegisterFunction(Constants.DATE_TIME, new DateTimeFunction(false));
             ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
             ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
-            ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
             ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
-            ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
             ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
-            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
-            ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
             ParserFunction.RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());
             ParserFunction.RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
             ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
-            ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
-            ParserFunction.RegisterFunction(Constants.POW, new PowFunction());
             ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
             ParserFunction.RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
-            ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
             ParserFunction.RegisterFunction(Constants.REGEX, new RegexFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
             ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
             ParserFunction.RegisterFunction(Constants.RESET_VARS, new ResetVariablesFunction());
-            ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
             ParserFunction.RegisterFunction(Constants.SCHEDULE_RUN, new ScheduleRunFunction(true));
             ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
             ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
             ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
-            ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
             ParserFunction.RegisterFunction(Constants.SINGLETON, new SingletonFunction());
             ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
             ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
-            ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());
             ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction(true));
             ParserFunction.RegisterFunction(Constants.STOP_DEBUGGER, new DebuggerFunction(false));
             ParserFunction.RegisterFunction(Constants.STR_BETWEEN, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN));
@@ -229,9 +219,9 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
             ParserFunction.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
 
-    }
+        }
 
-    public void RegisterEnums()
+        public void RegisterEnums()
         {
             ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
         }

@@ -56,7 +56,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            return new Variable(Math.Log(Math.E)) ;
+            return new Variable(Math.Log(Math.E, 2)) ;
         }
     }
     class Log10EFunction : ParserFunction, INumericFunction

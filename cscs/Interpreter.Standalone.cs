@@ -10,6 +10,22 @@ namespace SplitAndMerge
         public void InitStandalone()
         {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
+            // Math Top level functions
+            ParserFunction.RegisterFunction(Constants.ABS, new AbsFunction());
+            ParserFunction.RegisterFunction(Constants.ACOS, new AcosFunction());
+            ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
+            ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
+            ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
+            ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
+            ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
+            ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
+            ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
+            ParserFunction.RegisterFunction(Constants.POW, new PowFunction());
+            ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
+            ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
+            ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
+            ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());
+
             //ParserFunction.CleanUp();
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINE, new AppendLineFunction());
@@ -26,6 +42,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.FINDFILES, new FindfilesFunction());
             ParserFunction.RegisterFunction(Constants.FINDSTR, new FindstrFunction());
             ParserFunction.RegisterFunction(Constants.GET_NATIVE, new GetNativeFunction());
+            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
             ParserFunction.RegisterFunction(Constants.KILL, new KillFunction());
             ParserFunction.RegisterFunction(Constants.MKDIR, new MkdirFunction());
             ParserFunction.RegisterFunction(Constants.MORE, new MoreFunction());
@@ -69,7 +86,7 @@ namespace SplitAndMerge
 #endif
 #endif
             //ReadConfig();
-        }               
+        }
 
         void ReadConfig()
         {

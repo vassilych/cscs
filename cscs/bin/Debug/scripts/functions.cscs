@@ -14,7 +14,7 @@ function max3(a, b, c) {
 }
 
 function isInteger(candidate) {
-  return candidate == round(candidate);
+  return candidate == Math.round(candidate);
 }
 
 function factorial(n) {
@@ -28,18 +28,7 @@ function factorial(n) {
 
   return n * factorial(n - 1);
 }
-/*
-функция факториал (n) {
-  если(!isInteger(n) || n < 0) {
-    exc = "Factorial is for nonnegative integers only (n=" + n + ")";
-    ошибка(exc);
-  }
-  если(n <= 1) {
-    вернуть 1;
-  }
-  вернуть n * факториал(n - 1);
-}
-*/
+
 // Catalan numbers function implemented in CSCS.
 // C(0) = 1, C(n + 1) = Sum(C(i) * C(n - i)), i: 0 --> n, for n >= 0
 // Equivalent to: C(n) = 2 * (2*n - 1) / (n + 1) * C(n - 1), n > 0
@@ -69,7 +58,7 @@ function isPrime(n) {
     return 0;
   }
 
-  bound = round(sqrt(n));
+  bound = Math.round(Math.sqrt(n));
   sz = primes.size;
   if (sz <= bound) {
     //print("calling isPrime(", bound, "),n=", n);
@@ -120,11 +109,11 @@ function fibonacci(n) {
 }
 
 function tan(x) {
-  return sin(x) / cos(x);
+  return Math.sin(x) / Math.cos(x);
 }
 
 function cot(x) {
-  return cos(x) / sin(x);
+  return Math.cos(x) / Math.sin(x);
 }
 function test(calculated, expected) {
   if (calculated == expected) {
@@ -137,8 +126,8 @@ function test(calculated, expected) {
   }
 
   epsilon = 0.000001;
-  if ((expected == 0 && abs(calculated) <= epsilon) ||
-      (expected != 0 && abs(calculated - expected) / expected <= epsilon)) {
+  if ((expected == 0 && Math.abs(calculated) <= epsilon) ||
+      (expected != 0 && Math.abs(calculated - expected) / expected <= epsilon)) {
     print(calculated, " within epsion to ", expected, ". almost OK");
   } else {
     diff = expected - calculated;
@@ -150,8 +139,8 @@ function test2(x, expected) {
   epsilon = 0.000001;
   if (x == expected) {
     printgreen(x, " as expected. OK");
-  } elif ((expected == 0 && abs(x) <= epsilon) ||
-           abs(x - expected) / expected <= epsilon) {
+  } elif ((expected == 0 && Math.abs(x) <= epsilon) ||
+           Math.abs(x - expected) / expected <= epsilon) {
     printgray(x, " within epsion to ", expected, ". almost OK");
   } else {
     diff = expected - x;
