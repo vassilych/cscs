@@ -526,6 +526,14 @@ namespace SplitAndMerge
             function.isNative = isNative;
         }
 
+        public static bool UnregisterFunction(string name)
+        {
+            name = Constants.ConvertName(name);
+
+            bool removed = s_functions.Remove(name);
+            return removed;
+        }
+
         public static bool RemoveGlobal(string name)
         {
             name = Constants.ConvertName(name);
