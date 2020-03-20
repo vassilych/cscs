@@ -1257,18 +1257,20 @@ jsonFromText = "";
 function OnSuccess( object, errorCode, text )
 {
   // text is: {"coord":{"lon":8.54,"lat":47.37},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03n"}],"base":"stations","main":{"temp":9.92,"pressure":1015,"humidity":87,"temp_min":7.78,"temp_max":12.22},"visibility":10000,"wind":{"speed":1.5,"deg":320},"clouds":{"all":40},"dt":1559861701,"sys":{"type":1,"id":6941,"message":0.0094,"country":"CH","sunrise":1559878231,"sunset":1559935141},"timezone":7200,"id":180002468,"name":"Zurich","cod":200}"
+  // text is {"coord" : 8.53999996185303, "weather" : {{"id" : 500, "main" : Rain, "description" : light rain, "icon" : 10n}}, "base" : stations, "main" : 6.90000009536743, "wind" : 2.59999990463257, "rain" : 0.200000002980232, "clouds" : 90, "dt" : 1583875139, "sys" : 1, "timezone" : 3600, "id" : 0, "name" : Zürich, "cod" : 200, "lon" : 8.53999996185303, "temp" : 6.90000009536743, "speed" : 2.59999990463257, "1h" : 0.200000002980232, "all" : 90, "type" : 1}
   jsonFromText = GetVariableFromJSON( text );
   main = jsonFromText["main"];
   city = jsonFromText["name"];
   wind = jsonFromText["wind"];
   sys  = jsonFromText["sys"];
-  country = sys["country"];
-  print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
-        "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
-  //print("Temperature in", city, "temp:", jsonFromText["temp"], 
-  //      ", wind:", wind);
+  rain = jsonFromText["rain"];
+  //country = sys["country"];
+  //print("Temperature in", city, country, main["temp"], "tempMin:", main["temp_min"], "tempMax:", main["temp_max"], 
+  //      "humidity:", main["humidity"], "pressure:", main["pressure"], "wind:", wind["speed"]);
+  print("Temperature in", city, "temp:", jsonFromText["temp"], 
+        "rain:", rain, "wind:", wind);
   Test(city, "Zürich");
-  Test(country, "CH");
+  //Test(country, "CH");
 }
 
 function OnFailure( object, errorCode, text )
