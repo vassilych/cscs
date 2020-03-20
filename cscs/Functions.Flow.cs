@@ -1293,16 +1293,34 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
-            string includeScript;
-            ParsingScript tempScript = GetIncludeFileScript(script, args, out includeScript);
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            string filename = args[0].AsString();
+            return Execute(filename, script);
+        }
+
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = await script.GetFunctionArgsAsync();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            string filename = args[0].AsString();
+            return await ExecuteAsync(filename, script);
+        }
+
+        public static Variable Execute(string filename, ParsingScript parentScript = null)
+        {
+            if (parentScript == null)
+            {
+                parentScript = new ParsingScript("");
+            }
+            ParsingScript tempScript = parentScript.GetIncludeFileScript(filename);
 
             Variable result = null;
-            if (script.Debugger != null)
+            if (parentScript.Debugger != null)
             {
-                result = script.Debugger.StepInIncludeIfNeeded(tempScript).Result;
+                result = parentScript.Debugger.StepInIncludeIfNeeded(tempScript).Result;
             }
 
-            while (tempScript.Pointer < includeScript.Length)
+            while (tempScript.StillValid())
             {
                 result = tempScript.Execute();
                 tempScript.GoToNextStatement();
@@ -1310,34 +1328,26 @@ namespace SplitAndMerge
             return result == null ? Variable.EmptyInstance : result;
         }
 
-        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        public static async Task<Variable> ExecuteAsync(string filename, ParsingScript parentScript = null)
         {
-            List<Variable> args = await script.GetFunctionArgsAsync();
-            string includeScript;
-            ParsingScript tempScript = GetIncludeFileScript(script, args, out includeScript);
+            if (parentScript == null)
+            {
+                parentScript = new ParsingScript("");
+            }
+            ParsingScript tempScript = parentScript.GetIncludeFileScript(filename);
 
             Variable result = null;
-            if (script.Debugger != null)
+            if (parentScript.Debugger != null)
             {
-                result = await script.Debugger.StepInIncludeIfNeeded(tempScript);
+                result = await parentScript.Debugger.StepInIncludeIfNeeded(tempScript);
             }
 
-            while (tempScript.Pointer < includeScript.Length)
+            while (tempScript.StillValid())
             {
                 result = await tempScript.ExecuteAsync();
                 tempScript.GoToNextStatement();
             }
             return result == null ? Variable.EmptyInstance : result;
-        }
-
-        ParsingScript GetIncludeFileScript(ParsingScript script, List<Variable> args, out string includeScript)
-        {
-            Utils.CheckArgs(args.Count, 1, m_name, true);
-
-            string filename = args[0].AsString();
-            ParsingScript tempScript = script.GetIncludeFileScript(filename);
-            includeScript = tempScript.String;
-            return tempScript;
         }
     }
 
