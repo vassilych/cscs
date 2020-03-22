@@ -196,6 +196,33 @@ Test(newarray.size, 10);
 Test(1 + " " + 2, "1 2");
 Test("" + 4 + 5, "45");
 
+Print("Testing triple equality");
+Test(4 !== "4", true);
+Test(4 === "4", false);
+Test(4 == "4", true);
+Test(4 !== "5", true);
+
+Print("Testing 'var' and global and local names");
+function testGlobalLocal() {
+    var globalNoChangesFromLocal = 11;
+    var localOnly = 17;
+    globalDefinedLocally = 18;
+    globalDefinedLocally++;
+    globalChangesInLocal = 12;
+    globalChangesInLocal--;
+    localOnly++;
+    globalNoChangesFromLocal = 15;
+    globalNoChangesFromLocal++;
+}
+globalNoChangesFromLocal = 2;
+globalChangesInLocal   = 3;
+testGlobalLocal();
+Test(globalNoChangesFromLocal, 2);
+Test(globalChangesInLocal, 11);
+Test(NameExists(localOnly), false);
+Test(NameExists(globalDefinedLocally), true);
+Test(globalDefinedLocally, 19);
+
 Print("Testing short circuit evaluation");
 function f(x) {
   counter++;
@@ -802,7 +829,7 @@ globScopeVar2 = 20;
 function locVarTest() {  
   DefineLocal("globScopeVar1", 5);
   DefineLocal("localScopeVar", 15);
-  localVar = 40;
+  var localVarOnly = 40;
   globScopeVar1 = 25;
   globScopeVar2 = 30;  
 }
@@ -810,7 +837,7 @@ locVarTest();
 Test(NameExists(globScopeVar1, true));
 Test(NameExists(globScopeVar2, true));
 Test(NameExists(localScopeVar, false));
-Test(NameExists(localVar, false));
+Test(NameExists(localVarOnly, false));
 Test(globScopeVar1, 10); // no change expected
 Test(globScopeVar2, 30); // change expected
 
@@ -1151,23 +1178,30 @@ Test(numArray.Sort(), {33, 39, 51});
 
 Print("Testing Namespaces...");
 namespace ns1 {
-  AllMonths = Enum {January, February, March, April, May, June, July, August, September, October, November, December};
-  a=1;
-  b=2;
+  print("ns1 1");
+  var AllMonths = Enum {January, February, March, April, May, June, July, August, September, October, November, December};
+  print("ns1 2");
+  var alocal = 1;
+  print("ns1 3");
+  var blocal = 2;
+  print("ns1 4");
   function func(x) {
-    return x + a + b;
+    print("ns1 4.1");
+    return x + alocal + blocal;
   }
+  print("ns1 5");
   z= func(10);
   print(z);
 }
-x=ns1.b;
+x = ns1.blocal;
+Test(x, 2);
 ns1.w = 44;
 Test(ns1.func(20), 23);
 test(NS1.AllMonths.July, NS1.AllMonths.May + 2);
 
 namespace ns1 {
   function another(x=0) {
-    return 100 + x + ns1.a + ns1.b + w;
+    return 100 + x + ns1.alocal + ns1.blocal + w;
   }
   Test(b, 2);
   Test(w, 44);
@@ -1204,7 +1238,7 @@ namespace ns1 {
     }
   }
 
-  date = "8/23/2017";
+  ns1.date = "8/23/2017";
   dt = new CurrentDate();
   dt.setCompositDate(date);
   Test(dt, date);

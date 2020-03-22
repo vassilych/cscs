@@ -698,6 +698,16 @@ namespace SplitAndMerge
                     leftCell.Value = Convert.ToDouble(
                       string.Compare(leftCell.AsString(), rightCell.AsString()) >= 0);
                     break;
+                case "===":
+                    leftCell.Value = Convert.ToDouble(
+                        leftCell.Type == rightCell.Type &&
+                        leftCell.AsString() == rightCell.AsString());
+                    break;
+                case "!==":
+                    leftCell.Value = Convert.ToDouble(
+                        leftCell.Type != rightCell.Type ||
+                        leftCell.AsString() != rightCell.AsString());
+                    break;
                 case "==":
                     leftCell.Value = Convert.ToDouble(
                      string.Compare(leftCell.AsString(), rightCell.AsString()) == 0);

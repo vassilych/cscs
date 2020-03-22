@@ -348,7 +348,8 @@ namespace SplitAndMerge
             return LocalNameExists(item) || GlobalNameExists(item);
         }
 
-        public static void AddGlobalOrLocalVariable(string name, GetVarFunction function, ParsingScript script = null)
+        public static void AddGlobalOrLocalVariable(string name, GetVarFunction function,
+            ParsingScript script = null, bool localIfPossible = false)
         {
             name          = Constants.ConvertName(name);
             if (Constants.CheckReserved(name))
@@ -356,15 +357,17 @@ namespace SplitAndMerge
                 Utils.ThrowErrorMsg(name + " is a reserved name.", script, name);
             }
 
+            bool globalOnly = !localIfPossible && !LocalNameExists(name);
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
-            if (lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
+            if (!globalOnly && lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
             {
                 name = s_namespacePrefix + name;
             }
 
             function.Name = Constants.GetRealName(name);
             function.Value.ParamName = function.Name;
-            if (script != null && script.StackLevel != null && !GlobalNameExists(name))
+
+            if (!globalOnly && !localIfPossible && script != null && script.StackLevel != null && !GlobalNameExists(name))
             {
                 script.StackLevel.Variables[name] = function;
                 var handle = OnVariableChange;
@@ -373,7 +376,9 @@ namespace SplitAndMerge
                     handle.Invoke(function.Name, function.Value, false);
                 }
             }
-            else if (s_locals.Count > StackLevelDelta && (LocalNameExists(name) || !GlobalNameExists(name)))
+
+            if (!globalOnly && s_locals.Count > StackLevelDelta &&
+               (localIfPossible || LocalNameExists(name) || !GlobalNameExists(name)))
             {
                 AddLocalVariable(function);
             }
@@ -476,7 +481,7 @@ namespace SplitAndMerge
             }
         }
 
-        static bool LocalNameExists(string name)
+        public static bool LocalNameExists(string name)
         {
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
             if (lastLevel == null)
@@ -487,7 +492,7 @@ namespace SplitAndMerge
             return lastLevel.ContainsKey(name);
         }
 
-        static bool GlobalNameExists(string name)
+        public static bool GlobalNameExists(string name)
         {
             name = Constants.ConvertName(name);
             return s_variables.ContainsKey(name) || s_functions.ContainsKey(name);

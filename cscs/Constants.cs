@@ -140,6 +140,7 @@ namespace SplitAndMerge
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";
         public const string TO_STRING = "string";
+        public const string VAR = "var";
         public const string VARIABLE_TYPE = "VariableType";
         public const string WAIT = "wait";
         public const string WEB_REQUEST = "WebRequest";
@@ -223,7 +224,8 @@ namespace SplitAndMerge
         public static string NULL_ACTION = END_ARG.ToString();
 
         public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", ":" };
-        public static string[] MATH_ACTIONS = { "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
+        public static string[] MATH_ACTIONS = { "===", "!==",
+                                                "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
                                                 "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
         // Actions: always decreasing by the number of characters.
         public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
@@ -265,7 +267,7 @@ namespace SplitAndMerge
         // between them e.g. return a*b;
         public static List<string> FUNCT_WITH_SPACE_ONCE = new List<string>
         {
-            RETURN, THROW
+            RETURN, THROW, VAR
         };
 
         // The Control Flow Functions. It doesn't make sense to merge them or
