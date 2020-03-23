@@ -49,6 +49,7 @@ namespace SplitAndMerge
         public const string COMMENT = "//";
         public const string COMPILED_FUNCTION = "cfunction";
         public const string CONTINUE = "continue";
+        public const string DO = "do";
         public const string ELSE = "else";
         public const string ELSE_IF = "elif";
         public const string FOR = "for";

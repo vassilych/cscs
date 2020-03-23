@@ -98,6 +98,7 @@ namespace SplitAndMerge
         public void RegisterFunctions()
         {
             ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
+            ParserFunction.RegisterFunction(Constants.DO, new DoWhileStatement());
             ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
             ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());
             ParserFunction.RegisterFunction(Constants.BREAK, new BreakStatement());
@@ -616,6 +617,35 @@ namespace SplitAndMerge
 
             // The while condition is not true anymore: must skip the whole while
             // block before continuing with next statements.
+            SkipBlock(script);
+            return result.IsReturn ? result : Variable.EmptyInstance;
+        }
+
+        internal Variable ProcessDoWhile(ParsingScript script)
+        {
+            int startDoCondition = script.Pointer;
+            bool stillValid = true;
+            Variable result = Variable.EmptyInstance;
+
+            while (stillValid)
+            {
+                script.Pointer = startDoCondition;
+
+                result = ProcessBlock(script);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                {
+                    script.Pointer = startDoCondition;
+                    break;
+                }
+                script.Forward(Constants.WHILE.Length + 1);
+                Variable condResult = script.Execute(Constants.END_ARG_ARRAY);
+                stillValid = Convert.ToBoolean(condResult.Value);
+                if (!stillValid)
+                {
+                    break;
+                }
+            }
+
             SkipBlock(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }

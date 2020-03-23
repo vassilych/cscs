@@ -1307,6 +1307,18 @@ namespace SplitAndMerge
         }
     }
 
+    class DoWhileStatement : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessDoWhile(script);
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessDoWhile(script);
+        }
+    }
+
     class IncludeFile : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
