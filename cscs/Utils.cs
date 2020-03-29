@@ -120,7 +120,7 @@ namespace SplitAndMerge
             if (string.IsNullOrEmpty(varName))
             {
                 string realName = Constants.GetRealName(name);
-                throw new ArgumentException("Incomplete arguments for [" + realName + "]");
+                ThrowErrorMsg("Incomplete arguments for [" + realName + "]", null, name);
             }
         }
 
@@ -533,7 +533,7 @@ namespace SplitAndMerge
 
         public static double ConvertToDouble(object obj, ParsingScript script = null)
         {
-            string str = obj.ToString();
+            string str = obj.ToString().ToLower();
             double num = 0;
 
             if (!CanConvertToDouble(str, out num) &&
@@ -546,6 +546,16 @@ namespace SplitAndMerge
 
         public static bool CanConvertToDouble(string str, out double num)
         {
+            if (str == "true")
+            {
+                num = 1.0;
+                return true;
+            }
+            if (str == "false")
+            {
+                num = 0.0;
+                return true;
+            }
             return Double.TryParse(str, NumberStyles.Number |
                                         NumberStyles.AllowExponent |
                                         NumberStyles.Float,

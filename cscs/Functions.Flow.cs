@@ -77,6 +77,126 @@ namespace SplitAndMerge
         }
     }
 
+    class NullFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Variable.EmptyInstance;
+        }
+    }
+    class InfinityFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return new Variable(double.PositiveInfinity);
+        }
+    }
+    class NegInfinityFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return new Variable(double.NegativeInfinity);
+        }
+    }
+
+    class IsNaNFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            Variable arg = args[0];
+            return new Variable(arg.Type != Variable.VarType.NUMBER || double.IsNaN(arg.Value));
+        }
+    }
+
+    class TypeOfFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            bool complexVariable = Utils.GetSafeInt(args, 1, 0) == 1;
+            Variable element = null;
+            if (complexVariable)
+            {
+                element = Utils.GetVariable(args[0].AsString(), script, false);
+            }
+            if (element == null)
+            {
+                element = Utils.GetSafeVariable(args, 0);
+            }
+
+            string type = element.GetTypeString();
+            script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+
+            Variable newValue = new Variable(type);
+            return newValue;
+        }
+    }
+
+    class IsFiniteFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            Variable arg = args[0];
+
+            double value = arg.Value;
+            if (arg.Type != Variable.VarType.NUMBER &&
+               !double.TryParse(arg.String, out value))
+            {
+                value = double.PositiveInfinity;
+            }
+
+            return new Variable(!double.IsInfinity(value));
+        }
+    }
+
+    class IsUndefinedFunction : ParserFunction
+    {
+        string m_argument;
+        string m_action;
+
+        internal IsUndefinedFunction(string arg = "", string action = "")
+        {
+            m_argument = arg;
+            m_action = action;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            script.Forward(Constants.UNDEFINED.Length);
+            var variable =  ParserFunction.GetVariable(m_argument, script);
+            bool isUndefined = variable == null;
+            //bool isNotNull = variable is GetVarFunction &&
+            //    ((GetVarFunction)variable).Value != Variable.EmptyInstance; 
+
+            bool result = m_action == "===" || m_action == "==" ? isUndefined :
+                          !isUndefined;
+            return new Variable(result);
+        }
+    }
+
+    class ObjectPropsFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            Variable obj = Utils.GetItem(script, true);
+            string propName = Utils.GetItem(script, true).AsString();
+            script.MoveForwardIf(',');
+
+            Variable value = Utils.GetProperties(script);
+            obj.SetProperty(propName, value, script);
+
+            ParserFunction.AddGlobal(obj.ParamName, new GetVarFunction(obj), false);
+             
+            return new Variable(obj.ParamName);
+        }
+    }
+
     class ThrowFunction : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -695,7 +815,6 @@ namespace SplitAndMerge
             {
                 args = new List<Variable>();
             }
-
             int missingArgs = m_args.Length - args.Count;
 
             bool namedParameters = false;
@@ -779,6 +898,12 @@ namespace SplitAndMerge
                 var arg = new GetVarFunction(args[i]);
                 arg.Name = m_args[i];
                 m_stackLevel.Variables[m_args[i]] = arg;
+            }
+
+            for (int i = m_args.Length; i < args.Count; i++)
+            {
+                var arg = new GetVarFunction(args[i]);
+                m_stackLevel.Variables[args[i].ParamName] = arg;
             }
 
             if (NamespaceData  != null)
@@ -1319,6 +1444,30 @@ namespace SplitAndMerge
         }
     }
 
+    class SwitchStatement : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessSwitch(script);
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessSwitch(script);
+        }
+    }
+
+    class CaseStatement : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessCase(script, Name);
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Interpreter.Instance.ProcessCase(script, Name);
+        }
+    }
+
     class IncludeFile : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -1439,7 +1588,7 @@ namespace SplitAndMerge
                                      m_value.GetEnumProperty(temp, script) :
                                      m_value.GetProperty(temp, script);
                 Utils.CheckNotNull(propValue, temp, script);
-                return propValue;
+                return EvaluateFunction(propValue, script, m_propName);
             }
 
             // Otherwise just return the stored value.
@@ -1494,11 +1643,47 @@ namespace SplitAndMerge
                          m_value.GetEnumProperty(temp, script) :
                          await m_value.GetPropertyAsync(temp, script);
                 Utils.CheckNotNull(propValue, temp, script);
-                return propValue;
+                return await EvaluateFunctionAsync(propValue, script, m_propName);
             }
 
             // Otherwise just return the stored value.
             return m_value;
+        }
+
+        public static Variable EvaluateFunction(Variable var, ParsingScript script, string m_propName)
+        {
+            if (var.CustomFunctionGet != null)
+            {
+                List<Variable> args = script.Prev == '(' ? script.GetFunctionArgs() : new List<Variable>();
+                if (var.StackVariables != null)
+                {
+                    args.AddRange(var.StackVariables);
+                }
+                return var.CustomFunctionGet.Run(args, script);
+            }
+            if (!string.IsNullOrWhiteSpace(var.CustomGet))
+            {
+                return ParsingScript.RunString(var.CustomGet); 
+            }
+            return var;
+        }
+
+        public static async Task<Variable> EvaluateFunctionAsync(Variable var, ParsingScript script, string m_propName)
+        {
+            if (var.CustomFunctionGet != null)
+            {
+                List<Variable> args = script.Prev == '(' ? await script.GetFunctionArgsAsync() : new List<Variable>();
+                if (var.StackVariables != null)
+                {
+                    args.AddRange(var.StackVariables);
+                }
+                return await var.CustomFunctionGet.RunAsync(args, script);
+            }
+            if (!string.IsNullOrWhiteSpace(var.CustomGet))
+            {
+                return ParsingScript.RunString(var.CustomGet);
+            }
+            return var;
         }
 
         public int Delta

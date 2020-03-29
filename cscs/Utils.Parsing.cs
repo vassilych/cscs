@@ -13,22 +13,18 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
             Utils.CheckNotEnd(script);
 
-            bool inQuotes  = script.Current == Constants.QUOTE;
+            bool inQuotes = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
-            if (script.Current == Constants.START_GROUP)
+            bool isList = script.Current == Constants.START_GROUP || script.Current == Constants.START_ARRAY;
+            if (isList)
             {
-                // We are extracting a list between curly braces.
-                script.Forward(); // Skip the first brace.
-                bool isList = true;
-                Variable value = new Variable();
-                value.Tuple = GetArgs(script,
-                      Constants.START_GROUP, Constants.END_GROUP, (outList) => { isList = outList; } );
-                return value;
+                return ProcessArrayMap(script);
             }
 
+            var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
             // A variable, a function, or a number.
-            Variable var = script.Execute(Constants.NEXT_OR_END_ARRAY);
+            Variable var = script.Execute(sep);
             //value = var.Clone();
 
             if (inQuotes)
@@ -54,19 +50,15 @@ namespace SplitAndMerge
             bool inQuotes  = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
-            if (script.Current == Constants.START_GROUP)
+            bool isList = script.Current == Constants.START_GROUP || script.Current == Constants.START_ARRAY;
+            if (isList)
             {
-                // We are extracting a list between curly braces.
-                script.Forward(); // Skip the first brace.
-                bool isList = true;
-                Variable value = new Variable();
-                value.Tuple = await GetArgsAsync(script,
-                      Constants.START_GROUP, Constants.END_GROUP, (outList) => { isList = outList; });
-                return value;
+                return ProcessArrayMap(script);
             }
 
+            var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
             // A variable, a function, or a number.
-            Variable var = await script.ExecuteAsync(Constants.NEXT_OR_END_ARRAY);
+            Variable var = await script.ExecuteAsync(sep);
             //value = var.Clone();
 
             if (inQuotes)
@@ -84,7 +76,28 @@ namespace SplitAndMerge
             return var;
         }
 
-        public static string GetToken(ParsingScript script, char[] to)
+        public static Variable ProcessArrayMap(ParsingScript script)
+        {
+            bool isList = true;
+            char start = script.Current;
+            char end = script.Current == Constants.START_GROUP ?
+                Constants.END_GROUP : Constants.END_ARRAY;
+            script.Forward(); // Skip the first brace.
+            Variable value = new Variable();
+            var processingListBefore = script.ProcessingList;
+            script.ProcessingList = true;// script.ProcessingList || script.Current == Constants.START_ARRAY;
+            try
+            {
+                value.Tuple = GetArgs(script, start, end, (outList) => { isList = outList; });
+            }
+            finally
+            {
+                script.ProcessingList = processingListBefore;
+            }
+            return value;
+        }
+
+        public static string GetToken(ParsingScript script, char[] to, bool eatLast = false)
 
         {
             char curr = script.TryCurrent();
@@ -142,10 +155,15 @@ namespace SplitAndMerge
 
             script.MoveForwardIf(Constants.QUOTE, Constants.SPACE);
 
+            if (eatLast && !script.MoveForwardIf(Constants.END_ARG, Constants.SPACE))
+            {
+                script.MoveForwardIf(Constants.NEXT_ARG);
+            }
+
             return var;
         }
 
-        public static string GetNextToken(ParsingScript script)
+        public static string GetNextToken(ParsingScript script, bool eatLast = false)
         {
             if (!script.StillValid())
             {
@@ -160,7 +178,139 @@ namespace SplitAndMerge
 
             string var = script.Substr(script.Pointer, end - script.Pointer);
             script.Pointer = end;
+            if (eatLast)
+            {
+                script.Forward(1);
+            }
             return var;
+        }
+
+        public static CustomFunction GetFunction(ParsingScript script, string funcName, string token)
+        {
+            CustomFunction customFunc = null;
+            if (token == Constants.FUNCTION && script.Prev == '(')
+            {
+                string[] args = Utils.GetFunctionSignature(script);
+                script.MoveForwardIf('{');
+                string body = Utils.GetBodyBetween(script, '{', '}');
+                script.MoveForwardIf('}');
+
+                int parentOffset = script.Pointer +
+                    (script.CurrentClass != null ? script.CurrentClass.ParentOffset : 0);
+                customFunc = new CustomFunction(funcName, body, args, script);
+                customFunc.ParentScript = script;
+                customFunc.ParentOffset = parentOffset;
+
+            }
+            return customFunc;
+        }
+
+        static void SetPropertyFromStr(string token, Variable result, ParsingScript script,
+            string funcName, CustomFunction customFunc)
+        {
+            if (string.IsNullOrWhiteSpace(token) || (token[0] == '"' && token[token.Length-1] != '"'))
+            {
+                Utils.ThrowErrorMsg("Cannot mix value and set/get", script, funcName);
+            }
+            if (customFunc != null)
+            {
+                if (funcName == "set")
+                {
+                    result.CustomFunctionSet = customFunc;
+                }
+                else
+                {
+                    result.CustomFunctionGet = customFunc;
+                }
+                return;
+            }
+            if (token[0] == '"')
+            {
+                result.String = token.Substring(1, token.Length - 2);
+            }
+            else if (CanConvertToDouble(token.ToLower(), out double num))
+            {
+                result.Value = num;
+            }
+            else
+            {
+                if (funcName == "set")
+                {
+                    result.CustomSet = token;
+                }
+                else
+                {
+                    result.CustomGet = token;
+                }
+            }
+        }
+        public static Variable GetProperties(ParsingScript script)
+        {
+            Variable result = new Variable();
+            bool valueProvided = false;
+            bool setgetProvided = false;
+            bool writable = false;
+            bool configurable = false;
+            bool enumerable = false;
+            script.MoveForwardIf('{');
+            while (script.StillValid() && script.Current != '}')
+            {
+                var funcName = Utils.GetNextToken(script, true);
+                if (string.IsNullOrWhiteSpace(funcName))
+                {
+                    break;
+                }
+                var token = Utils.GetNextToken(script, true);
+
+                CustomFunction customFunc = GetFunction(script, funcName, token);
+                script.MoveForwardIf(',');
+                string lower = funcName.ToLower();
+                switch (lower)
+                {
+                    case "value":
+                        if (setgetProvided)
+                        {
+                            Utils.ThrowErrorMsg("Cannot mix value and set/get", script, funcName);
+                        }
+                        valueProvided = true;
+                        SetPropertyFromStr(token, result, script, lower, customFunc);
+                        break;
+                    case "set":
+                        if (valueProvided)
+                        {
+                            Utils.ThrowErrorMsg("Cannot mix value and set/get", script, funcName);
+                        }
+                        setgetProvided = true;
+                        SetPropertyFromStr(token, result, script, lower, customFunc);
+                        break;
+                    case "get":
+                        if (valueProvided)
+                        {
+                            Utils.ThrowErrorMsg("Cannot mix value and set/get", script, funcName);
+                        }
+                        setgetProvided = true;
+                        SetPropertyFromStr(token, result, script, lower, customFunc);
+                        break;
+                    case "writable":
+                        writable = ConvertToDouble(token.ToLower(), script) > 0;
+                        break;
+                    case "enumerable":
+                        enumerable = ConvertToDouble(token.ToLower(), script) > 0;
+                        break;
+                    case "configurable":
+                        configurable = ConvertToDouble(token.ToLower(), script) > 0;
+                        break;
+                }
+            }
+            if (result.Type == Variable.VarType.NONE)
+            {
+                result.Type = Variable.VarType.CUSTOM;
+            }
+            result.Writable = writable;
+            result.Enumerable = enumerable;
+            result.Configurable = configurable;
+
+            return result;
         }
 
         public static void SkipRestExpr(ParsingScript script, char toChar = Constants.END_STATEMENT)
@@ -992,6 +1142,70 @@ namespace SplitAndMerge
                 sb.Remove(sb.Length - 1, 1);
             }
             return sb.ToString();
+        }
+
+        public static string GetBodySize(ParsingScript script, string endToken1, string endToken2 = null)
+        {
+            int start = script.Pointer;
+            int length = 0;
+            int braces = 0;
+            bool inQuotes = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
+            bool checkBraces = true;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
+
+            for (; script.StillValid(); script.Forward())
+            {
+                if (script.StartsWith(endToken1))
+                {
+                    script.Forward(endToken1.Length + 1);
+                    return endToken1;
+                }
+                if (script.StartsWith(endToken2))
+                {
+                    script.Forward(endToken2.Length + 1);
+                    return endToken2;
+                }
+
+                char ch = script.Current;
+                checkBraces = !inQuotes;
+                if (ch == Constants.QUOTE && !inQuotes1 && (prev != '\\' || prevprev == '\\'))
+                {
+                    inQuotes = inQuotes2 = !inQuotes2;
+                }
+                if (ch == Constants.QUOTE1 && !inQuotes2 && (prev != '\\' || prevprev == '\\'))
+                {
+                    inQuotes = inQuotes1 = !inQuotes1;
+                }
+                if (string.IsNullOrWhiteSpace(ch.ToString()) && length == 0)
+                {
+                    continue;
+                }
+                else if (checkBraces && ch == '{')
+                {
+                    braces++;
+                }
+                else if (checkBraces && ch == '}')
+                {
+                    braces--;
+                }
+
+                length++;
+                prevprev = prev;
+                prev = ch;
+                if (braces < 0)
+                {
+                    if (ch == '}')
+                    {
+                        length--;
+                    }
+                    break;
+                }
+            }
+
+            return "";
         }
 
         public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG,

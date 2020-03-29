@@ -91,6 +91,9 @@ namespace SplitAndMerge
             RegisterEnums();
             RegisterActions();
 
+            ParserFunction.AddGlobal(Constants.THIS,
+                new GetVarFunction(new Variable(Variable.VarType.ARRAY)));
+
             InitStandalone();
             CompiledClass.Init();
         }
@@ -100,13 +103,21 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
             ParserFunction.RegisterFunction(Constants.DO, new DoWhileStatement());
             ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
+            ParserFunction.RegisterFunction(Constants.SWITCH, new SwitchStatement());
+            ParserFunction.RegisterFunction(Constants.CASE, new CaseStatement());
+            ParserFunction.RegisterFunction(Constants.DEFAULT, new CaseStatement());
             ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());
             ParserFunction.RegisterFunction(Constants.BREAK, new BreakStatement());
             ParserFunction.RegisterFunction(Constants.COMPILED_FUNCTION, new CompiledFunctionCreator(false));
             ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             ParserFunction.RegisterFunction(Constants.CLASS, new ClassCreator());
             ParserFunction.RegisterFunction(Constants.ENUM, new EnumFunction());
+            ParserFunction.RegisterFunction(Constants.INFINITY, new InfinityFunction());
+            ParserFunction.RegisterFunction(Constants.NEG_INFINITY, new NegInfinityFunction());
+            ParserFunction.RegisterFunction(Constants.ISFINITE, new IsFiniteFunction());
+            ParserFunction.RegisterFunction(Constants.ISNAN, new IsNaNFunction());
             ParserFunction.RegisterFunction(Constants.NEW, new NewObjectFunction());
+            ParserFunction.RegisterFunction(Constants.NULL, new NullFunction());
             ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
             ParserFunction.RegisterFunction(Constants.FUNCTION, new FunctionCreator());
             ParserFunction.RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
@@ -116,6 +127,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
             ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
             ParserFunction.RegisterFunction(Constants.TYPE, new TypeFunction());
+            ParserFunction.RegisterFunction(Constants.TYPE_OF, new TypeOfFunction());
             ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
             ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
 
@@ -175,6 +187,8 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_DECIMAL, new ToDecimalFunction());
             ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
             ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
+            //ParserFunction.RegisterFunction(Constants.TO_INTEGER, new ToIntFunction());
+            ParserFunction.RegisterFunction(Constants.TO_NUMBER, new ToDoubleFunction());
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
             ParserFunction.RegisterFunction(Constants.VAR, new VarFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
@@ -220,6 +234,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
             ParserFunction.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
 
+            ParserFunction.RegisterFunction(Constants.OBJECT_DEFPROP, new ObjectPropsFunction());
         }
 
         public void RegisterEnums()
@@ -346,15 +361,22 @@ namespace SplitAndMerge
 
         void ProcessArrayFor(ParsingScript script, string forString)
         {
-            int index = forString.IndexOf(Constants.FOR_EACH);
-            if (index <= 0 || index == forString.Length - 1)
+            var tokens = forString.Split(' ');
+            var sep = tokens.Length > 2 ? tokens[1] : "";
+            string varName = tokens[0];
+
+            if (sep != Constants.FOR_EACH && sep != Constants.FOR_IN && sep != Constants.FOR_OF)
             {
-                throw new ArgumentException("Expecting: for(item : array)");
+                int index = forString.IndexOf(Constants.FOR_EACH);
+                if (index <= 0 || index == forString.Length - 1)
+                {
+                    Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
+                                     script, Constants.FOR);
+                }
+                varName = forString.Substring(0, index);
             }
 
-            string varName = forString.Substring(0, index);
-
-            ParsingScript forScript = script.GetTempScript(forString, index + Constants.FOR_EACH.Length);
+            ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
             forScript.Debugger = script.Debugger;
 
             Variable arrayValue = Utils.GetItem(forScript);
@@ -390,18 +412,25 @@ namespace SplitAndMerge
             script.Pointer = startForCondition;
             SkipBlock(script);
         }
+
         async Task ProcessArrayForAsync(ParsingScript script, string forString)
         {
-            int index = forString.IndexOf(Constants.FOR_EACH);
-            if (index <= 0 || index == forString.Length - 1)
+            var tokens = forString.Split(' ');
+            var sep = tokens.Length > 2 ? tokens[1] : "";
+            string varName = tokens[0];
+
+            if (sep != Constants.FOR_EACH && sep != Constants.FOR_IN && sep != Constants.FOR_OF)
             {
-                throw new ArgumentException("Expecting: for(item : array)");
+                int index = forString.IndexOf(Constants.FOR_EACH);
+                if (index <= 0 || index == forString.Length - 1)
+                {
+                    Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
+                                     script, Constants.FOR);
+                }
+                varName = forString.Substring(0, index);
             }
 
-            string varName = forString.Substring(0, index);
-
-
-            ParsingScript forScript = script.GetTempScript(forString, index + Constants.FOR_EACH.Length);
+            ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
             forScript.Debugger = script.Debugger;
 
             Variable arrayValue = await Utils.GetItemAsync(forScript);
@@ -648,6 +677,59 @@ namespace SplitAndMerge
 
             SkipBlock(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
+        }
+
+        internal Variable ProcessCase(ParsingScript script, string reason)
+        {
+            if (reason == Constants.CASE)
+            {
+                /*var token = */Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            }
+            script.MoveForwardIf(':');
+
+            Variable result = ProcessBlock(script);
+
+            return result;
+        }
+
+        internal Variable ProcessSwitch(ParsingScript script)
+        {
+            Variable switchValue = Utils.GetItem(script);
+            script.Forward();
+
+            Variable result = Variable.EmptyInstance;
+            var caseSep = ":".ToCharArray();
+
+            bool caseDone = false;
+
+            while (script.StillValid())
+            {
+                var nextToken = Utils.GetBodySize(script, Constants.CASE, Constants.DEFAULT);
+                if (string.IsNullOrEmpty(nextToken))
+                {
+                    break;
+                }
+                if (nextToken == Constants.DEFAULT && !caseDone)
+                {
+                    result = ProcessBlock(script);
+                    break;
+                }
+                if (!caseDone)
+                {
+                    Variable caseValue = script.Execute(caseSep);
+                    script.Forward();
+
+                    if (switchValue.Type == caseValue.Type && switchValue.Equals(caseValue))
+                    {
+                        caseDone = true;
+                        result = ProcessBlock(script);
+                        script.Forward();
+                    }
+                }
+            }
+            script.Forward();
+            script.GoToNextStatement();
+            return result;
         }
 
         internal Variable ProcessIf(ParsingScript script)

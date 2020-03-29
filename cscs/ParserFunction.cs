@@ -28,19 +28,16 @@ namespace SplitAndMerge
                 m_impl = s_idFunction;
                 return;
             }
-            if (item.Length > 1 &&
-              ((item[0] == Constants.QUOTE  && item[item.Length - 1] == Constants.QUOTE) ||
-               (item[0] == Constants.QUOTE1 && item[item.Length - 1] == Constants.QUOTE1)))
+
+            m_impl = CheckString(script, item, ch);
+            if (m_impl != null)
             {
-                // We are dealing with a string.
-                s_strOrNumFunction.Item = item;
-                m_impl = s_strOrNumFunction;
                 return;
             }
 
             item = Constants.ConvertName(item);
 
-            m_impl = GetRegisteredAction(item, ref action);
+            m_impl = GetRegisteredAction(item, script, ref action);
             if (m_impl != null)
             {
                 return;
@@ -76,12 +73,36 @@ namespace SplitAndMerge
             m_impl = s_strOrNumFunction;
         }
 
+        static ParserFunction CheckString(ParsingScript script, string item, char ch)
+        {
+            if (item.Length > 1 &&
+              ((item[0] == Constants.QUOTE && item[item.Length - 1] == Constants.QUOTE) ||
+               (item[0] == Constants.QUOTE1 && item[item.Length - 1] == Constants.QUOTE1)))
+            {
+                // We are dealing with a string.
+                s_strOrNumFunction.Item = item;
+                return s_strOrNumFunction;
+            }
+            if (script.ProcessingList && ch == ':')
+            {
+                s_strOrNumFunction.Item = '"' + item + '"';
+                return s_strOrNumFunction;
+            }
+            return null;
+        }
+
         static ParserFunction GetArrayFunction(string name, ParsingScript script, string action)
         {
             int arrayStart = name.IndexOf(Constants.START_ARRAY);
             if (arrayStart < 0)
             {
                 return null;
+            }
+
+            if (arrayStart == 0)
+            {
+                Variable arr = Utils.ProcessArrayMap(new ParsingScript(name));
+                return new GetVarFunction(arr);
             }
 
             string arrayName = name;
@@ -170,8 +191,24 @@ namespace SplitAndMerge
             return varFunc;
         }
 
-        static ParserFunction GetRegisteredAction(string name, ref string action)
+        static bool ActionForUndefined(string action)
         {
+            return !string.IsNullOrWhiteSpace(action) && action.EndsWith("=");
+        }
+
+        static ParserFunction GetRegisteredAction(string name, ParsingScript script, ref string action)
+        {
+            if (Constants.CheckReserved(name))
+            {
+                return null;
+            }
+
+            if (ActionForUndefined(action) && script.Rest.StartsWith(Constants.UNDEFINED))
+            {
+                IsUndefinedFunction undef = new IsUndefinedFunction(name, action);
+                return undef;
+            }
+
             ActionFunction actionFunction = GetAction(action);
 
             // If passed action exists and is registered we are done.
@@ -552,6 +589,39 @@ namespace SplitAndMerge
             {
                 gvf.Value.CurrentAssign = "";
             }
+        }
+
+        static void AddVariables(List<Variable> vars, Dictionary<string, ParserFunction> dict)
+        {
+            foreach (var val in dict.Values)
+            {
+                if (val.isNative || !(val is GetVarFunction))
+                {
+                    continue;
+                }
+                Variable var = ((GetVarFunction)val).Value.DeepClone();
+                var.ParamName = ((GetVarFunction)val).Name;
+                vars.Add(var);
+            }
+        }
+
+        public static List<Variable> VariablesSnaphot(ParsingScript script = null, bool includeGlobals = false)
+        {
+            List<Variable> vars = new List<Variable>();
+            if (includeGlobals)
+            {
+                AddVariables(vars, s_variables);
+            }
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (lastLevel != null)
+            {
+                AddVariables(vars, lastLevel);
+            }
+            if (script != null && script.StackLevel != null)
+            {
+                AddVariables(vars, script.StackLevel.Variables);
+            }
+            return vars;
         }
 
         public static void AddGlobal(string name, ParserFunction function,

@@ -24,7 +24,17 @@ namespace SplitAndMerge
         public const char CONTINUE_LINE = '\\';
         public const char EMPTY = '\0';
         public const char TERNARY_OPERATOR = '?';
+
         public const string FOR_EACH = ":";
+        public const string FOR_IN = "in";
+        public const string FOR_OF = "of";
+        public const string INFINITY = "Infinity";
+        public const string NEG_INFINITY = "-Infinity";
+        public const string ISFINITE = "IsFinite";
+        public const string ISNAN = "IsNaN";
+        public const string NULL = "null";
+        public const string NAN = "NaN";
+        public const string UNDEFINED = "undefined";
 
         public const string ASSIGNMENT = "=";
         public const string AND = "&&";
@@ -44,11 +54,13 @@ namespace SplitAndMerge
         public const string DIV_ASSIGN = "/=";
 
         public const string BREAK = "break";
+        public const string CASE = "case";
         public const string CATCH = "catch";
         public const string CANCEL = "cancel_operation";
         public const string COMMENT = "//";
         public const string COMPILED_FUNCTION = "cfunction";
         public const string CONTINUE = "continue";
+        public const string DEFAULT = "default";
         public const string DO = "do";
         public const string ELSE = "else";
         public const string ELSE_IF = "elif";
@@ -60,9 +72,12 @@ namespace SplitAndMerge
         public const string INCLUDE = "include";
         public const string NEW = "new";
         public const string RETURN = "return";
+        public const string SWITCH = "switch";
+        public const string THIS = "this";
         public const string THROW = "throw";
         public const string TRY = "try";
         public const string TYPE = "type";
+        public const string TYPE_OF = "typeOf";
         public const string WHILE = "while";
 
         public const string TRUE = "true";
@@ -140,6 +155,8 @@ namespace SplitAndMerge
         public const string TO_DECIMAL = "decimal";
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";
+        public const string TO_INTEGER = "tointeger";
+        public const string TO_NUMBER = "number";
         public const string TO_STRING = "string";
         public const string VAR = "var";
         public const string VARIABLE_TYPE = "VariableType";
@@ -161,6 +178,7 @@ namespace SplitAndMerge
         public const string ENDS_WITH     = "EndsWith";
         public const string EQUALS        = "Equals";
         public const string FIRST         = "First";
+        public const string FOREACH       = "ForEach";
         public const string INDEX_OF      = "IndexOf";
         public const string JOIN          = "Join";
         public const string KEYS          = "Keys";
@@ -217,6 +235,7 @@ namespace SplitAndMerge
         public const string MATH_TANH     = "Math.Tanh";
         public const string MATH_TRUNC    = "Math.Trunc";
 
+        public const string OBJECT_DEFPROP = "Object.defineProperty";
 
         // Special property for converting an object to a string:
         public const string PROP_TO_STRING    = "ToString";
@@ -245,6 +264,7 @@ namespace SplitAndMerge
         public static char[] IF_ARG_ARRAY = "&|)".ToCharArray();
         public static char[] END_PARSE_ARRAY = { SPACE, END_STATEMENT, END_ARG, END_GROUP, '\n' };
         public static char[] NEXT_OR_END_ARRAY = { NEXT_ARG, END_ARG, END_GROUP, END_STATEMENT, SPACE };
+        public static char[] NEXT_OR_END_ARRAY_EXT = { NEXT_ARG, END_ARG, END_GROUP, END_ARRAY, END_STATEMENT, SPACE };
 
         public static string TOKEN_SEPARATION_STR = "<>=+-*/%&|^,!()[]{}\t\n;: ";
         public static char[] TOKEN_SEPARATION = TOKEN_SEPARATION_STR.ToCharArray();
@@ -268,7 +288,7 @@ namespace SplitAndMerge
         // between them e.g. return a*b;
         public static List<string> FUNCT_WITH_SPACE_ONCE = new List<string>
         {
-            RETURN, THROW, VAR
+            CASE, RETURN, THROW, TYPE_OF, VAR
         };
 
         // The Control Flow Functions. It doesn't make sense to merge them or
@@ -285,6 +305,7 @@ namespace SplitAndMerge
             RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
+            SWITCH, CASE, DEFAULT, NAN, UNDEFINED,
             NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString(), "math"
         };
 

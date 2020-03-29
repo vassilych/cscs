@@ -85,6 +85,7 @@ namespace SplitAndMerge
         }
 
         public ParserFunction.StackLevel StackLevel { get; set; }
+        public bool ProcessingList { get; set; }
 
         public bool DisableBreakpoints;
         public bool InTryBlock;
@@ -134,6 +135,27 @@ namespace SplitAndMerge
                 }
             }
             return path;
+        }
+
+        public bool StartsWith(string str, bool caseSensitive = true)
+        {
+            if (String.IsNullOrEmpty(str) || str.Length > m_data.Length - m_from)
+            {
+                return false;
+            }
+            for (int i = m_from; i < m_data.Length && i < str.Length + m_from; i++)
+            {
+                var ch1 = str[i - m_from];
+                var ch2 = m_data[i];
+
+                if ((caseSensitive && ch1 != ch2) ||
+                   (!caseSensitive && char.ToUpperInvariant(ch1) != char.ToUpperInvariant(ch2)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public int Find(char ch, int from = -1)
@@ -384,6 +406,13 @@ namespace SplitAndMerge
                 }
             }
             return endGroupRead;
+        }
+
+        public static Variable RunString(string str)
+        {
+            ParsingScript tempScript = new ParsingScript(str);
+            Variable result = tempScript.Execute();
+            return result;
         }
 
         public Variable Execute(char[] toArray = null, int from = -1)

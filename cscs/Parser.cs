@@ -187,6 +187,13 @@ namespace SplitAndMerge
             }
             while (true);
 
+            if (to.Contains(Constants.END_ARRAY) && ch == Constants.END_ARRAY &&
+                item[item.Length-1] != Constants.END_ARRAY &&
+                item.ToString().Contains(Constants.START_ARRAY))
+            {
+                item.Append(ch);
+            }
+
             string result = item.ToString();
             result = result.Replace("\\\\", "\\");
             result = result.Replace("\\\"", "\"");
@@ -254,7 +261,7 @@ namespace SplitAndMerge
                          current.IsReturn);
             if (done)
             {
-                if (action != null && action != Constants.END_ARG_STR)
+                if (action != null && action != Constants.END_ARG_STR && token != Constants.DEFAULT)
                 {
                     throw new ArgumentException("Action [" +
                               action + "] without an argument.");
@@ -606,10 +613,6 @@ namespace SplitAndMerge
                     leftCell.Value *= rightCell.Value;
                     break;
                 case "/":
-                    if (rightCell.Value == 0.0)
-                    {
-                        throw new ArgumentException("Division by zero");
-                    }
                     leftCell.Value /= rightCell.Value;
                     break;
                 case "+":
@@ -638,9 +641,11 @@ namespace SplitAndMerge
                     leftCell.Value = Convert.ToDouble(leftCell.Value >= rightCell.Value);
                     break;
                 case "==":
+                case "===":
                     leftCell.Value = Convert.ToDouble(leftCell.Value == rightCell.Value);
                     break;
                 case "!=":
+                case "!==":
                     leftCell.Value = Convert.ToDouble(leftCell.Value != rightCell.Value);
                     break;
                 case "&":

@@ -12,7 +12,7 @@ namespace SplitAndMerge
         {
             NONE, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
-            BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME
+            BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME, CUSTOM
         };
 
         public Variable()
@@ -178,12 +178,23 @@ namespace SplitAndMerge
             {
                 return false;
             }
+
+            if (Type == VarType.NUMBER && Value == other.Value)
+            {
+                return true;
+            }
+            bool stringsEqual = String.Equals(this.String, other.String, StringComparison.Ordinal);
+            if (Type == VarType.STRING && stringsEqual)
+            {
+                return true;
+            }
+            if (Type == VarType.OBJECT)
+            {
+                return Object == other.Object;
+            }
+
             if (Double.IsNaN(Value) != Double.IsNaN(other.Value) ||
               (!Double.IsNaN(Value) && Value != other.Value))
-            {
-                return false;
-            }
-            if (!String.Equals(this.String, other.String, StringComparison.Ordinal))
             {
                 return false;
             }
@@ -203,7 +214,11 @@ namespace SplitAndMerge
             {
                 return false;
             }
-            return true;
+            if (!stringsEqual)
+            {
+                return false;
+            }
+            return AsString() == other.AsString();
         }
 
         public void AddVariableToHash(string hash, Variable newVar)
@@ -569,7 +584,7 @@ namespace SplitAndMerge
 
             if (isList)
             {
-                sb.Append(Constants.START_GROUP.ToString() +
+                sb.Append(Constants.START_ARRAY.ToString() +
                          (sameLine ? "" : Environment.NewLine));
             }
 
@@ -620,7 +635,7 @@ namespace SplitAndMerge
             }
             if (isList)
             {
-                sb.Append(Constants.END_GROUP.ToString() +
+                sb.Append(Constants.END_ARRAY.ToString() +
                          (sameLine ? "" : Environment.NewLine));
             }
 
@@ -637,7 +652,7 @@ namespace SplitAndMerge
             else
             {
                 sb.Append((m_object != null ? (m_object.ToString() + " ") : "") +
-                           Constants.START_GROUP.ToString());
+                           Constants.START_ARRAY.ToString());
 
                 List<string> allProps = GetAllProperties();
                 for (int i = 0;  i < allProps.Count; i++)
@@ -706,7 +721,7 @@ namespace SplitAndMerge
                 Utils.CheckNotNull(property, varName, script);
                 return property.SetProperty(actualPropName, value, script, baseName);
             }
-            return FinishSetProperty(propName, value, baseName);
+            return FinishSetProperty(propName, value, script, baseName);
         }
 
         public async Task<Variable> SetPropertyAsync(string propName, Variable value, ParsingScript script, string baseName = "")
@@ -721,7 +736,7 @@ namespace SplitAndMerge
                 Variable result = await property.SetPropertyAsync(actualPropName, value, script, baseName);
                 return result;
             }
-            return FinishSetProperty(propName, value, baseName);
+            return FinishSetProperty(propName, value, script, baseName);
         }
 
         string GetRealName(string name)
@@ -735,9 +750,31 @@ namespace SplitAndMerge
             return realName;
         }
 
-        public Variable FinishSetProperty(string propName, Variable value, string baseName = "")
+        public Variable FinishSetProperty(string propName, Variable value, ParsingScript script, string baseName = "")
         {
             Variable result = Variable.EmptyInstance;
+
+            // Check for an existing custom setter
+            if ((m_propertyMap.TryGetValue(propName, out result) ||
+                m_propertyMap.TryGetValue(GetRealName(propName), out result)))
+            {
+                if (!result.Writable)
+                {
+                    Utils.ThrowErrorMsg("Property [" + propName + "] is not writable.",
+                        script, propName);
+                }
+                if (result.CustomFunctionSet != null)
+                {
+                    var args = new List<Variable> { value };
+                    result.CustomFunctionSet.Run(args, script);
+                    return result;
+                }
+                if (!string.IsNullOrWhiteSpace(result.CustomSet))
+                {
+                    return ParsingScript.RunString(result.CustomSet);
+                }
+            }
+
             m_propertyMap[propName] = value;
 
             string converted = Constants.ConvertName(propName);
@@ -901,6 +938,45 @@ namespace SplitAndMerge
             return GetCoreProperty(propName, script);
         }
 
+        bool ProcessForEach(ParsingScript script)
+        {
+            var token = Utils.GetNextToken(script, true);
+            Utils.CheckNotEmpty(token, Constants.FOREACH);
+
+            CustomFunction customFunc = Utils.GetFunction(script, "", token);
+            script.MoveForwardIf(Constants.END_ARG);
+
+            if (customFunc == null)
+            {
+                customFunc = ParserFunction.GetFunction(token, script) as CustomFunction;
+            }
+            if (customFunc == null)
+            {
+                Utils.ThrowErrorMsg("No function found for [" + Constants.FOREACH + "].",
+                                    script, token);
+            }
+            if (Tuple == null)
+            {
+                Utils.ThrowErrorMsg("No array found for [" + Constants.FOREACH + "].",
+                                    script, token);
+            }
+
+            var args = ParserFunction.VariablesSnaphot(script);
+            string propArg = customFunc.RealArgs[0];
+            List<Variable> funcArgs = new List<Variable>();
+
+            int index = 0;
+            foreach (var item in Tuple)
+            {
+                funcArgs.Clear();
+                funcArgs.Add(item);
+                funcArgs.Add(new Variable(index++));
+                funcArgs.Add(this);
+                customFunc.Run(funcArgs, script);
+            }
+            return true;
+        }
+
         Variable GetCoreProperty(string propName, ParsingScript script = null)
         {
             Variable result = Variable.EmptyInstance;
@@ -999,6 +1075,11 @@ namespace SplitAndMerge
                 script.GetFunctionArgs();
                 Sort();
 
+                return this;
+            }
+            else if (script != null && propName.Equals(Constants.FOREACH, StringComparison.OrdinalIgnoreCase))
+            {
+                ProcessForEach(script);
                 return this;
             }
             else if (script != null && propName.Equals(Constants.SPLIT, StringComparison.OrdinalIgnoreCase))
@@ -1375,6 +1456,17 @@ namespace SplitAndMerge
             set { m_datetime = value; Type = VarType.DATETIME; }
         }
 
+        public CustomFunction CustomFunctionGet
+        {
+            get { return m_customFunctionGet; }
+            set { m_customFunctionGet = value; }
+        }
+        public CustomFunction CustomFunctionSet
+        {
+            get { return m_customFunctionSet; }
+            set { m_customFunctionSet = value; }
+        }
+
         public List<Variable> Tuple
         {
             get { return m_tuple; }
@@ -1393,12 +1485,23 @@ namespace SplitAndMerge
         public string CurrentAssign { get; set; } = "";
         public string ParamName { get; set; } = "";
 
+        public bool Writable { get; set; } = true;
+        public bool Enumerable { get; set; } = true;
+        public bool Configurable { get; set; } = true;
+
+        public string CustomGet { get; set; }
+        public string CustomSet { get; set; }
+
+        public List<Variable> StackVariables { get; set;  }
+
         public static Variable EmptyInstance = new Variable();
 
         double m_value;
         string m_string;
         object m_object;
         DateTime m_datetime;
+        CustomFunction m_customFunctionGet;
+        CustomFunction m_customFunctionSet;
         List<Variable> m_tuple;
         Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
         Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
