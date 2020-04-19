@@ -1135,6 +1135,31 @@ namespace SplitAndMerge
                 }
                 return this;
             }
+            else if (script != null && propName.Equals(Constants.ADD_UNIQUE, StringComparison.OrdinalIgnoreCase))
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, propName);
+
+                Variable var = Utils.GetSafeVariable(args, 0);
+                string comp = var.AsString();
+                int index = Utils.GetSafeInt(args, 1, -1);
+
+                bool containsItem = m_tuple != null && m_tuple.Any(item => item.AsString() == comp);
+
+                if (!containsItem)
+                {
+                    if (index >= 0)
+                    {
+                        m_tuple.Insert(index, var);
+                    }
+                    else
+                    {
+                        m_tuple.Add(var);
+                    }
+                    return new Variable(true);
+                }
+                return new Variable(false);
+            }
             else if (script != null && propName.Equals(Constants.REMOVE_AT, StringComparison.OrdinalIgnoreCase))
             {
                 List<Variable> args = script.GetFunctionArgs();
@@ -1220,9 +1245,9 @@ namespace SplitAndMerge
                 {
                     string lower = val.ToLower();
                     contains = m_dictionary != null && m_dictionary.ContainsKey(lower);
-                    if (!contains && Tuple != null)
+                    if (!contains && m_tuple != null)
                     {
-                        foreach (var item in Tuple)
+                        foreach (var item in m_tuple)
                         {
                             if (item.AsString().Equals(val, comp))
                             {

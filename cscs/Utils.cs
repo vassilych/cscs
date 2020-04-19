@@ -166,6 +166,7 @@ namespace SplitAndMerge
         {
             string [] lines = script.Split('\n');
             lineNumber = lines.Length <= lineNumber ? -1 : lineNumber;
+            System.Diagnostics.Debug.WriteLine(msg);
             if (lineNumber < 0)
             {
                 throw new ParsingException(msg);

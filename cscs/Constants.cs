@@ -86,6 +86,7 @@ namespace SplitAndMerge
         public const string ABS = "abs";
         public const string ACOS = "acos";
         public const string ADD = "add";
+        public const string ADD_UNIQUE = "addunique";
         public const string ADD_TO_HASH = "AddToHash";
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
         public const string ASIN = "asin";
