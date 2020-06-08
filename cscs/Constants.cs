@@ -114,6 +114,7 @@ namespace SplitAndMerge
         public const string NAME_EXISTS = "NameExists";
         public const string NAMESPACE = "Namespace";
         public const string NOW = "Now";
+        public const string ON_EXCEPTION = "OnException";
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
         public const string PI = "pi";

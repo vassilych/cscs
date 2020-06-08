@@ -506,8 +506,14 @@ namespace SplitAndMerge
             return token;
         }
 
-        public static Variable GetVariable(string varName, ParsingScript script, bool testNull = true)
+        public static Variable GetVariable(string varName, ParsingScript script = null, bool testNull = true)
         {
+            varName = varName.ToLower();
+            if (script == null)
+            {
+                script = new ParsingScript("");
+            }
+
             ParserFunction func = ParserFunction.GetVariable(varName, script);
             if (!testNull && func == null)
             {
@@ -716,7 +722,7 @@ namespace SplitAndMerge
 
         public static string GetFullPath(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path))
             {
                 return path;
             }

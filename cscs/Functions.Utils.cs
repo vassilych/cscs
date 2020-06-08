@@ -841,6 +841,69 @@ namespace SplitAndMerge
         }
     }
 
+    class LabelFunction : ActionFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            // Just skip this label. m_name is equal to the lable name.
+            return Variable.EmptyInstance;
+        }
+    }
+
+    class GotoGosubFunction : ParserFunction
+    {
+        bool m_isGoto = true;
+
+        public GotoGosubFunction(bool gotoMode = true)
+        {
+            m_isGoto = gotoMode;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var labelName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+
+            Dictionary<string, int> labels;
+            if (script.AllLabels == null || script.LabelToFile == null |
+               !script.AllLabels.TryGetValue(script.FunctionName, out labels))
+            {
+                Utils.ThrowErrorMsg("Couldn't find labels in function [" + script.FunctionName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            int gotoPointer;
+            if (!labels.TryGetValue(labelName, out gotoPointer))
+            {
+                Utils.ThrowErrorMsg("Couldn't find label [" + labelName + "].",
+                                    script, m_name);
+                return Variable.EmptyInstance;
+            }
+
+            string filename;
+            if (script.LabelToFile.TryGetValue(labelName, out filename) &&
+                filename != script.Filename && !string.IsNullOrWhiteSpace(filename))
+            {
+                var newScript = script.GetIncludeFileScript(filename);
+                script.Filename = filename;
+                script.String = newScript.String;
+            }
+
+            if (!m_isGoto)
+            {
+                script.PointersBack.Add(script.Pointer);
+            }
+
+            script.Pointer = gotoPointer;
+            if (string.IsNullOrWhiteSpace(script.FunctionName))
+            {
+                script.Backward();
+            }
+
+            return Variable.EmptyInstance;
+        }
+    }
+
     class EncodeFileFunction : ParserFunction
     {
         bool m_encode = true;
@@ -896,297 +959,6 @@ namespace SplitAndMerge
 
             Utils.WriteFileText(pathname, newText);
             return new Variable(pathname);
-        }
-    }
-
-    public class WebRequestFunction : ParserFunction
-    {
-        static string[] s_allowedMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE" };
-
-        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 2, m_name);
-            string method = args[0].AsString().ToUpper();
-            string uri = args[1].AsString();
-            string load = Utils.GetSafeString(args, 2);
-            string tracking = Utils.GetSafeString(args, 3);
-            string onSuccess = Utils.GetSafeString(args, 4);
-            string onFailure = Utils.GetSafeString(args, 5, onSuccess);
-            string contentType = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
-            Variable headers = Utils.GetSafeVariable(args, 7);
-            int timeoutMs = Utils.GetSafeInt(args, 8, 10 * 1000);
-            bool justFire = Utils.GetSafeInt(args, 9) > 0;
-
-            if (!s_allowedMethods.Contains(method))
-            {
-                throw new ArgumentException("Unknown web request method: " + method);
-            }
-
-            await ProcessWebRequestAsync(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
-
-            return Variable.EmptyInstance;
-        }
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 2, m_name);
-            string method = args[0].AsString().ToUpper();
-            string uri = args[1].AsString();
-            string load = Utils.GetSafeString(args, 2);
-            string tracking = Utils.GetSafeString(args, 3);
-            string onSuccess = Utils.GetSafeString(args, 4);
-            string onFailure = Utils.GetSafeString(args, 5, onSuccess);
-            string contentType = Utils.GetSafeString(args, 6, "application/x-www-form-urlencoded");
-            Variable headers = Utils.GetSafeVariable(args, 7);
-            int timeoutMs = Utils.GetSafeInt(args, 8, 10 * 1000);
-            bool justFire = Utils.GetSafeInt(args, 9) > 0;
-
-            if (!s_allowedMethods.Contains(method))
-            {
-                throw new ArgumentException("Unknown web request method: " + method);
-            }
-
-            Task.Run(() => ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking,
-                                             contentType, headers));
-
-            return Variable.EmptyInstance;
-        }
-
-        static void ProcessWebRequest(string uri, string method, string load,
-                                            string onSuccess, string onFailure,
-                                            string tracking, string contentType,
-                                            Variable headers)
-        {
-            try
-            {
-                WebRequest request = WebRequest.CreateHttp(uri);
-                request.Method = method;
-                request.ContentType = contentType;
-
-                if (!string.IsNullOrWhiteSpace(load))
-                {
-                    var bytes = Encoding.UTF8.GetBytes(load);
-                    request.ContentLength = bytes.Length;
-
-                    using (var requestStream = request.GetRequestStream())
-                    {
-                        requestStream.Write(bytes, 0, bytes.Length);
-                    }
-                }
-
-                if (headers != null && headers.Tuple != null)
-                {
-                    var keys = headers.GetKeys();
-                    foreach (var header in keys)
-                    {
-                        var headerValue = headers.GetVariable(header).AsString();
-                        request.Headers.Add(header, headerValue);
-                    }
-                }
-                HttpWebResponse resp = request.GetResponse() as HttpWebResponse;
-                string result;
-                using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                {
-                    result = sr.ReadToEnd();
-                }
-                string responseCode = resp == null ? "" : resp.StatusCode.ToString();
-                CustomFunction.Run(onSuccess, new Variable(tracking),
-                                   new Variable(responseCode), new Variable(result));
-            }
-            catch (Exception exc)
-            {
-                CustomFunction.Run(onFailure, new Variable(tracking),
-                                   new Variable(""), new Variable(exc.Message));
-            }
-        }
-
-        static async Task ProcessWebRequestAsync(string uri, string method, string load,
-                                            string onSuccess, string onFailure,
-                                            string tracking, string contentType,
-                                            Variable headers, int timeout,
-                                            bool justFire = false)
-        {
-            try
-            {
-                WebRequest request = WebRequest.CreateHttp(uri);
-                request.Method = method;
-                request.ContentType = contentType;
-
-                if (!string.IsNullOrWhiteSpace(load))
-                {
-                    var bytes = Encoding.UTF8.GetBytes(load);
-                    request.ContentLength = bytes.Length;
-
-                    using (var requestStream = request.GetRequestStream())
-                    {
-                        requestStream.Write(bytes, 0, bytes.Length);
-                    }
-                }
-
-                if (headers != null && headers.Tuple != null)
-                {
-                    var keys = headers.GetKeys();
-                    foreach (var header in keys)
-                    {
-                        var headerValue = headers.GetVariable(header).AsString();
-                        request.Headers.Add(header, headerValue);
-                    }
-                }
-
-                Task<WebResponse> task = request.GetResponseAsync();
-                Task finishTask = FinishRequest(onSuccess, onFailure,
-                                                tracking, task, timeout);
-                if (justFire)
-                {
-                    return;
-                }
-                await finishTask;
-            }
-            catch (Exception exc)
-            {
-                await CustomFunction.RunAsync(onFailure, new Variable(tracking),
-                                              new Variable(""), new Variable(exc.Message));
-            }
-        }
-
-        static async Task FinishRequest(string onSuccess, string onFailure,
-                                        string tracking, Task<WebResponse> responseTask,
-                                        int timeoutMs)
-        {
-            string result = "";
-            string method = onSuccess;
-            HttpWebResponse response = null;
-            Task timeoutTask = Task.Delay(timeoutMs);
-
-            try
-            {
-                Task first = await Task.WhenAny(timeoutTask, responseTask);
-                if (first == timeoutTask)
-                {
-                    await timeoutTask;
-                    throw new Exception("Timeout waiting for response.");
-                }
-
-                response = await responseTask as HttpWebResponse;
-                if ((int)response.StatusCode >= 400)
-                {
-                    throw new Exception(response.StatusDescription);
-                }
-
-                using (StreamReader sr = new StreamReader(response.GetResponseStream()))
-                {
-                    result = sr.ReadToEnd();
-                }
-            }
-            catch (Exception exc)
-            {
-                result = exc.Message;
-                method = onFailure;
-            }
-
-            string responseCode = response == null ? "" : response.StatusCode.ToString();
-            await CustomFunction.RunAsync(method, new Variable(tracking),
-                                          new Variable(responseCode), new Variable(result));
-        }
-    }
-
-    class GetVariableFromJSONFunction : ParserFunction
-    {
-        static char[] SEP = "\",:]}".ToCharArray();
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name);
-
-            string json = args[0].AsString();
-
-            Dictionary<int, int> d;
-            json = Utils.ConvertToScript(json, out d);
-
-            var tempScript = script.GetTempScript(json);
-            Variable result = ExtractValue(tempScript);
-            return result;
-        }
-
-        static Variable ExtractObject(ParsingScript script)
-        {
-            Variable newValue = new Variable(Variable.VarType.ARRAY);
-
-            while (script.StillValid() && (newValue.Count == 0 || script.Current == ','))
-            {
-                script.Forward();
-                string key = Utils.GetToken(script, SEP);
-                script.MoveForwardIf(':');
-
-                Variable valueVar = ExtractValue(script);
-                newValue.SetHashVariable(key, valueVar);
-            }
-            script.MoveForwardIf('}');
-
-            return newValue;
-        }
-
-        static Variable ExtractArray(ParsingScript script)
-        {
-            Variable newValue = new Variable(Variable.VarType.ARRAY);
-
-            while (script.StillValid() && (newValue.Count == 0 || script.Current == ','))
-            {
-                script.Forward();
-                Variable addVariable = ExtractValue(script);
-                newValue.AddVariable(addVariable);
-            }
-            script.MoveForwardIf(']');
-
-            return newValue;
-        }
-
-        static Variable ExtractValue(ParsingScript script)
-        {
-            if (script.TryCurrent() == '{')
-            {
-                return ExtractObject(script);
-            }
-            if (script.TryCurrent() == '[')
-            {
-                return ExtractArray(script);
-            }
-            var token = Utils.GetToken(script, SEP);
-            return new Variable(token);
-        }
-    }
-
-
-    class IncludeFileSecure : ParserFunction
-    {
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name, true);
-
-            string filename = args[0].AsString();
-            string pathname = script.GetFilePath(filename);
-
-            EncodeFileFunction.EncodeDecode(pathname, false);
-            ParsingScript tempScript = script.GetIncludeFileScript(filename);
-            string includeScript = tempScript.String;
-            EncodeFileFunction.EncodeDecode(pathname, true);
-
-            Variable result = null;
-            if (script.Debugger != null)
-            {
-                result = script.Debugger.StepInIncludeIfNeeded(tempScript).Result;
-            }
-
-            while (tempScript.Pointer < includeScript.Length)
-            {
-                result = tempScript.Execute();
-                tempScript.GoToNextStatement();
-            }
-            return result == null ? Variable.EmptyInstance : result;
         }
     }
 }

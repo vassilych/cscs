@@ -1040,7 +1040,7 @@ namespace SplitAndMerge
         }
 
         public static Task<Variable> Run(string functionName,
-             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null)
+             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
         {
             CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
 
@@ -1063,12 +1063,12 @@ namespace SplitAndMerge
                 args.Add(arg3);
             }
 
-            Variable result = customFunction.Run(args);
+            Variable result = customFunction.Run(args, script);
             return Task.FromResult( result );
         }
 
         public static async Task<Variable> RunAsync(string functionName,
-             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null)
+             Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
         {
             CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
 
@@ -1091,7 +1091,7 @@ namespace SplitAndMerge
                 args.Add(arg3);
             }
 
-            Variable result = await customFunction.RunAsync(args);
+            Variable result = await customFunction.RunAsync(args, script);
             return result;
         }
 

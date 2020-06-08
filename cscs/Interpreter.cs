@@ -147,6 +147,8 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
             ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
+            ParserFunction.RegisterFunction(Constants.INCLUDE_SECURE, new IncludeFileSecure());
+            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
             ParserFunction.RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());
             ParserFunction.RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
@@ -192,6 +194,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
             ParserFunction.RegisterFunction(Constants.VAR, new VarFunction());
             ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+            ParserFunction.RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
 
             ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
             ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
@@ -683,7 +686,8 @@ namespace SplitAndMerge
         {
             if (reason == Constants.CASE)
             {
-                /*var token = */Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                /*var token = */
+                Utils.GetToken(script, Constants.TOKEN_SEPARATION);
             }
             script.MoveForwardIf(':');
 
@@ -1086,7 +1090,7 @@ namespace SplitAndMerge
             int blockStart = script.Pointer;
             int startCount = 0;
             int endCount = 0;
-            bool inQuotes  = false;
+            bool inQuotes = false;
             bool inQuotes1 = false;
             bool inQuotes2 = false;
             char previous = Constants.EMPTY;
@@ -1144,7 +1148,7 @@ namespace SplitAndMerge
                 ParsingScript nextData = new ParsingScript(script);
                 string nextToken = Utils.GetNextToken(nextData);
                 if (Constants.ELSE_IF != nextToken &&
-                    Constants.ELSE    != nextToken)
+                    Constants.ELSE != nextToken)
                 {
                     return;
                 }
@@ -1152,5 +1156,46 @@ namespace SplitAndMerge
                 SkipBlock(script);
             }
         }
+
+        public static Variable Run(string functionName, Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
+        {
+            System.Threading.Tasks.Task<Variable> task = null;
+            try
+            {
+                task = CustomFunction.Run(functionName, arg1, arg2, arg3, script);
+            }
+            catch (Exception exc)
+            {
+                task = CustomFunction.Run(Constants.ON_EXCEPTION, new Variable(functionName),
+                                          new Variable(exc.Message), arg2, script);
+                if (task == null)
+                {
+                    throw;
+                }
+            }
+            return task == null ? Variable.EmptyInstance : task.Result;
+        }
+
+
+        public static Variable Run(CustomFunction function, List<Variable> args, ParsingScript script = null)
+        {
+            Variable result = null;
+            try
+            {
+                result = function.Run(args, script);
+            }
+            catch (Exception exc)
+            {
+                var task = CustomFunction.Run(Constants.ON_EXCEPTION, new Variable(function.Name),
+                                          new Variable(exc.Message), args.Count > 0 ? args[0] : Variable.EmptyInstance, script);
+                if (task == null)
+                {
+                    throw;
+                }
+                result = task.Result;
+            }
+            return result;
+        }
     }
 }
+

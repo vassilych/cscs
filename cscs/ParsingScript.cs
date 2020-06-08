@@ -24,6 +24,7 @@ namespace SplitAndMerge
         public string String
         {
             get { return m_data; }
+            set { m_data = value; }
         }
         public string Rest
         {
@@ -84,6 +85,28 @@ namespace SplitAndMerge
             set;
         }
 
+        public string CurrentModule { get; set; }
+
+        public Dictionary<string, Dictionary<string, int>> AllLabels
+        {
+            get;
+            set;
+        }
+        public Dictionary<string, string> LabelToFile
+        {
+            get;
+            set;
+        }
+
+        public List<int> PointersBack { get; set; } = new List<int>();
+
+        string m_functionName = "";
+        public string FunctionName
+        {
+            get { return m_functionName;  }
+            set { m_functionName = value.ToLower(); }
+        }
+
         public ParserFunction.StackLevel StackLevel { get; set; }
         public bool ProcessingList { get; set; }
 
@@ -117,6 +140,9 @@ namespace SplitAndMerge
             ScriptOffset = other.ScriptOffset;
             Debugger = other.Debugger;
             InTryBlock = other.InTryBlock;
+            AllLabels = other.AllLabels;
+            LabelToFile = other.LabelToFile;
+            FunctionName = other.FunctionName;
         }
 
         public int Size() { return m_data.Length; }
@@ -156,6 +182,17 @@ namespace SplitAndMerge
             }
 
             return true;
+        }
+
+        public bool ProcessReturn()
+        {
+            if (PointersBack.Count > 0)
+            {
+                Pointer = PointersBack[PointersBack.Count - 1];
+                PointersBack.RemoveAt(PointersBack.Count - 1);
+                return true;
+            }
+            return false;
         }
 
         public int Find(char ch, int from = -1)
@@ -307,6 +344,21 @@ namespace SplitAndMerge
             int max = Math.Min(m_data.Length - from, maxChars);
             string result = m_data.Substring(from, max);
             return result;
+        }
+
+        public bool IsPrevious(string str)
+        {
+            if (string.IsNullOrEmpty(str))
+            {
+                return true;
+            }
+            if (m_from < str.Length || m_data.Length < str.Length)
+            {
+                return false;
+            }
+
+            var substr = m_data.Substring(m_from - str.Length, str.Length);
+            return substr.Equals(str, StringComparison.OrdinalIgnoreCase);
         }
 
         public void Forward(int delta = 1) { m_from += delta; }
@@ -540,6 +592,10 @@ namespace SplitAndMerge
             tempScript.OriginalScript = this.OriginalScript;
             tempScript.InTryBlock     = this.InTryBlock;
             tempScript.StackLevel     = this.StackLevel;
+            tempScript.AllLabels      = this.AllLabels;
+            tempScript.LabelToFile    = this.LabelToFile;
+            tempScript.FunctionName   = this.FunctionName;            
+
             //tempScript.Debugger       = this.Debugger;
 
             return tempScript;

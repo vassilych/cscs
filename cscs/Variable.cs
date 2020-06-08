@@ -293,6 +293,7 @@ namespace SplitAndMerge
         public void TrySetAsMap()
         {
             if (m_tuple == null || m_tuple.Count < 1 ||
+                m_dictionary.Count > 0 || m_keyMappings.Count > 0 ||
                 m_tuple[0].m_dictionary.Count == 0)
             {
                 return;
