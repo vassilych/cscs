@@ -407,11 +407,6 @@ namespace SplitAndMerge
             if (!globalOnly && !localIfPossible && script != null && script.StackLevel != null && !GlobalNameExists(name))
             {
                 script.StackLevel.Variables[name] = function;
-                var handle = OnVariableChange;
-                if (handle != null)
-                {
-                    handle.Invoke(function.Name, function.Value, false);
-                }
             }
 
             if (!globalOnly && s_locals.Count > StackLevelDelta &&
@@ -630,6 +625,9 @@ namespace SplitAndMerge
             name = Constants.ConvertName(name);
             NormalizeValue(function);
             function.isNative = isNative;
+
+            var handle = OnVariableChange;
+            bool exists = handle != null && s_variables.ContainsKey(name);
             s_variables[name] = function;
 
             function.Name = Constants.GetRealName(name);
@@ -639,10 +637,9 @@ namespace SplitAndMerge
                 Translation.AddTempKeyword(name);
             }
 #endif
-            var handle = OnVariableChange;
             if (handle != null && function is GetVarFunction)
             {
-                handle.Invoke(function.Name, ((GetVarFunction)function).Value, true);
+                handle.Invoke(function.Name, ((GetVarFunction)function).Value, exists);
             }
         }
 
@@ -779,14 +776,17 @@ namespace SplitAndMerge
             {
                 ((GetVarFunction)local).Value.ParamName = local.Name;
             }
+
+            var handle = OnVariableChange;
+            bool exists = handle != null && s_lastExecutionLevel.Variables.ContainsKey(name);
+
             s_lastExecutionLevel.Variables[name] = local;
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             Translation.AddTempKeyword(name);
 #endif
-            var handle = OnVariableChange;
             if (handle != null && local is GetVarFunction)
             {
-                handle.Invoke(local.Name, ((GetVarFunction)local).Value, false);
+                handle.Invoke(local.Name, ((GetVarFunction)local).Value, exists);
             }
         }
 

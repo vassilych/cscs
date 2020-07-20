@@ -83,11 +83,17 @@ namespace SplitAndMerge
 
         public static void AddDefinition(string def)
         {
-            s_definitions.Add(def);
+            if (!s_definitions.Contains(def))
+            {
+                s_definitions.Add(def);
+            }
         }
         public static void AddNamespace(string ns)
         {
-            s_namespaces.Add(ns);
+            if (!s_namespaces.Contains(ns))
+            {
+                s_namespaces.Add(ns);
+            }
         }
         public static void ClearDefinitions()
         {
