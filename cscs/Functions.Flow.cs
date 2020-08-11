@@ -108,24 +108,37 @@ namespace SplitAndMerge
             Variable arg = args[0];
             return new Variable(arg.Type != Variable.VarType.NUMBER || double.IsNaN(arg.Value));
         }
-    }
+    }   
 
     class TypeOfFunction : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            List<Variable> args = script.GetFunctionArgs();
+            var args = Utils.GetTokens(script, Constants.TOKEN_SEPARATION);
             Utils.CheckArgs(args.Count, 1, m_name);
 
-            bool complexVariable = Utils.GetSafeInt(args, 1, 0) == 1;
+            var vari = GetVariable(args[0], script);
+            if (vari == null || vari.GetValue(script).Type == Variable.VarType.UNDEFINED)
+            {
+                return Variable.Undefined;
+            }
+
+            var exists = FunctionExists(args[0]);
+            if (!exists)
+            {
+                return Variable.Undefined;
+            }
+
+            bool complexVariable = args.Count > 1 &&
+                Utils.CanConvertToDouble(args[1], out double converted) && converted > 0;
             Variable element = null;
             if (complexVariable)
             {
-                element = Utils.GetVariable(args[0].AsString(), script, false);
+                element = Utils.GetVariable(args[0], script, false);
             }
             if (element == null)
             {
-                element = Utils.GetSafeVariable(args, 0);
+                element = new Variable(args[0]);
             }
 
             string type = element.GetTypeString();
@@ -168,11 +181,9 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            script.Forward(Constants.UNDEFINED.Length);
             var variable =  ParserFunction.GetVariable(m_argument, script);
-            bool isUndefined = variable == null;
-            //bool isNotNull = variable is GetVarFunction &&
-            //    ((GetVarFunction)variable).Value != Variable.EmptyInstance; 
+            var varValue = variable == null ? null : variable.GetValue(script);
+            bool isUndefined = varValue == null || varValue.Type == Variable.VarType.UNDEFINED;
 
             bool result = m_action == "===" || m_action == "==" ? isUndefined :
                           !isUndefined;
@@ -227,17 +238,52 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-            script.MoveForwardIf('=');
-            AssignFunction assign = new AssignFunction();
-            return assign.Assign(script, varName, true);
+            var args = Utils.GetTokens(script);
+            Variable result = Variable.EmptyInstance;
+            foreach (var arg in args)
+            {
+                var ind = arg.IndexOf('=');
+                if (ind <= 0)
+                {
+                    if (!FunctionExists(arg))
+                    {
+                        AddGlobalOrLocalVariable(arg, new GetVarFunction(new Variable(Variable.VarType.NONE)), script);
+                    }
+                    continue;
+                }
+                var varName = arg.Substring(0, ind);
+                ParsingScript tempScript = new ParsingScript(arg.Substring(ind + 1));
+                AssignFunction assign = new AssignFunction();
+                result = assign.Assign(tempScript, varName, true);
+            }
+            return result;
         }
+
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
-            string varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-            script.MoveForwardIf('=');
-            AssignFunction assign = new AssignFunction();
-            return await assign.AssignAsync(script, varName, true);
+            //var varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            //char action = script.CurrentAndForward();
+
+            var args = Utils.GetTokens(script);
+            Task<Variable> result = null;
+            foreach (var arg in args)
+            {
+                var ind = arg.IndexOf('=');
+                if (ind <= 0)
+                {
+                    if (!FunctionExists(arg))
+                    {
+                        AddGlobalOrLocalVariable(arg, new GetVarFunction(new Variable(Variable.VarType.UNDEFINED)), script);
+                    }
+                    continue;
+                }
+                var varName = arg.Substring(0, ind);
+                ParsingScript tempScript = new ParsingScript(arg.Substring(ind + 1));
+                AssignFunction assign = new AssignFunction();
+                result = assign.AssignAsync(tempScript, varName, true);
+            }
+
+            return result == null ? Variable.EmptyInstance: await result;
         }
     }
 
@@ -1297,6 +1343,14 @@ namespace SplitAndMerge
             int index = var.FindIndex(val);
 
             return new Variable(index);
+        }
+    }
+
+    class UndefinedFunction : ParserFunction, INumericFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return new Variable(Variable.VarType.UNDEFINED);
         }
     }
 

@@ -130,6 +130,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TYPE_OF, new TypeOfFunction());
             ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
             ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
+            ParserFunction.RegisterFunction(Constants.UNDEFINED, new UndefinedFunction());
 
             ParserFunction.RegisterFunction(Constants.ADD, new AddFunction());
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
@@ -236,6 +237,9 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MATH_TAN, new TanFunction());
             ParserFunction.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
             ParserFunction.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
+
+            ParserFunction.RegisterFunction(Constants.CONSOLE_LOG, new PrintFunction());
+
 
             ParserFunction.RegisterFunction(Constants.OBJECT_DEFPROP, new ObjectPropsFunction());
         }
@@ -692,6 +696,7 @@ namespace SplitAndMerge
             script.MoveForwardIf(':');
 
             Variable result = ProcessBlock(script);
+            script.MoveBackIfPrevious('}');
 
             return result;
         }
@@ -727,11 +732,15 @@ namespace SplitAndMerge
                     {
                         caseDone = true;
                         result = ProcessBlock(script);
+                        if (script.Prev == '}')
+                        {
+                            break;
+                        }
                         script.Forward();
                     }
                 }
             }
-            script.Forward();
+            script.MoveForwardIfNotPrevious('}');
             script.GoToNextStatement();
             return result;
         }

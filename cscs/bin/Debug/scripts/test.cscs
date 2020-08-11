@@ -223,6 +223,13 @@ Test(NameExists(localOnly), false);
 Test(NameExists(globalDefinedLocally), true);
 Test(globalDefinedLocally, 19);
 
+var xx = {"firstName":"John", "lastName":"Doe"}, yy = {"firstName":"John1", "lastName":"Doe1"}; 
+var x1 = {firstName:"Johnny", lastName:"Doe"}, y1 = {firstName:"John2", lastName:"Doe2"}; 
+Test(xx["firstName"], "John");
+Test(yy["lastName"], "Doe1");
+Test(x1["firstName"], "Johnny");
+Test(y1["lastName"], "Doe2");
+
 Print("Testing short circuit evaluation");
 function f(x) {
   counter++;
@@ -251,7 +258,6 @@ Test(num.type, "NUMBER");
 Test(VariableType.NONE.string.lower, "none");
 Test(VariableType.NUMBER.String.Upper, "NUMBER");
 Test(VariableType.NONE, 0);
-Test(VariableType.NUMBER, 1);
 
 x["bla"]["blu"]=113;
 Test(contains (x["bla"], "blu"), 1);
@@ -377,7 +383,7 @@ Test(exceptionThrown, false);
 
 exceptionThrown = false;
 try {
-  var = blah.unknown;
+  vari = blah.unknown;
   Print("ERROR. Exception needed for non existing variable.");
 } catch(exc) {
   Print("OK. Caught: " + exc);
@@ -1152,9 +1158,36 @@ Test(string(someDate, "HH:mm:ss"), "18:29:48");
 dateNow = DateTime();
 dateNow.Add("3y5M");
 dateNow.Add("-3y5M");
-Test(string(dateNow, "M/d/yyyy"), string(DateTime(), "M/d/yyyy"))
+Test(string(dateNow, "M/d/yyyy"), string(DateTime(), "M/d/yyyy"));
+
+x=2;
+switch(x) {
+  case 1: console.log(x, " one"); Test(true, false); break;
+  case 2: console.log(x, " two"); Test(true, true); break;
+  case 3: console.log(x, " three"); Test(true, false); break;
+  default: console.log(x, " default"); Test(true, false);
+}
+switch(++x) {
+  case 1: console.log(x, " one"); Test(true, false);
+  case 2: console.log(x, " two"); Test(true, false);
+  case 3: console.log(x, " three"); Test(true, true);
+  default: console.log(x, " default"); Test(true, true);
+}
 
 Print("Testing Misc. Functions...");
+z = typeof xw_undef;
+typeof z === 'undefined';
+if (typeof z === 'undefined') {
+    print ("Not defined!"); Test(true, true);
+} else {
+    print ("Defined!"); Test(true, false);
+}
+if (z != undefined) {
+    print ("Defined!"); Test(true, false);
+} else {
+    print ("Not defined!"); Test(true, true);
+}
+
 Test(NameExists(IamABrandNewName), false);
 Test(NameExists(arr), true);
 

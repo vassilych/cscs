@@ -397,6 +397,13 @@ namespace SplitAndMerge
                 Backward();
             }
         }
+        public void MoveForwardIfNotPrevious(char ch)
+        {
+            if (Prev != ch)
+            {
+                Forward();
+            }
+        }
         public void SkipAllIfNotIn(char toSkip, char[] to)
         {
             if (to.Contains(toSkip))

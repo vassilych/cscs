@@ -705,8 +705,12 @@ namespace SplitAndMerge
                     break;
                 case "===":
                     leftCell.Value = Convert.ToDouble(
-                        leftCell.Type == rightCell.Type &&
-                        leftCell.AsString() == rightCell.AsString());
+                        (leftCell.Type == rightCell.Type &&
+                         leftCell.AsString() == rightCell.AsString()) ||
+                        (leftCell.Type == Variable.VarType.UNDEFINED &&
+                         rightCell.AsString() == Constants.UNDEFINED) ||
+                        (rightCell.Type == Variable.VarType.UNDEFINED &&
+                         leftCell.AsString() == Constants.UNDEFINED));
                     break;
                 case "!==":
                     leftCell.Value = Convert.ToDouble(

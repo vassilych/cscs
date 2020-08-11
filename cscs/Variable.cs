@@ -10,7 +10,7 @@ namespace SplitAndMerge
     {
         public enum VarType
         {
-            NONE, NUMBER, STRING, ARRAY,
+            NONE, UNDEFINED, NUMBER, STRING, ARRAY,
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
             BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME, CUSTOM
         };
@@ -578,6 +578,10 @@ namespace SplitAndMerge
                 return sb.ToString();
             }
 
+            if (Type == VarType.UNDEFINED)
+            {
+                return Constants.UNDEFINED;
+            }
             if (Type == VarType.NONE || m_tuple == null)
             {
                 return string.Empty;
@@ -1521,6 +1525,7 @@ namespace SplitAndMerge
         public List<Variable> StackVariables { get; set;  }
 
         public static Variable EmptyInstance = new Variable();
+        public static Variable Undefined = new Variable(VarType.UNDEFINED);
 
         double m_value;
         string m_string;
