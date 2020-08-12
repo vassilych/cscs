@@ -117,6 +117,15 @@ namespace SplitAndMerge
             var args = Utils.GetTokens(script, Constants.TOKEN_SEPARATION);
             Utils.CheckArgs(args.Count, 1, m_name);
 
+            if (args[0].StartsWith("\""))
+            {
+                return new Variable(Constants.TypeToString(Variable.VarType.STRING).ToLower());
+            }
+            if (Utils.CanConvertToDouble(args[0], out double _))
+            {
+                return new Variable(Constants.TypeToString(Variable.VarType.NUMBER).ToLower());
+            }
+
             var vari = GetVariable(args[0], script);
             if (vari == null || vari.GetValue(script).Type == Variable.VarType.UNDEFINED)
             {
@@ -144,7 +153,7 @@ namespace SplitAndMerge
             string type = element.GetTypeString();
             script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
 
-            Variable newValue = new Variable(type);
+            Variable newValue = new Variable(type.ToLower());
             return newValue;
         }
     }

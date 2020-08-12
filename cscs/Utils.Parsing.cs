@@ -105,10 +105,15 @@ namespace SplitAndMerge
                 result = new List<string>();
                 while (script.StillValid())
                 {
+                    bool isString = script.StartsWith("\"");
                     var token = Utils.GetToken(script, separators);
-                    if (string.IsNullOrEmpty(token))
+                    if (string.IsNullOrEmpty(token) || token == Constants.END_STATEMENT.ToString())
                     {
                         break;
+                    }
+                    if (isString)
+                    {
+                        token = "\"" + token + "\"";
                     }
                     result.Add(token);
                 }
