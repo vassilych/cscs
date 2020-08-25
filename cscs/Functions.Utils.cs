@@ -850,6 +850,59 @@ namespace SplitAndMerge
         }
     }
 
+    class PointerFunction : ActionFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<string> args = Utils.GetTokens(script);
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            var result = new Variable(Variable.VarType.POINTER);
+            result.Pointer = args[0];
+            ParserFunction.AddGlobalOrLocalVariable(m_name,
+                                        new GetVarFunction(result), script);
+            return result;
+        }
+    }
+
+    class PointerReferenceFunction : ActionFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var pointer = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+
+            var result = GetRefValue(pointer, script);
+            return result;
+        }
+
+        public Variable GetRefValue(string pointer, ParsingScript script)
+        {
+            if (string.IsNullOrWhiteSpace(pointer))
+            {
+                return Variable.Undefined;
+            }
+            var refPointer = ParserFunction.GetVariable(pointer, null, true) as GetVarFunction;
+            if (refPointer == null || string.IsNullOrWhiteSpace(refPointer.Value.Pointer))
+            {
+                return Variable.Undefined;
+            }
+
+            var result = ParserFunction.GetVariable(refPointer.Value.Pointer, null, true);
+            if (result is GetVarFunction)
+            {
+                return ((GetVarFunction)result).Value;
+            }
+
+            if (result is CustomFunction)
+            {
+                script.Forward();
+                List<Variable> args = script.GetFunctionArgs();
+                return ((CustomFunction)result).Run(args, script);
+            }
+            return Variable.Undefined;
+        }
+    }
+
     class GotoGosubFunction : ParserFunction
     {
         bool m_isGoto = true;

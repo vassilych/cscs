@@ -118,6 +118,8 @@ namespace SplitAndMerge
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
         public const string PI = "pi";
+        public const string POINTER = "->";
+        public const string POINTER_REF = "&";
         public const string POW = "pow";
         public const string PRINT = "print";
         public const string PSTIME = "pstime";
@@ -247,7 +249,7 @@ namespace SplitAndMerge
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();
 
-        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", ":" };
+        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", ":" };
         public static string[] MATH_ACTIONS = { "===", "!==",
                                                 "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
                                                 "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};

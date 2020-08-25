@@ -298,7 +298,8 @@ namespace SplitAndMerge
             }
             name = Constants.ConvertName(name);
             ParserFunction impl;
-            StackLevel localStack = script.StackLevel != null ? script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            StackLevel localStack = script != null &&  script.StackLevel != null ?
+                 script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
             if (localStack != null)
             {
                 Dictionary<string, ParserFunction> local = localStack.Variables;

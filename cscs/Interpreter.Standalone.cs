@@ -11,7 +11,10 @@ namespace SplitAndMerge
         {
             ParserFunction.RegisterFunction(Constants.GOTO, new GotoGosubFunction(true));
             ParserFunction.RegisterFunction(Constants.GOSUB, new GotoGosubFunction(false));
+
             ParserFunction.AddAction(Constants.LABEL_OPERATOR, new LabelFunction());
+            ParserFunction.AddAction(Constants.POINTER, new PointerFunction());
+            ParserFunction.AddAction(Constants.POINTER_REF, new PointerReferenceFunction());
 
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
             // Math Top level functions
