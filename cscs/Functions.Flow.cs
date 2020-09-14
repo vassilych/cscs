@@ -1857,6 +1857,10 @@ namespace SplitAndMerge
             {
                 NumberOperator(left, right, m_action);
             }
+            else if (left.Type == Variable.VarType.DATETIME)
+            {
+                DateOperator(left, right, m_action, script,m_name);
+            }
             else
             {
                 StringOperator(left, right, m_action);
@@ -1874,6 +1878,47 @@ namespace SplitAndMerge
                                                          new GetVarFunction(left), script);
             }
             return left;
+        }
+
+        public static void DateOperator(Variable valueA,
+                          Variable valueB, string action, ParsingScript script, string name = "")
+        {
+            int sign = 1;
+            char ch = action.Length > 0 ? action[0] : '\0';
+            switch (ch)
+            {
+               case '+':
+                   sign = 1;
+                   break;
+               case '-':
+                   sign = -1;
+                   break;
+               default:
+                   Utils.ThrowErrorMsg("Not a valid action [" + action + "] on a date.",
+                                        script, name);
+                   break;
+            }
+            if (valueB.Type == Variable.VarType.NUMBER)
+            {
+                AddToDate(valueA, valueB.Value * sign);
+            }
+            else
+            {
+                valueA.DateTime = DateTimeFunction.Add(valueA.DateTime, ch + valueB.AsString());
+            }
+        }
+
+        static void AddToDate(Variable valueA, double delta)
+        {
+            var dt = valueA.AsDateTime();
+            if (dt.Date == DateTime.MinValue)
+            {
+                valueA.DateTime = dt.AddSeconds(delta);
+            }
+            else
+            {
+                valueA.DateTime = dt.AddDays(delta);
+            }
         }
 
         static void NumberOperator(Variable valueA,

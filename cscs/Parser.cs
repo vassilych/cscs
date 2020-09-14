@@ -407,9 +407,10 @@ namespace SplitAndMerge
                 return false;
             }
 
-            // Case of a negative number, or starting with the closing bracket:
+            // Case of a negative number, or a pointer, or starting with the closing bracket:
             if (item.Length == 0 &&
-               ((ch == '-' && next != '-') || ch == Constants.END_ARRAY
+               ((ch == '-' && next != '-') || ch == '&'
+                                           || ch == Constants.END_ARRAY
                                            || ch == Constants.END_ARG))
             {
                 return true;
@@ -589,6 +590,10 @@ namespace SplitAndMerge
                 rightCell.Type == Variable.VarType.NUMBER)
             {
                 MergeNumbers(leftCell, rightCell, script);
+            }
+            else if (leftCell.Type == Variable.VarType.DATETIME)
+            {
+                OperatorAssignFunction.DateOperator(leftCell, rightCell, leftCell.Action, script);
             }
             else
             {

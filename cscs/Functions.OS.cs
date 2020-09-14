@@ -431,6 +431,10 @@ namespace SplitAndMerge
                 throw new ArgumentException("Couldn't parse [" + when + "] using format [" +
                                             strFormat + "].");
             }
+            if (!strFormat.Contains("yy") && !strFormat.Contains("MM") && !strFormat.Contains("dd"))
+            {
+                date = date.Subtract(new TimeSpan(date.Date.Ticks));
+            }
 
             return new Variable(date);
         }
