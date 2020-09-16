@@ -1902,6 +1902,10 @@ namespace SplitAndMerge
             {
                 AddToDate(valueA, valueB.Value * sign);
             }
+            else if (valueB.Type == Variable.VarType.DATETIME)
+            {
+                AddToDate(valueA, valueB.DateTime, sign);
+            }
             else
             {
                 valueA.DateTime = DateTimeFunction.Add(valueA.DateTime, ch + valueB.AsString());
@@ -1918,6 +1922,33 @@ namespace SplitAndMerge
             else
             {
                 valueA.DateTime = dt.AddDays(delta);
+            }
+        }
+
+        static void AddToDate(Variable valueA, DateTime valueB, int sign)
+        {
+            var dt = valueA.AsDateTime();
+            if (dt.Date == DateTime.MinValue)
+            {
+                if (sign < 0)
+                {
+                    valueA.Value = valueA.DateTime.Subtract(valueB).TotalSeconds;
+                }
+                else
+                {
+                    valueA.DateTime = valueA.DateTime.AddSeconds(valueB.Second);
+                }
+            }
+            else
+            {
+                if (sign < 0)
+                {
+                    valueA.Value = valueA.DateTime.Subtract(valueB).TotalDays;                    
+                }
+                else
+                {
+                    valueA.DateTime = valueA.DateTime.AddDays(valueB.Day);
+                }
             }
         }
 
