@@ -142,6 +142,8 @@ namespace SplitAndMerge
                 }
             }
 
+            script.MoveForwardIf(Constants.SPACE);
+
             // String in quotes
             bool inQuotes = curr == Constants.QUOTE || curr == Constants.QUOTE1;
             if (inQuotes)
