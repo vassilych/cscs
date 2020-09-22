@@ -1465,6 +1465,53 @@ namespace SplitAndMerge
             Tuple = newTuple;
         }
 
+        public virtual void AddToDate(Variable valueB, int sign)
+        {
+            var dt = AsDateTime();
+            if (valueB.Type == Variable.VarType.NUMBER)
+            {
+                var delta = valueB.Value * sign;
+                if (dt.Date == DateTime.MinValue)
+                {
+                    DateTime = dt.AddSeconds(delta);
+                }
+                else
+                {
+                    DateTime = dt.AddDays(delta);
+                }
+            }
+            else if (valueB.Type == Variable.VarType.DATETIME)
+            {
+                if (dt.Date == DateTime.MinValue)
+                {
+                    if (sign < 0)
+                    {
+                        Value = DateTime.Subtract(valueB.DateTime).TotalSeconds;
+                    }
+                    else
+                    {
+                        DateTime = DateTime.AddSeconds(valueB.DateTime.Second);
+                    }
+                }
+                else
+                {
+                    if (sign < 0)
+                    {
+                        Value = DateTime.Subtract(valueB.DateTime).TotalDays;
+                    }
+                    else
+                    {
+                        DateTime = DateTime.AddDays(valueB.DateTime.Day);
+                    }
+                }
+            }
+            else
+            {
+                char ch = sign > 0 ? '+' : '-';
+                DateTime = DateTimeFunction.Add(DateTime, ch + valueB.AsString());
+            }
+        }
+
         public virtual double Value
         {
             get { return m_value; }
