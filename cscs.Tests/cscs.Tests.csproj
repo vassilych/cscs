@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="UnitTests\ControlFlow\**" />
+    <Compile Remove="UnitTests\CoreFunctions\Conversion\**" />
+    <Compile Remove="UnitTests\CoreFunctions\CoreMisc\**" />
+    <Compile Remove="UnitTests\CoreFunctions\ExtendedMisc\**" />
+    <Compile Remove="UnitTests\CoreFunctions\FileCL\**" />
+    <Compile Remove="UnitTests\CoreFunctions\Strings\**" />
+    <Compile Remove="UnitTests\CoreFunctions\VariableAndArray\**" />
+    <Compile Remove="UnitTests\Debugger\**" />
+    <Compile Remove="UnitTests\ObjectOriented\**" />
+    <EmbeddedResource Remove="UnitTests\ControlFlow\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\Conversion\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\CoreMisc\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\ExtendedMisc\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\FileCL\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\Strings\**" />
+    <EmbeddedResource Remove="UnitTests\CoreFunctions\VariableAndArray\**" />
+    <EmbeddedResource Remove="UnitTests\Debugger\**" />
+    <EmbeddedResource Remove="UnitTests\ObjectOriented\**" />
+    <None Remove="UnitTests\ControlFlow\**" />
+    <None Remove="UnitTests\CoreFunctions\Conversion\**" />
+    <None Remove="UnitTests\CoreFunctions\CoreMisc\**" />
+    <None Remove="UnitTests\CoreFunctions\ExtendedMisc\**" />
+    <None Remove="UnitTests\CoreFunctions\FileCL\**" />
+    <None Remove="UnitTests\CoreFunctions\Strings\**" />
+    <None Remove="UnitTests\CoreFunctions\VariableAndArray\**" />
+    <None Remove="UnitTests\Debugger\**" />
+    <None Remove="UnitTests\ObjectOriented\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jlw.Utilities.Testing" Version="1.1.7544.26130" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="2.1.2" />
+    <PackageReference Include="MSTest.TestFramework" Version="2.1.2" />
+    <PackageReference Include="coverlet.collector" Version="1.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cscs\cscs.csproj" />
+  </ItemGroup>
+
+</Project>
