@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net461;</TargetFrameworks>
+    <Deterministic>False</Deterministic>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\cscs\*.cs" LinkBase="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="..\cscs\Main.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CodeDom" Version="4.7.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
+  </ItemGroup>
+
+</Project>
