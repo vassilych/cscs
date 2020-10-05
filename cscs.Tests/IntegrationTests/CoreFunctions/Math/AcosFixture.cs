@@ -11,7 +11,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
         [TestInitialize]
         public void IntializeTest()
         {
-            outputBuffer.Clear();
+            OutputBuffer.Clear();
         }
 
         [TestMethod]
@@ -36,7 +36,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
             var script = $"acos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
-            Console.WriteLine(outputBuffer);
+            Console.WriteLine(OutputBuffer);
             Assert.AreEqual(expected.ToString("G"), actual.AsString());
         }
 
@@ -50,8 +50,8 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
             var script = $"acos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
-            Console.WriteLine(outputBuffer);
-            StringAssert.Contains(outputBuffer.ToString(), "CSCS Parsing Exception");
+            Console.WriteLine(OutputBuffer);
+            StringAssert.Contains(OutputBuffer.ToString(), "CSCS Parsing Exception");
 
         }
     }
