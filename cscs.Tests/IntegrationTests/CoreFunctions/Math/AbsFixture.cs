@@ -1,9 +1,7 @@
 using System;
-using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SplitAndMerge;
 
-namespace cscs.Tests.UnitTests.CoreFunctions.Math
+namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
 {
     [TestClass]
     public class AbsFixture : BaseCscsFixture

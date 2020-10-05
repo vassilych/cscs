@@ -3,10 +3,10 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SplitAndMerge;
 
-namespace cscs.Tests.UnitTests.CoreFunctions.Math
+namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
 {
     [TestClass]
-    public class CeilFixture : BaseCscsFixture
+    public class CosFixture : BaseCscsFixture
     {
         [TestInitialize]
         public void IntializeTest()
@@ -30,10 +30,10 @@ namespace cscs.Tests.UnitTests.CoreFunctions.Math
         [DataRow(double.MinValue)]
         [DataRow(double.MaxValue)]
         [DataRow(double.NaN)]
-        public void Should_Return_Ceil(double input)
+        public void Should_Return_Cosine(double input)
         {
-            var expected = System.Math.Ceiling(input);
-            var script = $"ceil({input}); // Should return: {expected}";
+            var expected = System.Math.Cos(input);
+            var script = $"cos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(outputBuffer);
@@ -46,8 +46,8 @@ namespace cscs.Tests.UnitTests.CoreFunctions.Math
         [DataRow(double.PositiveInfinity)]
         public void Should_Throw_Cscs_Exception(double input)
         {
-            var expected = System.Math.Ceiling(input);
-            var script = $"ceil({input}); // Should return: {expected}";
+            var expected = System.Math.Cos(input);
+            var script = $"cos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(outputBuffer);

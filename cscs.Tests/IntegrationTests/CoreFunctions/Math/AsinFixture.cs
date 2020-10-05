@@ -3,10 +3,10 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SplitAndMerge;
 
-namespace cscs.Tests.UnitTests.CoreFunctions.Math
+namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
 {
     [TestClass]
-    public class AcosFixture : BaseCscsFixture
+    public class AsinFixture : BaseCscsFixture
     {
         [TestInitialize]
         public void IntializeTest()
@@ -30,10 +30,10 @@ namespace cscs.Tests.UnitTests.CoreFunctions.Math
         [DataRow(double.MinValue)]
         [DataRow(double.MaxValue)]
         [DataRow(double.NaN)]
-        public void Should_Return_Acosine(double input)
+        public void Should_Return_Asine(double input)
         {
-            var expected = System.Math.Acos(input);
-            var script = $"acos({input}); // Should return: {expected}";
+            var expected = System.Math.Asin(input);
+            var script = $"asin({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(outputBuffer);
@@ -46,8 +46,8 @@ namespace cscs.Tests.UnitTests.CoreFunctions.Math
         [DataRow(double.PositiveInfinity)]
         public void Should_Throw_Cscs_Exception(double input)
         {
-            var expected = System.Math.Acos(input);
-            var script = $"acos({input}); // Should return: {expected}";
+            var expected = System.Math.Asin(input);
+            var script = $"asin({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(outputBuffer);
