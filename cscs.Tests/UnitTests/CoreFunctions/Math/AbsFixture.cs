@@ -15,31 +15,44 @@ namespace cscs.Tests.UnitTests.CoreFunctions.Math
         }
 
         [TestMethod]
-        [DataRow(short.MinValue, short.MaxValue + 1)]
-        [DataRow(short.MaxValue, short.MaxValue)]
-        [DataRow(int.MinValue, int.MaxValue + 1L)]
-        [DataRow(int.MaxValue, int.MaxValue)]
-        [DataRow(long.MinValue + 1, long.MaxValue)]
-        [DataRow(long.MaxValue, long.MaxValue)]
-        [DataRow(1,1)]
-        [DataRow(1.1, 1.1)]
-        [DataRow(-1, 1)]
-        [DataRow(-1.1, 1.1)]
-        [DataRow(double.Epsilon, double.Epsilon)]
-        [DataRow(-double.Epsilon, double.Epsilon)]
-        [DataRow(double.MinValue, double.MaxValue)]
-        [DataRow(double.MaxValue, double.MaxValue)]
-        [DataRow(double.NaN, double.NaN)]
-        //[DataRow(double.NegativeInfinity, 1.1)]
-        //[DataRow(double.PositiveInfinity, 1.1)]
-        public void Should_Return_AbsoluteValue(double input, double expected)
+        [DataRow(short.MinValue)]
+        [DataRow(short.MaxValue)]
+        [DataRow(int.MinValue)]
+        [DataRow(int.MaxValue)]
+        [DataRow(long.MinValue)]
+        [DataRow(long.MaxValue)]
+        [DataRow(1)]
+        [DataRow(1.1)]
+        [DataRow(-1)]
+        [DataRow(-1.1)]
+        [DataRow(double.Epsilon)]
+        [DataRow(-double.Epsilon)]
+        [DataRow(double.MinValue)]
+        [DataRow(double.MaxValue)]
+        [DataRow(double.NaN)]
+        public void Should_Return_AbsoluteValue(double input)
         {
-            var script = $"abs({input});";
+            var expected = System.Math.Abs(input);
+            var script = $"abs({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(outputBuffer);
-
             Assert.AreEqual(expected.ToString("G"), actual.AsString());
+        }
+
+
+        [TestMethod]
+        [DataRow(double.NegativeInfinity)]
+        [DataRow(double.PositiveInfinity)]
+        public void Should_Throw_Cscs_Exception(double input)
+        {
+            var expected = System.Math.Abs(input);
+            var script = $"abs({input}); // Should return: {expected}";
+            var actual = Process(script);
+            Console.WriteLine(script);
+            Console.WriteLine(outputBuffer);
+            StringAssert.Contains(outputBuffer.ToString(), "CSCS Parsing Exception");
+
         }
     }
 }
