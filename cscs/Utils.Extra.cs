@@ -65,16 +65,19 @@ namespace SplitAndMerge
 
             if (isDir)
             {
+#if !NETSTANDARD
                 user = Directory.GetAccessControl(fs.FullName).GetOwner(
                   typeof(System.Security.Principal.NTAccount)).ToString();
-
+#endif
                 DirectoryInfo di = fs as DirectoryInfo;
                 size = di.GetFileSystemInfos().Length;
             }
             else
             {
+#if !NETSTANDARD
                 user = File.GetAccessControl(fs.FullName).GetOwner(
                   typeof(System.Security.Principal.NTAccount)).ToString();
+#endif
                 FileInfo fi = fs as FileInfo;
                 size = fi.Length;
 
@@ -85,7 +88,7 @@ namespace SplitAndMerge
             }
 #endif
 
-            string data = string.Format("{0}{1} {2,4} {3,8} {4,8} {5,9} {6,23} {7}",
+                string data = string.Format("{0}{1} {2,4} {3,8} {4,8} {5,9} {6,23} {7}",
                 d, permissions, links, user, group, size, last, name);
 
             return data;
