@@ -766,5 +766,17 @@ namespace SplitAndMerge
             }
             return "";
         }
+
+        public static void ExtendArrayIfNeeded<T>(List<T> array, int count, T defaultValue)
+        {
+            if (array.Count <= count)
+            {
+                array.Capacity = count + 1;
+                while (array.Count <= count)
+                {
+                    array.Add(defaultValue);
+                }
+            }
+        }
     }
 }

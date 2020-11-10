@@ -1,3 +1,45 @@
+
+clear_comp_definitions();
+clear_comp_namespaces();
+add_comp_namespace("System.Diagnostics");
+add_comp_definition("int m_counter;");
+
+csfunction double cstest(int arg) {
+  Stopwatch stopWatch = new Stopwatch();
+  stopWatch.Start();
+  Thread.Sleep(1000);
+  stopWatch.Stop();
+  TimeSpan ts = stopWatch.Elapsed;
+  if (arg < 10 && ts.Seconds < 30) Console.WriteLine("small");
+  else Console.WriteLine("bigger");
+
+  m_counter++;
+  string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+      ts.Hours, ts.Minutes, ts.Seconds,
+      ts.Milliseconds / 10);
+  Console.WriteLine("Counter: " + m_counter, ", arg: " + arg + ", elapsedTime=" + elapsedTime);
+  return ts;
+}
+x = cstest(1);
+
+
+csfunction int cscode(sender, int arg) {
+  var x = sender;
+  int a = 1;
+  int b = arg;
+  int c = a + b;
+  Console.WriteLine(sender + ", c=" + c);
+  return c;
+}
+cfunction cscscode(sender, arg) {
+  x = sender;
+  print(sender);
+  return arg + 1;
+}
+res=cscode ("lala", 7);
+res=cscscode ("lala", 7);
+print(res);
+
 labStr="labelString1";
 b = {"Key1":labStr, "Key2":"label2"};
 print(b["key1"], b["key2"]);

@@ -1556,6 +1556,26 @@ namespace SplitAndMerge
             return argsStr;
         }
 
+        public static List<string> SplitToken(string token)
+        {
+            List<string> tokens = new List<string>();
+            char[] separators = { '+', '-', '*', '/' };
+            var start = 0;
+            var end = token.IndexOfAny(separators, start + 1);
+            while(end > 0)
+            {
+                tokens.Add(token.Substring(start, end - start));
+                tokens.Add(token.Substring(end, 1));
+                start = end + 1;
+                end = token.IndexOfAny(separators, start + 1);
+            }
+            if (start < token.Length)
+            {
+                tokens.Add(token.Substring(start));
+            }
+            return tokens;
+        }
+
         public static Variable Calculate(string functionName, string argsStr)
         {
             ParsingScript script = new ParsingScript(argsStr);

@@ -153,8 +153,16 @@ namespace SplitAndMerge
             {
                 return new Variable(((bool)obj));
             }
-            return new Variable(obj);
+            if (obj is List<string>)
+            {
+                return new Variable(((List<string>)obj));
+            }
+            if (obj is List<double>)
+            {
+                return new Variable(((List<double>)obj));
+            }
 
+            return new Variable(obj);
         }
 
         public void Reset()
@@ -219,6 +227,11 @@ namespace SplitAndMerge
                 return false;
             }
             return AsString() == other.AsString();
+        }
+
+        public virtual bool Preprocess()
+        {
+            return false;
         }
 
         public void AddVariableToHash(string hash, Variable newVar)
@@ -1582,6 +1595,11 @@ namespace SplitAndMerge
 
         public static Variable EmptyInstance = new Variable();
         public static Variable Undefined = new Variable(VarType.UNDEFINED);
+
+        public virtual Variable Default()
+        {
+            return EmptyInstance;
+        }
 
         protected double m_value;
         protected string m_string;

@@ -290,9 +290,9 @@ namespace SplitAndMerge
             return impl;
         }
 
-        public static ParserFunction GetVariable(string name, ParsingScript script, bool force = false)
+        public static ParserFunction GetVariable(string name, ParsingScript script = null, bool force = false)
         {
-            if (!force && script.TryPrev() == Constants.START_ARG)
+            if (!force && script != null && script.TryPrev() == Constants.START_ARG)
             {
                 return GetFunction(name, script);
             }
@@ -322,6 +322,33 @@ namespace SplitAndMerge
             }
 
             return GetFunction(name, script);
+        }
+
+        public static Variable GetVariableValue(string name, ParsingScript script = null)
+        {
+            name = Constants.ConvertName(name);
+            ParserFunction impl = null;
+            StackLevel localStack = script != null && script.StackLevel != null ?
+                 script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            if (localStack != null && localStack.Variables.TryGetValue(name, out impl) &&
+                impl is GetVarFunction)
+            {
+                return (impl as GetVarFunction).Value;
+            }
+
+            string scopeName = script == null || script.Filename == null ? "" : script.Filename;
+            impl = GetLocalScopeVariable(name, scopeName);
+            if (impl == null && s_variables.TryGetValue(name, out impl))
+            {
+                impl = impl.NewInstance();
+            }
+
+            if (impl != null && impl is GetVarFunction)
+            {
+                return (impl as GetVarFunction).Value;
+            }
+
+            return null;
         }
 
         public static ParserFunction GetFunction(string name, ParsingScript script)
