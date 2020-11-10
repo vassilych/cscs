@@ -1050,7 +1050,14 @@ namespace SplitAndMerge
             {
                 return ExtractArray(script);
             }
+            
+            bool canBeNumeric = script.Current != '"';
             var token = Utils.GetToken(script, SEP);
+
+            if (canBeNumeric && Utils.CanConvertToDouble(token, out double num))
+            {
+                return new Variable(num);
+            }
             return new Variable(token);
         }
     }
