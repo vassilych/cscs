@@ -7,7 +7,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>cscs</RootNamespace>
     <AssemblyName>cscs</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
