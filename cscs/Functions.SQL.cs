@@ -19,6 +19,10 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction("SQLQuery", new SQLQueryFunction());
             ParserFunction.RegisterFunction("SQLNonQuery", new SQLNonQueryFunction());
             ParserFunction.RegisterFunction("SQLInsert", new SQLInsertFunction());
+            ParserFunction.RegisterFunction("SQLCursorInit", new SQLCursorFunction(SQLCursorFunction.Mode.SETUP));
+            ParserFunction.RegisterFunction("SQLCursor", new SQLCursorFunction(SQLCursorFunction.Mode.NEXT));
+            ParserFunction.RegisterFunction("SQLCursorClose", new SQLCursorFunction(SQLCursorFunction.Mode.CLOSE));
+            ParserFunction.RegisterFunction("SQLCursorTotal", new SQLCursorFunction(SQLCursorFunction.Mode.TOTAL));
         }
     }
 
@@ -32,6 +36,180 @@ namespace SplitAndMerge
             var connString = Utils.GetSafeString(args, 0);
             CSCS_SQL.ConnectionString = connString;
             return Variable.EmptyInstance;
+        }
+    }
+
+    class SQLCursorFunction : ParserFunction
+    {
+        internal enum Mode { SETUP, NEXT, TOTAL, CLOSE };
+        Mode m_mode;
+
+        internal SQLCursorFunction(Mode mode)
+        {
+            m_mode = mode;
+        }
+
+        class SQLQueryObj
+        {
+            public string Table { get; set; }
+            public string Query { get; set; }
+            public SqlConnection Connection { get; set; }
+            public SqlCommand Command { get; set; }
+            public SqlDataReader DataReader { get; set; }
+            public int CurrentRow { get; set; }
+            public Dictionary<string, SqlDbType> Columns { get; set; }
+        }
+
+        static List<SQLQueryObj> s_queries = new List<SQLQueryObj>();
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            if (m_mode == Mode.SETUP)
+            {
+                var query = Utils.GetSafeString(args, 0);
+                Variable result = new Variable(ExecuteQuery(query));
+                return result;
+            }
+            else if (m_mode == Mode.NEXT)
+            {
+                var id = Utils.GetSafeInt(args, 0);
+                return GetNextRecord(id);
+            }
+            else if (m_mode == Mode.CLOSE)
+            {
+                var id = Utils.GetSafeInt(args, 0);
+                Close(id);
+                return Variable.EmptyInstance;
+            }
+            else if (m_mode == Mode.TOTAL)
+            {
+                var id = Utils.GetSafeInt(args, 0);
+                Variable result = new Variable(GetTotalRecords(id));
+                return result;
+            }
+
+            return Variable.EmptyInstance;
+        }
+
+        static int ExecuteQuery(string query)
+        {
+            SQLQueryObj newQuery = new SQLQueryObj();
+            newQuery.Query = GetSQLQuery(query);
+            newQuery.Connection = new SqlConnection(CSCS_SQL.ConnectionString);
+            newQuery.Connection.Open();
+
+            newQuery.Command = new SqlCommand(newQuery.Query, newQuery.Connection);
+            newQuery.DataReader = newQuery.Command.ExecuteReader();
+
+            newQuery.Table = GetTableName(query);
+            newQuery.Columns = SQLQueryFunction.GetColumnData(newQuery.Table);
+
+            s_queries.Add(newQuery);
+
+            return s_queries.Count - 1;// (int)count;
+        }
+
+        static int GetTotalRecords(int id)
+        {
+            SQLQueryObj obj = GetSQLObject(id);
+
+            int rows = 0;
+            using (var sqlCon = new SqlConnection(CSCS_SQL.ConnectionString))
+            {
+                sqlCon.Open();
+                var com = sqlCon.CreateCommand();
+                com.CommandText = GetCountQuery(obj.Query);
+                var totalRow = com.ExecuteScalar();
+                rows = (int)totalRow;
+                sqlCon.Close();
+            }
+            return rows;
+        }
+
+        static Variable GetNextRecord(int id)
+        {
+            SQLQueryObj obj = GetSQLObject(id);
+            if (obj == null || !obj.DataReader.HasRows || !obj.DataReader.Read())
+            {
+                return Variable.EmptyInstance;
+            }
+
+            Variable rowVar = new Variable(Variable.VarType.ARRAY);
+            for (int i = 0; i < obj.DataReader.FieldCount; i++)
+            {
+                var cell     = obj.DataReader.GetValue(i);
+                var cellType = obj.DataReader.GetDataTypeName(i);
+                var variable = SQLQueryFunction.ConvertToVariable(cell, cellType);
+                rowVar.AddVariable(variable);
+            }
+            return rowVar;
+        }
+
+        static void Close(int id)
+        {
+            SQLQueryObj obj = GetSQLObject(id);
+            obj.DataReader.Dispose();
+            obj.Command.Dispose();
+            obj.Connection.Dispose();
+            s_queries[id] = null;
+        }
+
+        static SQLQueryObj GetSQLObject(int id, bool throwExc = true)
+        {
+            if (id < 0 || id >= s_queries.Count)
+            {
+                if (!throwExc)
+                {
+                    return null;
+                }
+                throw new ArgumentException("Invalid handle: " + id);
+            }
+            SQLQueryObj obj = s_queries[id];
+
+            if (obj == null)
+            {
+                if (!throwExc)
+                {
+                    return null;
+                }
+                throw new ArgumentException("Object has already been recycled. Handle: " + id);
+            }
+            return obj;
+        }
+
+        public static string GetTableName(string query)
+        {
+            query = query.ToUpper();
+            int index1 = query.LastIndexOf(" FROM ");
+            if (index1 <= 0)
+            {
+                return query;
+            }
+            var rest = query.Substring(index1 + 6).Trim();
+            int index2 = rest.IndexOfAny(" ;".ToCharArray());
+            index2 = index2 < 0 ? rest.Length - 1 : index2;
+            var tableName = rest.Substring(0, index2 + 1);
+            return tableName;
+        }
+
+        public static string GetSQLQuery(string query)
+        {
+            query = query.ToUpper();
+            if (!query.Contains(' '))
+            {
+                query = "SELECT * FROM " + query;
+            }
+            return query;
+        }
+        public static string GetCountQuery(string query)
+        {
+            query = query.ToUpper();
+            int index1 = query.LastIndexOf(" FROM ");
+            string rest = index1 <= 0 ? query : query.Substring(index1 + 6);
+            return "SELECT COUNT(*) FROM " + rest;
         }
     }
 
@@ -107,44 +285,56 @@ namespace SplitAndMerge
                 foreach (var item in row.ItemArray)
                 {
                     DataColumn col = table.Columns[i++];
-                    switch (col.DataType.Name)
-                    {
-                        case "Int16":
-                            rowVar.AddVariable(new Variable((Int16)item));
-                            break;
-                        case "Int32":
-                            rowVar.AddVariable(new Variable((int)item));
-                            break;
-                        case "Int64":
-                            rowVar.AddVariable(new Variable((long)item));
-                            break;
-                        case "Boolean":
-                            rowVar.AddVariable(new Variable((bool)item));
-                            break;
-                        case "Single":
-                            rowVar.AddVariable(new Variable((float)item));
-                            break;
-                        case "Double":
-                            rowVar.AddVariable(new Variable((double)item));
-                            break;
-                        case "String":
-                            rowVar.AddVariable(new Variable((string)item));
-                            break;
-                        case "DateTime":
-                            rowVar.AddVariable(new Variable((DateTime)item));
-                            break;
-                        case "Decimal":
-                            rowVar.AddVariable(new Variable(Decimal.ToDouble((Decimal)item)));
-                            break;
-                        default:
-                            throw new ArgumentException("Unknown type: " + col.DataType.Name);
-                    }
+                    rowVar.AddVariable(ConvertToVariable(item, col.DataType.Name));
                 }
 
                 results.AddVariable(rowVar);
             }
 
             return results;
+        }
+
+        public static Variable ConvertToVariable(object item, string objType)
+        {
+            objType = objType.ToLower();
+            switch (objType)
+            {
+                case "smallint":
+                case "tinyint":
+                case "int16":
+                    return new Variable((Int16)item);
+                case "int":
+                case "int32":
+                    return new Variable((int)item);
+                case "bigint":
+                case "int64":
+                    return new Variable((long)item);
+                case "bit":
+                case "boolean":
+                    return new Variable((bool)item);
+                case "real":
+                case "float":
+                case "single":
+                    return new Variable((float)item);
+                case "double":
+                    return new Variable((double)item);
+                case "char":
+                case "nchar":
+                case "varchar":
+                case "nvarchar":
+                case "text":
+                case "ntext":
+                case "string":
+                    return new Variable((string)item);
+                case "date":
+                case "datetime":
+                    return new Variable((DateTime)item);
+                case "decimal":
+                case "money":
+                    return new Variable(Decimal.ToDouble((Decimal)item));
+                default:
+                    throw new ArgumentException("Unknown type: " + objType);
+            }
         }
 
         public static SqlDbType StringToSqlDbType(string strType)
