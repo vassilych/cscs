@@ -372,6 +372,7 @@ namespace SplitAndMerge
         public static void UpdateFunction(string name, ParserFunction function)
         {
             name = Constants.ConvertName(name);
+            Utils.CheckLegalName(name);
             lock (s_variables)
             {
                 // First search among local variables.
@@ -417,10 +418,7 @@ namespace SplitAndMerge
             ParsingScript script = null, bool localIfPossible = false)
         {
             name          = Constants.ConvertName(name);
-            if (Constants.CheckReserved(name))
-            {
-                Utils.ThrowErrorMsg(name + " is a reserved name.", script, name);
-            }
+            Utils.CheckLegalName(name, script);
 
             bool globalOnly = !localIfPossible && !LocalNameExists(name);
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
@@ -650,6 +648,7 @@ namespace SplitAndMerge
         public static void AddGlobal(string name, ParserFunction function,
                                      bool isNative = true)
         {
+            Utils.CheckLegalName(name);
             name = Constants.ConvertName(name);
             NormalizeValue(function);
             function.isNative = isNative;

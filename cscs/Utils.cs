@@ -205,6 +205,28 @@ namespace SplitAndMerge
             ThrowErrorMsg(msg, code, lineNumber, filename);
         }
 
+        public static bool CheckLegalName(string name, ParsingScript script = null, bool throwError = true)
+        {
+            if (string.IsNullOrWhiteSpace(name) || Constants.CheckReserved(name))
+            {
+                if (!throwError)
+                {
+                    return false;
+                }
+                Utils.ThrowErrorMsg(name + " is a reserved name.", script, name);
+            }
+            if (Char.IsDigit(name[0]) || name[0] == '-')
+            {
+                if (!throwError)
+                {
+                    return false;
+                }
+                Utils.ThrowErrorMsg(name + " has illegal first character " + name[0], null, name);
+            }
+
+            return true;
+        }
+
         public static ParsingScript GetTempScript(string str, ParserFunction.StackLevel stackLevel, string name = "",
             ParsingScript script = null, ParsingScript parentScript = null,
             int parentOffset = 0, CSCSClass.ClassInstance instance = null)
