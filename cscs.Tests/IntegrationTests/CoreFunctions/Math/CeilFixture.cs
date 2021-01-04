@@ -1,8 +1,6 @@
 using System;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SplitAndMerge;
-
 namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
 {
     [TestClass]
