@@ -548,6 +548,26 @@ namespace SplitAndMerge
             return AsString();
         }
 
+        public object AsObject()
+        {
+            switch(Type)
+            {
+                case VarType.NUMBER: return AsDouble();
+                case VarType.DATETIME: return AsDateTime();
+                case VarType.OBJECT: return Object;
+                case VarType.ARRAY:
+                case VarType.ARRAY_NUM:
+                case VarType.ARRAY_STR:
+                    var list = new List<object>();
+                    for (int i = 0; i < m_tuple.Count; i++)
+                    {
+                        list.Add(m_tuple[i].AsObject());
+                    }
+                    return list;
+            }
+            return AsString();
+        }
+
         public virtual string AsString(string format)
         {
             if (Type == VarType.DATETIME && !string.IsNullOrWhiteSpace(format))

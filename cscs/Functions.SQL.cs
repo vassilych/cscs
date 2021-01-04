@@ -12,6 +12,16 @@ namespace SplitAndMerge
     {
         internal static string ConnectionString { get; set; }
 
+        internal static void CheckConnectionString(ParsingScript script = null, string funcName = "")
+        {
+            if (string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                Utils.ThrowErrorMsg("SQL Connection string has not been initialized.",
+                         script, funcName);
+            }
+
+        }
+
         public static void Init()
         {
             ParserFunction.RegisterFunction("SQLConnectionString", new SQLConnectionStringFunction());
@@ -19,10 +29,17 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction("SQLQuery", new SQLQueryFunction());
             ParserFunction.RegisterFunction("SQLNonQuery", new SQLNonQueryFunction());
             ParserFunction.RegisterFunction("SQLInsert", new SQLInsertFunction());
+
+            ParserFunction.RegisterFunction("SQLCreateDB", new SQLDBOperationsFunction(SQLDBOperationsFunction.Mode.CREATE_DB));
+            ParserFunction.RegisterFunction("SQLDropDB", new SQLDBOperationsFunction(SQLDBOperationsFunction.Mode.DROP_DB));
+            ParserFunction.RegisterFunction("SQLDropTable", new SQLDBOperationsFunction(SQLDBOperationsFunction.Mode.DROP_TABLE));
+            ParserFunction.RegisterFunction("SQLProcedure", new SQLSPFunction());
+
             ParserFunction.RegisterFunction("SQLCursorInit", new SQLCursorFunction(SQLCursorFunction.Mode.SETUP));
-            ParserFunction.RegisterFunction("SQLCursor", new SQLCursorFunction(SQLCursorFunction.Mode.NEXT));
-            ParserFunction.RegisterFunction("SQLCursorClose", new SQLCursorFunction(SQLCursorFunction.Mode.CLOSE));
+            ParserFunction.RegisterFunction("SQLCursorNext", new SQLCursorFunction(SQLCursorFunction.Mode.NEXT));
+            ParserFunction.RegisterFunction("SQLCursorCurrentRow", new SQLCursorFunction(SQLCursorFunction.Mode.CURRENT_ROW));
             ParserFunction.RegisterFunction("SQLCursorTotal", new SQLCursorFunction(SQLCursorFunction.Mode.TOTAL));
+            ParserFunction.RegisterFunction("SQLCursorClose", new SQLCursorFunction(SQLCursorFunction.Mode.CLOSE));
         }
     }
 
@@ -33,15 +50,14 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
 
-            var connString = Utils.GetSafeString(args, 0);
-            CSCS_SQL.ConnectionString = connString;
+            CSCS_SQL.ConnectionString = Utils.GetSafeString(args, 0);
             return Variable.EmptyInstance;
         }
     }
 
     class SQLCursorFunction : ParserFunction
     {
-        internal enum Mode { SETUP, NEXT, TOTAL, CLOSE };
+        internal enum Mode { SETUP, NEXT, CURRENT_ROW, TOTAL, CLOSE };
         Mode m_mode;
 
         internal SQLCursorFunction(Mode mode)
@@ -57,6 +73,7 @@ namespace SplitAndMerge
             public SqlCommand Command { get; set; }
             public SqlDataReader DataReader { get; set; }
             public int CurrentRow { get; set; }
+            public int TotalRows { get; set; } = -1;
             public Dictionary<string, SqlDbType> Columns { get; set; }
         }
 
@@ -66,6 +83,7 @@ namespace SplitAndMerge
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
 
             if (m_mode == Mode.SETUP)
             {
@@ -84,6 +102,14 @@ namespace SplitAndMerge
                 Close(id);
                 return Variable.EmptyInstance;
             }
+            else if (m_mode == Mode.CURRENT_ROW)
+            {
+                var id = Utils.GetSafeInt(args, 0);
+                SQLQueryObj obj = GetSQLObject(id);
+                Variable result = new Variable(obj.CurrentRow);
+                return result;
+            }
+
             else if (m_mode == Mode.TOTAL)
             {
                 var id = Utils.GetSafeInt(args, 0);
@@ -115,18 +141,21 @@ namespace SplitAndMerge
         static int GetTotalRecords(int id)
         {
             SQLQueryObj obj = GetSQLObject(id);
+            if (obj.TotalRows >= 0)
+            {
+                return obj.TotalRows;
+            }
 
-            int rows = 0;
             using (var sqlCon = new SqlConnection(CSCS_SQL.ConnectionString))
             {
                 sqlCon.Open();
                 var com = sqlCon.CreateCommand();
                 com.CommandText = GetCountQuery(obj.Query);
                 var totalRow = com.ExecuteScalar();
-                rows = (int)totalRow;
+                obj.TotalRows = (int)totalRow;
                 sqlCon.Close();
             }
-            return rows;
+            return obj.TotalRows;
         }
 
         static Variable GetNextRecord(int id)
@@ -140,11 +169,12 @@ namespace SplitAndMerge
             Variable rowVar = new Variable(Variable.VarType.ARRAY);
             for (int i = 0; i < obj.DataReader.FieldCount; i++)
             {
-                var cell     = obj.DataReader.GetValue(i);
+                var cell = obj.DataReader.GetValue(i);
                 var cellType = obj.DataReader.GetDataTypeName(i);
                 var variable = SQLQueryFunction.ConvertToVariable(cell, cellType);
                 rowVar.AddVariable(variable);
             }
+            obj.CurrentRow++;
             return rowVar;
         }
 
@@ -209,17 +239,27 @@ namespace SplitAndMerge
             query = query.ToUpper();
             int index1 = query.LastIndexOf(" FROM ");
             string rest = index1 <= 0 ? query : query.Substring(index1 + 6);
+            int index2 = rest.LastIndexOf(" ORDER ");
+            rest = index2 < 0 ? rest : rest.Substring(0, index2);
             return "SELECT COUNT(*) FROM " + rest;
         }
     }
 
     class SQLQueryFunction : ParserFunction
     {
-        static Dictionary<string, Dictionary<string, SqlDbType>> s_columns = new Dictionary<string, Dictionary<string, SqlDbType>>();
+        static Dictionary<string, object> s_cache =
+            new Dictionary<string, object>();
+
+        static Dictionary<string, Dictionary<string, SqlDbType>> s_columns =
+            new Dictionary<string, Dictionary<string, SqlDbType>>();
+        static List<KeyValuePair<string, SqlDbType>> s_colList =
+            new List<KeyValuePair<string, SqlDbType>>();
+
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
 
             var query = Utils.GetSafeString(args, 0);
             Variable results = GetData(query);
@@ -242,6 +282,41 @@ namespace SplitAndMerge
             }
 
             return null;
+        }
+
+        public static List<KeyValuePair<string, SqlDbType>> GetColumnUserData(string tableName)
+        {
+            List<KeyValuePair<string, SqlDbType>> result = null;
+            if (s_cache.TryGetValue(tableName, out object tableData) &&
+                tableData is List<KeyValuePair<string, SqlDbType>>)
+            {
+                return tableData as List<KeyValuePair<string, SqlDbType>>;
+            }
+            result = new List<KeyValuePair<string, SqlDbType>>();
+
+            var query = @"select t.name      [TableTypeName]
+                                ,c.name      [ColumnName]
+                                ,y.name      [DataType]
+                                ,c.max_length[MaxLength]
+                          from sys.table_types t
+                    inner join sys.columns c on c.object_id = t.type_table_object_id
+                    inner join sys.types y ON y.system_type_id = c.system_type_id
+                          WHERE t.is_user_defined = 1 AND t.is_table_type = 1
+                            AND t.name = '" + tableName + "' order by c.column_id";
+            var data = GetData(query, tableName);
+            for (int i = 1; data.Tuple != null && i < data.Tuple.Count; i++)
+            {
+                var row = data.Tuple[i];
+                if (row.Type == Variable.VarType.ARRAY && row.Tuple.Count > 2)
+                {
+                    var colName = row.Tuple[1].AsString();
+                    var colType = SQLQueryFunction.StringToSqlDbType(row.Tuple[2].AsString());
+                    result.Add(new KeyValuePair<string, SqlDbType>(colName, colType));
+                }
+            }
+
+            s_cache[tableName] = result;
+            return result;
         }
 
         public static Variable GetData(string query, string tableName = "")
@@ -327,6 +402,8 @@ namespace SplitAndMerge
                 case "string":
                     return new Variable((string)item);
                 case "date":
+                case "time":
+                case "timestamp":
                 case "datetime":
                     return new Variable((DateTime)item);
                 case "decimal":
@@ -339,39 +416,86 @@ namespace SplitAndMerge
 
         public static SqlDbType StringToSqlDbType(string strType)
         {
-            switch(strType)
+            switch (strType.ToLower())
             {
-                case "Int16":    return SqlDbType.SmallInt;
-                case "Int32":    return SqlDbType.Int;
-                case "Int64":    return SqlDbType.BigInt;
-                case "String":   return SqlDbType.NVarChar;
-                case "Single":   return SqlDbType.Real;
-                case "Double":   return SqlDbType.Float;
-                case "Boolean":  return SqlDbType.Bit;
-                case "DateTime": return SqlDbType.DateTime;
-                case "Binary":   return SqlDbType.Binary;
-                case "Decimal":  return SqlDbType.Decimal;
+                case "int16":
+                case "smallint": return SqlDbType.SmallInt;
+                case "int32":
+                case "int": return SqlDbType.Int;
+                case "int64":
+                case "bigint": return SqlDbType.BigInt;
+                case "string":
+                case "char":
+                case "varchar":
+                case "nvarchar": return SqlDbType.NVarChar;
+                case "text":
+                case "ntext": return SqlDbType.NText;
+                case "single":
+                case "real": return SqlDbType.Real;
+                case "double":
+                case "float": return SqlDbType.Float;
+                case "boolean":
+                case "binary": return SqlDbType.Binary;
+                case "bit": return SqlDbType.Bit;
+                case "datetime": return SqlDbType.DateTime;
+                case "time": return SqlDbType.Time;
+                case "timestamp": return SqlDbType.Timestamp;
+                case "decimal": return SqlDbType.Decimal;
+                case "money": return SqlDbType.Money;
+                case "smallmoney": return SqlDbType.SmallMoney;
                 default:
                     throw new ArgumentException("Unknown type: " + strType);
             }
         }
 
-        public static object SqlDbTypeToType(SqlDbType dbType, Variable var)
+        public static object SqlDbTypeToVariable(SqlDbType dbType, Variable var)
         {
             switch (dbType)
             {
                 case SqlDbType.SmallInt:
-                case SqlDbType.Int:     
-                case SqlDbType.BigInt:   return var.AsInt();
+                case SqlDbType.Int:
+                case SqlDbType.BigInt: return var.AsInt();
+                case SqlDbType.NChar:
+                case SqlDbType.NText:
                 case SqlDbType.NVarChar: return var.AsString();
                 case SqlDbType.Real:
                 case SqlDbType.Decimal:
-                case SqlDbType.Float:    return var.AsDouble();
-                case SqlDbType.Bit:      return var.AsBool();
+                case SqlDbType.SmallMoney:
+                case SqlDbType.Money:
+                case SqlDbType.Float: return var.AsDouble();
+                case SqlDbType.Binary:
+                case SqlDbType.Bit: return var.AsBool();
                 case SqlDbType.SmallDateTime:
+                case SqlDbType.Date:
+                case SqlDbType.Time:
                 case SqlDbType.DateTime: return var.AsDateTime();
             }
             return var.AsString();
+        }
+
+        public static Type SqlDbTypeToType(SqlDbType dbType)
+        {
+            switch (dbType)
+            {
+                case SqlDbType.SmallInt:
+                case SqlDbType.Int: return typeof(int);
+                case SqlDbType.BigInt: return typeof(long);
+                case SqlDbType.NChar:
+                case SqlDbType.NText:
+                case SqlDbType.NVarChar: return typeof(string);
+                case SqlDbType.Real:
+                case SqlDbType.Decimal:
+                case SqlDbType.SmallMoney:
+                case SqlDbType.Money:
+                case SqlDbType.Float: return typeof(double);
+                case SqlDbType.Binary:
+                case SqlDbType.Bit: return typeof(bool);
+                case SqlDbType.SmallDateTime:
+                case SqlDbType.Date:
+                case SqlDbType.Time:
+                case SqlDbType.DateTime: return typeof(DateTime);
+            }
+            return typeof(string);
         }
     }
 
@@ -381,9 +505,10 @@ namespace SplitAndMerge
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 3, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
 
             var tableName = Utils.GetSafeString(args, 0).Trim();
-            var colsStr   = Utils.GetSafeString(args, 1).Trim();
+            var colsStr = Utils.GetSafeString(args, 1).Trim();
 
             var colData = SQLQueryFunction.GetColumnData(tableName);
             if (colData == null || colData.Count == 0)
@@ -443,7 +568,7 @@ namespace SplitAndMerge
                 var varName = "@" + cols[i];
                 var varType = colData[cols[i]];
                 cmd.Parameters.Add(varName, varType);
-                cmd.Parameters[varName].Value = SQLQueryFunction.SqlDbTypeToType(varType, values.Tuple[i]);
+                cmd.Parameters[varName].Value = SQLQueryFunction.SqlDbTypeToVariable(varType, values.Tuple[i]);
             }
 
             cmd.ExecuteNonQuery();
@@ -456,17 +581,160 @@ namespace SplitAndMerge
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
 
             var queryStatement = Utils.GetSafeString(args, 0).Trim();
+            int result = 0;
             using (SqlConnection con = new SqlConnection(CSCS_SQL.ConnectionString))
             {
                 using (SqlCommand cmd = new SqlCommand(queryStatement, con))
                 {
                     con.Open();
-                    cmd.ExecuteNonQuery();
+                    result = cmd.ExecuteNonQuery();
                 }
             }
-            return new Variable(true);
+            return new Variable(result);
+        }
+    }
+
+    class SQLSPFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
+
+            var spName = Utils.GetSafeString(args, 0);
+            var colTypes = GetSPData(spName);
+            int result = 0;
+
+            SqlCommand sqlcom = new SqlCommand(spName);
+            sqlcom.CommandType = CommandType.StoredProcedure;
+            for (int i = 0; i < colTypes.Count && i+1 < args.Count; i++)
+            {
+                var arg = args[i + 1];
+                var currName = colTypes[i].Key;
+                var currType = colTypes[i].Value;
+                if (arg.Type == Variable.VarType.ARRAY && currType is List<KeyValuePair<string, SqlDbType>>)
+                {
+                    var typeData = currType as List<KeyValuePair<string, SqlDbType>>;
+                    DataTable dt = new DataTable();
+                    foreach (var entry in typeData)
+                    {
+                        var type = SQLQueryFunction.SqlDbTypeToType((SqlDbType)entry.Value);
+                        dt.Columns.Add(new DataColumn(entry.Key, type));
+                    }
+                    for (int j = 0; j < arg.Tuple.Count; j++)
+                    {
+                        var row = arg.Tuple[j];
+                        var objs = row.AsObject() as List<object>;
+                        var dataRow = dt.NewRow();
+                        if (objs != null)
+                        {
+                            for (int k = 0; k < objs.Count; k++)
+                            {
+                                dataRow[typeData[k].Key] = objs[k];
+                            }
+                        }
+                        dt.Rows.Add(dataRow);
+                    }
+                    sqlcom.Parameters.AddWithValue("@" + currName, dt);
+                }
+                else
+                {
+                    sqlcom.Parameters.AddWithValue("@" + currName, arg.AsObject());
+                }
+            }
+
+            using (SqlConnection con = new SqlConnection(CSCS_SQL.ConnectionString))
+            {
+                sqlcom.Connection = con;
+                con.Open();
+                result = sqlcom.ExecuteNonQuery();
+            }
+            return new Variable(result);
+        }
+
+        static List<KeyValuePair<string, object>> GetSPData(string spName)
+        {
+            var colTypes = new List<KeyValuePair<string, object>>();
+            var existing = new HashSet<string>();
+            var query = @"SELECT definition FROM sys.sql_modules WHERE object_id = (OBJECT_ID(N'" + spName + "'))";
+            var data = SQLQueryFunction.GetData(query);
+            var str = data.AsString().ToLower();
+            int start = str.IndexOf('@');
+            while (start > 0)
+            {
+                int end1 = str.IndexOf(' ', start + 1);
+                int end2 = str.IndexOfAny(" \n\t".ToCharArray(), end1 + 1);
+                if (end1 < 0 || end2 < 0)
+                {
+                    break;
+                }
+                var paramName = str.Substring(start + 1, end1 - start).Trim();
+                if (existing.Contains(paramName))
+                {
+                    break;
+                }
+                existing.Add(paramName);
+                var paramType = str.Substring(end1 + 1, end2 - end1).Trim();
+                try
+                {
+                    var sqlType = SQLQueryFunction.StringToSqlDbType(paramType);
+                    colTypes.Add(new KeyValuePair<string, object>(paramName, sqlType));
+                }
+                catch (Exception)
+                {
+                    var colData = SQLQueryFunction.GetColumnUserData(paramType);
+                    colTypes.Add(new KeyValuePair<string, object>(paramName, colData));
+                }
+                start = str.IndexOf('@', end2 + 1);
+            }
+            return colTypes;
+        }
+    }
+
+    class SQLDBOperationsFunction : ParserFunction
+    {
+        internal enum Mode { DROP_DB, CREATE_DB, DROP_TABLE };
+        Mode m_mode;
+
+        internal SQLDBOperationsFunction(Mode mode)
+        {
+            m_mode = mode;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
+
+            var arg = Utils.GetSafeString(args, 0).Trim();
+            string statement = "";
+            switch (m_mode)
+            {
+                case Mode.DROP_DB:
+                    statement = "DROP DATABASE " + arg;
+                    break;
+                case Mode.CREATE_DB:
+                    statement = "CREATE DATABASE " + arg;
+                    break;
+                case Mode.DROP_TABLE:
+                    statement = "DROP TABLE " + arg;
+                    break;
+            }
+            int result = 0;
+            using (SqlConnection con = new SqlConnection(CSCS_SQL.ConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(statement, con))
+                {
+                    con.Open();
+                    result = cmd.ExecuteNonQuery();
+                }
+            }
+            return new Variable(result);
         }
     }
 
@@ -476,12 +744,15 @@ namespace SplitAndMerge
         {
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name);
+            CSCS_SQL.CheckConnectionString(script, m_name);
 
             var tableName = Utils.GetSafeString(args, 0);
-            return GetColsData(tableName);
+            bool namesOnly = Utils.GetSafeInt(args, 1, 0) == 1;
+
+            return GetColsData(tableName, namesOnly);
         }
 
-        public static Variable GetColsData(string tableName)
+        public static Variable GetColsData(string tableName, bool namesOnly = false)
         {
             var colData = SQLQueryFunction.GetColumnData(tableName);
 
@@ -494,7 +765,10 @@ namespace SplitAndMerge
             foreach (KeyValuePair<string, SqlDbType> entry in colData)
             {
                 results.AddVariable(new Variable(entry.Key));
-                results.AddVariable(new Variable(entry.Value.ToString()));
+                if (!namesOnly)
+                {
+                    results.AddVariable(new Variable(entry.Value.ToString()));
+                }
             }
             return results;
         }
