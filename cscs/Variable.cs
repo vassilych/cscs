@@ -11,7 +11,7 @@ namespace SplitAndMerge
         public enum VarType
         {
             NONE, UNDEFINED, NUMBER, STRING, ARRAY,
-            ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR,
+            ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR, BYTE_ARRAY,
             BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME, CUSTOM, POINTER
         };
 
@@ -42,6 +42,10 @@ namespace SplitAndMerge
         public Variable(DateTime dt)
         {
             DateTime = dt;
+        }
+        public Variable(byte[] ba)
+        {
+            ByteArray = ba;
         }
         public Variable(List<Variable> a)
         {
@@ -153,6 +157,10 @@ namespace SplitAndMerge
             {
                 return new Variable(((bool)obj));
             }
+            if (obj is byte[])
+            {
+                return new Variable(((byte[])obj));
+            }
             if (obj is List<string>)
             {
                 return new Variable(((List<string>)obj));
@@ -171,6 +179,7 @@ namespace SplitAndMerge
             m_string = null;
             m_object = null;
             m_tuple = null;
+            m_byteArray = null;
             Action = null;
             IsReturn = false;
             Type = VarType.NONE;
@@ -199,6 +208,10 @@ namespace SplitAndMerge
             if (Type == VarType.OBJECT)
             {
                 return Object == other.Object;
+            }
+            if (Type == VarType.BYTE_ARRAY)
+            {
+                return ByteArray == other.ByteArray;
             }
 
             if (Double.IsNaN(Value) != Double.IsNaN(other.Value) ||
@@ -543,6 +556,14 @@ namespace SplitAndMerge
             return m_datetime;
         }
 
+        public virtual byte[] AsByteArray()
+        {
+            if (Type == VarType.STRING)
+            {
+                return Encoding.Unicode.GetBytes(m_string);
+            }
+            return m_byteArray;
+        }
         public override string ToString()
         {
             return AsString();
@@ -550,7 +571,7 @@ namespace SplitAndMerge
 
         public object AsObject()
         {
-            switch(Type)
+            switch (Type)
             {
                 case VarType.NUMBER: return AsDouble();
                 case VarType.DATETIME: return AsDateTime();
@@ -597,6 +618,10 @@ namespace SplitAndMerge
             if (Type == VarType.OBJECT)
             {
                 return ObjectToString();
+            }
+            if (Type == VarType.BYTE_ARRAY)
+            {
+                return Encoding.Unicode.GetString(m_byteArray, 0, m_byteArray.Length);
             }
 
             StringBuilder sb = new StringBuilder();
@@ -1128,8 +1153,9 @@ namespace SplitAndMerge
                 List<Variable> args = script.GetFunctionArgs();
                 string sep = Utils.GetSafeString(args, 0, " ");
                 var option = Utils.GetSafeString(args, 1);
+                var max = Utils.GetSafeInt(args, 2, int.MaxValue - 1);
 
-                return TokenizeFunction.Tokenize(AsString(), sep, option);
+                return TokenizeFunction.Tokenize(AsString(), sep, option, max);
             }
             else if (script != null && propName.Equals(Constants.JOIN, StringComparison.OrdinalIgnoreCase))
             {
@@ -1569,6 +1595,12 @@ namespace SplitAndMerge
             set { m_datetime = value; Type = VarType.DATETIME; }
         }
 
+        public byte[] ByteArray
+        {
+            get { return m_byteArray; }
+            set { m_byteArray = value; Type = VarType.BYTE_ARRAY; }
+        }
+
         public string Pointer
         {
             get;
@@ -1611,7 +1643,7 @@ namespace SplitAndMerge
         public string CustomGet { get; set; }
         public string CustomSet { get; set; }
 
-        public List<Variable> StackVariables { get; set;  }
+        public List<Variable> StackVariables { get; set; }
 
         public static Variable EmptyInstance = new Variable();
         public static Variable Undefined = new Variable(VarType.UNDEFINED);
@@ -1628,6 +1660,7 @@ namespace SplitAndMerge
         CustomFunction m_customFunctionGet;
         CustomFunction m_customFunctionSet;
         protected List<Variable> m_tuple;
+        protected byte[] m_byteArray;
         Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
         Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
         Dictionary<string, string> m_propertyStringMap = new Dictionary<string, string>();

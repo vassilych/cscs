@@ -198,6 +198,7 @@ namespace SplitAndMerge
             result = result.Replace("\\\\", "\\");
             result = result.Replace("\\\"", "\"");
             result = result.Replace("\\'", "'");
+            result = result.Replace("\\n", "\n");
 
             if (throwExc && string.IsNullOrWhiteSpace(result) && action != "++" && action != "--" &&
                 Utils.IsAction(script.Prev) && Utils.IsAction(script.PrevPrev))
