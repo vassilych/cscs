@@ -97,9 +97,11 @@ namespace SplitAndMerge
         public const string COS = "cos";
         public const string CURRENT_PATH = "CurrentPath";
         public const string DATE_TIME = "DateTime";
+        public const string DECODE = "decode";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
         public const string ENV = "env";
+        public const string ENCODE = "encode";
         public const string EXIT = "exit";
         public const string EXP = "exp";
         public const string FIND_INDEX = "find_index";
@@ -156,6 +158,7 @@ namespace SplitAndMerge
         public const string TOKENIZE_LINES = "TokenizeLines";
         public const string TOKEN_COUNTER = "CountTokens";
         public const string TO_BOOL = "bool";
+        public const string TO_BYTEARRAY = "bytearray";
         public const string TO_DECIMAL = "decimal";
         public const string TO_DOUBLE = "double";
         public const string TO_INT = "int";

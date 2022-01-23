@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -154,17 +155,17 @@ namespace SplitAndMerge
 
         public static void ThrowErrorMsg(string msg, ParsingScript script, string token)
         {
-            string code     = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
-            int lineNumber  = script == null ? 0 : script.OriginalLineNumber;
+            string code = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
+            int lineNumber = script == null ? 0 : script.OriginalLineNumber;
             string filename = script == null || string.IsNullOrWhiteSpace(script.Filename) ? "" : script.Filename;
-            int minLines    = script == null || script.OriginalLine.ToLower().Contains(token.ToLower()) ? 1 : 2;
+            int minLines = script == null || script.OriginalLine.ToLower().Contains(token.ToLower()) ? 1 : 2;
 
             ThrowErrorMsg(msg, code, lineNumber, filename, minLines);
         }
 
         static void ThrowErrorMsg(string msg, string script, int lineNumber, string filename = "", int minLines = 1)
         {
-            string [] lines = script.Split('\n');
+            string[] lines = script.Split('\n');
             lineNumber = lines.Length <= lineNumber ? -1 : lineNumber;
             System.Diagnostics.Debug.WriteLine(msg);
             if (lineNumber < 0)
@@ -594,11 +595,11 @@ namespace SplitAndMerge
         public static void ProcessErrorMsg(string str, ParsingScript script)
         {
             char ch = script.TryPrev();
-            string entity = ch == '(' ? "function":
-                            ch == '[' ? "array"   :
+            string entity = ch == '(' ? "function" :
+                            ch == '[' ? "array" :
                             ch == '{' ? "operand" :
                                         "variable";
-            string token    = Constants.GetRealName(str);
+            string token = Constants.GetRealName(str);
 
             string msg = "Couldn't find " + entity + " [" + token + "].";
 
@@ -752,7 +753,7 @@ namespace SplitAndMerge
             {
                 path = Path.GetFullPath(path);
             }
-            catch(Exception exc)
+            catch (Exception exc)
             {
                 Console.WriteLine("Exception converting path {0}: {1}", path, exc.Message);
             }
@@ -799,6 +800,153 @@ namespace SplitAndMerge
                     array.Add(defaultValue);
                 }
             }
+        }
+
+        static public byte[] TruncateArray(byte[] array, int bytesReceived = 0)
+        {
+            int i = array.Length - 1;
+            while (i >= 0 && array[i] == 0 && i >= bytesReceived)
+            {
+                --i;
+            }
+            byte[] newArray = new byte[i + 1];
+            Array.Copy(array, newArray, i + 1);
+            return newArray;
+        }
+
+
+        static string pass = "mi_900.";
+        static string keySalt = "poo12.";
+        static string ivSalt = "puu14T";
+
+        static public string EncryptString(string plainText, string password = "")
+        {
+            var byteArray =  EncryptStringToBytes(plainText, password);
+            var encoded = Convert.ToBase64String(byteArray);
+            return encoded;
+        }
+
+        static public string DecryptString(string encrypted, string password = "")
+        {
+            var byteArray = Convert.FromBase64String(encrypted);
+            var decrypted = DecryptStringFromBytes(byteArray, password);
+            return decrypted;
+        }
+
+        static public byte[] EncryptStringToBytes(string plainText, string password = "")
+        {
+            string keyStr = keySalt + pass + password;
+            string saltStr = ivSalt + pass + password;
+
+            byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
+            byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();
+
+            return EncryptStringToBytes(plainText, key, iv);
+        }
+
+
+        static public string DecryptStringFromBytes(byte[] cipherText, string password = "")
+        {
+            string keyStr = keySalt + pass + password;
+            string saltStr = ivSalt + pass + password;
+
+            byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
+            byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();
+
+            var result = DecryptStringFromBytes(cipherText, key, iv);
+            return result.Trim('\0');
+        }
+
+        static public byte[] EncryptStringToBytes(string plainText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (plainText == null || plainText.Length <= 0)
+                throw new ArgumentNullException("plainText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+            byte[] encrypted;
+            // Create an RijndaelManaged object
+            // with the specified key and IV.
+            using (RijndaelManaged rijAlg = new RijndaelManaged())
+            {
+                rijAlg.Key = Key;
+                rijAlg.IV = IV;
+                rijAlg.Padding = PaddingMode.Zeros;
+
+                // Create an encryptor to perform the stream transform.
+                ICryptoTransform encryptor = rijAlg.CreateEncryptor(rijAlg.Key, rijAlg.IV);
+
+                // Create the streams used for encryption.
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        {
+
+                            //Write all data to the stream.
+                            swEncrypt.Write(plainText);
+                        }
+                        encrypted = msEncrypt.ToArray();
+                    }
+                }
+            }
+
+            // Return the encrypted bytes from the memory stream.
+            return encrypted;
+
+        }
+
+        static public string DecryptStringFromBytes(byte[] cipherText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+
+            // Declare the string used to hold
+            // the decrypted text.
+            string plaintext = null;
+            try
+            {
+                // Create an RijndaelManaged object
+                // with the specified key and IV.
+                using (RijndaelManaged rijAlg = new RijndaelManaged())
+                {
+                    rijAlg.Key = Key;
+                    rijAlg.IV = IV;
+                    rijAlg.Padding = PaddingMode.Zeros;
+
+                    // Create a decryptor to perform the stream transform.
+                    ICryptoTransform decryptor = rijAlg.CreateDecryptor(rijAlg.Key, rijAlg.IV);
+
+                    // Create the streams used for decryption.
+                    using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                    {
+                        using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                        {
+                            using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                            {
+                                // Read the decrypted bytes from the decrypting stream
+                                // and place them in a string.
+                                plaintext = srDecrypt.ReadToEnd();
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (Exception exc)
+            {
+                plaintext = Encoding.Unicode.GetString(cipherText, 0, cipherText.Length).Trim();
+            }
+
+            return plaintext;
         }
     }
 }

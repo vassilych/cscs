@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace SplitAndMerge
@@ -1399,6 +1400,45 @@ namespace SplitAndMerge
             return new Variable(result);
         }
     }
+    class ToByteArrayFunction : ParserFunction, INumericFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            string arg = Utils.GetSafeString(args, 0);
+            string pass = Utils.GetSafeString(args, 1);
+
+            var encoded = !string.IsNullOrWhiteSpace(pass);
+
+            var bytes = encoded ? Utils.EncryptStringToBytes(arg, pass) :
+                                  Encoding.UTF8.GetBytes(arg);
+
+            return new Variable(bytes);
+        }
+    }
+    class EncodeDecodeFunction : ParserFunction, IStringFunction
+    {
+        bool m_encode;
+        internal EncodeDecodeFunction(bool encode = true)
+        {
+            m_encode = encode;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 2, m_name);
+
+            string arg = Utils.GetSafeString(args, 0);
+            string pass = Utils.GetSafeString(args, 1);
+
+            var result = m_encode ? Utils.EncryptString(arg, pass) :
+                                    Utils.DecryptString(arg, pass);
+
+            return new Variable(result);
+        }
+    }
     class ToBoolFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -1432,6 +1472,12 @@ namespace SplitAndMerge
 
             Variable arg = args[0];
             string format = Utils.GetSafeString(args, 1);
+
+            if (arg.Type == Variable.VarType.BYTE_ARRAY && !string.IsNullOrWhiteSpace(format))
+            {
+                var decoded = Utils.DecryptStringFromBytes(arg.AsByteArray(), format);
+                return new Variable(decoded);
+            }
 
             string result = arg.AsString(format);
             return new Variable(result);

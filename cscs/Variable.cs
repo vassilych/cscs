@@ -571,7 +571,7 @@ namespace SplitAndMerge
 
         public object AsObject()
         {
-            switch (Type)
+            switch(Type)
             {
                 case VarType.NUMBER: return AsDouble();
                 case VarType.DATETIME: return AsDateTime();
@@ -1643,7 +1643,7 @@ namespace SplitAndMerge
         public string CustomGet { get; set; }
         public string CustomSet { get; set; }
 
-        public List<Variable> StackVariables { get; set; }
+        public List<Variable> StackVariables { get; set;  }
 
         public static Variable EmptyInstance = new Variable();
         public static Variable Undefined = new Variable(VarType.UNDEFINED);

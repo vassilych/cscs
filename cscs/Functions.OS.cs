@@ -61,13 +61,13 @@ namespace SplitAndMerge
 
     class DataFunction : ParserFunction
     {
-        internal enum DataMode { ADD, SUBSCRIBE, SEND };
+        internal enum DataMode { ADD, SUBSCRIBE, SEND};
 
-        DataMode m_mode;
+        DataMode      m_mode;
 
         static string s_method;
         static string s_tracking;
-        static bool s_updateImmediate = false;
+        static bool   s_updateImmediate = false;
 
         static StringBuilder s_data = new StringBuilder();
 
@@ -80,7 +80,7 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             string result = "";
 
-            switch (m_mode)
+            switch(m_mode)
             {
                 case DataMode.ADD:
                     Collect(args);
@@ -101,8 +101,8 @@ namespace SplitAndMerge
         {
             s_data.Clear();
 
-            s_method = Utils.GetSafeString(args, 0);
-            s_tracking = Utils.GetSafeString(args, 1);
+            s_method          = Utils.GetSafeString(args, 0);
+            s_tracking        = Utils.GetSafeString(args, 1);
             s_updateImmediate = Utils.GetSafeDouble(args, 2) > 0;
         }
 
@@ -170,7 +170,7 @@ namespace SplitAndMerge
             return Tokenize(data, sep, option);
         }
 
-        static public Variable Tokenize(string data, string sep, string option = "", int max = int.MaxValue - 1)
+        static public Variable Tokenize(string data, string sep, string option = "", int max = int.MaxValue-1)
         {
             if (sep == "\\t")
             {
@@ -578,7 +578,7 @@ namespace SplitAndMerge
 
             Utils.CheckArgs(args.Count, 2, m_name);
             string pattern = Utils.GetSafeString(args, 0);
-            string text = Utils.GetSafeString(args, 1);
+            string text    = Utils.GetSafeString(args, 1);
 
             Variable result = new Variable(Variable.VarType.ARRAY);
 
@@ -1054,7 +1054,7 @@ namespace SplitAndMerge
             {
                 return ExtractArray(script);
             }
-
+            
             bool canBeNumeric = script.Current != '"';
             var token = Utils.GetToken(script, SEP);
 
