@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,6 +29,10 @@ namespace SplitAndMerge
             }
         }
         public Variable(double d)
+        {
+            Value = d;
+        }
+        public Variable(long d)
         {
             Value = d;
         }
@@ -571,7 +576,7 @@ namespace SplitAndMerge
 
         public object AsObject()
         {
-            switch(Type)
+            switch (Type)
             {
                 case VarType.NUMBER: return AsDouble();
                 case VarType.DATETIME: return AsDateTime();
@@ -818,6 +823,9 @@ namespace SplitAndMerge
 
         public Variable FinishSetProperty(string propName, Variable value, ParsingScript script, string baseName = "")
         {
+            Variable reflectedProp = SetReflectedProperty(propName, value);
+            if (reflectedProp != null)
+                return reflectedProp;            
             Variable result = Variable.EmptyInstance;
 
             // Check for an existing custom setter
@@ -940,16 +948,7 @@ namespace SplitAndMerge
                 string match = GetActualPropertyName(propName, obj.GetProperties());
                 if (!string.IsNullOrWhiteSpace(match))
                 {
-                    List<Variable> args = null;
-                    if (script != null &&
-                       (script.Pointer == 0 || script.Prev == Constants.START_ARG))
-                    {
-                        args = script.GetFunctionArgs();
-                    }
-                    else if (script != null)
-                    {
-                        args = new List<Variable>();
-                    }
+                    var args = GetArgs(script);
                     var task = obj.GetProperty(match, args, script);
                     result = task != null ? task.Result : null;
                     if (result != null)
@@ -960,6 +959,208 @@ namespace SplitAndMerge
             }
 
             return GetCoreProperty(propName, script);
+        }
+
+        List<Variable> GetArgs(ParsingScript script)
+        {
+            List<Variable> args = null;
+            if (script != null)
+            {
+                if (script.Pointer == 0 || script.Prev == Constants.START_ARG)
+                {
+                    args = script.GetFunctionArgs();
+                }
+                else
+                {
+                    args = new List<Variable>();
+                }
+            }
+
+            return args;
+        }
+
+        Variable SetReflectedProperty(string propName, Variable value)
+        {
+            if (Object == null)
+                return null;
+
+            BindingFlags bf = BindingFlags.Instance;
+
+            Type t;
+            if (Object is Type ot)
+            {
+                t = ot;
+                bf = BindingFlags.Static;
+            }
+            else
+                t = Object.GetType();
+
+            bf |= BindingFlags.Public;
+
+            var properties = t.GetProperties(bf);
+            if (properties != null)
+            {
+                foreach (var property in properties)
+                {
+                    if (String.Compare(property.Name, propName, true) == 0)
+                    {
+                        property.SetValue(Object, ChangeType(value.AsObject(), property.PropertyType));
+                        return value;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        Variable GetReflectedProperty(string propName, ParsingScript script)
+        {
+            if (Object == null)
+                return null;
+
+            BindingFlags bf = BindingFlags.Instance;
+
+            Type t;
+            if (Object is Type ot)
+            {
+                t = ot;
+                bf = BindingFlags.Static;
+            }
+            else
+                t = Object.GetType();
+
+            bf |= BindingFlags.Public;
+
+            var properties = t.GetProperties(bf);
+            if (properties != null)
+            {
+                foreach (var property in properties)
+                {
+                    if (String.Compare(property.Name, propName, true) == 0)
+                        return ConvertToVariable(property.GetValue(Object));
+                }
+            }
+
+            // TODO: If we couldn't find the property, there is other code I could write
+            // that uses custom attributes, DefaultMemberAttribute. I'm not sure that
+            // the syntax of the scripting language would get that to this code, and
+            // so I'm not going to implement it yet.
+
+            if (script != null)
+            {
+                var methods = t.GetMethods(bf);
+
+                if (methods != null)
+                {
+                    List<Variable> args = null;
+                    Conversion bestConversion = Conversion.Mismatch;
+                    System.Reflection.MethodInfo bestMethod = null;
+                    object[] bestTypedArgs = null;
+                    foreach (var method in methods)
+                    {
+                        if (String.Compare(method.Name, propName, true) == 0)
+                        {
+                            if (args == null)
+                                args = GetArgs(script);
+                            // For now, we're just going to support matching the argument count
+                            // TODO: Try to match the types, but since we are free to manipulate
+                            // types, that might be tricky
+                            var parameters = method.GetParameters();
+                            if (args.Count == parameters.GetLength(0))
+                            {
+                                if (args.Count == 0)
+                                {
+                                    bestMethod = method;
+                                    break;
+                                }
+                                object[] typedArgs = new object[args.Count];
+                                Conversion thisConversion = ChangeTypes(args, parameters, typedArgs);
+                                if (thisConversion < bestConversion || bestMethod == null)
+                                {
+                                    bestMethod = method;
+                                    bestTypedArgs = typedArgs;
+                                    bestConversion = thisConversion;
+                                    if (bestConversion == Conversion.Exact)
+                                        break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (bestMethod != null)
+                    {
+                        object res = bestMethod.Invoke(Object, bestTypedArgs);
+                        return ConvertToVariable(res);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        enum Conversion
+        {
+            Exact,
+            Assignable,
+            Convertible,
+            Mismatch
+        }
+
+        private Conversion ChangeTypes(List<Variable> args, ParameterInfo[] parameters, object[] typedArgs)
+        {
+            Conversion worstConversion = Conversion.Exact;
+            if (args.Count > 0)
+            {
+                for (int arg = 0; arg < args.Count; ++arg)
+                {
+                    typedArgs[arg] = ChangeType(args[arg].AsObject(), parameters[arg].ParameterType, out Conversion conversion);
+                    if (conversion > worstConversion)
+                        worstConversion = conversion;
+                }
+            }
+            return worstConversion;
+        }
+
+        static object ChangeType(object value, Type conversionType)
+        {
+            return ChangeType(value, conversionType, out Conversion conversion);
+        }
+
+        static object ChangeType(object value, Type conversionType, out Conversion conversion)
+        {
+            try
+            {
+                Type t = value.GetType();
+                if (t == conversionType)
+                {
+                    conversion = Conversion.Exact;
+                    return value;
+                }
+
+                if (conversionType.IsAssignableFrom(t))
+                {
+                    conversion = Conversion.Assignable;
+                    return Convert.ChangeType(value, conversionType);
+                }
+
+                conversion = Conversion.Convertible;
+                if (value is string && conversionType.IsEnum)
+                {
+                    return Enum.Parse(conversionType, (string)value, true);
+                }
+                return Convert.ChangeType(value, conversionType);
+            }
+            catch (InvalidCastException)
+            {
+            }
+            catch (FormatException)
+            {
+            }
+            catch
+            {
+            }
+            conversion = Conversion.Mismatch;
+            return value;
         }
 
         public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)
@@ -1045,6 +1246,9 @@ namespace SplitAndMerge
 
         Variable GetCoreProperty(string propName, ParsingScript script = null)
         {
+            Variable reflectedProp = GetReflectedProperty(propName, script);
+            if (reflectedProp != null)
+                return reflectedProp;            
             Variable result = Variable.EmptyInstance;
 
             if (m_propertyMap.TryGetValue(propName, out result) ||
@@ -1643,7 +1847,7 @@ namespace SplitAndMerge
         public string CustomGet { get; set; }
         public string CustomSet { get; set; }
 
-        public List<Variable> StackVariables { get; set;  }
+        public List<Variable> StackVariables { get; set; }
 
         public static Variable EmptyInstance = new Variable();
         public static Variable Undefined = new Variable(VarType.UNDEFINED);

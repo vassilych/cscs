@@ -78,6 +78,7 @@ namespace SplitAndMerge
         public const string TRY = "try";
         public const string TYPE = "type";
         public const string TYPE_OF = "typeOf";
+        public const string TYPE_REF = "typeRef";
         public const string WHILE = "while";
 
         public const string TRUE = "true";

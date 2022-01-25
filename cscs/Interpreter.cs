@@ -128,6 +128,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
             ParserFunction.RegisterFunction(Constants.TYPE, new TypeFunction());
             ParserFunction.RegisterFunction(Constants.TYPE_OF, new TypeOfFunction());
+            ParserFunction.RegisterFunction(Constants.TYPE_REF, new TypeRefFunction());
             ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
             ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
             ParserFunction.RegisterFunction(Constants.UNDEFINED, new UndefinedFunction());
@@ -1207,6 +1208,33 @@ namespace SplitAndMerge
                 result = task.Result;
             }
             return result;
+        }
+
+        public static void RunScript(string fileName = "start.cscs")
+        {
+            Interpreter.Instance.Init();
+
+            string script = FileToString(fileName);
+            Variable result = null;
+            try
+            {
+                result = Interpreter.Instance.Process(script, fileName);
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine("Exception: " + exc.Message);
+                Console.WriteLine(exc.StackTrace);
+                ParserFunction.InvalidateStacksAfterLevel(0);
+                throw;
+            }
+        }
+
+        public static string FileToString(string filename)
+        {
+            string contents = "";
+            string[] lines = System.IO.File.ReadAllLines(filename);
+            contents = string.Join("\n", lines);
+            return contents;
         }
     }
 }
