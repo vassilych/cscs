@@ -1004,7 +1004,7 @@ namespace SplitAndMerge
                 {
                     if (String.Compare(property.Name, propName, true) == 0)
                     {
-                        property.SetValue(Object, ChangeType(value.AsObject(), property.PropertyType));
+                        property.SetValue(Object, ParameterConverter.ChangeType(value.AsObject(), property.PropertyType));
                         return value;
                     }
                 }
@@ -1053,43 +1053,28 @@ namespace SplitAndMerge
                 if (methods != null)
                 {
                     List<Variable> args = null;
-                    Conversion bestConversion = Conversion.Mismatch;
                     System.Reflection.MethodInfo bestMethod = null;
-                    object[] bestTypedArgs = null;
+                    ParameterConverter pConv = new ParameterConverter();
                     foreach (var method in methods)
                     {
                         if (String.Compare(method.Name, propName, true) == 0)
                         {
                             if (args == null)
                                 args = GetArgs(script);
-                            // For now, we're just going to support matching the argument count
-                            // TODO: Try to match the types, but since we are free to manipulate
-                            // types, that might be tricky
+
                             var parameters = method.GetParameters();
-                            if (args.Count == parameters.GetLength(0))
+                            if (pConv.ConvertVariablesToTypedArgs(args, parameters))
                             {
-                                if (args.Count == 0)
-                                {
-                                    bestMethod = method;
+                                bestMethod = method;
+                                if (pConv.BestConversion == ParameterConverter.Conversion.Exact)
                                     break;
-                                }
-                                object[] typedArgs = new object[args.Count];
-                                Conversion thisConversion = ChangeTypes(args, parameters, typedArgs);
-                                if (thisConversion < bestConversion || bestMethod == null)
-                                {
-                                    bestMethod = method;
-                                    bestTypedArgs = typedArgs;
-                                    bestConversion = thisConversion;
-                                    if (bestConversion == Conversion.Exact)
-                                        break;
-                                }
-                            }
+                            }    
                         }
                     }
 
                     if (bestMethod != null)
                     {
-                        object res = bestMethod.Invoke(Object, bestTypedArgs);
+                        object res = bestMethod.Invoke(Object, pConv.BestTypedArgs);
                         return ConvertToVariable(res);
                     }
                 }
@@ -1098,69 +1083,101 @@ namespace SplitAndMerge
             return null;
         }
 
-        enum Conversion
+        public class ParameterConverter
         {
-            Exact,
-            Assignable,
-            Convertible,
-            Mismatch
-        }
+            public Conversion BestConversion { get; private set; }
+            public object[] BestTypedArgs { get; private set; }
 
-        private Conversion ChangeTypes(List<Variable> args, ParameterInfo[] parameters, object[] typedArgs)
-        {
-            Conversion worstConversion = Conversion.Exact;
-            if (args.Count > 0)
+            public ParameterConverter()
             {
-                for (int arg = 0; arg < args.Count; ++arg)
-                {
-                    typedArgs[arg] = ChangeType(args[arg].AsObject(), parameters[arg].ParameterType, out Conversion conversion);
-                    if (conversion > worstConversion)
-                        worstConversion = conversion;
-                }
+                BestConversion = Conversion.Mismatch;
             }
-            return worstConversion;
-        }
 
-        static object ChangeType(object value, Type conversionType)
-        {
-            return ChangeType(value, conversionType, out Conversion conversion);
-        }
-
-        static object ChangeType(object value, Type conversionType, out Conversion conversion)
-        {
-            try
+            public bool ConvertVariablesToTypedArgs(List<Variable> args, ParameterInfo[] parameters)
             {
-                Type t = value.GetType();
-                if (t == conversionType)
+                if (args.Count == parameters.GetLength(0))
                 {
-                    conversion = Conversion.Exact;
-                    return value;
+                    if (args.Count == 0)
+                    {
+                        BestConversion = Conversion.Exact;
+                        return true;
+                    }
+                    object[] typedArgs = new object[args.Count];
+                    Conversion thisConversion = ChangeTypes(args, parameters, typedArgs);
+                    if (thisConversion < BestConversion || BestTypedArgs == null)
+                    {
+                        BestTypedArgs = typedArgs;
+                        BestConversion = thisConversion;
+                        return true;
+                    }
                 }
+                return false;
+            }
 
-                if (conversionType.IsAssignableFrom(t))
+            public enum Conversion
+            {
+                Exact,
+                Assignable,
+                Convertible,
+                Mismatch
+            }
+
+            public static Conversion ChangeTypes(List<Variable> args, ParameterInfo[] parameters, object[] typedArgs)
+            {
+                Conversion worstConversion = Conversion.Exact;
+                if (args.Count > 0)
                 {
-                    conversion = Conversion.Assignable;
+                    for (int arg = 0; arg < args.Count; ++arg)
+                    {
+                        typedArgs[arg] = ChangeType(args[arg].AsObject(), parameters[arg].ParameterType, out Conversion conversion);
+                        if (conversion > worstConversion)
+                            worstConversion = conversion;
+                    }
+                }
+                return worstConversion;
+            }
+
+            public static object ChangeType(object value, Type conversionType)
+            {
+                return ChangeType(value, conversionType, out Conversion conversion);
+            }
+
+            public static object ChangeType(object value, Type conversionType, out Conversion conversion)
+            {
+                try
+                {
+                    Type t = value.GetType();
+                    if (t == conversionType)
+                    {
+                        conversion = Conversion.Exact;
+                        return value;
+                    }
+
+                    if (conversionType.IsAssignableFrom(t))
+                    {
+                        conversion = Conversion.Assignable;
+                        return Convert.ChangeType(value, conversionType);
+                    }
+
+                    conversion = Conversion.Convertible;
+                    if (value is string && conversionType.IsEnum)
+                    {
+                        return Enum.Parse(conversionType, (string)value, true);
+                    }
                     return Convert.ChangeType(value, conversionType);
                 }
-
-                conversion = Conversion.Convertible;
-                if (value is string && conversionType.IsEnum)
+                catch (InvalidCastException)
                 {
-                    return Enum.Parse(conversionType, (string)value, true);
                 }
-                return Convert.ChangeType(value, conversionType);
+                catch (FormatException)
+                {
+                }
+                catch
+                {
+                }
+                conversion = Conversion.Mismatch;
+                return value;
             }
-            catch (InvalidCastException)
-            {
-            }
-            catch (FormatException)
-            {
-            }
-            catch
-            {
-            }
-            conversion = Conversion.Mismatch;
-            return value;
         }
 
         public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)

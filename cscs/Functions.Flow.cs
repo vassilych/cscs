@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -695,6 +696,13 @@ namespace SplitAndMerge
             script.MoveForwardIf(Constants.START_ARG);
             List<Variable> args = script.GetFunctionArgs();
 
+            Type t = TypeRefFunction.GetTypeAnywhere(className, true);
+            if (t != null)
+            {
+                object reflectedObj = CreateReflectedObj(t, args);
+                return new Variable(reflectedObj);
+            }
+
             CompiledClass csClass = CSCSClass.GetClass(className) as CompiledClass;
             if (csClass != null)
             {
@@ -712,6 +720,33 @@ namespace SplitAndMerge
                 CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
             return new Variable(instance);
+        }
+
+       private object CreateReflectedObj(Type t, List<Variable> args)
+        {
+            var constructors = t.GetConstructors(BindingFlags.Public);
+            if (constructors == null)
+                return null;
+
+            ConstructorInfo bestConstructor = null;
+            var pConv = new Variable.ParameterConverter();
+            foreach (var ctor in constructors)
+            {
+                if (pConv.ConvertVariablesToTypedArgs(args, ctor.GetParameters()))
+                {
+                    bestConstructor = ctor;
+                    if (pConv.BestConversion == Variable.ParameterConverter.Conversion.Exact)
+                        break;
+                }
+            }
+
+            if (bestConstructor == null)
+            {
+                if (args.Count > 0)
+                    throw new ArgumentException($"No suitable constructor found for [{t.FullName}]");
+                return Activator.CreateInstance(t);
+            }
+            return bestConstructor?.Invoke(pConv.BestTypedArgs);
         }
 
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
