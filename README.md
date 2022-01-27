@@ -21,7 +21,12 @@ You can also pre-compile CSCS code to speed-up exection. This has been described
 
 You can use Visual Studio Code as an IDE for developing and debugging CSCS code. The Visual Studio Code Extension to debug CSCS code is available [here](https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debugger).
 
-<br>
+
+### Contributions
+
+Special thanks for contributions from Dan Spear, especially using Reflection in order to call C# functionality directly from CSCS.
+Examples coming up soon.
+
 
 Description of CSCS
 ======
@@ -545,3 +550,4 @@ That's it! Now inside of CSCS we can just execute the following statement:
  
  
  and x will get a random value between 0 and 100.
+
