@@ -16,12 +16,20 @@ namespace SplitAndMerge
         {
             return new Variable(Math.PI);
         }
+        public override string Description()
+        {
+            return "Returns the number Pi (3.14159265358...)";
+        }
     }
     class EFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
             return new Variable(Math.E);
+        }
+        public override string Description()
+        {
+            return "Returns the number e (2.718281828...)";
         }
     }
     class Sqrt2Function : ParserFunction, INumericFunction
@@ -30,12 +38,20 @@ namespace SplitAndMerge
         {
             return new Variable(Math.Sqrt(2));
         }
+        public override string Description()
+        {
+            return "Returns the squared root of 2.";
+        }
     }
     class Sqrt1_2Function : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
             return new Variable(Math.Sqrt(1/2));
+        }
+        public override string Description()
+        {
+            return "Returns the squared root of 1/2.";
         }
     }
     class Ln2Function : ParserFunction, INumericFunction
@@ -44,12 +60,20 @@ namespace SplitAndMerge
         {
             return new Variable(Math.Log(2));
         }
+        public override string Description()
+        {
+            return "Returns the natural logarithm of 2.";
+        }
     }
     class Ln10Function : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
             return new Variable(Math.Log(10));
+        }
+        public override string Description()
+        {
+            return "Returns the natural logarithm of 10.";
         }
     }
     class Log2EFunction : ParserFunction, INumericFunction
@@ -58,12 +82,20 @@ namespace SplitAndMerge
         {
             return new Variable(Math.Log(Math.E, 2)) ;
         }
+        public override string Description()
+        {
+            return "Returns the logarithm of e using base 2.";
+        }
     }
     class Log10EFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
             return new Variable(Math.Log10(Math.E));
+        }
+        public override string Description()
+        {
+            return "Returns the logarithm of e using base 10.";
         }
     }
 
@@ -76,6 +108,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Exp(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns e raised to the specified power.";
         }
     }
 
@@ -91,6 +127,10 @@ namespace SplitAndMerge
             arg1.Value = Math.Pow(arg1.Value, arg2.Value);
             return arg1;
         }
+        public override string Description()
+        {
+            return "Returns a specified number raised to the specified power.";
+        }
     }
 
     class SinFunction : ParserFunction, INumericFunction
@@ -103,6 +143,10 @@ namespace SplitAndMerge
             arg.Value = Sin(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the sine of the specified angle.";
+        }
     }
     class CosFunction : ParserFunction, INumericFunction
     {
@@ -114,6 +158,10 @@ namespace SplitAndMerge
             arg.Value = Math.Cos(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the cosine of the specified angle.";
+        }
     }
     class TanFunction : ParserFunction, INumericFunction
     {
@@ -122,6 +170,10 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
             return new Variable(Math.Tan(args[0].Value));
+        }
+        public override string Description()
+        {
+            return "Returns the tangent of the specified angle.";
         }
     }
     class SinhFunction : ParserFunction, INumericFunction
@@ -134,6 +186,10 @@ namespace SplitAndMerge
             arg.Value = Math.Sinh(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the hyperbolic sine of the specified angle.";
+        }
     }
     class CoshFunction : ParserFunction, INumericFunction
     {
@@ -145,6 +201,10 @@ namespace SplitAndMerge
             arg.Value = Math.Cosh(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the hyperbolic cosine of the specified angle.";
+        }
     }
     class TanhFunction : ParserFunction, INumericFunction
     {
@@ -153,6 +213,10 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
             return new Variable(Math.Tanh(args[0].Value));
+        }
+        public override string Description()
+        {
+            return "Returns the hyperbolic tangent of the specified angle.";
         }
     }
     class AsinFunction : ParserFunction, INumericFunction
@@ -165,6 +229,10 @@ namespace SplitAndMerge
             arg.Value = Math.Asin(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the angle whose sine is the specified number.";
+        }
     }
     class AcosFunction : ParserFunction, INumericFunction
     {
@@ -175,6 +243,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Acos(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the angle whose cosine is the specified number.";
         }
     }
     class AtanFunction : ParserFunction, INumericFunction
@@ -187,6 +259,10 @@ namespace SplitAndMerge
             arg.Value = Math.Atan(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the angle whose tangent is the specified number.";
+        }
     }
     class Atan2Function : ParserFunction, INumericFunction
     {
@@ -195,6 +271,10 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 2, m_name, true);
             return new Variable(Math.Atan2(args[0].Value, args[1].Value));
+        }
+        public override string Description()
+        {
+            return "Returns the angle whose tangent is the quotient of two specified numbers.";
         }
     }
     class AsinhFunction : ParserFunction, INumericFunction
@@ -207,6 +287,10 @@ namespace SplitAndMerge
             arg.Value = Math.Log(arg.Value + Math.Sqrt(arg.Value * arg.Value + 1));
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the angle whose hyperbolic sine is the specified number.";
+        }
     }
     class AcoshFunction : ParserFunction, INumericFunction
     {
@@ -218,6 +302,10 @@ namespace SplitAndMerge
             arg.Value = Math.Log(arg.Value + Math.Sqrt(arg.Value * arg.Value - 1));
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the angle whose hyperbolic cosine is the specified number.";
+        }
     }
     class AtanhFunction : ParserFunction, INumericFunction
     {
@@ -228,6 +316,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Log((1 + arg.Value) / (1 - arg.Value)) / 2;
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the angle whose hyperbolic tangent is the specified number.";
         }
     }
 
@@ -241,6 +333,10 @@ namespace SplitAndMerge
             arg.Value = Math.Sqrt(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns the square root of a specified number.";
+        }
     }
     class CbrtFunction : ParserFunction, INumericFunction
     {
@@ -249,6 +345,10 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
             return new Variable(Math.Pow(args[0].Value, 1.0 / 3.0));
+        }
+        public override string Description()
+        {
+            return "Returns the cube root of a specified number.";
         }
     }
     class MinFunction : ParserFunction, INumericFunction
@@ -267,6 +367,10 @@ namespace SplitAndMerge
             }
             return new Variable(result);
         }
+        public override string Description()
+        {
+            return "Returns the smaller of two numbers.";
+        }
     }
     class MaxFunction : ParserFunction, INumericFunction
     {
@@ -284,6 +388,10 @@ namespace SplitAndMerge
             }
             return new Variable(result);
         }
+        public override string Description()
+        {
+            return "Returns the larger of two numbers.";
+        }
     }
     class AbsFunction : ParserFunction, INumericFunction
     {
@@ -294,6 +402,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Abs(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the absolute value of a specified number.";
         }
     }
     class SignFunction : ParserFunction, INumericFunction
@@ -306,6 +418,10 @@ namespace SplitAndMerge
             arg.Value = Math.Sign(arg.Value);
             return arg;
         }
+        public override string Description()
+        {
+            return "Returns an integer that indicates the sign of a number.";
+        }
     }
     class CeilFunction : ParserFunction, INumericFunction
     {
@@ -316,6 +432,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Ceiling(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the smallest integral value greater than or equal to the specified number.";
         }
     }
 
@@ -328,6 +448,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Floor(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the largest integral value less than or equal to the specified number.";
         }
     }
 
@@ -343,6 +467,10 @@ namespace SplitAndMerge
             args[0].Value = Math.Round(args[0].AsDouble(), numberDigits);
             return args[0];
         }
+        public override string Description()
+        {
+            return "Rounds a value to the nearest integer or to the specified number of fractional digits.";
+        }
     }
 
     class LogFunction : ParserFunction, INumericFunction
@@ -354,6 +482,10 @@ namespace SplitAndMerge
             Variable arg = args[0];
             arg.Value = Math.Log(arg.Value);
             return arg;
+        }
+        public override string Description()
+        {
+            return "Returns the natural (base e) logarithm of a specified number.";
         }
     }
 
@@ -397,6 +529,10 @@ namespace SplitAndMerge
             }
 
             return new Variable(result);
+        }
+        public override string Description()
+        {
+            return "Returns a random number between 0 and 1.";
         }
     }
 

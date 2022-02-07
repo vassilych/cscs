@@ -28,12 +28,7 @@ namespace SplitAndMerge
         public const string FOR_EACH = ":";
         public const string FOR_IN = "in";
         public const string FOR_OF = "of";
-        public const string INFINITY = "Infinity";
-        public const string NEG_INFINITY = "-Infinity";
-        public const string ISFINITE = "IsFinite";
-        public const string ISNAN = "IsNaN";
         public const string NULL = "null";
-        public const string NAN = "NaN";
         public const string UNDEFINED = "undefined";
 
         public const string ASSIGNMENT = "=";
@@ -71,6 +66,7 @@ namespace SplitAndMerge
         public const string IF = "if";
         public const string INCLUDE = "include";
         public const string NEW = "new";
+        public const string QUIT = "quit";
         public const string RETURN = "return";
         public const string SWITCH = "switch";
         public const string THIS = "this";
@@ -84,18 +80,13 @@ namespace SplitAndMerge
         public const string TRUE = "true";
         public const string FALSE = "false";
 
-        public const string ABS = "abs";
-        public const string ACOS = "acos";
         public const string ADD = "add";
         public const string ADD_UNIQUE = "addunique";
         public const string ADD_TO_HASH = "AddToHash";
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
-        public const string ASIN = "asin";
         public const string CANCEL_RUN = "CancelRun";
-        public const string CEIL = "ceil";
         public const string CHECK_LOADER_MAIN = "LoaderMain";
         public const string CONTAINS = "contains";
-        public const string COS = "cos";
         public const string CURRENT_PATH = "CurrentPath";
         public const string DATE_TIME = "DateTime";
         public const string DECODE = "decode";
@@ -104,44 +95,35 @@ namespace SplitAndMerge
         public const string ENV = "env";
         public const string ENCODE = "encode";
         public const string EXIT = "exit";
-        public const string EXP = "exp";
         public const string FIND_INDEX = "find_index";
-        public const string FLOOR = "floor";
         public const string GET_COLUMN = "GetColumn";
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
         public const string GET_KEYS = "GetKeys";
         public const string HELP = "help";
         public const string LOCK = "lock";
-        public const string LOG = "log";
         public const string NAME_EXISTS = "NameExists";
         public const string NAMESPACE = "Namespace";
         public const string NOW = "Now";
         public const string ON_EXCEPTION = "OnException";
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
-        public const string PI = "pi";
         public const string POINTER = "->";
         public const string POINTER_REF = "&";
-        public const string POW = "pow";
         public const string PRINT = "print";
         public const string PSTIME = "pstime";
-        public const string RANDOM = "GetRandom";
         public const string REGEX = "Regex";
         public const string REMOVE = "RemoveItem";
         public const string REMOVE_AT = "RemoveAt";
         public const string RESET_VARS = "ResetVariables";
-        public const string ROUND = "round";
         public const string SCHEDULE_RUN = "ScheduleRun";
         public const string SETENV = "setenv";
         public const string SET_PROPERTY = "SetProperty";
         public const string SHOW = "show";
         public const string SIGNAL = "signal";
-        public const string SIN = "sin";
         public const string SINGLETON = "singleton";
         public const string SIZE = "Size";
         public const string SLEEP = "sleep";
-        public const string SQRT = "sqrt";
         public const string STR_BETWEEN = "StrBetween";
         public const string STR_BETWEEN_ANY = "StrBetweenAny";
         public const string STR_CONTAINS = "StrContains";
@@ -222,6 +204,9 @@ namespace SplitAndMerge
         public const string MATH_E        = "Math.E";
         public const string MATH_EXP      = "Math.Exp";
         public const string MATH_FLOOR    = "Math.Floor";
+        public const string MATH_INFINITY = "Math.Infinity";
+        public const string MATH_ISFINITE = "Math.IsFinite";
+        public const string MATH_ISNAN    = "Math.IsNaN";
         public const string MATH_LN2      = "Math.LN2";
         public const string MATH_LN10     = "Math.LN10";
         public const string MATH_LOG      = "Math.LOG";
@@ -229,6 +214,8 @@ namespace SplitAndMerge
         public const string MATH_LOG10E   = "Math.LOG10E";
         public const string MATH_MAX      = "Math.Max";
         public const string MATH_MIN      = "Math.Min";
+        public const string MATH_NAN      = "Math.NaN";
+        public const string MATH_NEG_INFINITY = "Math.-Infinity";
         public const string MATH_PI       = "Math.PI";
         public const string MATH_POW      = "Math.Pow";
         public const string MATH_RANDOM   = "Math.Random";
@@ -316,7 +303,7 @@ namespace SplitAndMerge
             RETURN, THROW, TRY, CATCH, COMMENT, TRUE, FALSE, TYPE,
             ASSIGNMENT, AND, OR, EQUAL, NOT_EQUAL, LESS, LESS_EQ, GREATER, GREATER_EQ,
             ADD_ASSIGN, SUBT_ASSIGN, MULT_ASSIGN, DIV_ASSIGN,
-            SWITCH, CASE, DEFAULT, NAN, UNDEFINED,
+            SWITCH, CASE, DEFAULT, MATH_NAN, UNDEFINED,
             NEXT_ARG.ToString(), START_GROUP.ToString(), END_GROUP.ToString(), END_STATEMENT.ToString(), "math"
         };
 

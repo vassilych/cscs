@@ -112,10 +112,6 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             ParserFunction.RegisterFunction(Constants.CLASS, new ClassCreator());
             ParserFunction.RegisterFunction(Constants.ENUM, new EnumFunction());
-            ParserFunction.RegisterFunction(Constants.INFINITY, new InfinityFunction());
-            ParserFunction.RegisterFunction(Constants.NEG_INFINITY, new NegInfinityFunction());
-            ParserFunction.RegisterFunction(Constants.ISFINITE, new IsFiniteFunction());
-            ParserFunction.RegisterFunction(Constants.ISNAN, new IsNaNFunction());
             ParserFunction.RegisterFunction(Constants.NEW, new NewObjectFunction());
             ParserFunction.RegisterFunction(Constants.NULL, new NullFunction());
             ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
@@ -123,6 +119,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
             ParserFunction.RegisterFunction(Constants.GET_PROPERTY, new GetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.INCLUDE, new IncludeFile());
+            ParserFunction.RegisterFunction(Constants.QUIT, new QuitFunction());
             ParserFunction.RegisterFunction(Constants.SET_PROPERTY, new SetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
             ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
@@ -151,6 +148,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
             ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
             ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
+            ParserFunction.RegisterFunction(Constants.HELP, new HelpFunction());
             ParserFunction.RegisterFunction(Constants.INCLUDE_SECURE, new IncludeFileSecure());
             ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
             ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
@@ -221,6 +219,9 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MATH_E, new EFunction());
             ParserFunction.RegisterFunction(Constants.MATH_EXP, new ExpFunction());
             ParserFunction.RegisterFunction(Constants.MATH_FLOOR, new FloorFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_INFINITY, new InfinityFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ISFINITE, new IsFiniteFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_ISNAN, new IsNaNFunction());
             ParserFunction.RegisterFunction(Constants.MATH_LN2, new Ln2Function());
             ParserFunction.RegisterFunction(Constants.MATH_LN10, new Ln10Function());
             ParserFunction.RegisterFunction(Constants.MATH_LOG, new LogFunction());
@@ -228,6 +229,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.MATH_LOG10E, new Log10EFunction());
             ParserFunction.RegisterFunction(Constants.MATH_MIN, new MinFunction());
             ParserFunction.RegisterFunction(Constants.MATH_MAX, new MaxFunction());
+            ParserFunction.RegisterFunction(Constants.MATH_NEG_INFINITY, new NegInfinityFunction());
             ParserFunction.RegisterFunction(Constants.MATH_PI, new PiFunction());
             ParserFunction.RegisterFunction(Constants.MATH_POW, new PowFunction());
             ParserFunction.RegisterFunction(Constants.MATH_RANDOM, new GetRandomFunction(true));
@@ -301,6 +303,10 @@ namespace SplitAndMerge
             while (toParse.Pointer < data.Length)
             {
                 result = toParse.Execute();
+                if (result.Type == Variable.VarType.QUIT)
+                {
+                    return result;
+                }
                 toParse.GoToNextStatement();
             }
 
@@ -329,6 +335,10 @@ namespace SplitAndMerge
             while (toParse.Pointer < data.Length)
             {
                 result = await toParse.ExecuteAsync();
+                if (result.Type == Variable.VarType.QUIT)
+                {
+                    return result;
+                }
                 toParse.GoToNextStatement();
             }
 

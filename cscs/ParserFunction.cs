@@ -589,6 +589,23 @@ namespace SplitAndMerge
             function.isNative = isNative;
         }
 
+        public static string GetDefinedFunctions()
+        {
+            StringBuilder sb  = new StringBuilder();
+            var keys = s_functions.Keys.ToList();
+            keys.Sort();
+            foreach (var key in keys)
+            {
+                var func = s_functions[key];
+                if (func.isNative)
+                {
+                    sb.AppendLine(key  +  ": " + func.Description());
+                }
+            }
+
+            return sb.ToString();
+        }
+
         public static bool UnregisterFunction(string name)
         {
             name = Constants.ConvertName(name);
@@ -913,6 +930,11 @@ namespace SplitAndMerge
             return this;
         }
 
+        public virtual string Description()
+        {
+            var name = this.GetType().Name;
+            return name;
+        }
         public static void CleanUp()
         {
             s_functions.Clear();

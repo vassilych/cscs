@@ -455,6 +455,10 @@ namespace SplitAndMerge
             {
                 throw exception;
             }
+            if (result.Type == Variable.VarType.QUIT)
+            {
+                DebuggerServer.StopServer();
+            }
             return result;
         }
     }

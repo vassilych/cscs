@@ -17,22 +17,6 @@ namespace SplitAndMerge
             ParserFunction.AddAction(Constants.POINTER_REF, new PointerReferenceFunction());
 
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false
-            // Math Top level functions
-            ParserFunction.RegisterFunction(Constants.ABS, new AbsFunction());
-            ParserFunction.RegisterFunction(Constants.ACOS, new AcosFunction());
-            ParserFunction.RegisterFunction(Constants.ASIN, new AsinFunction());
-            ParserFunction.RegisterFunction(Constants.CEIL, new CeilFunction());
-            ParserFunction.RegisterFunction(Constants.COS, new CosFunction());
-            ParserFunction.RegisterFunction(Constants.EXP, new ExpFunction());
-            ParserFunction.RegisterFunction(Constants.FLOOR, new FloorFunction());
-            ParserFunction.RegisterFunction(Constants.LOG, new LogFunction());
-            ParserFunction.RegisterFunction(Constants.PI, new PiFunction());
-            ParserFunction.RegisterFunction(Constants.POW, new PowFunction());
-            ParserFunction.RegisterFunction(Constants.ROUND, new RoundFunction());
-            ParserFunction.RegisterFunction(Constants.RANDOM, new GetRandomFunction());
-            ParserFunction.RegisterFunction(Constants.SIN, new SinFunction());
-            ParserFunction.RegisterFunction(Constants.SQRT, new SqrtFunction());
-
             //ParserFunction.CleanUp();
             ParserFunction.RegisterFunction(Constants.APPEND, new AppendFunction());
             ParserFunction.RegisterFunction(Constants.APPENDLINE, new AppendLineFunction());
@@ -150,7 +134,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.APPENDLINES, tr1, tr2);
                 Translation.Add(languageSection, Constants.CD, tr1, tr2);
                 Translation.Add(languageSection, Constants.CD__, tr1, tr2);
-                Translation.Add(languageSection, Constants.CEIL, tr1, tr2);
                 Translation.Add(languageSection, Constants.CONSOLE_CLR, tr1, tr2);
                 Translation.Add(languageSection, Constants.CONTAINS, tr1, tr2);
                 Translation.Add(languageSection, Constants.COPY, tr1, tr2);
@@ -162,7 +145,6 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.EXISTS, tr1, tr2);
                 Translation.Add(languageSection, Constants.FINDFILES, tr1, tr2);
                 Translation.Add(languageSection, Constants.FINDSTR, tr1, tr2);
-                Translation.Add(languageSection, Constants.FLOOR, tr1, tr2);
                 Translation.Add(languageSection, Constants.GET_COLUMN, tr1, tr2);
                 Translation.Add(languageSection, Constants.GET_KEYS, tr1, tr2);
                 Translation.Add(languageSection, Constants.KILL, tr1, tr2);
@@ -179,13 +161,11 @@ namespace SplitAndMerge
                 Translation.Add(languageSection, Constants.PRINT_RED, tr1, tr2);
                 Translation.Add(languageSection, Constants.PSINFO, tr1, tr2);
                 Translation.Add(languageSection, Constants.PWD, tr1, tr2);
-                Translation.Add(languageSection, Constants.RANDOM, tr1, tr2);
                 Translation.Add(languageSection, Constants.READ, tr1, tr2);
                 Translation.Add(languageSection, Constants.READFILE, tr1, tr2);
                 Translation.Add(languageSection, Constants.READNUMBER, tr1, tr2);
                 Translation.Add(languageSection, Constants.REMOVE, tr1, tr2);
                 Translation.Add(languageSection, Constants.REMOVE_AT, tr1, tr2);
-                Translation.Add(languageSection, Constants.ROUND, tr1, tr2);
                 Translation.Add(languageSection, Constants.RUN, tr1, tr2);
                 Translation.Add(languageSection, Constants.SETENV, tr1, tr2);
                 Translation.Add(languageSection, Constants.SHOW, tr1, tr2);
