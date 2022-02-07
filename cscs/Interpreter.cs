@@ -66,6 +66,10 @@ namespace SplitAndMerge
                                      (newLine ? Environment.NewLine : string.Empty));
                 handler(this, args);
             }
+            else
+            {
+                Console.WriteLine(text);
+            }
         }
 
         public bool AppendData(string text, bool newLine = false)

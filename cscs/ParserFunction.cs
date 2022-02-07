@@ -572,6 +572,12 @@ namespace SplitAndMerge
                                             bool isNative = true)
         {
             name = Constants.ConvertName(name);
+            if (s_functions.TryGetValue(name, out ParserFunction old))
+            {
+                var msg = "Warning: Overriding function [" + old.Name + "].";
+                System.Diagnostics.Debug.WriteLine(msg);
+                Interpreter.Instance.AppendOutput(msg, true);
+            }
             function.Name = Constants.GetRealName(name);
 
             if (!string.IsNullOrWhiteSpace(s_namespace))
