@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
@@ -406,32 +407,45 @@ namespace SplitAndMerge
 
             Variable arrayValue = Utils.GetItem(forScript);
 
-            if (arrayValue.Type == Variable.VarType.STRING)
-            {
-                arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
-            }
-
-            int cycles = arrayValue.Count;
-            if (cycles == 0)
-            {
-                SkipBlock(script);
-                return;
-            }
             int startForCondition = script.Pointer;
 
-            for (int i = 0; i < cycles; i++)
+            if ((arrayValue.Type == Variable.VarType.OBJECT) && (arrayValue.Object is IEnumerable ienum))
             {
-                script.Pointer = startForCondition;
-                Variable current = arrayValue.GetValue(i);
-                ParserFunction.AddGlobalOrLocalVariable(varName,
-                               new GetVarFunction(current));
-                Variable result = ProcessBlock(script);
-                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                foreach (object item in ienum)
                 {
-                    //script.Pointer = startForCondition;
-                    //SkipBlock(script);
-                    //return;
-                    break;
+                    Variable current = new Variable(item);
+
+                    script.Pointer = startForCondition;
+                    ParserFunction.AddGlobalOrLocalVariable(varName,
+                                   new GetVarFunction(current));
+                    Variable result = ProcessBlock(script);
+                    if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (arrayValue.Type == Variable.VarType.STRING)
+                {
+                    arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
+                }
+
+                int cycles = arrayValue.Count;
+
+                for (int i = 0; i < cycles; i++)
+                {
+                    Variable current = arrayValue.GetValue(i);
+
+                    script.Pointer = startForCondition;
+                    ParserFunction.AddGlobalOrLocalVariable(varName,
+                                   new GetVarFunction(current));
+                    Variable result = ProcessBlock(script);
+                    if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                    {
+                        break;
+                    }
                 }
             }
             script.Pointer = startForCondition;
@@ -460,32 +474,45 @@ namespace SplitAndMerge
 
             Variable arrayValue = await Utils.GetItemAsync(forScript);
 
-            if (arrayValue.Type == Variable.VarType.STRING)
-            {
-                arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
-            }
-
-            int cycles = arrayValue.Count;
-            if (cycles == 0)
-            {
-                SkipBlock(script);
-                return;
-            }
             int startForCondition = script.Pointer;
 
-            for (int i = 0; i < cycles; i++)
+            if ((arrayValue.Type == Variable.VarType.OBJECT) && (arrayValue.Object is IEnumerable ienum))
             {
-                script.Pointer = startForCondition;
-                Variable current = arrayValue.GetValue(i);
-                ParserFunction.AddGlobalOrLocalVariable(varName,
-                               new GetVarFunction(current));
-                Variable result = await ProcessBlockAsync(script);
-                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                foreach (object item in ienum)
                 {
-                    //script.Pointer = startForCondition;
-                    //SkipBlock(script);
-                    //return;
-                    break;
+                    Variable current = new Variable(item);
+
+                    script.Pointer = startForCondition;
+                    ParserFunction.AddGlobalOrLocalVariable(varName,
+                                   new GetVarFunction(current));
+                    Variable result = ProcessBlock(script);
+                    if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (arrayValue.Type == Variable.VarType.STRING)
+                {
+                    arrayValue = new Variable(new List<string>(arrayValue.ToString().ToCharArray().Select(c => c.ToString())));
+                }
+
+                int cycles = arrayValue.Count;
+
+                for (int i = 0; i < cycles; i++)
+                {
+                    Variable current = arrayValue.GetValue(i);
+
+                    script.Pointer = startForCondition;
+                    ParserFunction.AddGlobalOrLocalVariable(varName,
+                                   new GetVarFunction(current));
+                    Variable result = await ProcessBlockAsync(script);
+                    if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                    {
+                        break;
+                    }
                 }
             }
             script.Pointer = startForCondition;
