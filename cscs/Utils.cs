@@ -11,6 +11,10 @@ namespace SplitAndMerge
 {
     public partial class Utils
     {
+        public static Func<string, string> GetFileContentsDelegate { get; set; }
+
+        public static char[] SPACESEP = new char[] { ' ' };
+
         public static void CheckArgs(int args, int expected, string msg, bool exactMatch = false)
         {
             if (args < expected || (exactMatch && args != expected))
@@ -151,6 +155,40 @@ namespace SplitAndMerge
                     }
                 }
             }
+        }
+
+        public static string TrimString1(string text, int maxSize = 15, bool addQoutes = false, bool addDots = true)
+        {
+            if (text.Length <= maxSize)
+            {
+                return text;
+            }
+            var parts = text.Split(SPACESEP, 2);
+            var friendlyName = TrimString(parts.First(), maxSize, addQoutes, addDots);
+            return friendlyName;
+        }
+
+        public static string TrimString(string text, int maxSize = 15, bool addQoutes = false, bool addDots = true)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return "";
+            }
+            text = text.Split('\n')[0].Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "";
+            }
+            if (text.Length > maxSize)
+            {
+                text = text.Substring(0, maxSize - 3) + (addDots ? "..." : "");
+            }
+            if (addQoutes)
+            {
+                text = "\"" + text + "\"";
+            }
+
+            return text;
         }
 
         public static void ThrowErrorMsg(string msg, ParsingScript script, string token)
@@ -320,6 +358,12 @@ namespace SplitAndMerge
         {
             try
             {
+                if (GetFileContentsDelegate != null)
+                {
+                    var contents = GetFileContentsDelegate.Invoke(filename);
+                    return contents.Split('\n');
+                }
+
                 string[] lines = File.ReadAllLines(filename);
                 return lines;
             }
@@ -809,34 +853,84 @@ namespace SplitAndMerge
             {
                 --i;
             }
-            byte[] newArray = new byte[i + 1];
-            Array.Copy(array, newArray, i + 1);
+            //int size = (int)(Math.Ceiling(i / 4.0) * 4.0);
+            int size = i + 1;
+            byte[] newArray = new byte[size];
+            Array.Copy(array, newArray, size);
             return newArray;
         }
 
 
-        static string pass = "mi_900.";
-        static string keySalt = "poo12.";
-        static string ivSalt = "puu14T";
+        internal static string Pass { get; set; } = "mi_900.";
+        internal static string KeySalt { get; set; } = "poo12.";
+        internal static string IvSalt { get; set; } = "puu14T";
 
         static public string EncryptString(string plainText, string password = "")
         {
-            var byteArray =  EncryptStringToBytes(plainText, password);
+            if (password == "plain")
+            {
+                return plainText;
+            }
+            if (string.IsNullOrEmpty(plainText))
+            {
+                return "";
+            }
+            var byteArray = EncryptStringToBytes(plainText, password);
             var encoded = Convert.ToBase64String(byteArray);
             return encoded;
         }
 
         static public string DecryptString(string encrypted, string password = "")
         {
-            var byteArray = Convert.FromBase64String(encrypted);
-            var decrypted = DecryptStringFromBytes(byteArray, password);
-            return decrypted;
+            if (password == "plain")
+            {
+                return encrypted;
+            }
+            if (string.IsNullOrWhiteSpace(encrypted) || encrypted.Length <= 8 ||
+                encrypted.Contains(" "))
+            {
+                return encrypted;
+            }
+            try
+            {
+                var byteArray = Convert.FromBase64String(encrypted);
+                string decrypted = encrypted;
+
+                var t = Task.Run(() => {
+                    decrypted = DecryptStringFromBytes(byteArray, password);
+                });
+                //await Task.WhenAny();
+                bool completed = t.Wait(4000);
+
+                return decrypted;
+            }
+            catch (Exception exc)
+            {
+                return encrypted;
+            }
+        }
+
+        public static bool CheckIfDecrypted(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return true;
+            }
+            for (int i = 0; i < text.Length; i++)
+            {
+                var ch = (int)text[i];
+                if (ch == 65533)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         static public byte[] EncryptStringToBytes(string plainText, string password = "")
         {
-            string keyStr = keySalt + pass + password;
-            string saltStr = ivSalt + pass + password;
+            string keyStr = KeySalt + Pass + password;
+            string saltStr = IvSalt + Pass + password;
 
             byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
             byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();
@@ -847,8 +941,8 @@ namespace SplitAndMerge
 
         static public string DecryptStringFromBytes(byte[] cipherText, string password = "")
         {
-            string keyStr = keySalt + pass + password;
-            string saltStr = ivSalt + pass + password;
+            string keyStr = KeySalt + Pass + password;
+            string saltStr = IvSalt + Pass + password;
 
             byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
             byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();
@@ -943,10 +1037,10 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                plaintext = Encoding.Unicode.GetString(cipherText, 0, cipherText.Length).Trim();
+                plaintext = Encoding.Unicode.GetString(cipherText, 0, Math.Min(cipherText.Length, 255)).Trim();
             }
 
-            return plaintext;
+            return plaintext.Trim();
         }
     }
 }
