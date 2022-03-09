@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -825,7 +826,7 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = SetReflectedProperty(propName, value);
             if (reflectedProp != null)
-                return reflectedProp;            
+                return reflectedProp;
             Variable result = Variable.EmptyInstance;
 
             // Check for an existing custom setter
@@ -995,7 +996,7 @@ namespace SplitAndMerge
             else
                 t = Object.GetType();
 
-            bf |= BindingFlags.Public;
+            bf |= BindingFlags.Public | BindingFlags.SetProperty;
 
             var properties = t.GetProperties(bf);
             if (properties != null)
@@ -1031,7 +1032,7 @@ namespace SplitAndMerge
 
             bf |= BindingFlags.Public;
 
-            var properties = t.GetProperties(bf);
+            var properties = t.GetProperties(bf | BindingFlags.GetProperty);
             if (properties != null)
             {
                 foreach (var property in properties)
@@ -1068,7 +1069,7 @@ namespace SplitAndMerge
                                 bestMethod = method;
                                 if (pConv.BestConversion == ParameterConverter.Conversion.Exact)
                                     break;
-                            }    
+                            }
                         }
                     }
 
@@ -1164,6 +1165,15 @@ namespace SplitAndMerge
                     {
                         return Enum.Parse(conversionType, (string)value, true);
                     }
+
+                    IList genericList = ConvertToGenericList(value, conversionType);
+                    if (genericList != null)
+                    {
+                        AddToGenericList(genericList, value);
+                        // Do we need to call ChangeType on this again to convert it? It seems to work without that.
+                        return genericList;
+                    }
+
                     return Convert.ChangeType(value, conversionType);
                 }
                 catch (InvalidCastException)
@@ -1178,6 +1188,43 @@ namespace SplitAndMerge
                 conversion = Conversion.Mismatch;
                 return value;
             }
+
+            private static IList ConvertToGenericList(object value, Type conversionType)
+            {
+                // 1) Check if both types are generic and have 1 parameter
+                Type valueType = value.GetType();
+                if (!valueType.IsGenericType || !conversionType.IsGenericType)
+                    return null;
+                if (valueType.GenericTypeArguments.Length != 1 || conversionType.GenericTypeArguments.Length != 1)
+                    return null;
+
+                // 2) Check if both types support IEnumerable
+                Type iEnumerableType = typeof(IEnumerable);
+                if (!iEnumerableType.IsAssignableFrom(valueType) || !iEnumerableType.IsAssignableFrom(conversionType))
+                    return null;
+
+                // 3) Create an instance of the target type
+                Type emptyGenericListType = typeof(List<>);
+                Type genericListType = emptyGenericListType.MakeGenericType(conversionType.GenericTypeArguments);
+                object genericList = Activator.CreateInstance(genericListType);
+
+                return genericList as IList;
+            }
+
+            private static void AddToGenericList(IList genericList, object value)
+            {
+                Type genericListType = genericList.GetType();
+                if (genericListType.GenericTypeArguments.Length != 1)
+                    return;         // TODO: Throw an exception?
+                Type itemType = genericListType.GenericTypeArguments[0];
+
+                if (value is IEnumerable enumValue)
+                {
+                    foreach (object item in enumValue)
+                        genericList.Add(ChangeType(item, itemType));
+                }
+            }
+
         }
 
         public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)
@@ -1265,7 +1312,7 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = GetReflectedProperty(propName, script);
             if (reflectedProp != null)
-                return reflectedProp;            
+                return reflectedProp;
             Variable result = Variable.EmptyInstance;
 
             if (m_propertyMap.TryGetValue(propName, out result) ||
