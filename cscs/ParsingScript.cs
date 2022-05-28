@@ -588,6 +588,17 @@ namespace SplitAndMerge
                 GoToNextStatement();
             }
         }
+        public Variable ExecuteScript()
+        {
+            Variable result = null;
+            while (StillValid() &&
+                  (result == null || !result.IsReturn))
+            {
+                result = Execute();
+                GoToNextStatement();
+            }
+            return result;
+        }
 
         public ParsingScript GetTempScript(string str, int startIndex = 0)
         {

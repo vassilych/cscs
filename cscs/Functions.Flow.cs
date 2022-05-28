@@ -377,7 +377,7 @@ namespace SplitAndMerge
 
             string functionName = args[0].AsString();
 
-            CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
+            CustomFunction custFunc = ParserFunction.GetFunction(functionName) as CustomFunction;
             Utils.CheckNotNull(functionName, custFunc, script);
 
 #if __ANDROID__ == false && __IOS__ == false
@@ -540,6 +540,17 @@ namespace SplitAndMerge
             return theClass;
         }
 
+        public static List<Variable> GetClassProperties(CSCSClass cscsClass)
+        {
+            var props = new List<Variable>();
+            foreach(var prop in cscsClass.m_classProperties)
+            {
+                props.Add(new Variable(prop.Key));
+            }
+
+            return props;
+        }
+
         static Dictionary<string, CSCSClass> s_allClasses =
             new Dictionary<string, CSCSClass>();
 
@@ -557,10 +568,10 @@ namespace SplitAndMerge
 
         public class ClassInstance : ScriptObject
         {
-            public ClassInstance(string instanceName, string className, List<Variable> args,
-                                 ParsingScript script = null)
+            public ClassInstance(string instanceName, string className,
+                List<Variable> args = null, ParsingScript script = null)
             {
-                InstanceName = instanceName;
+                InstanceName = instanceName.ToLower();
                 m_cscsClass = CSCSClass.GetClass(className);
                 if (m_cscsClass == null)
                 {
@@ -574,17 +585,22 @@ namespace SplitAndMerge
                 }
 
                 // Run "constructor" if any is defined for this number of args.
-                CustomFunction constructor = null;
-                if (m_cscsClass.m_constructors.TryGetValue(args.Count, out constructor))
+                if (args != null &&
+                    m_cscsClass.m_constructors.TryGetValue(args.Count, out CustomFunction constructor))
                 {
                     constructor.Run(args, script, this);
                 }
+
+                s_classInstances[InstanceName] = this;
             }
 
             public string InstanceName { get; set; }
             CSCSClass m_cscsClass;
 
             Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
+            static Dictionary<string, ClassInstance> s_classInstances =
+                    new Dictionary<string, ClassInstance>();
+
             HashSet<string> m_propSet = new HashSet<string>();
             HashSet<string> m_propSetLower = new HashSet<string>();
 
@@ -594,18 +610,72 @@ namespace SplitAndMerge
                 if (!m_cscsClass.m_customFunctions.TryGetValue(Constants.PROP_TO_STRING.ToLower(),
                      out customFunction))
                 {
-                    return m_cscsClass.Name + "." + InstanceName;
+                    int counter = 0;
+                    var props = m_cscsClass.m_classProperties;
+                    StringBuilder sb = new StringBuilder(m_cscsClass.Name + "." + InstanceName + "[");
+                    foreach (var entry in m_properties)
+                    {
+                        sb.Append(entry.Key + "=" + entry.Value);
+                        if (++counter < m_properties.Count)
+                        {
+                            sb.Append(",");
+                        }
+                    }
+                    sb.Append("]");
+                    return sb.ToString();
                 }
 
                 Variable result = customFunction.Run(null, null, this); 
                 return result.ToString();
             }
 
+            public static bool AssignIfClass(Variable oldVar, Variable newVar)
+            {
+                var classObj = oldVar.Object as ClassInstance;
+                if (classObj == null ||
+                    !s_classInstances.TryGetValue(classObj.InstanceName, out ClassInstance cscsObj))
+                {
+                    return false;
+                }
+                if (string.Compare(classObj.InstanceName, newVar.ParamName,
+                    StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    return false;
+                }
+                s_classInstances[newVar.ParamName.ToLower()] = cscsObj;
+                return true;
+            }
+
+            public static string MarshalInstance(string varName)
+            {
+                if (!s_classInstances.TryGetValue(varName, out CSCSClass.ClassInstance cscsObj))
+                {
+                    return null;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.Append("<" + cscsObj.InstanceName + ":class:" + cscsObj.m_cscsClass.Name + ">");
+                var props = CSCSClass.GetClassProperties(cscsObj.m_cscsClass);
+
+                foreach (var prop in props)
+                {
+                    var propName = prop.String.ToLower();
+                    var propVal = cscsObj.GetProperty(propName).Result;
+                    if (propVal == null)
+                    {
+                        continue;
+                    }
+                    sb.Append(propVal.Marshal(propName));
+                }
+                return sb.ToString();
+            }
+
             public Task<Variable> SetProperty(string name, Variable value)
             {
-                m_properties[name] = value;
+                var namelower = name.ToLower();
+                m_properties[namelower] = value;
                 m_propSet.Add(name);
-                m_propSetLower.Add(name.ToLower());
+                m_propSetLower.Add(namelower);
                 return Task.FromResult( Variable.EmptyInstance );
             }
 
@@ -797,11 +867,13 @@ namespace SplitAndMerge
             CSCSClass.ClassInstance instance = new
                 CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
-            return new Variable(instance);
-        }
+            var newObject = new Variable(instance);
+            newObject.ParamName = instance.InstanceName;
+            return newObject;
+       }
 
        private object CreateReflectedObj(Type t, List<Variable> args)
-        {
+       {
             var constructors = t.GetConstructors(BindingFlags.Public);
             if (constructors == null)
                 return null;
@@ -850,7 +922,9 @@ namespace SplitAndMerge
             CSCSClass.ClassInstance instance = new
                 CSCSClass.ClassInstance(script.CurrentAssign, className, args, script);
 
-            return new Variable(instance);
+            var newObject = new Variable(instance);
+            newObject.ParamName = instance.InstanceName;
+            return newObject;
         }
     }
 
@@ -858,7 +932,7 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            string className = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            string className = Utils.GetToken(script);
             className = Constants.ConvertName(className);
             string[] baseClasses = Utils.GetBaseClasses(script);
             CSCSClass newClass = new CSCSClass(className, baseClasses);
@@ -875,10 +949,11 @@ namespace SplitAndMerge
 
             string body = Utils.ConvertToScript(scriptExpr, out _);
 
-            Variable result = null;
             ParsingScript tempScript = script.GetTempScript(body);
             tempScript.CurrentClass = newClass;
             tempScript.DisableBreakpoints = true;
+            var result = tempScript.ExecuteScript();
+            return result; ;
 
             // Uncomment if want to step into the class creation code when the debugger is attached (unlikely)
             /*Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
@@ -886,15 +961,6 @@ namespace SplitAndMerge
             {
                 result = debugger.StepInFunctionIfNeeded(tempScript);
             }*/
-
-            while (tempScript.Pointer < body.Length - 1 &&
-                  (result == null || !result.IsReturn))
-            {
-                result = tempScript.Execute();
-                tempScript.GoToNextStatement();
-            }
-
-            return Variable.EmptyInstance;
         }
     }
 
@@ -1083,7 +1149,7 @@ namespace SplitAndMerge
             for (int i = m_args.Length; i < args.Count; i++)
             {
                 var arg = new GetVarFunction(args[i]);
-                m_stackLevel.Variables[args[i].ParamName] = arg;
+                m_stackLevel.Variables[args[i].ParamName.ToLower()] = arg;
             }
 
             if (NamespaceData  != null)
@@ -1222,7 +1288,7 @@ namespace SplitAndMerge
         public static Task<Variable> Run(string functionName,
              Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
         {
-            CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
+            CustomFunction customFunction = ParserFunction.GetFunction(functionName) as CustomFunction;
 
             if (customFunction == null)
             {
@@ -1250,7 +1316,7 @@ namespace SplitAndMerge
         public static async Task<Variable> RunAsync(string functionName,
              Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
         {
-            CustomFunction customFunction = ParserFunction.GetFunction(functionName, null) as CustomFunction;
+            CustomFunction customFunction = ParserFunction.GetFunction(functionName) as CustomFunction;
 
             if (customFunction == null)
             {
@@ -1806,6 +1872,10 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
+            if (script == null)
+            {
+                return m_value;
+            }
             // First check if this element is part of an array:
             if (script.TryPrev() == Constants.START_ARRAY)
             {
@@ -1861,6 +1931,10 @@ namespace SplitAndMerge
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
+            if (script == null)
+            {
+                return m_value;
+            }
             // First check if this element is part of an array:
             if (script.TryPrev() == Constants.START_ARRAY)
             {
@@ -2198,7 +2272,7 @@ namespace SplitAndMerge
             if (arrayIndices.Count == 0)
             {
                 ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(varValue), script, localIfPossible);
-                Variable retVar = varValue.DeepClone();
+                Variable retVar = varValue.DeepClone(m_name);
                 retVar.CurrentAssign = m_name;
                 return retVar;
             }
@@ -2252,7 +2326,7 @@ namespace SplitAndMerge
             if (arrayIndices.Count == 0)
             {
                 ParserFunction.AddGlobalOrLocalVariable(m_name, new GetVarFunction(varValue), script, localIfPossible);
-                Variable retVar = varValue.DeepClone();
+                Variable retVar = varValue.DeepClone(m_name);
                 retVar.CurrentAssign = m_name;
                 return retVar;
             }
@@ -2779,12 +2853,117 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            List<Variable> args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name, true);
+            //List<Variable> args = script.GetFunctionArgs();
+            //Utils.CheckArgs(args.Count, 1, m_name, true);
+            string className = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+            className = Constants.ConvertName(className);
 
-            Variable baseValue = args[0];
+            var cscsClass = CSCSClass.GetClass(className);
+            if (cscsClass != null)
+            {
+                var result = CSCSClass.GetClassProperties(cscsClass);
+                return new Variable(result);
+            }
+
+            var pf = ParserFunction.GetVariable(className, script);
+            if (pf == null)
+            {
+                return Variable.EmptyInstance;
+            }
+
+            Variable baseValue = pf.GetValue(script);
             List<Variable> props = baseValue.GetProperties();
             return new Variable(props);
+        }
+    }
+
+    class MarshalFunction : ParserFunction, IArrayFunction
+    {
+        bool m_marshal;
+        public MarshalFunction(bool marshal = true)
+        {
+            m_marshal = marshal;
+        }
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            var obj = Utils.GetSafeVariable(args, 0);
+            string objName = obj.ParsingToken;
+            objName = Constants.ConvertName(objName);
+
+            if (!m_marshal)
+            {                
+                Variable result = Unmarshal(obj.String);
+                return result;
+            }
+
+            var cscsClass = Marshal(objName, script);
+            if (string.IsNullOrWhiteSpace(cscsClass))
+            {
+                return Variable.EmptyInstance;
+            }
+            return new Variable(cscsClass);
+        }
+
+        public static string Marshal(string varName, ParsingScript script = null)
+        {
+            var classInstance = CSCSClass.ClassInstance.MarshalInstance(varName);
+            if (classInstance != null)
+            {
+                return classInstance;
+            }
+
+            ParserFunction func = ParserFunction.GetVariable(varName);
+            Variable currentValue = func != null ? func.GetValue(script) : new Variable(varName);
+            varName = func == null ? "" : varName;
+            var result = currentValue.Marshal(varName);
+
+            return result;
+        }
+
+        public static Variable Unmarshal(string source)
+        {
+            Variable result = Variable.EmptyInstance;
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return result;
+            }
+            int pointer = 0;
+            string instanceName = Utils.GetNextToken(source, ref pointer, ':');
+            var type = Utils.GetNextToken(source, ref pointer, ':');
+
+            if (type == "class")
+            {
+                var className = Utils.GetNextToken(source, ref pointer, ':');
+                var cscsClass = CSCSClass.GetClass(className);
+                if (cscsClass == null)
+                {
+                    throw new ArgumentException("Class [" + className + "] not found.");
+                }
+
+                var args = new List<Variable>();
+                var classInstance = new CSCSClass.ClassInstance(instanceName, className, args);
+                while (pointer < source.Length)
+                {
+                    var propName = Utils.GetNextToken(source, ref pointer, ':');
+                    var propType = Utils.GetNextToken(source, ref pointer, ':');
+                    var propValue = Variable.Unmarshal(propType, source, ref pointer);
+                    classInstance.SetProperty(propName, propValue);
+                }
+                result = new Variable(classInstance);
+            }
+            else
+            {
+                result = Variable.Unmarshal(type, source, ref pointer);
+            }
+            if (!string.IsNullOrWhiteSpace(instanceName))
+            {
+                ParserFunction.AddGlobalOrLocalVariable(instanceName,
+                                        new GetVarFunction(result));
+            }
+
+            return result;
         }
     }
 

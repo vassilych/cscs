@@ -288,7 +288,7 @@ namespace SplitAndMerge
 
         public static bool ExtractParameterNames(List<Variable> args, string functionName, ParsingScript script)
         {
-            CustomFunction custFunc = ParserFunction.GetFunction(functionName, script) as CustomFunction;
+            CustomFunction custFunc = ParserFunction.GetFunction(functionName) as CustomFunction;
             if (custFunc == null)
             {
                 return false;

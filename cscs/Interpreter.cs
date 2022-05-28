@@ -124,6 +124,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
             ParserFunction.RegisterFunction(Constants.GET_PROPERTY, new GetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.INCLUDE, new IncludeFile());
+            ParserFunction.RegisterFunction(Constants.MARSHAL, new MarshalFunction(true));
             ParserFunction.RegisterFunction(Constants.QUIT, new QuitFunction());
             ParserFunction.RegisterFunction(Constants.SET_PROPERTY, new SetPropertyFunction());
             ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
@@ -134,6 +135,7 @@ namespace SplitAndMerge
             ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
             ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
             ParserFunction.RegisterFunction(Constants.UNDEFINED, new UndefinedFunction());
+            ParserFunction.RegisterFunction(Constants.UNMARSHAL, new MarshalFunction(false));
 
             ParserFunction.RegisterFunction(Constants.ADD, new AddFunction());
             ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());

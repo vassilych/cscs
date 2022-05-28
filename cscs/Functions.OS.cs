@@ -823,9 +823,9 @@ namespace SplitAndMerge
                 throw new ArgumentException("Unknown web request method: " + method);
             }
 
-            await ProcessWebRequestAsync(uri, method, load, onSuccess, onFailure, tracking, contentType, headers, timeoutMs, justFire);
-
-            return Variable.EmptyInstance;
+            var result = await ProcessWebRequestAsync(uri, method, load, onSuccess, onFailure,
+                               tracking, contentType, headers, timeoutMs, justFire);
+            return result;
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -848,17 +848,23 @@ namespace SplitAndMerge
                 throw new ArgumentException("Unknown web request method: " + method);
             }
 
-            Task.Run(() => ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking,
-                                             contentType, headers));
-
-            return Variable.EmptyInstance;
+            if (justFire)
+            {
+                Task.Run(() => ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking,
+                                                 contentType, headers));
+                return Variable.EmptyInstance;
+            }
+            var res = ProcessWebRequest(uri, method, load, onSuccess, onFailure, tracking,
+                                                 contentType, headers);
+            return res;
         }
 
-        static void ProcessWebRequest(string uri, string method, string load,
+        static Variable ProcessWebRequest(string uri, string method, string load,
                                             string onSuccess, string onFailure,
                                             string tracking, string contentType,
                                             Variable headers)
         {
+            Variable res = Variable.EmptyInstance;
             try
             {
                 WebRequest request = WebRequest.CreateHttp(uri);
@@ -892,17 +898,25 @@ namespace SplitAndMerge
                     result = sr.ReadToEnd();
                 }
                 string responseCode = resp == null ? "" : resp.StatusCode.ToString();
-                CustomFunction.Run(onSuccess, new Variable(tracking),
-                                   new Variable(responseCode), new Variable(result));
+                res = new Variable(result);
+                if (!string.IsNullOrWhiteSpace(onSuccess))
+                {
+                    CustomFunction.Run(onSuccess, new Variable(tracking), new Variable(responseCode), res);
+                }
             }
             catch (Exception exc)
             {
-                CustomFunction.Run(onFailure, new Variable(tracking),
-                                   new Variable(""), new Variable(exc.Message));
+                res = new Variable(exc.Message);
+                if (!string.IsNullOrWhiteSpace(onFailure))
+                {
+                    CustomFunction.Run(onFailure, new Variable(tracking),
+                                       new Variable(""), res);
+                }
             }
+            return res;
         }
 
-        static async Task ProcessWebRequestAsync(string uri, string method, string load,
+        static async Task<Variable> ProcessWebRequestAsync(string uri, string method, string load,
                                             string onSuccess, string onFailure,
                                             string tracking, string contentType,
                                             Variable headers, int timeout,
@@ -936,22 +950,27 @@ namespace SplitAndMerge
                 }
 
                 Task<WebResponse> task = request.GetResponseAsync();
-                Task finishTask = FinishRequest(onSuccess, onFailure,
+                var finishTask = FinishRequest(onSuccess, onFailure,
                                                 tracking, task, timeout);
                 if (justFire)
                 {
-                    return;
+                    return Variable.EmptyInstance;
                 }
-                await finishTask;
+                var result = await finishTask;
+                return result;
             }
             catch (Exception exc)
             {
-                await CustomFunction.RunAsync(onFailure, new Variable(tracking),
-                                              new Variable(""), new Variable(exc.Message));
+                if (!string.IsNullOrWhiteSpace(onFailure))
+                {
+                    await CustomFunction.RunAsync(onFailure, new Variable(tracking),
+                                                  new Variable(""), new Variable(exc.Message));
+                }
+                return new Variable(exc.Message);
             }
         }
 
-        static async Task FinishRequest(string onSuccess, string onFailure,
+        static async Task<Variable> FinishRequest(string onSuccess, string onFailure,
                                         string tracking, Task<WebResponse> responseTask,
                                         int timeoutMs)
         {
@@ -986,9 +1005,15 @@ namespace SplitAndMerge
                 method = onFailure;
             }
 
+            var res = new Variable(result);
+
             string responseCode = response == null ? "" : response.StatusCode.ToString();
-            await CustomFunction.RunAsync(method, new Variable(tracking),
-                                          new Variable(responseCode), new Variable(result));
+            if (!string.IsNullOrWhiteSpace(method))
+            {
+                await CustomFunction.RunAsync(method, new Variable(tracking),
+                                              new Variable(responseCode), res);
+            }
+            return res;
         }
     }
 

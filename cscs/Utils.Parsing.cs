@@ -126,8 +126,12 @@ namespace SplitAndMerge
             return result;
         }
 
-        public static string GetToken(ParsingScript script, char[] to, bool eatLast = false)
+        public static string GetToken(ParsingScript script, char[] to = null, bool eatLast = false)
         {
+            if (to == null)
+            {
+                to = Constants.TOKEN_SEPARATION;
+            }
             char curr = script.TryCurrent();
             char prev = script.TryPrev();
 
@@ -778,6 +782,58 @@ namespace SplitAndMerge
                 return true;
             }
             return EndsWithFunction(str, Constants.FUNCT_WITH_SPACE_ONCE);
+        }
+
+        public static string GetNextToken(string source, ref int pointer, char sep ='\0',
+            char open = '<', char close = '>')
+        {
+            if (source.Length <= pointer)
+            {
+                return "";
+            }
+            if (source[pointer] == open)
+            {
+                pointer++;
+            }
+            StringBuilder sb = new StringBuilder(source.Length);
+            List<string> args = new List<string>();
+
+            bool inQuotes = false;
+            char prev = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
+            int brackets = 0;
+
+            while (pointer < source.Length)
+            {
+                char ch = source[pointer++];
+                if (sep != '\0' && ch == sep)
+                {
+                    break;
+                }
+                else if (ch == '"')
+                {
+                    if (prev != '\\' || prevprev == '\\')
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (ch == open)
+                {
+                    if (!inQuotes) brackets++;
+                }
+                else if (ch == close)
+                {
+                    if (!inQuotes) brackets--;
+                }
+                if (brackets < 0)
+                {
+                    break;
+                }
+                sb.Append(ch);
+                prevprev = prev;
+                prev = ch;
+            }
+            return sb.ToString();
         }
 
         public static List<string> GetCompiledArgs(string source)

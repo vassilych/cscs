@@ -116,9 +116,18 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            Variable portRes = Utils.GetItem(script);
-            Utils.CheckPosInt(portRes, script);
-            int port = (int)portRes.Value;
+            List<Variable> args = script.GetFunctionArgs();
+
+            Utils.CheckArgs(args.Count, 2, Constants.CONNECTSRV);
+            Utils.CheckPosInt(args[1], script);
+
+            string functionToRun = Utils.GetSafeString(args, 0);
+            int port = Utils.GetSafeInt(args, 1);
+
+            var customFunction = GetFunction(functionToRun) as CustomFunction;
+            Utils.CheckNotNull(customFunction, functionToRun, script);
+
+            Interpreter.Instance.AppendOutput("Starting server with function " + functionToRun, true);
 
             try
             {
@@ -138,18 +147,22 @@ namespace SplitAndMerge
                     Interpreter.Instance.AppendOutput("Waiting for connections on " + port + " ...", true);
                     handler = listener.Accept();
 
-                    // Data buffer for incoming data.
-                    byte[] bytes = new byte[1024];
-                    int bytesRec = handler.Receive(bytes);
-                    string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
+                    var request = ReceiveMessage(handler);
+                    SendMessage(handler, "OK");
+                    var load = ReceiveMessage(handler);
+                    var objReceived = MarshalFunction.Unmarshal(load);
 
-                    Interpreter.Instance.AppendOutput("Received from " + handler.RemoteEndPoint.ToString() +
-                      ": [" + received + "]", true);
+                    var funcArgs = new List<Variable>() { new Variable(request), objReceived };
+                    var retValue = customFunction.Run(funcArgs, script);
+                    var classInst = retValue.Object as CSCSClass.ClassInstance;
+                    var objName = classInst != null && !string.IsNullOrWhiteSpace(classInst.InstanceName) ?
+                        classInst.InstanceName : retValue.ParamName;
+                    var retLoad = string.IsNullOrWhiteSpace(objName) ?
+                        retValue.Marshal("") : MarshalFunction.Marshal(objName);
+                    SendMessage(handler, retLoad);
 
-                    byte[] msg = Encoding.UTF8.GetBytes(received);
-                    handler.Send(msg);
-
-                    if (received.Contains("<EOF>"))
+                    Interpreter.Instance.AppendOutput("Finished processing client: [" + retValue.AsString() + "]", true);
+                    if (request.Contains("<EOF>"))
                     {
                         break;
                     }
@@ -159,6 +172,7 @@ namespace SplitAndMerge
                 {
                     handler.Shutdown(SocketShutdown.Both);
                     handler.Close();
+                    listener.Close();
                 }
             }
             catch (Exception exc)
@@ -168,6 +182,43 @@ namespace SplitAndMerge
 
             return Variable.EmptyInstance;
         }
+
+        public static string ReceiveMessage(Socket handler)
+        {
+            var bytes = new byte[128];
+            int bytesRec = handler.Receive(bytes);
+            string dataSize = Encoding.UTF8.GetString(bytes, 0, bytesRec);
+            if (!int.TryParse(dataSize, out int size) || size < 1)
+            {
+                Interpreter.Instance.AppendOutput("Received no valid data size: [" +
+                    dataSize + "]", true);
+                return "";
+            }
+
+            var msg = Encoding.UTF8.GetBytes("OK");
+            handler.Send(msg);
+
+            bytes = new byte[size];
+            bytesRec = handler.Receive(bytes);
+            string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
+
+            Interpreter.Instance.AppendOutput("Received from " + handler.RemoteEndPoint.ToString() +
+              ": [" + received + "]", true);
+            return received;
+        }
+
+        public static void SendMessage(Socket handler, string msgToSend)
+        {
+            var len = msgToSend.Length + 1;
+            var msg = Encoding.UTF8.GetBytes("" + len);
+            handler.Send(msg);
+
+            var bytes = new byte[128];
+            int bytesRec = handler.Receive(bytes, bytes.Length, SocketFlags.None);
+
+            msg = Encoding.UTF8.GetBytes(msgToSend);
+            handler.Send(msg);
+        }
     }
 
     // Starts running an "echo" client
@@ -175,26 +226,41 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            // Data buffer for incoming data.
-            byte[] bytes = new byte[1024];
-
             List<Variable> args = script.GetFunctionArgs();
 
             Utils.CheckArgs(args.Count, 3, Constants.CONNECTSRV);
-            Utils.CheckPosInt(args[1], script);
+            Utils.CheckPosInt(args[2], script);
 
-            string hostname = args[0].String;
-            int port = (int)args[1].Value;
-            string msgToSend = args[2].String;
+            string request = Utils.GetSafeString(args, 0);
+            string load = Utils.GetSafeString(args, 1);
+            int port = Utils.GetSafeInt(args, 2);
+            string host = Utils.GetSafeString(args, 3);
 
-            if (string.IsNullOrWhiteSpace(hostname) || hostname.Equals("localhost"))
+            var objName = string.IsNullOrWhiteSpace(args[1].ParamName) ? load :
+                                 args[1].ParamName;
+
+            string retValue = SendToServer(request, objName, port, host);
+            var retObj = MarshalFunction.Unmarshal(retValue);
+            return retObj;
+        }
+
+        public string SendToServer(string request, string load, int port, string host = "localhost")
+        {
+            // Data buffer for incoming data.
+            byte[] bytes = new byte[1024];
+            Utils.CheckNotEmpty(request, "request");
+            Utils.CheckNotEmpty(load, "load");
+            var objLoad = MarshalFunction.Marshal(load);
+
+            if (string.IsNullOrWhiteSpace(host) || host.Equals("localhost"))
             {
-                hostname = Dns.GetHostName();
+                host = Dns.GetHostName();
             }
 
+            string retValue = "";
             try
             {
-                IPHostEntry ipHostInfo = Dns.GetHostEntry(hostname);
+                IPHostEntry ipHostInfo = Dns.GetHostEntry(host);
                 IPAddress ipAddress = ipHostInfo.AddressList[0];
                 IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
 
@@ -206,12 +272,10 @@ namespace SplitAndMerge
 
                 Interpreter.Instance.AppendOutput("Connected to [" + sender.RemoteEndPoint.ToString() + "]", true);
 
-                byte[] msg = Encoding.UTF8.GetBytes(msgToSend);
-                sender.Send(msg);
-
-                // Receive the response from the remote device.
-                int bytesRec = sender.Receive(bytes);
-                string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
+                ServerSocket.SendMessage(sender, request);
+                ServerSocket.ReceiveMessage(sender);
+                ServerSocket.SendMessage(sender, objLoad);
+                retValue = ServerSocket.ReceiveMessage(sender);
 
                 sender.Shutdown(SocketShutdown.Both);
                 sender.Close();
@@ -222,7 +286,7 @@ namespace SplitAndMerge
                 throw new ArgumentException("Couldn't connect to server: (" + exc.Message + ")");
             }
 
-            return Variable.EmptyInstance;
+            return retValue;
         }
     }
 

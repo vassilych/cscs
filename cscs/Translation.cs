@@ -224,7 +224,7 @@ namespace SplitAndMerge
                 throw new ArgumentException("Translation of [" + translation + "] contains white spaces");
             }
 
-            ParserFunction origFunction = ParserFunction.GetFunction(origName, null);
+            ParserFunction origFunction = ParserFunction.GetFunction(origName);
             Utils.CheckNotNull(origName, origFunction, null);
             ParserFunction.RegisterFunction(translation, origFunction);
 
@@ -327,7 +327,7 @@ namespace SplitAndMerge
                     string translation = string.Empty;
                     if (toLang == Constants.ENGLISH)
                     {
-                        ParserFunction func = ParserFunction.GetFunction(token, parentScript);
+                        ParserFunction func = ParserFunction.GetFunction(token);
                         if (func != null)
                         {
                             translation = func.Name;

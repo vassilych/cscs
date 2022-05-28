@@ -453,7 +453,7 @@ namespace SplitAndMerge
                 if (item.Length > 0)
                 {
                     string token = item.ToString();
-                    ParserFunction func = ParserFunction.GetFunction(token, parentSript);
+                    ParserFunction func = ParserFunction.GetFunction(token);
                     bool isNative = Translation.IsNativeWord(token);
                     if (func != null || isNative)
                     {
@@ -479,7 +479,7 @@ namespace SplitAndMerge
             ParsingScript argScript = new ParsingScript(adjArgs);
             List<Variable> args = argScript.GetFunctionArgs();
 
-            ParserFunction function = ParserFunction.GetFunction(functionName, null);
+            ParserFunction function = ParserFunction.GetFunction(functionName);
             if (function is CustomCompiledFunction)
             {
                 CustomCompiledFunction customFunction = function as CustomCompiledFunction;

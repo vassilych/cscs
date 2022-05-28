@@ -102,6 +102,7 @@ namespace SplitAndMerge
         public const string GET_KEYS = "GetKeys";
         public const string HELP = "help";
         public const string LOCK = "lock";
+        public const string MARSHAL = "marshal";
         public const string NAME_EXISTS = "NameExists";
         public const string NAMESPACE = "Namespace";
         public const string NOW = "Now";
@@ -148,6 +149,7 @@ namespace SplitAndMerge
         public const string TO_INTEGER = "tointeger";
         public const string TO_NUMBER = "number";
         public const string TO_STRING = "string";
+        public const string UNMARSHAL = "unmarshal";
         public const string VAR = "var";
         public const string VARIABLE_TYPE = "VariableType";
         public const string WAIT = "wait";
@@ -332,7 +334,7 @@ namespace SplitAndMerge
                 return name;
             }
 
-            string lower = name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
+            string lower = name.ToLower();
             if (name == lower || CONTROL_FLOW.Contains(lower))
             { // Do not permit using key words with no case, like IF, For
                 return name;
@@ -349,9 +351,8 @@ namespace SplitAndMerge
 
         public static string GetRealName(string name)
         {
-            name = name.Trim();
-            string realName;
-            if (!s_realNames.TryGetValue(name, out realName))
+            name = name.Trim().ToLower();
+            if (!s_realNames.TryGetValue(name, out string realName))
             {
                 return name;
             }

@@ -165,7 +165,7 @@ namespace SplitAndMerge
 
             string prop = name.Substring(ind + 1);
 
-            ParserFunction pf = ParserFunction.GetFromNamespace(prop, baseName, script);
+            ParserFunction pf = ParserFunction.GetFromNamespace(prop, baseName);
             if (pf != null)
             {
                 return pf;
@@ -174,7 +174,7 @@ namespace SplitAndMerge
             pf = ParserFunction.GetVariable(baseName, script, true);
             if (pf == null || !(pf is GetVarFunction))
             {
-                pf = ParserFunction.GetFunction(baseName, script);
+                pf = ParserFunction.GetFunction(baseName);
                 if (pf == null)
                 {
                     pf = Utils.ExtractArrayElement(baseName);
@@ -240,13 +240,13 @@ namespace SplitAndMerge
             return true;
         }
 
-        public static ParserFunction GetFromNamespace(string name, ParsingScript script)
+        public static ParserFunction GetFromNamespace(string name)
         {
-            ParserFunction result = GetFromNamespace(name, s_namespace, script);
+            ParserFunction result = GetFromNamespace(name, s_namespace);
             return result;
         }
 
-        public static ParserFunction GetFromNamespace(string name, string nameSpace, ParsingScript script)
+        public static ParserFunction GetFromNamespace(string name, string nameSpace)
         {
             if (string.IsNullOrWhiteSpace(nameSpace))
             {
@@ -294,7 +294,7 @@ namespace SplitAndMerge
         {
             if (!force && script != null && script.TryPrev() == Constants.START_ARG)
             {
-                return GetFunction(name, script);
+                return GetFunction(name);
             }
             name = Constants.ConvertName(name);
             ParserFunction impl;
@@ -321,7 +321,7 @@ namespace SplitAndMerge
                 return impl.NewInstance();
             }
 
-            return GetFunction(name, script);
+            return GetFunction(name);
         }
 
         public static Variable GetVariableValue(string name, ParsingScript script = null)
@@ -351,7 +351,7 @@ namespace SplitAndMerge
             return null;
         }
 
-        public static ParserFunction GetFunction(string name, ParsingScript script)
+        public static ParserFunction GetFunction(string name)
         {
             name = Constants.ConvertName(name);
             ParserFunction impl;
@@ -362,7 +362,7 @@ namespace SplitAndMerge
                 return impl.NewInstance();
             }
 
-            return GetFromNamespace(name, script);
+            return GetFromNamespace(name);
         }
 
         public static void UpdateFunction(Variable variable)
@@ -986,9 +986,9 @@ namespace SplitAndMerge
         static Dictionary<string, Dictionary<string, ParserFunction>> s_localScope =
            new Dictionary<string, Dictionary<string, ParserFunction>>();
 
-        public static bool IsNumericFunction(string paramName, ParsingScript script = null)
+        public static bool IsNumericFunction(string paramName)
         {
-            ParserFunction function = ParserFunction.GetFunction(paramName, script);
+            ParserFunction function = ParserFunction.GetFunction(paramName);
             return function is INumericFunction;
         }
 

@@ -35,7 +35,7 @@ namespace SplitAndMerge
             string language = args[0].AsString();
             string funcName = args[1].AsString();
 
-            ParserFunction function = ParserFunction.GetFunction(funcName, script);
+            ParserFunction function = ParserFunction.GetFunction(funcName);
             CustomFunction custFunc = function as CustomFunction;
             Utils.CheckNotNull(funcName, custFunc, script);
 
