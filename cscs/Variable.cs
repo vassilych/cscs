@@ -1805,7 +1805,13 @@ namespace SplitAndMerge
         {
             if (Type == VarType.OBJECT && Object != null)
             {
-                return Object.GetType().ToString();
+                var result = Object.GetType().ToString();
+                var instance = Object as CSCSClass.ClassInstance;
+                if (instance != null)
+                {
+                    result += ": " + instance.CscsClass.OriginalName;
+                }
+                return result;
             }
             return Constants.TypeToString(Type);
         }

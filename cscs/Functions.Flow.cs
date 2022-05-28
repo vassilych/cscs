@@ -449,18 +449,18 @@ namespace SplitAndMerge
 
     public class CSCSClass : ParserFunction
     {
-        public CSCSClass() {}
+        public CSCSClass() { }
 
-        public CSCSClass(string className)
+        public CSCSClass(string className, string[] baseClasses = null)
         {
-            Name = className;
-            RegisterClass(className, this);
-        }
+            OriginalName = className;
+            Name = Constants.ConvertName(className);
+            RegisterClass(Name, this);
 
-        public CSCSClass(string className, string[] baseClasses)
-        {
-            Name = className;
-            RegisterClass(className, this);
+            if (baseClasses == null)
+            {
+                return;
+            }
 
             foreach (string baseClass in baseClasses)
             {
@@ -490,7 +490,6 @@ namespace SplitAndMerge
             }
 
             obj.Name = className;
-            className = Constants.ConvertName(className);
             s_allClasses[className] = obj;
         }
 
@@ -543,13 +542,15 @@ namespace SplitAndMerge
         public static List<Variable> GetClassProperties(CSCSClass cscsClass)
         {
             var props = new List<Variable>();
-            foreach(var prop in cscsClass.m_classProperties)
+            foreach (var prop in cscsClass.m_classProperties)
             {
                 props.Add(new Variable(prop.Key));
             }
 
             return props;
         }
+
+        public string OriginalName { get; set; }
 
         static Dictionary<string, CSCSClass> s_allClasses =
             new Dictionary<string, CSCSClass>();
@@ -572,21 +573,21 @@ namespace SplitAndMerge
                 List<Variable> args = null, ParsingScript script = null)
             {
                 InstanceName = instanceName.ToLower();
-                m_cscsClass = CSCSClass.GetClass(className);
-                if (m_cscsClass == null)
+                CscsClass = CSCSClass.GetClass(className);
+                if (CscsClass == null)
                 {
                     throw new ArgumentException("Class [" + className + "] not found.");
                 }
 
                 // Copy over all the properties defined for this class.
-                foreach (var entry in m_cscsClass.m_classProperties)
+                foreach (var entry in CscsClass.m_classProperties)
                 {
                     SetProperty(entry.Key, entry.Value);
                 }
 
                 // Run "constructor" if any is defined for this number of args.
                 if (args != null &&
-                    m_cscsClass.m_constructors.TryGetValue(args.Count, out CustomFunction constructor))
+                    CscsClass.m_constructors.TryGetValue(args.Count, out CustomFunction constructor))
                 {
                     constructor.Run(args, script, this);
                 }
@@ -595,7 +596,7 @@ namespace SplitAndMerge
             }
 
             public string InstanceName { get; set; }
-            CSCSClass m_cscsClass;
+            public CSCSClass CscsClass { get; set; }
 
             Dictionary<string, Variable> m_properties = new Dictionary<string, Variable>();
             static Dictionary<string, ClassInstance> s_classInstances =
@@ -607,12 +608,12 @@ namespace SplitAndMerge
             public override string ToString()
             {
                 CustomFunction customFunction = null;
-                if (!m_cscsClass.m_customFunctions.TryGetValue(Constants.PROP_TO_STRING.ToLower(),
+                if (!CscsClass.m_customFunctions.TryGetValue(Constants.PROP_TO_STRING.ToLower(),
                      out customFunction))
                 {
                     int counter = 0;
-                    var props = m_cscsClass.m_classProperties;
-                    StringBuilder sb = new StringBuilder(m_cscsClass.Name + "." + InstanceName + "[");
+                    var props = CscsClass.m_classProperties;
+                    StringBuilder sb = new StringBuilder(CscsClass.Name + "." + InstanceName + "[");
                     foreach (var entry in m_properties)
                     {
                         sb.Append(entry.Key + "=" + entry.Value);
@@ -654,8 +655,8 @@ namespace SplitAndMerge
                 }
 
                 StringBuilder sb = new StringBuilder();
-                sb.Append("<" + cscsObj.InstanceName + ":class:" + cscsObj.m_cscsClass.Name + ">");
-                var props = CSCSClass.GetClassProperties(cscsObj.m_cscsClass);
+                sb.Append("<" + cscsObj.InstanceName + ":class:" + cscsObj.CscsClass.Name + ">");
+                var props = CSCSClass.GetClassProperties(cscsObj.CscsClass);
 
                 foreach (var prop in props)
                 {
@@ -686,7 +687,7 @@ namespace SplitAndMerge
                     return value;
                 }
 
-                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
+                if (!CscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
                 {
                     return null;
                 }
@@ -695,7 +696,7 @@ namespace SplitAndMerge
                     return Variable.EmptyInstance;
                 }
 
-                foreach (var entry in m_cscsClass.m_classProperties)
+                foreach (var entry in CscsClass.m_classProperties)
                 {
                     args.Add(entry.Value);
                 }
@@ -717,7 +718,7 @@ namespace SplitAndMerge
             public List<string> GetProperties()
             {
                 List<string> props = new List<string>(m_properties.Keys);
-                props.AddRange(m_cscsClass.m_customFunctions.Keys);
+                props.AddRange(CscsClass.m_customFunctions.Keys);
 
                 return props;
             }
@@ -728,7 +729,7 @@ namespace SplitAndMerge
 
             public bool FunctionExists(string name)
             {
-                if (!m_cscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
+                if (!CscsClass.m_customFunctions.TryGetValue(name, out CustomFunction customFunction))
                 {
                     return false;
                 }
@@ -933,7 +934,6 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             string className = Utils.GetToken(script);
-            className = Constants.ConvertName(className);
             string[] baseClasses = Utils.GetBaseClasses(script);
             CSCSClass newClass = new CSCSClass(className, baseClasses);
 
