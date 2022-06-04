@@ -806,7 +806,7 @@ namespace SplitAndMerge
             while (pointer < source.Length)
             {
                 char ch = source[pointer++];
-                if (sep != '\0' && ch == sep)
+                if (sep != '\0' && ch == sep && !inQuotes)
                 {
                     break;
                 }

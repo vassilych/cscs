@@ -490,6 +490,7 @@ namespace SplitAndMerge
             }
 
             obj.Name = className;
+            className = Constants.ConvertName(className);
             s_allClasses[className] = obj;
         }
 
@@ -2898,12 +2899,12 @@ namespace SplitAndMerge
                 return result;
             }
 
-            var cscsClass = Marshal(objName, script);
-            if (string.IsNullOrWhiteSpace(cscsClass))
+            var cscsVar = Marshal(objName, script);
+            if (string.IsNullOrWhiteSpace(cscsVar))
             {
                 return Variable.EmptyInstance;
             }
-            return new Variable(cscsClass);
+            return new Variable(cscsVar);
         }
 
         public static string Marshal(string varName, ParsingScript script = null)
@@ -2956,11 +2957,6 @@ namespace SplitAndMerge
             else
             {
                 result = Variable.Unmarshal(type, source, ref pointer);
-            }
-            if (!string.IsNullOrWhiteSpace(instanceName))
-            {
-                ParserFunction.AddGlobalOrLocalVariable(instanceName,
-                                        new GetVarFunction(result));
             }
 
             return result;
