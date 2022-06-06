@@ -16,6 +16,10 @@ namespace SplitAndMerge
             ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR, BYTE_ARRAY, QUIT,
             BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME, CUSTOM, POINTER
         };
+        public enum OriginalType
+        {
+            NONE, UNDEFINED, INT, LONG, BOOL, DOUBLE, STRING, BYTE_ARRAY, ARRAY, DATE_TIME, OBJECT
+        };
 
         public Variable()
         {
@@ -32,30 +36,37 @@ namespace SplitAndMerge
         public Variable(double d)
         {
             Value = d;
+            Original = OriginalType.DOUBLE;
         }
         public Variable(long d)
         {
             Value = d;
+            Original = OriginalType.LONG;
         }
         public Variable(bool d)
         {
             Value = d ? 1.0 : 0.0;
+            Original = OriginalType.BOOL;
         }
         public Variable(string s)
         {
             String = s;
+            Original = OriginalType.STRING;
         }
         public Variable(DateTime dt)
         {
             DateTime = dt;
+            Original = OriginalType.DATE_TIME;
         }
         public Variable(byte[] ba)
         {
             ByteArray = ba;
+            Original = OriginalType.BYTE_ARRAY;
         }
         public Variable(List<Variable> a)
         {
             this.Tuple = a;
+            Original = OriginalType.ARRAY;
         }
         public Variable(List<string> a)
         {
@@ -65,6 +76,7 @@ namespace SplitAndMerge
                 tuple.Add(new Variable(a[i]));
             }
             this.Tuple = tuple;
+            Original = OriginalType.ARRAY;
         }
         public Variable(List<double> a)
         {
@@ -74,6 +86,7 @@ namespace SplitAndMerge
                 tuple.Add(new Variable(a[i]));
             }
             this.Tuple = tuple;
+            Original = OriginalType.ARRAY;
         }
         public Variable(Dictionary<string, string> a)
         {
@@ -86,6 +99,7 @@ namespace SplitAndMerge
                 tuple.Add(new Variable(a[key]));
             }
             this.Tuple = tuple;
+            Original = OriginalType.ARRAY;
         }
         public Variable(Dictionary<string, double> a)
         {
@@ -98,11 +112,13 @@ namespace SplitAndMerge
                 tuple.Add(new Variable(a[key]));
             }
             this.Tuple = tuple;
+            Original = OriginalType.ARRAY;
         }
 
         public Variable(object o)
         {
             Object = o;
+            Original = OriginalType.OBJECT;
         }
 
         public virtual Variable Clone()
@@ -2105,11 +2121,8 @@ namespace SplitAndMerge
         }
 
         public string Action { get; set; }
-        public VarType Type
-        {
-            get;
-            set;
-        }
+        public VarType Type { get; set; }
+        public OriginalType Original { get; set; }
         public bool IsReturn { get; set; }
         public string ParsingToken { get; set; }
         public int Index { get; set; }

@@ -21,9 +21,8 @@ namespace SplitAndMerge
 
     public partial class Interpreter
     {
-
         private static Interpreter instance;
-        private bool m_bHasBeenInitialized = false;
+        private static bool m_bHasBeenInitialized = false;
 
         private Interpreter()
         {
