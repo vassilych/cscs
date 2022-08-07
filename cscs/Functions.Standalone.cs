@@ -35,12 +35,12 @@ namespace SplitAndMerge
             string language = args[0].AsString();
             string funcName = args[1].AsString();
 
-            ParserFunction function = ParserFunction.GetFunction(funcName);
+            ParserFunction function = InterpreterInstance.GetFunction(funcName);
             CustomFunction custFunc = function as CustomFunction;
             Utils.CheckNotNull(funcName, custFunc, script);
 
             string body = Utils.BeautifyScript(custFunc.Body, custFunc.Header);
-            string translated = Translation.TranslateScript(body, language, script);
+            string translated = InterpreterInstance.Translation.TranslateScript(body, language, script);
             Utils.PrintScript(translated, script);
 
             return new Variable(translated);
@@ -113,11 +113,11 @@ namespace SplitAndMerge
             output += (m_newLine ? Environment.NewLine : string.Empty);
             if (m_changeColor)
             {
-                Utils.PrintColor(output, m_fgcolor);
+                Utils.PrintColor(script.InterpreterInstance, output, m_fgcolor);
             }
             else
             {
-                Interpreter.Instance.AppendOutput(output);
+                InterpreterInstance.AppendOutput(output);
             }
 
             if (script.Debugger != null)

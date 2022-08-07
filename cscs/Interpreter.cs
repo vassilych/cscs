@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static SplitAndMerge.ParserFunction;
+using System.IO;
+
 
 namespace SplitAndMerge
 {
@@ -21,14 +21,12 @@ namespace SplitAndMerge
 
     public partial class Interpreter
     {
+        #region Original Interpreter code (tweaked in some places)
+
+        public TranslationManager Translation { get; private set; }
+
         private static Interpreter instance;
         private static bool m_bHasBeenInitialized = false;
-
-        private Interpreter()
-        {
-            Init();
-        }
-
         public static Interpreter Instance
         {
             get
@@ -38,6 +36,19 @@ namespace SplitAndMerge
                     instance = new Interpreter();
                 }
                 return instance;
+            }
+        }
+
+        // Global functions:
+
+        // TODO: Pass this a collection of ScriptModule objects.
+        // Each ScriptModule can add functionality
+        public Interpreter()
+        {
+            Init();
+            if (instance == null)
+            {
+                instance = this;
             }
         }
 
@@ -85,191 +96,192 @@ namespace SplitAndMerge
             return false;
         }
 
-        public void Init()
+        public bool IsRunning { get; set; } = true;
+        public int ExitCode { get; set; }
+
+        private void Init()
         {
-            if (m_bHasBeenInitialized)
-                return;
-            m_bHasBeenInitialized = true; // making sure the init gets call only once
+            Translation = new TranslationManager(this);
 
             RegisterFunctions();
             RegisterEnums();
             RegisterActions();
 
-            ParserFunction.AddGlobal(Constants.THIS,
+            AddGlobal(Constants.THIS,
                 new GetVarFunction(new Variable(Variable.VarType.ARRAY)));
 
             InitStandalone();
-            CompiledClass.Init();
+            RegisterCompiledClass();
         }
 
         public void RegisterFunctions()
         {
-            ParserFunction.RegisterFunction(Constants.IF, new IfStatement());
-            ParserFunction.RegisterFunction(Constants.DO, new DoWhileStatement());
-            ParserFunction.RegisterFunction(Constants.WHILE, new WhileStatement());
-            ParserFunction.RegisterFunction(Constants.SWITCH, new SwitchStatement());
-            ParserFunction.RegisterFunction(Constants.CASE, new CaseStatement());
-            ParserFunction.RegisterFunction(Constants.DEFAULT, new CaseStatement());
-            ParserFunction.RegisterFunction(Constants.FOR, new ForStatement());
-            ParserFunction.RegisterFunction(Constants.BREAK, new BreakStatement());
-            ParserFunction.RegisterFunction(Constants.COMPILED_FUNCTION, new CompiledFunctionCreator(false));
-            ParserFunction.RegisterFunction(Constants.CONTINUE, new ContinueStatement());
-            ParserFunction.RegisterFunction(Constants.CLASS, new ClassCreator());
-            ParserFunction.RegisterFunction(Constants.ENUM, new EnumFunction());
-            ParserFunction.RegisterFunction(Constants.NEW, new NewObjectFunction());
-            ParserFunction.RegisterFunction(Constants.NULL, new NullFunction());
-            ParserFunction.RegisterFunction(Constants.RETURN, new ReturnStatement());
-            ParserFunction.RegisterFunction(Constants.FUNCTION, new FunctionCreator());
-            ParserFunction.RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
-            ParserFunction.RegisterFunction(Constants.GET_PROPERTY, new GetPropertyFunction());
-            ParserFunction.RegisterFunction(Constants.INCLUDE, new IncludeFile());
-            ParserFunction.RegisterFunction(Constants.MARSHAL, new MarshalFunction(true));
-            ParserFunction.RegisterFunction(Constants.QUIT, new QuitFunction());
-            ParserFunction.RegisterFunction(Constants.SET_PROPERTY, new SetPropertyFunction());
-            ParserFunction.RegisterFunction(Constants.TRY, new TryBlock());
-            ParserFunction.RegisterFunction(Constants.THROW, new ThrowFunction());
-            ParserFunction.RegisterFunction(Constants.TYPE, new TypeFunction());
-            ParserFunction.RegisterFunction(Constants.TYPE_OF, new TypeOfFunction());
-            ParserFunction.RegisterFunction(Constants.TYPE_REF, new TypeRefFunction());
-            ParserFunction.RegisterFunction(Constants.TRUE, new BoolFunction(true));
-            ParserFunction.RegisterFunction(Constants.FALSE, new BoolFunction(false));
-            ParserFunction.RegisterFunction(Constants.UNDEFINED, new UndefinedFunction());
-            ParserFunction.RegisterFunction(Constants.UNMARSHAL, new MarshalFunction(false));
+            RegisterFunction(Constants.IF, new IfStatement());
+            RegisterFunction(Constants.DO, new DoWhileStatement());
+            RegisterFunction(Constants.WHILE, new WhileStatement());
+            RegisterFunction(Constants.SWITCH, new SwitchStatement());
+            RegisterFunction(Constants.CASE, new CaseStatement());
+            RegisterFunction(Constants.DEFAULT, new CaseStatement());
+            RegisterFunction(Constants.FOR, new ForStatement());
+            RegisterFunction(Constants.BREAK, new BreakStatement());
+            RegisterFunction(Constants.COMPILED_FUNCTION, new CompiledFunctionCreator(false));
+            RegisterFunction(Constants.CONTINUE, new ContinueStatement());
+            RegisterFunction(Constants.CLASS, new ClassCreator());
+            RegisterFunction(Constants.ENUM, new EnumFunction());
+            RegisterFunction(Constants.NEW, new NewObjectFunction());
+            RegisterFunction(Constants.NULL, new NullFunction());
+            RegisterFunction(Constants.RETURN, new ReturnStatement());
+            RegisterFunction(Constants.FUNCTION, new FunctionCreator());
+            RegisterFunction(Constants.GET_PROPERTIES, new GetPropertiesFunction());
+            RegisterFunction(Constants.GET_PROPERTY, new GetPropertyFunction());
+            RegisterFunction(Constants.INCLUDE, new IncludeFile());
+            RegisterFunction(Constants.MARSHAL, new MarshalFunction(true));
+            RegisterFunction(Constants.QUIT, new QuitFunction());
+            RegisterFunction(Constants.SET_PROPERTY, new SetPropertyFunction());
+            RegisterFunction(Constants.TRY, new TryBlock());
+            RegisterFunction(Constants.THROW, new ThrowFunction());
+            RegisterFunction(Constants.TYPE, new TypeFunction());
+            RegisterFunction(Constants.TYPE_OF, new TypeOfFunction());
+            RegisterFunction(Constants.TYPE_REF, new TypeRefFunction());
+            RegisterFunction(Constants.TRUE, new BoolFunction(true));
+            RegisterFunction(Constants.FALSE, new BoolFunction(false));
+            RegisterFunction(Constants.UNDEFINED, new UndefinedFunction());
+            RegisterFunction(Constants.UNMARSHAL, new MarshalFunction(false));
 
-            ParserFunction.RegisterFunction(Constants.ADD, new AddFunction());
-            ParserFunction.RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
-            ParserFunction.RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
-            ParserFunction.RegisterFunction(Constants.CANCEL, new CancelFunction());
-            ParserFunction.RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
-            ParserFunction.RegisterFunction(Constants.CHECK_LOADER_MAIN, new CheckLoaderMainFunction());
-            ParserFunction.RegisterFunction(Constants.CONTAINS, new ContainsFunction());
-            ParserFunction.RegisterFunction(Constants.CURRENT_PATH, new CurrentPathFunction());
-            ParserFunction.RegisterFunction(Constants.DATE_TIME, new DateTimeFunction(false));
-            ParserFunction.RegisterFunction(Constants.DECODE, new EncodeDecodeFunction(false));
-            ParserFunction.RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
-            ParserFunction.RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
-            ParserFunction.RegisterFunction(Constants.ENCODE, new EncodeDecodeFunction(true));
-            ParserFunction.RegisterFunction(Constants.ENV, new GetEnvFunction());
-            ParserFunction.RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
-            ParserFunction.RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
-            ParserFunction.RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
-            ParserFunction.RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
-            ParserFunction.RegisterFunction(Constants.HELP, new HelpFunction());
-            ParserFunction.RegisterFunction(Constants.INCLUDE_SECURE, new IncludeFileSecure());
-            ParserFunction.RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
-            ParserFunction.RegisterFunction(Constants.LOCK, new LockFunction());
-            ParserFunction.RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());
-            ParserFunction.RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
-            ParserFunction.RegisterFunction(Constants.NOW, new DateTimeFunction());
-            ParserFunction.RegisterFunction(Constants.PRINT, new PrintFunction());
-            ParserFunction.RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
-            ParserFunction.RegisterFunction(Constants.REGEX, new RegexFunction());
-            ParserFunction.RegisterFunction(Constants.REMOVE, new RemoveFunction());
-            ParserFunction.RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
-            ParserFunction.RegisterFunction(Constants.RESET_VARS, new ResetVariablesFunction());
-            ParserFunction.RegisterFunction(Constants.SCHEDULE_RUN, new ScheduleRunFunction(true));
-            ParserFunction.RegisterFunction(Constants.SHOW, new ShowFunction());
-            ParserFunction.RegisterFunction(Constants.SETENV, new SetEnvFunction());
-            ParserFunction.RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
-            ParserFunction.RegisterFunction(Constants.SINGLETON, new SingletonFunction());
-            ParserFunction.RegisterFunction(Constants.SIZE, new SizeFunction());
-            ParserFunction.RegisterFunction(Constants.SLEEP, new SleepFunction());
-            ParserFunction.RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction(true));
-            ParserFunction.RegisterFunction(Constants.STOP_DEBUGGER, new DebuggerFunction(false));
-            ParserFunction.RegisterFunction(Constants.STR_BETWEEN, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN));
-            ParserFunction.RegisterFunction(Constants.STR_BETWEEN_ANY, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN_ANY));
-            ParserFunction.RegisterFunction(Constants.STR_CONTAINS, new StringManipulationFunction(StringManipulationFunction.Mode.CONTAINS));
-            ParserFunction.RegisterFunction(Constants.STR_LOWER, new StringManipulationFunction(StringManipulationFunction.Mode.LOWER));
-            ParserFunction.RegisterFunction(Constants.STR_ENDS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.ENDS_WITH));
-            ParserFunction.RegisterFunction(Constants.STR_EQUALS, new StringManipulationFunction(StringManipulationFunction.Mode.EQUALS));
-            ParserFunction.RegisterFunction(Constants.STR_INDEX_OF, new StringManipulationFunction(StringManipulationFunction.Mode.INDEX_OF));
-            ParserFunction.RegisterFunction(Constants.STR_REPLACE, new StringManipulationFunction(StringManipulationFunction.Mode.REPLACE));
-            ParserFunction.RegisterFunction(Constants.STR_STARTS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.STARTS_WITH));
-            ParserFunction.RegisterFunction(Constants.STR_SUBSTR, new StringManipulationFunction(StringManipulationFunction.Mode.SUBSTRING));
-            ParserFunction.RegisterFunction(Constants.STR_TRIM, new StringManipulationFunction(StringManipulationFunction.Mode.TRIM));
-            ParserFunction.RegisterFunction(Constants.STR_UPPER, new StringManipulationFunction(StringManipulationFunction.Mode.UPPER));
-            ParserFunction.RegisterFunction(Constants.THREAD, new ThreadFunction());
-            ParserFunction.RegisterFunction(Constants.THREAD_ID, new ThreadIDFunction());
-            ParserFunction.RegisterFunction(Constants.TOKENIZE, new TokenizeFunction());
-            ParserFunction.RegisterFunction(Constants.TOKENIZE_LINES, new TokenizeLinesFunction());
-            ParserFunction.RegisterFunction(Constants.TOKEN_COUNTER, new TokenCounterFunction());
-            ParserFunction.RegisterFunction(Constants.TO_BYTEARRAY, new ToByteArrayFunction());
-            ParserFunction.RegisterFunction(Constants.TO_BOOL, new ToBoolFunction());
-            ParserFunction.RegisterFunction(Constants.TO_DECIMAL, new ToDecimalFunction());
-            ParserFunction.RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
-            ParserFunction.RegisterFunction(Constants.TO_INT, new ToIntFunction());
-            //ParserFunction.RegisterFunction(Constants.TO_INTEGER, new ToIntFunction());
-            ParserFunction.RegisterFunction(Constants.TO_NUMBER, new ToDoubleFunction());
-            ParserFunction.RegisterFunction(Constants.TO_STRING, new ToStringFunction());
-            ParserFunction.RegisterFunction(Constants.VAR, new VarFunction());
-            ParserFunction.RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
-            ParserFunction.RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
+            RegisterFunction(Constants.ADD, new AddFunction());
+            RegisterFunction(Constants.ADD_TO_HASH, new AddVariableToHashFunction());
+            RegisterFunction(Constants.ADD_ALL_TO_HASH, new AddVariablesToHashFunction());
+            RegisterFunction(Constants.CANCEL, new CancelFunction());
+            RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
+            RegisterFunction(Constants.CHECK_LOADER_MAIN, new CheckLoaderMainFunction());
+            RegisterFunction(Constants.CONTAINS, new ContainsFunction());
+            RegisterFunction(Constants.CURRENT_PATH, new CurrentPathFunction());
+            RegisterFunction(Constants.DATE_TIME, new DateTimeFunction(false));
+            RegisterFunction(Constants.DECODE, new EncodeDecodeFunction(false));
+            RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
+            RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
+            RegisterFunction(Constants.ENCODE, new EncodeDecodeFunction(true));
+            RegisterFunction(Constants.ENV, new GetEnvFunction());
+            RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());
+            RegisterFunction(Constants.GET_COLUMN, new GetColumnFunction());
+            RegisterFunction(Constants.GET_FILE_FROM_DEBUGGER, new GetFileFromDebugger());
+            RegisterFunction(Constants.GET_KEYS, new GetAllKeysFunction());
+            RegisterFunction(Constants.HELP, new HelpFunction());
+            RegisterFunction(Constants.INCLUDE_SECURE, new IncludeFileSecure());
+            RegisterFunction(Constants.JSON, new GetVariableFromJSONFunction());
+            RegisterFunction(Constants.LOCK, new LockFunction());
+            RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());
+            RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
+            RegisterFunction(Constants.NOW, new DateTimeFunction());
+            RegisterFunction(Constants.PRINT, new PrintFunction());
+            RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
+            RegisterFunction(Constants.REGEX, new RegexFunction());
+            RegisterFunction(Constants.REMOVE, new RemoveFunction());
+            RegisterFunction(Constants.REMOVE_AT, new RemoveAtFunction());
+            RegisterFunction(Constants.RESET_VARS, new ResetVariablesFunction());
+            RegisterFunction(Constants.SCHEDULE_RUN, new ScheduleRunFunction(true));
+            RegisterFunction(Constants.SHOW, new ShowFunction());
+            RegisterFunction(Constants.SETENV, new SetEnvFunction());
+            RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
+            RegisterFunction(Constants.SINGLETON, new SingletonFunction());
+            RegisterFunction(Constants.SIZE, new SizeFunction());
+            RegisterFunction(Constants.SLEEP, new SleepFunction());
+            RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction(true));
+            RegisterFunction(Constants.STOP_DEBUGGER, new DebuggerFunction(false));
+            RegisterFunction(Constants.STR_BETWEEN, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN));
+            RegisterFunction(Constants.STR_BETWEEN_ANY, new StringManipulationFunction(StringManipulationFunction.Mode.BEETWEEN_ANY));
+            RegisterFunction(Constants.STR_CONTAINS, new StringManipulationFunction(StringManipulationFunction.Mode.CONTAINS));
+            RegisterFunction(Constants.STR_LOWER, new StringManipulationFunction(StringManipulationFunction.Mode.LOWER));
+            RegisterFunction(Constants.STR_ENDS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.ENDS_WITH));
+            RegisterFunction(Constants.STR_EQUALS, new StringManipulationFunction(StringManipulationFunction.Mode.EQUALS));
+            RegisterFunction(Constants.STR_INDEX_OF, new StringManipulationFunction(StringManipulationFunction.Mode.INDEX_OF));
+            RegisterFunction(Constants.STR_REPLACE, new StringManipulationFunction(StringManipulationFunction.Mode.REPLACE));
+            RegisterFunction(Constants.STR_STARTS_WITH, new StringManipulationFunction(StringManipulationFunction.Mode.STARTS_WITH));
+            RegisterFunction(Constants.STR_SUBSTR, new StringManipulationFunction(StringManipulationFunction.Mode.SUBSTRING));
+            RegisterFunction(Constants.STR_TRIM, new StringManipulationFunction(StringManipulationFunction.Mode.TRIM));
+            RegisterFunction(Constants.STR_UPPER, new StringManipulationFunction(StringManipulationFunction.Mode.UPPER));
+            RegisterFunction(Constants.THREAD, new ThreadFunction());
+            RegisterFunction(Constants.THREAD_ID, new ThreadIDFunction());
+            RegisterFunction(Constants.TOKENIZE, new TokenizeFunction());
+            RegisterFunction(Constants.TOKENIZE_LINES, new TokenizeLinesFunction());
+            RegisterFunction(Constants.TOKEN_COUNTER, new TokenCounterFunction());
+            RegisterFunction(Constants.TO_BYTEARRAY, new ToByteArrayFunction());
+            RegisterFunction(Constants.TO_BOOL, new ToBoolFunction());
+            RegisterFunction(Constants.TO_DECIMAL, new ToDecimalFunction());
+            RegisterFunction(Constants.TO_DOUBLE, new ToDoubleFunction());
+            RegisterFunction(Constants.TO_INT, new ToIntFunction());
+            //RegisterFunction(Constants.TO_INTEGER, new ToIntFunction());
+            RegisterFunction(Constants.TO_NUMBER, new ToDoubleFunction());
+            RegisterFunction(Constants.TO_STRING, new ToStringFunction());
+            RegisterFunction(Constants.VAR, new VarFunction());
+            RegisterFunction(Constants.WAIT, new SignalWaitFunction(false));
+            RegisterFunction(Constants.WEB_REQUEST, new WebRequestFunction());
 
-            ParserFunction.RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
-            ParserFunction.RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
-            ParserFunction.RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
+            RegisterFunction(Constants.ADD_DATA, new DataFunction(DataFunction.DataMode.ADD));
+            RegisterFunction(Constants.COLLECT_DATA, new DataFunction(DataFunction.DataMode.SUBSCRIBE));
+            RegisterFunction(Constants.GET_DATA, new DataFunction(DataFunction.DataMode.SEND));
 
             // Math Functions
-            ParserFunction.RegisterFunction(Constants.MATH_ABS, new AbsFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ACOS, new AcosFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ACOSH, new AcoshFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ASIN, new AsinFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ASINH, new AsinhFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ATAN, new TanFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ATAN2, new Atan2Function());
-            ParserFunction.RegisterFunction(Constants.MATH_ATANH, new AtanhFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_CBRT, new CbrtFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_CEIL, new CeilFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_COS, new CosFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_COSH, new CoshFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_E, new EFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_EXP, new ExpFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_FLOOR, new FloorFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_INFINITY, new InfinityFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ISFINITE, new IsFiniteFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_ISNAN, new IsNaNFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_LN2, new Ln2Function());
-            ParserFunction.RegisterFunction(Constants.MATH_LN10, new Ln10Function());
-            ParserFunction.RegisterFunction(Constants.MATH_LOG, new LogFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_LOG2E, new Log2EFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_LOG10E, new Log10EFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_MIN, new MinFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_MAX, new MaxFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_NEG_INFINITY, new NegInfinityFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_PI, new PiFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_POW, new PowFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_RANDOM, new GetRandomFunction(true));
-            ParserFunction.RegisterFunction(Constants.MATH_ROUND, new RoundFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_SQRT, new SqrtFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_SQRT1_2, new Sqrt1_2Function());
-            ParserFunction.RegisterFunction(Constants.MATH_SQRT2, new Sqrt2Function());
-            ParserFunction.RegisterFunction(Constants.MATH_SIGN, new SignFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_SIN, new SinFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_SINH, new SinhFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_TAN, new TanFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
-            ParserFunction.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
+            RegisterFunction(Constants.MATH_ABS, new AbsFunction());
+            RegisterFunction(Constants.MATH_ACOS, new AcosFunction());
+            RegisterFunction(Constants.MATH_ACOSH, new AcoshFunction());
+            RegisterFunction(Constants.MATH_ASIN, new AsinFunction());
+            RegisterFunction(Constants.MATH_ASINH, new AsinhFunction());
+            RegisterFunction(Constants.MATH_ATAN, new TanFunction());
+            RegisterFunction(Constants.MATH_ATAN2, new Atan2Function());
+            RegisterFunction(Constants.MATH_ATANH, new AtanhFunction());
+            RegisterFunction(Constants.MATH_CBRT, new CbrtFunction());
+            RegisterFunction(Constants.MATH_CEIL, new CeilFunction());
+            RegisterFunction(Constants.MATH_COS, new CosFunction());
+            RegisterFunction(Constants.MATH_COSH, new CoshFunction());
+            RegisterFunction(Constants.MATH_E, new EFunction());
+            RegisterFunction(Constants.MATH_EXP, new ExpFunction());
+            RegisterFunction(Constants.MATH_FLOOR, new FloorFunction());
+            RegisterFunction(Constants.MATH_INFINITY, new InfinityFunction());
+            RegisterFunction(Constants.MATH_ISFINITE, new IsFiniteFunction());
+            RegisterFunction(Constants.MATH_ISNAN, new IsNaNFunction());
+            RegisterFunction(Constants.MATH_LN2, new Ln2Function());
+            RegisterFunction(Constants.MATH_LN10, new Ln10Function());
+            RegisterFunction(Constants.MATH_LOG, new LogFunction());
+            RegisterFunction(Constants.MATH_LOG2E, new Log2EFunction());
+            RegisterFunction(Constants.MATH_LOG10E, new Log10EFunction());
+            RegisterFunction(Constants.MATH_MIN, new MinFunction());
+            RegisterFunction(Constants.MATH_MAX, new MaxFunction());
+            RegisterFunction(Constants.MATH_NEG_INFINITY, new NegInfinityFunction());
+            RegisterFunction(Constants.MATH_PI, new PiFunction());
+            RegisterFunction(Constants.MATH_POW, new PowFunction());
+            RegisterFunction(Constants.MATH_RANDOM, new GetRandomFunction(true));
+            RegisterFunction(Constants.MATH_ROUND, new RoundFunction());
+            RegisterFunction(Constants.MATH_SQRT, new SqrtFunction());
+            RegisterFunction(Constants.MATH_SQRT1_2, new Sqrt1_2Function());
+            RegisterFunction(Constants.MATH_SQRT2, new Sqrt2Function());
+            RegisterFunction(Constants.MATH_SIGN, new SignFunction());
+            RegisterFunction(Constants.MATH_SIN, new SinFunction());
+            RegisterFunction(Constants.MATH_SINH, new SinhFunction());
+            RegisterFunction(Constants.MATH_TAN, new TanFunction());
+            RegisterFunction(Constants.MATH_TANH, new TanhFunction());
+            RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
 
-            ParserFunction.RegisterFunction(Constants.CONSOLE_LOG, new PrintFunction());
+            RegisterFunction(Constants.CONSOLE_LOG, new PrintFunction());
 
 
-            ParserFunction.RegisterFunction(Constants.OBJECT_DEFPROP, new ObjectPropsFunction());
+            RegisterFunction(Constants.OBJECT_DEFPROP, new ObjectPropsFunction());
         }
 
         public void RegisterEnums()
         {
-            ParserFunction.RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
+            RegisterEnum(Constants.VARIABLE_TYPE, "SplitAndMerge.Variable.VarType");
         }
 
         public void RegisterActions()
         {
-            ParserFunction.AddAction(Constants.ASSIGNMENT, new AssignFunction());
-            ParserFunction.AddAction(Constants.INCREMENT, new IncrementDecrementFunction());
-            ParserFunction.AddAction(Constants.DECREMENT, new IncrementDecrementFunction());
+            AddAction(Constants.ASSIGNMENT, new AssignFunction());
+            AddAction(Constants.INCREMENT, new IncrementDecrementFunction());
+            AddAction(Constants.DECREMENT, new IncrementDecrementFunction());
 
             for (int i = 0; i < Constants.OPER_ACTIONS.Length; i++)
             {
-                ParserFunction.AddAction(Constants.OPER_ACTIONS[i], new OperatorAssignFunction());
+                AddAction(Constants.OPER_ACTIONS[i], new OperatorAssignFunction());
             }
         }
 
@@ -289,13 +301,13 @@ namespace SplitAndMerge
         public Variable Process(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
-            string data = Utils.ConvertToScript(script, out char2Line, filename);
+            string data = Utils.ConvertToScript(this, script, out char2Line, filename);
             if (string.IsNullOrWhiteSpace(data))
             {
                 return null;
             }
 
-            ParsingScript toParse = new ParsingScript(data, 0, char2Line);
+            ParsingScript toParse = new ParsingScript(this, data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
 
@@ -321,13 +333,13 @@ namespace SplitAndMerge
         public async Task<Variable> ProcessAsync(string script, string filename = "", bool mainFile = false)
         {
             Dictionary<int, int> char2Line;
-            string data = Utils.ConvertToScript(script, out char2Line, filename);
+            string data = Utils.ConvertToScript(this, script, out char2Line, filename);
             if (string.IsNullOrWhiteSpace(data))
             {
                 return null;
             }
 
-            ParsingScript toParse = new ParsingScript(data, 0, char2Line);
+            ParsingScript toParse = new ParsingScript(this, data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
 
@@ -417,8 +429,7 @@ namespace SplitAndMerge
                     Variable current = new Variable(item);
 
                     script.Pointer = startForCondition;
-                    ParserFunction.AddGlobalOrLocalVariable(varName,
-                                   new GetVarFunction(current));
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
                     Variable result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -440,8 +451,7 @@ namespace SplitAndMerge
                     Variable current = arrayValue.GetValue(i);
 
                     script.Pointer = startForCondition;
-                    ParserFunction.AddGlobalOrLocalVariable(varName,
-                                   new GetVarFunction(current));
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
                     Variable result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -476,16 +486,13 @@ namespace SplitAndMerge
             Variable arrayValue = await Utils.GetItemAsync(forScript);
 
             int startForCondition = script.Pointer;
-
             if ((arrayValue.Type == Variable.VarType.OBJECT) && (arrayValue.Object is IEnumerable ienum))
             {
                 foreach (object item in ienum)
                 {
                     Variable current = new Variable(item);
-
                     script.Pointer = startForCondition;
-                    ParserFunction.AddGlobalOrLocalVariable(varName,
-                                   new GetVarFunction(current));
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
                     Variable result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -507,8 +514,7 @@ namespace SplitAndMerge
                     Variable current = arrayValue.GetValue(i);
 
                     script.Pointer = startForCondition;
-                    ParserFunction.AddGlobalOrLocalVariable(varName,
-                                   new GetVarFunction(current));
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
                     Variable result = await ProcessBlockAsync(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -896,7 +902,7 @@ namespace SplitAndMerge
         internal Variable ProcessTry(ParsingScript script)
         {
             int startTryCondition = script.Pointer - 1;
-            int currentStackLevel = ParserFunction.GetCurrentStackLevel();
+            int currentStackLevel = GetCurrentStackLevel();
             Exception exception = null;
 
             Variable result = null;
@@ -941,15 +947,15 @@ namespace SplitAndMerge
             if (exception != null)
             {
                 string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
-                ParserFunction.InvalidateStacksAfterLevel(currentStackLevel);
+                InvalidateStacksAfterLevel(currentStackLevel);
 
                 GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
-                ParserFunction.AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+                AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
                 GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
-                ParserFunction.AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
+                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
 
                 result = ProcessBlock(script);
-                ParserFunction.PopLocalVariable(exceptionName);
+                PopLocalVariable(exceptionName);
             }
             else
             {
@@ -962,7 +968,7 @@ namespace SplitAndMerge
         internal async Task<Variable> ProcessTryAsync(ParsingScript script)
         {
             int startTryCondition = script.Pointer - 1;
-            int currentStackLevel = ParserFunction.GetCurrentStackLevel();
+            int currentStackLevel = GetCurrentStackLevel();
             Exception exception = null;
 
             Variable result = null;
@@ -1007,15 +1013,15 @@ namespace SplitAndMerge
             if (exception != null)
             {
                 string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
-                ParserFunction.InvalidateStacksAfterLevel(currentStackLevel);
+                InvalidateStacksAfterLevel(currentStackLevel);
 
                 GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
-                ParserFunction.AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+                AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
                 GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
-                ParserFunction.AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
+                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
 
                 result = await ProcessBlockAsync(script);
-                ParserFunction.PopLocalVariable(exceptionName);
+                PopLocalVariable(exceptionName);
             }
             else
             {
@@ -1026,10 +1032,10 @@ namespace SplitAndMerge
             return result;
         }
 
-        private static string CreateExceptionStack(string exceptionName, int lowestStackLevel)
+        private string CreateExceptionStack(string exceptionName, int lowestStackLevel)
         {
             string result = "";
-            Stack<ParserFunction.StackLevel> stack = ParserFunction.ExecutionStack;
+            Stack<ParserFunction.StackLevel> stack = ExecutionStack;
             int level = stack.Count;
             foreach (ParserFunction.StackLevel stackLevel in stack)
             {
@@ -1051,10 +1057,11 @@ namespace SplitAndMerge
 
             return result;
         }
-        public static string GetStack(int lowestStackLevel = 0)
+
+        public string GetStack(int lowestStackLevel = 0)
         {
             string result = "";
-            Stack<ParserFunction.StackLevel> stack = ParserFunction.ExecutionStack;
+            Stack<ParserFunction.StackLevel> stack = ExecutionStack;
             int level = stack.Count;
             foreach (ParserFunction.StackLevel stackLevel in stack)
             {
@@ -1212,16 +1219,16 @@ namespace SplitAndMerge
             }
         }
 
-        public static Variable Run(string functionName, Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
+        public Variable Run(string functionName, Variable arg1 = null, Variable arg2 = null, Variable arg3 = null, ParsingScript script = null)
         {
-            System.Threading.Tasks.Task<Variable> task = null;
+            Task<Variable> task;
             try
             {
-                task = CustomFunction.Run(functionName, arg1, arg2, arg3, script);
+                task = CustomFunction.Run(this, functionName, arg1, arg2, arg3, script);
             }
             catch (Exception exc)
             {
-                task = CustomFunction.Run(Constants.ON_EXCEPTION, new Variable(functionName),
+                task = CustomFunction.Run(this, Constants.ON_EXCEPTION, new Variable(functionName),
                                           new Variable(exc.Message), arg2, script);
                 if (task == null)
                 {
@@ -1232,7 +1239,26 @@ namespace SplitAndMerge
         }
 
 
-        public static Variable Run(CustomFunction function, List<Variable> args, ParsingScript script = null)
+        public Variable Run(string functionName, List<Variable> args, ParsingScript script = null)
+        {
+            Task<Variable> task = null;
+            try
+            {
+                task = CustomFunction.Run(this, functionName, args, script);
+            }
+            catch (Exception exc)
+            {
+                task = CustomFunction.Run(this, Constants.ON_EXCEPTION, new Variable(functionName),
+                                          new Variable(exc.Message), args.Count > 0 ? args[0] : Variable.EmptyInstance, script);
+                if (task == null)
+                {
+                    throw;
+                }
+            }
+            return task == null ? Variable.EmptyInstance : task.Result;
+        }
+
+        public Variable Run(CustomFunction function, List<Variable> args, ParsingScript script = null)
         {
             Variable result = null;
             try
@@ -1241,7 +1267,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                var task = CustomFunction.Run(Constants.ON_EXCEPTION, new Variable(function.Name),
+                var task = CustomFunction.Run(this, Constants.ON_EXCEPTION, new Variable(function.Name),
                                           new Variable(exc.Message), args.Count > 0 ? args[0] : Variable.EmptyInstance, script);
                 if (task == null)
                 {
@@ -1252,21 +1278,19 @@ namespace SplitAndMerge
             return result;
         }
 
-        public static void RunScript(string fileName = "start.cscs")
+        public void RunScript(string fileName = "start.cscs")
         {
-            Interpreter.Instance.Init();
-
             string script = FileToString(fileName);
             Variable result = null;
             try
             {
-                result = Interpreter.Instance.Process(script, fileName);
+                result = Process(script, fileName);
             }
             catch (Exception exc)
             {
                 Console.WriteLine("Exception: " + exc.Message);
                 Console.WriteLine(exc.StackTrace);
-                ParserFunction.InvalidateStacksAfterLevel(0);
+                InvalidateStacksAfterLevel(0);
                 throw;
             }
         }
@@ -1278,6 +1302,954 @@ namespace SplitAndMerge
             contents = string.Join("\n", lines);
             return contents;
         }
+
+        #endregion
+
+        #region Code that was moved from ParserFunction
+
+        // These were all static in ParserFunction. Now they are
+        // member variables and code in Interpreter
+
+        // Global functions:
+        Dictionary<string, ParserFunction> s_functions = new Dictionary<string, ParserFunction>();
+
+        // Global variables:
+        Dictionary<string, ParserFunction> s_variables = new Dictionary<string, ParserFunction>();
+
+        // Global actions to functions map:
+        Dictionary<string, ActionFunction> s_actions = new Dictionary<string, ActionFunction>();
+
+        // Local scope variables:
+        Dictionary<string, Dictionary<string, ParserFunction>> s_localScope =
+           new Dictionary<string, Dictionary<string, ParserFunction>>();
+
+
+        Stack<StackLevel> s_locals = new Stack<StackLevel>();
+        public Stack<StackLevel> ExecutionStack { get { return s_locals; } }
+
+        StackLevel s_lastExecutionLevel;
+
+        Dictionary<string, StackLevel> s_namespaces = new Dictionary<string, StackLevel>();
+        string s_namespace;
+        string s_namespacePrefix;
+
+        public string GetCurrentNamespace { get { return s_namespace; } }
+
+        public Dictionary<string, CSCSClass> s_allClasses = new Dictionary<string, CSCSClass>();
+
+        private DataFunctionData _dataFunctionData;
+        public DataFunctionData DataFunctionData
+        {
+            get
+            {
+                if (_dataFunctionData == null)
+                    _dataFunctionData = new DataFunctionData(this);
+                return _dataFunctionData;
+            }
+        }
+
+
+        public ParserFunction GetFromNamespace(string name)
+        {
+            ParserFunction result = GetFromNamespace(name, s_namespace);
+            return result;
+        }
+
+        public ParserFunction GetFromNamespace(string name, string nameSpace)
+        {
+            if (string.IsNullOrWhiteSpace(nameSpace))
+            {
+                return null;
+            }
+
+            int ind = nameSpace.IndexOf('.');
+            string prop = "";
+            if (ind >= 0)
+            {
+                prop = name;
+                name = nameSpace.Substring(ind + 1);
+                nameSpace = nameSpace.Substring(0, ind);
+            }
+
+            StackLevel level;
+            if (!s_namespaces.TryGetValue(nameSpace, out level))
+            {
+                return null;
+            }
+
+            if (!name.StartsWith(nameSpace, StringComparison.OrdinalIgnoreCase))
+            {
+                name = nameSpace + "." + name;
+            }
+
+            var vars = level.Variables;
+            ParserFunction impl;
+            if (!vars.TryGetValue(name, out impl) &&
+                !s_variables.TryGetValue(name, out impl) &&
+                !s_functions.TryGetValue(name, out impl)
+                )
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(prop) && impl is GetVarFunction getVarFunction)
+            {
+                getVarFunction.PropertyName = prop;
+            }
+            return impl;
+        }
+
+        public bool TryAddToNamespace(string name, string nameSpace, Variable varValue)
+        {
+            StackLevel level;
+            if (string.IsNullOrWhiteSpace(nameSpace) ||
+               !s_namespaces.TryGetValue(nameSpace, out level))
+            {
+                return false;
+            }
+
+            var vars = level.Variables;
+            vars[name] = new GetVarFunction(varValue);
+
+            return true;
+        }
+
+        public ParserFunction GetVariable(string name, ParsingScript script = null, bool force = false)
+        {
+            if (!force && script != null && script.TryPrev() == Constants.START_ARG)
+            {
+                return GetFunction(name);
+            }
+            name = Constants.ConvertName(name);
+            ParserFunction impl;
+            StackLevel localStack = script != null && script.StackLevel != null ?
+                 script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            if (localStack != null)
+            {
+                Dictionary<string, ParserFunction> local = localStack.Variables;
+                if (local.TryGetValue(name, out impl))
+                {
+                    return impl;
+                }
+            }
+
+            string scopeName = script == null || script.Filename == null ? "" : script.Filename;
+            impl = GetLocalScopeVariable(name, scopeName);
+            if (impl != null)
+            {
+                return impl;
+            }
+
+            if (s_variables.TryGetValue(name, out impl))
+            {
+                return impl.NewInstance();
+            }
+
+            return GetFunction(name);
+        }
+
+        public Variable GetVariableValue(string name, ParsingScript script = null)
+        {
+            name = Constants.ConvertName(name);
+            ParserFunction impl = null;
+            StackLevel localStack = script != null && script.StackLevel != null ?
+                 script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            if (localStack != null && localStack.Variables.TryGetValue(name, out impl) &&
+                impl is GetVarFunction)
+            {
+                return (impl as GetVarFunction).Value;
+            }
+
+            string scopeName = script == null || script.Filename == null ? "" : script.Filename;
+            impl = GetLocalScopeVariable(name, scopeName);
+            if (impl == null && s_variables.TryGetValue(name, out impl))
+            {
+                impl = impl.NewInstance();
+            }
+
+            if (impl != null && impl is GetVarFunction)
+            {
+                return (impl as GetVarFunction).Value;
+            }
+
+            return null;
+        }
+
+        public ParserFunction GetFunction(string name)
+        {
+            name = Constants.ConvertName(name);
+            ParserFunction impl;
+
+            if (s_functions.TryGetValue(name, out impl))
+            {
+                // Global function exists and is registered (e.g. pi, exp, or a variable)
+                return impl.NewInstance();
+            }
+
+            return GetFromNamespace(name);
+        }
+
+        public void UpdateFunction(Variable variable)
+        {
+            UpdateFunction(variable.ParsingToken, new GetVarFunction(variable));
+        }
+        public void UpdateFunction(string name, ParserFunction function)
+        {
+            name = Constants.ConvertName(name);
+            Utils.CheckLegalName(name);
+            lock (s_variables)
+            {
+                // First search among local variables.
+                if (s_lastExecutionLevel != null && s_locals.Count > StackLevelDelta)
+                {
+                    Dictionary<string, ParserFunction> local = s_lastExecutionLevel.Variables;
+
+                    if (local.ContainsKey(name))
+                    {
+                        // Local function exists (a local variable)
+                        local[name] = function;
+                        return;
+                    }
+                }
+            }
+            // If it's not a local variable, update global.
+            s_variables[name] = function;
+        }
+        public ActionFunction GetAction(string action)
+        {
+            if (string.IsNullOrWhiteSpace(action))
+            {
+                return null;
+            }
+
+            ActionFunction impl;
+            if (s_actions.TryGetValue(action, out impl))
+            {
+                // Action exists and is registered (e.g. =, +=, --, etc.)
+                return impl;
+            }
+
+            return null;
+        }
+
+        public bool FunctionExists(string item)
+        {
+            // If it is not defined locally, then check globally:
+            return LocalNameExists(item) || GlobalNameExists(item);
+        }
+
+        public void AddGlobalOrLocalVariable(string name, GetVarFunction function,
+            ParsingScript script = null, bool localIfPossible = false)
+        {
+            name = Constants.ConvertName(name);
+            Utils.CheckLegalName(name, script);
+
+            bool globalOnly = !localIfPossible && !LocalNameExists(name);
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (!globalOnly && lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
+            {
+                name = s_namespacePrefix + name;
+            }
+
+            function.Name = Constants.GetRealName(name);
+            function.Value.ParamName = function.Name;
+
+            if (!globalOnly && !localIfPossible && script != null && script.StackLevel != null && !GlobalNameExists(name))
+            {
+                script.StackLevel.Variables[name] = function;
+            }
+
+            if (!globalOnly && s_locals.Count > StackLevelDelta &&
+               (localIfPossible || LocalNameExists(name) || !GlobalNameExists(name)))
+            {
+                AddLocalVariable(function);
+            }
+            else
+            {
+                AddGlobal(name, function, false /* not native */);
+            }
+        }
+
+        string CreateVariableEntry(Variable var, string name, bool isLocal = false)
+        {
+            try
+            {
+                string value = var.AsString(true, true, 16);
+                string localGlobal = isLocal ? "0" : "1";
+                string varData = name + ":" + localGlobal + ":" +
+                                 Constants.TypeToString(var.Type).ToLower() + ":" + value;
+                return varData.Trim();
+            }
+            catch (Exception exc)
+            {
+                // TODO: Clean up not used objects.
+                bool removed = isLocal ? PopLocalVariable(name) : RemoveGlobal(name);
+                Console.WriteLine("Object {0} is probably dead ({1}): {2}. Removing it.", name, removed, exc);
+                return null;
+            }
+        }
+
+        void GetVariables(Dictionary<string, ParserFunction> variablesScope,
+                                 StringBuilder sb, bool isLocal = false)
+        {
+            var all = variablesScope.Values.ToList();
+            for (int i = 0; i < all.Count; i++)
+            {
+                var variable = all[i];
+                GetVarFunction gvf = variable as GetVarFunction;
+                if (gvf == null || string.IsNullOrWhiteSpace(variable.Name))
+                {
+                    continue;
+                }
+
+                string varData = CreateVariableEntry(gvf.Value, variable.Name, isLocal);
+                if (!string.IsNullOrWhiteSpace(varData))
+                {
+                    sb.AppendLine(varData);
+                    if (gvf.Value.Type == Variable.VarType.OBJECT)
+                    {
+                        var props = gvf.Value.GetProperties();
+                        foreach (Variable var in props)
+                        {
+                            var val = gvf.Value.GetProperty(var.AsString());
+                            varData = CreateVariableEntry(val, variable.Name + "." + var.AsString(), isLocal);
+                            if (!string.IsNullOrWhiteSpace(varData))
+                            {
+                                sb.AppendLine(varData);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public string GetVariables(ParsingScript script)
+        {
+            StringBuilder sb = new StringBuilder();
+            // Locals, if any:
+            if (s_lastExecutionLevel != null)
+            {
+                Dictionary<string, ParserFunction> locals = s_lastExecutionLevel.Variables;
+                GetVariables(locals, sb, true);
+            }
+
+            // Variables in the local file scope:
+            if (script != null && script.Filename != null)
+            {
+                Dictionary<string, ParserFunction> localScope;
+                string scopeName = Path.GetFileName(script.Filename);
+                if (s_localScope.TryGetValue(scopeName, out localScope))
+                {
+                    GetVariables(localScope, sb, true);
+                }
+            }
+
+            // Globals:
+            GetVariables(s_variables, sb, false);
+
+            return sb.ToString().Trim();
+        }
+
+        Dictionary<string, ParserFunction> GetLastLevel()
+        {
+            lock (s_variables)
+            {
+                if (s_lastExecutionLevel == null || s_locals.Count <= StackLevelDelta)
+                {
+                    return null;
+                }
+                var result = s_lastExecutionLevel.Variables;
+                return result;
+            }
+        }
+
+        public bool LocalNameExists(string name)
+        {
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (lastLevel == null)
+            {
+                return false;
+            }
+            name = Constants.ConvertName(name);
+            return lastLevel.ContainsKey(name);
+        }
+
+        public bool GlobalNameExists(string name)
+        {
+            name = Constants.ConvertName(name);
+            return s_variables.ContainsKey(name) || s_functions.ContainsKey(name);
+        }
+
+        public Variable RegisterEnum(string varName, string enumName)
+        {
+            Variable enumVar = EnumFunction.UseExistingEnum(enumName);
+            if (enumVar == Variable.EmptyInstance)
+            {
+                return enumVar;
+            }
+
+            RegisterFunction(varName, new GetVarFunction(enumVar));
+            return enumVar;
+        }
+
+        public void RegisterFunction(string name, ParserFunction function,
+                                            bool isNative = true)
+        {
+            function.InterpreterInstance = this;
+
+            name = Constants.ConvertName(name);
+            if (s_functions.TryGetValue(name, out ParserFunction old))
+            {
+                var msg = "Warning: Overriding function [" + old.Name + "].";
+                System.Diagnostics.Debug.WriteLine(msg);
+                AppendOutput(msg, true);
+            }
+            function.Name = Constants.GetRealName(name);
+
+            if (!string.IsNullOrWhiteSpace(s_namespace))
+            {
+                StackLevel level;
+                if (s_namespaces.TryGetValue(s_namespace, out level) &&
+                   function is CustomFunction)
+                {
+                    ((CustomFunction)function).NamespaceData = level;
+                    name = s_namespacePrefix + name;
+                }
+            }
+
+            s_functions[name] = function;
+            function.isNative = isNative;
+        }
+
+        public string GetDefinedFunctions()
+        {
+            StringBuilder sb = new StringBuilder();
+            var keys = s_functions.Keys.ToList();
+            keys.Sort();
+            foreach (var key in keys)
+            {
+                var func = s_functions[key];
+                if (func.isNative)
+                {
+                    sb.AppendLine(key + ": " + func.Description());
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        public bool UnregisterFunction(string name)
+        {
+            name = Constants.ConvertName(name);
+
+            bool removed = s_functions.Remove(name);
+            return removed;
+        }
+
+        public bool RemoveGlobal(string name)
+        {
+            name = Constants.ConvertName(name);
+            return s_variables.Remove(name);
+        }
+
+        void NormalizeValue(ParserFunction function)
+        {
+            GetVarFunction gvf = function as GetVarFunction;
+            if (gvf != null)
+            {
+                gvf.Value.CurrentAssign = "";
+            }
+        }
+
+        void AddVariables(List<Variable> vars, Dictionary<string, ParserFunction> dict)
+        {
+            foreach (var val in dict.Values)
+            {
+                if (val.isNative || !(val is GetVarFunction))
+                {
+                    continue;
+                }
+                Variable var = ((GetVarFunction)val).Value.DeepClone();
+                var.ParamName = ((GetVarFunction)val).Name;
+                vars.Add(var);
+            }
+        }
+
+        public List<Variable> VariablesSnaphot(ParsingScript script = null, bool includeGlobals = false)
+        {
+            List<Variable> vars = new List<Variable>();
+            if (includeGlobals)
+            {
+                AddVariables(vars, s_variables);
+            }
+            Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
+            if (lastLevel != null)
+            {
+                AddVariables(vars, lastLevel);
+            }
+            if (script != null && script.StackLevel != null)
+            {
+                AddVariables(vars, script.StackLevel.Variables);
+            }
+            return vars;
+        }
+
+        public void AddGlobal(string name, ParserFunction function,
+                                     bool isNative = true)
+        {
+            function.InterpreterInstance = this;
+            Utils.CheckLegalName(name);
+            name = Constants.ConvertName(name);
+            NormalizeValue(function);
+            function.isNative = isNative;
+
+            var handle = OnVariableChange;
+            bool exists = handle != null && s_variables.ContainsKey(name);
+            s_variables[name] = function;
+
+            function.Name = Constants.GetRealName(name);
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
+            if (!isNative)
+            {
+                Translation.AddTempKeyword(name);
+            }
+#endif
+            if (handle != null && function is GetVarFunction)
+            {
+                handle.Invoke(function.Name, ((GetVarFunction)function).Value, exists);
+            }
+        }
+
+        public void AddLocalScopeVariable(string name, string scopeName, ParserFunction variable)
+        {
+            variable.InterpreterInstance = this;
+
+            name = Constants.ConvertName(name);
+            variable.isNative = false;
+            variable.Name = Constants.GetRealName(name);
+            if (variable is GetVarFunction)
+            {
+                ((GetVarFunction)variable).Value.ParamName = variable.Name;
+            }
+
+            if (scopeName == null)
+            {
+                scopeName = "";
+            }
+
+            Dictionary<string, ParserFunction> localScope;
+            if (!s_localScope.TryGetValue(scopeName, out localScope))
+            {
+                localScope = new Dictionary<string, ParserFunction>();
+            }
+            localScope[name] = variable;
+            s_localScope[scopeName] = localScope;
+        }
+
+        ParserFunction GetLocalScopeVariable(string name, string scopeName)
+        {
+            scopeName = Path.GetFileName(scopeName);
+            Dictionary<string, ParserFunction> localScope;
+            if (!s_localScope.TryGetValue(scopeName, out localScope))
+            {
+                return null;
+            }
+
+            name = Constants.ConvertName(name);
+            ParserFunction function = null;
+            localScope.TryGetValue(name, out function);
+            return function;
+        }
+
+        public void AddAction(string name, ActionFunction action)
+        {
+            action.InterpreterInstance = this;
+            s_actions[name] = action;
+        }
+
+        public void AddLocalVariables(StackLevel locals)
+        {
+            lock (s_variables)
+            {
+                s_locals.Push(locals);
+                s_lastExecutionLevel = locals;
+            }
+        }
+
+        public void AddNamespace(string namespaceName)
+        {
+            namespaceName = Constants.ConvertName(namespaceName);
+            if (!string.IsNullOrWhiteSpace(s_namespace))
+            {
+                throw new ArgumentException("Already inside of namespace [" + s_namespace + "].");
+            }
+
+            StackLevel level;
+            if (!s_namespaces.TryGetValue(namespaceName, out level))
+            {
+                level = new StackLevel(namespaceName, true); ;
+            }
+
+            lock (s_variables)
+            {
+                s_locals.Push(level);
+                s_lastExecutionLevel = level;
+            }
+
+            s_namespaces[namespaceName] = level;
+
+            s_namespace = namespaceName;
+            s_namespacePrefix = namespaceName + ".";
+        }
+
+        public void PopNamespace()
+        {
+            s_namespace = s_namespacePrefix = "";
+            lock (s_variables)
+            {
+                while (s_locals.Count > 0)
+                {
+                    var level = s_locals.Pop();
+                    s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
+                    if (level.IsNamespace)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        public string AdjustWithNamespace(string name)
+        {
+            name = Constants.ConvertName(name);
+            return s_namespacePrefix + name;
+        }
+
+        public StackLevel AddStackLevel(string scopeName)
+        {
+            lock (s_variables)
+            {
+                s_locals.Push(new StackLevel(scopeName));
+                s_lastExecutionLevel = s_locals.Peek();
+                return s_lastExecutionLevel;
+            }
+        }
+
+        public void AddLocalVariable(ParserFunction local, string varName = "")
+        {
+            local.InterpreterInstance = this;
+
+            NormalizeValue(local);
+            local.m_isGlobal = false;
+
+            lock (s_variables)
+            {
+
+                if (s_lastExecutionLevel == null)
+                {
+                    s_lastExecutionLevel = new StackLevel();
+                    s_locals.Push(s_lastExecutionLevel);
+                }
+            }
+
+            var name = Constants.ConvertName(string.IsNullOrWhiteSpace(varName) ? local.Name : varName);
+            local.Name = Constants.GetRealName(name);
+            if (local is GetVarFunction getVarFunction)
+            {
+                getVarFunction.Value.ParamName = local.Name;
+            }
+
+            var handle = OnVariableChange;
+            bool exists = handle != null && s_lastExecutionLevel.Variables.ContainsKey(name);
+
+            s_lastExecutionLevel.Variables[name] = local;
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
+            Translation.AddTempKeyword(name);
+#endif
+            if (handle != null && local is GetVarFunction localFunction)
+            {
+                handle.Invoke(local.Name, localFunction.Value, exists);
+            }
+        }
+
+        public void PopLocalVariables(int id)
+        {
+            lock (s_variables)
+            {
+                if (s_lastExecutionLevel == null)
+                {
+                    return;
+                }
+                if (id < 0 || s_lastExecutionLevel.Id == id)
+                {
+                    s_locals.Pop();
+                    s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
+                    return;
+                }
+
+                var array = s_locals.ToArray();
+                for (int i = 1; i < array.Length; i++)
+                {
+                    var stack = array[i];
+                    if (stack.Id == id)
+                    {
+                        for (int j = 0; j < i + 1 && s_locals.Count > 0; j++)
+                        {
+                            s_locals.Pop();
+                        }
+                        for (int j = 0; j < i; j++)
+                        {
+                            s_locals.Push(array[j]);
+                        }
+                        s_lastExecutionLevel = s_locals.Peek();
+                        return;
+                    }
+                }
+            }
+        }
+
+        public int GetCurrentStackLevel()
+        {
+            lock (s_variables)
+            {
+                return s_locals.Count;
+            }
+        }
+
+        public void InvalidateStacksAfterLevel(int level)
+        {
+            lock (s_variables)
+            {
+                while (level >= 0 && s_locals.Count > level)
+                {
+                    s_locals.Pop();
+                }
+                s_lastExecutionLevel = s_locals.Count == 0 ? null : s_locals.Peek();
+            }
+        }
+
+        public bool PopLocalVariable(string name)
+        {
+            if (s_lastExecutionLevel == null)
+            {
+                return false;
+            }
+            Dictionary<string, ParserFunction> locals = s_lastExecutionLevel.Variables;
+            name = Constants.ConvertName(name);
+            return locals.Remove(name);
+        }
+
+        public ParserFunction GetObjectFunction(string name, ParsingScript script)
+        {
+            if (script.CurrentClass != null && script.CurrentClass.Name == name)
+            {
+                script.Backward(name.Length + 1);
+                return new FunctionCreator();
+            }
+            if (script.ClassInstance != null &&
+               (script.ClassInstance.PropertyExists(name) || script.ClassInstance.FunctionExists(name)))
+            {
+                name = script.ClassInstance.InstanceName + "." + name;
+            }
+            //int ind = name.LastIndexOf('.');
+            int ind = name.IndexOf('.');
+            if (ind <= 0)
+            {
+                return null;
+            }
+            string baseName = name.Substring(0, ind);
+            if (s_namespaces.ContainsKey(baseName))
+            {
+                int ind2 = name.IndexOf('.', ind + 1);
+                if (ind2 > 0)
+                {
+                    ind = ind2;
+                    baseName = name.Substring(0, ind);
+                }
+            }
+
+            string prop = name.Substring(ind + 1);
+
+            ParserFunction pf = GetFromNamespace(prop, baseName);
+            if (pf != null)
+            {
+                return pf;
+            }
+
+            pf = GetVariable(baseName, script, true);
+            if (pf == null || !(pf is GetVarFunction))
+            {
+                pf = GetFunction(baseName);
+                if (pf == null)
+                {
+                    pf = Utils.ExtractArrayElement(this, baseName);
+                }
+            }
+
+            GetVarFunction varFunc = pf as GetVarFunction;
+            if (varFunc == null)
+            {
+                return null;
+            }
+
+            varFunc.PropertyName = prop;
+            return varFunc;
+        }
+
+        public ParserFunction GetArrayFunction(string name, ParsingScript script, string action)
+        {
+            int arrayStart = name.IndexOf(Constants.START_ARRAY);
+            if (arrayStart < 0)
+            {
+                return null;
+            }
+
+            if (arrayStart == 0)
+            {
+                Variable arr = Utils.ProcessArrayMap(new ParsingScript(this, name));
+                return new GetVarFunction(arr);
+            }
+
+            string arrayName = name;
+
+            int delta = 0;
+            List<Variable> arrayIndices = Utils.GetArrayIndices(script, arrayName, delta, (string arr, int del) => { arrayName = arr; delta = del; });
+
+            if (arrayIndices.Count == 0)
+            {
+                return null;
+            }
+
+            ParserFunction pf = GetVariable(arrayName, script);
+            GetVarFunction varFunc = pf as GetVarFunction;
+            if (varFunc == null)
+            {
+                return null;
+            }
+
+            // we temporarily backtrack for the processing
+            script.Backward(name.Length - arrayStart - 1);
+            script.Backward(action != null ? action.Length : 0);
+            // delta shows us how manxy chars we need to advance forward in GetVarFunction()
+            delta -= arrayName.Length;
+            delta += action != null ? action.Length : 0;
+
+            varFunc.Indices = arrayIndices;
+            varFunc.Delta = delta;
+            return varFunc;
+        }
+
+        static bool ActionForUndefined(string action)
+        {
+            return !string.IsNullOrWhiteSpace(action) && action.EndsWith("=") && action.Length > 1;
+        }
+
+        public ParserFunction GetRegisteredAction(string name, ParsingScript script, ref string action)
+        {
+            if (Constants.CheckReserved(name))
+            {
+                return null;
+            }
+
+            if (false && ActionForUndefined(action) && script.Rest.StartsWith(Constants.UNDEFINED))
+            {
+                IsUndefinedFunction undef = new IsUndefinedFunction(name, action);
+                return undef;
+            }
+
+            ActionFunction actionFunction = GetAction(action);
+
+            // If passed action exists and is registered we are done.
+            if (actionFunction == null)
+            {
+                return null;
+            }
+
+            ActionFunction theAction = actionFunction.NewInstance() as ActionFunction;
+            theAction.Name = name;
+            theAction.Action = action;
+
+            action = null;
+            return theAction;
+        }
+
+        public void CleanUp()
+        {
+            s_functions.Clear();
+            s_actions.Clear();
+            s_allClasses.Clear();
+            CleanUpVariables();
+        }
+
+        public void CleanUpVariables()
+        {
+            s_variables.Clear();
+            s_locals.Clear();
+            s_localScope.Clear();
+            s_namespaces.Clear();
+            s_namespace = s_namespacePrefix = "";
+        }
+
+        public bool IsNumericFunction(string paramName, ParsingScript script = null)
+        {
+            ParserFunction function = GetFunction(paramName);
+            return function is INumericFunction;
+        }
+
+        public void RegisterClass(string className, CSCSClass obj)
+        {
+            obj.InterpreterInstance = this;
+            obj.Namespace = GetCurrentNamespace;
+            obj.OriginalName = className;
+
+            if (!string.IsNullOrWhiteSpace(obj.Namespace))
+            {
+                className = obj.Namespace + "." + className;
+            }
+
+            className = Constants.ConvertName(className);
+            obj.Name = className;
+            s_allClasses[className] = obj;
+        }
+
+        public CSCSClass GetClass(string name)
+        {
+            string currNamespace = GetCurrentNamespace;
+            if (!string.IsNullOrWhiteSpace(currNamespace))
+            {
+                bool namespacePresent = name.Contains(".");
+                if (!namespacePresent)
+                {
+                    name = currNamespace + "." + name;
+                }
+            }
+
+            CSCSClass theClass = null;
+            s_allClasses.TryGetValue(name, out theClass);
+            return theClass;
+        }
+
+        public static List<Variable> GetClassProperties(CSCSClass cscsClass)
+        {
+            var props = new List<Variable>();
+            foreach (var prop in cscsClass.ClassProperties)
+            {
+                props.Add(new Variable(prop.Key));
+            }
+
+            return props;
+        }
+
+        private void RegisterCompiledClass()
+        {
+            RegisterClass("CompiledTest", new TestCompiledClass());
+            RegisterClass("CompiledTestAsync", new TestCompiledClassAsync());
+
+            RegisterFunction("TestObject",
+                new GetVarFunction(new Variable(new TestScriptObject())), true);
+        }
+
+        #endregion
     }
 }
 

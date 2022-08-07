@@ -160,7 +160,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't get files from " + path + ": " + exc.Message);
+                throw new ArgumentException("Couldn't get files from " + path + ": " + exc.Message, exc);
             }
             return results;
         }
@@ -192,7 +192,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't copy to [" + dst + "]: " + exc.Message);
+                throw new ArgumentException("Couldn't copy to [" + dst + "]: " + exc.Message, exc);
             }
         }
 
@@ -301,16 +301,15 @@ namespace SplitAndMerge
             }*/
         }
 
-        public static List<Variable> ConvertToResults(string[] items,
-                                                            bool print = false)
+        public static List<Variable> ConvertToResults(string[] items, Interpreter interpreter = null)
         {
             List<Variable> results = new List<Variable>(items.Length);
             foreach (string item in items)
             {
                 results.Add(new Variable(item));
-                if (print)
+                if (interpreter != null)
                 {
-                    Interpreter.Instance.AppendOutput(item);
+                    interpreter.AppendOutput(item);
                 }
             }
 
@@ -357,12 +356,12 @@ namespace SplitAndMerge
             return results;
         }
 
-        public static void PrintColor(string output, ConsoleColor fgcolor)
+        public static void PrintColor(Interpreter interpreter, string output, ConsoleColor fgcolor)
         {
             ConsoleColor currentForeground = Console.ForegroundColor;
             Console.ForegroundColor = fgcolor;
 
-            Interpreter.Instance.AppendOutput(output);
+            interpreter.AppendOutput(output);
             //Console.Write(output);
 
             Console.ForegroundColor = currentForeground;
@@ -429,7 +428,7 @@ namespace SplitAndMerge
             }
             return ms;
         }
-        public static void PrintScriptColor(string script, ParsingScript parentSript)
+        public static void PrintScriptColor(string script, ParsingScript parentScript)
         {
             StringBuilder item = new StringBuilder();
 
@@ -442,7 +441,7 @@ namespace SplitAndMerge
 
                 if (inQuotes)
                 {
-                    Interpreter.Instance.AppendOutput(ch.ToString());
+                    parentScript.InterpreterInstance.AppendOutput(ch.ToString());
                     continue;
                 }
                 if (!Constants.TOKEN_SEPARATION.Contains(ch))
@@ -453,43 +452,42 @@ namespace SplitAndMerge
                 if (item.Length > 0)
                 {
                     string token = item.ToString();
-                    ParserFunction func = ParserFunction.GetFunction(token);
-                    bool isNative = Translation.IsNativeWord(token);
+                    ParserFunction func = parentScript.InterpreterInstance.GetFunction(token);
+                    bool isNative = parentScript.InterpreterInstance.Translation.IsNativeWord(token);
                     if (func != null || isNative)
                     {
                         ConsoleColor col = isNative || func.isNative ? ConsoleColor.Green :
                                                        func.isGlobal ? ConsoleColor.Magenta :
                                                            ConsoleColor.Gray;
-                        Utils.PrintColor(token, col);
+                        Utils.PrintColor(parentScript.InterpreterInstance, token, col);
                     }
                     else
                     {
-                        Interpreter.Instance.AppendOutput(token);
+                        parentScript.InterpreterInstance.AppendOutput(token);
                     }
                     item.Clear();
                 }
-                Interpreter.Instance.AppendOutput(ch.ToString());
+                parentScript.InterpreterInstance.AppendOutput(ch.ToString());
             }
         }
 
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-        public static Variable RunCompiled(string functionName, string argsString)
+        public static Variable RunCompiled(Interpreter interpreter, string functionName, string argsString)
         {
             string adjArgs = PrepareArgs(argsString, true);
-            ParsingScript argScript = new ParsingScript(adjArgs);
+            ParsingScript argScript = new ParsingScript(interpreter, adjArgs);
             List<Variable> args = argScript.GetFunctionArgs();
 
-            ParserFunction function = ParserFunction.GetFunction(functionName);
-            if (function is CustomCompiledFunction)
+            ParserFunction function = interpreter.GetFunction(functionName);
+            if (function is CustomCompiledFunction customFunction)
             {
-                CustomCompiledFunction customFunction = function as CustomCompiledFunction;
                 Variable result = customFunction.Run(args);
                 if (result != null)
                 {
                     return result;
                 }
             }
-            return Calculate(functionName, argsString);
+            return Calculate(interpreter, functionName, argsString);
         }
 #endif
     }

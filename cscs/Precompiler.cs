@@ -44,10 +44,10 @@ namespace SplitAndMerge
         ParsingScript m_parentScript;
         public string CSharpCode { get; private set; }
 
-        Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+        Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> m_compiledFunc;
 
-        Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+        Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>> m_compiledFuncAsync;
 
         static List<string> s_definitions = new List<string>();
@@ -144,7 +144,7 @@ namespace SplitAndMerge
                 }
             }
 
-            m_cscsCode = Utils.ConvertToScript(m_originalCode, out _);
+            m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
             RemoveIrrelevant(m_cscsCode);
 
             CSharpCode = ConvertScript();
@@ -176,11 +176,11 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Compile error: " + exc.Message);
+                throw new ArgumentException("Compile error: " + exc.Message, exc);
             }
         }
 
-        static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+        static Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
                            List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable>
                             CompileAndCache(CompilerResults compile, string functionName)
         {
@@ -191,7 +191,7 @@ namespace SplitAndMerge
             List<ParameterExpression> paramTypes = tuple.Item2;
 
             var lambda =
-              Expression.Lambda<Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
                                      List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable>>(
                 methodCall, paramTypes.ToArray());
             var func = lambda.Compile();
@@ -199,7 +199,7 @@ namespace SplitAndMerge
             return func;
         }
 
-        static Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+        static Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
                    List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>>
                     CompileAndCacheAsync(CompilerResults compile, string functionName)
         {
@@ -210,7 +210,7 @@ namespace SplitAndMerge
             List<ParameterExpression> paramTypes = tuple.Item2;
 
             var lambda =
-              Expression.Lambda<Func<List<string>, List<double>, List<List<string>>, List<List<double>>,
+              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
                                      List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>>>(
                 methodCall, paramTypes.ToArray());
             var func = lambda.Compile();
@@ -225,6 +225,7 @@ namespace SplitAndMerge
             Type mt = module.GetType("SplitAndMerge.Precompiler");
 
             List<ParameterExpression> paramTypes = new List<ParameterExpression>();
+            paramTypes.Add(Expression.Parameter(typeof(Interpreter), "__interpreter"));
             paramTypes.Add(Expression.Parameter(typeof(List<string>), STRING_VAR_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<double>), NUMERIC_VAR_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<List<string>>), STRING_ARRAY_ARG));
@@ -244,7 +245,7 @@ namespace SplitAndMerge
             return new Tuple<MethodCallExpression, List<ParameterExpression>>(methodCall, paramTypes);
         }
 
-        public Variable Run(List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
+        public Variable Run(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
                             List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
                             List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
         {
@@ -254,10 +255,10 @@ namespace SplitAndMerge
                 Compile();
             }
 
-            Variable result = m_compiledFunc.Invoke(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
+            Variable result = m_compiledFunc.Invoke(interpreter, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
             return result;
         }
-        public Variable RunAsync(List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
+        public Variable RunAsync(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
                             List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
                             List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
         {
@@ -267,7 +268,7 @@ namespace SplitAndMerge
                 Compile();
             }
 
-            var task = m_compiledFuncAsync.Invoke(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
+            var task = m_compiledFuncAsync.Invoke(interpreter, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
             Variable result = task.Result;
             return result;
         }
@@ -344,7 +345,7 @@ namespace SplitAndMerge
             {
                 paramValue = paramName;
             }
-            return m_depth + "ParserFunction.AddGlobalOrLocalVariable(\"" + paramName +
+            return m_depth + "__interpreter.AddGlobalOrLocalVariable(\"" + paramName +
                      "\", new GetVarFunction(Variable.ConvertToVariable(" + paramValue + ")));\n";
         }
 
@@ -417,7 +418,8 @@ namespace SplitAndMerge
                 m_converted.AppendLine("    public static Variable " + m_functionName);
             }
             m_converted.AppendLine(
-                           "(List<string> " + STRING_VAR_ARG + ",\n" +
+                           "(Interpreter __interpreter,\n" +
+                           " List<string> " + STRING_VAR_ARG + ",\n" +
                            " List<double> " + NUMERIC_VAR_ARG + ",\n" +
                            " List<List<string>> " + STRING_ARRAY_ARG + ",\n" +
                            " List<List<double>> " + NUMERIC_ARRAY_ARG + ",\n" +
@@ -817,9 +819,9 @@ namespace SplitAndMerge
             string result = "Utils.ExtendArrayIfNeeded(" + arrayName + ", (int)" + arrayIndex + ", Variable.EmptyInstance); \n";
             result += m_depth + token.Substring(0, start + 1) + "(int)" + arrayIndex + token.Substring(end, token.Length - end);
 
-            extra += m_depth + "if (" + BOOL_TEMP_VAR + ") " + "ParserFunction.AddGlobalOrLocalVariable(\"" + arrayName +
+            extra += m_depth + "if (" + BOOL_TEMP_VAR + ") " + "__interpreter.AddGlobalOrLocalVariable(\"" + arrayName +
                      "\", new GetVarFunction(Variable.ConvertToVariable(__varTempVar)));\n"; ;
-            extra += m_depth + "else ParserFunction.AddGlobalOrLocalVariable(\"" + arrayName +
+            extra += m_depth + "else __interpreter.AddGlobalOrLocalVariable(\"" + arrayName +
                      "\", new GetVarFunction(Variable.ConvertToVariable(" + arrayName + ")));\n";
             return result;
         }
@@ -1186,7 +1188,7 @@ namespace SplitAndMerge
             if (paramStart >= 0)
             {
                 paramEnd = paramEnd <= paramStart ? restStr.Length : paramEnd;
-                ParsingScript tmpScript = new ParsingScript(restStr.Substring(paramStart, restStr.Length - paramStart));
+                ParsingScript tmpScript = new ParsingScript(m_parentScript.InterpreterInstance, restStr.Substring(paramStart, restStr.Length - paramStart));
                 argsStr = Utils.PrepareArgs(Utils.GetBodyBetween(tmpScript));
             }
 
@@ -1274,7 +1276,7 @@ namespace SplitAndMerge
         //expr += m_depth + VARIABLE_TEMP_VAR + " = ParserFunction.GetVariable(\"" + functionName + "\");\n";
         string GetCSCSVariable(string functionName, string argsStr = "" , char ch = '(')
         {
-            string result = m_depth + VARIABLE_TEMP_VAR + " = ParserFunction.GetVariableValue(\"" + functionName + "\");\n";
+            string result = m_depth + VARIABLE_TEMP_VAR + " = __interpreter.GetVariableValue(\"" + functionName + "\");\n";
             return result;
         }
 
@@ -1287,7 +1289,7 @@ namespace SplitAndMerge
             }
 
             sb.AppendLine(m_depth + ARGS_TEMP_VAR + " =\"" + argsStr + "\";");
-            sb.AppendLine(m_depth + SCRIPT_TEMP_VAR + " = new ParsingScript(" + ARGS_TEMP_VAR + ");");
+            sb.AppendLine(m_depth + SCRIPT_TEMP_VAR + " = new ParsingScript(__interpreter, " + ARGS_TEMP_VAR + ");");
             sb.AppendLine(m_depth + PARSER_TEMP_VAR + " = new ParserFunction(" + SCRIPT_TEMP_VAR + ", \"" + functionName +
                 "\", '" + ch + "', ref " + ACTION_TEMP_VAR + ");");
 

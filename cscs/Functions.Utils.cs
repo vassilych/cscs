@@ -20,8 +20,8 @@ namespace SplitAndMerge
             string pattern = args[0].AsString();
 
             int MAX_PROC_NAME = 26;
-            Interpreter.Instance.AppendOutput(Utils.GetLine(), true);
-            Interpreter.Instance.AppendOutput(String.Format("{0} {1} {2} {3} {4} {5}",
+            InterpreterInstance.AppendOutput(Utils.GetLine(), true);
+            InterpreterInstance.AppendOutput(String.Format("{0} {1} {2} {3} {4} {5}",
               "Process Id".PadRight(15), "Process Name".PadRight(MAX_PROC_NAME),
               "Working Set".PadRight(15), "Virt Mem".PadRight(15),
               "Start Time".PadRight(15), "CPU Time".PadRight(25)), true);
@@ -50,9 +50,9 @@ namespace SplitAndMerge
                   string.Format("{0,15} {1," + MAX_PROC_NAME + "} {2,15} {3,15} {4,15} {5,25}",
                     pr.Id, procTitle,
                     workingSet, virtMemory, startTime, procTime)));
-                Interpreter.Instance.AppendOutput(results.Last().String, true);
+                InterpreterInstance.AppendOutput(results.Last().String, true);
             }
-            Interpreter.Instance.AppendOutput(Utils.GetLine(), true);
+            InterpreterInstance.AppendOutput(Utils.GetLine(), true);
 
             return new Variable(results);
         }
@@ -74,12 +74,11 @@ namespace SplitAndMerge
             {
                 Process process = Process.GetProcessById(processId);
                 process.Kill();
-                Interpreter.Instance.AppendOutput("Process " + processId + " killed", true);
+                InterpreterInstance.AppendOutput("Process " + processId + " killed", true);
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't kill process " + processId +
-                  " (" + exc.Message + ")");
+                throw new ArgumentException($"Couldn't kill process {processId} ({exc.Message})", exc);
             }
 
             return Variable.EmptyInstance;
@@ -104,14 +103,13 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't start [" + processName + "]: " + exc.Message);
+                throw new ArgumentException($"Couldn't start [{processName}]: {exc.Message}", exc);
             }
 
             return new Variable(processId);
         }
     }
 
-    // Starts running an "echo" server
     class ServerSocket : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -124,10 +122,10 @@ namespace SplitAndMerge
             string functionToRun = Utils.GetSafeString(args, 0);
             int port = Utils.GetSafeInt(args, 1);
 
-            var customFunction = GetFunction(functionToRun) as CustomFunction;
+            var customFunction = InterpreterInstance.GetFunction(functionToRun) as CustomFunction;
             Utils.CheckNotNull(customFunction, functionToRun, script);
 
-            Interpreter.Instance.AppendOutput("Starting server with function " + functionToRun, true);
+            InterpreterInstance.AppendOutput("Starting server with function " + functionToRun, true);
 
             try
             {
@@ -144,13 +142,13 @@ namespace SplitAndMerge
                 Socket handler = null;
                 while (true)
                 {
-                    Interpreter.Instance.AppendOutput("Waiting for connections on " + port + " ...", true);
+                    InterpreterInstance.AppendOutput("Waiting for connections on " + port + " ...", true);
                     handler = listener.Accept();
 
                     var request = ReceiveMessage(handler);
                     SendMessage(handler, "OK");
                     var load = ReceiveMessage(handler);
-                    var objReceived = MarshalFunction.Unmarshal(load);
+                    var objReceived = MarshalFunction.Unmarshal(load, InterpreterInstance);
 
                     var funcArgs = new List<Variable>() { new Variable(request), objReceived };
                     var retValue = customFunction.Run(funcArgs, script);
@@ -158,10 +156,10 @@ namespace SplitAndMerge
                     var objName = classInst != null && !string.IsNullOrWhiteSpace(classInst.InstanceName) ?
                         classInst.InstanceName : retValue.ParamName;
                     var retLoad = string.IsNullOrWhiteSpace(objName) ?
-                        retValue.Marshal("") : MarshalFunction.Marshal(objName);
+                        retValue.Marshal("") : MarshalFunction.Marshal(objName, InterpreterInstance);
                     SendMessage(handler, retLoad);
 
-                    Interpreter.Instance.AppendOutput("Finished processing client: [" + retValue.AsString() + "]", true);
+                    InterpreterInstance.AppendOutput("Finished processing client: [" + retValue.AsString() + "]", true);
                     if (request.Contains("<EOF>"))
                     {
                         break;
@@ -240,7 +238,7 @@ namespace SplitAndMerge
                                  args[1].ParamName;
 
             string retValue = SendToServer(request, objName, port, host);
-            var retObj = MarshalFunction.Unmarshal(retValue);
+            var retObj = MarshalFunction.Unmarshal(retValue, InterpreterInstance);
             return retObj;
         }
 
@@ -250,7 +248,7 @@ namespace SplitAndMerge
             byte[] bytes = new byte[1024];
             Utils.CheckNotEmpty(request, "request");
             Utils.CheckNotEmpty(load, "load");
-            var objLoad = MarshalFunction.Marshal(load);
+            var objLoad = MarshalFunction.Marshal(load, InterpreterInstance);
 
             if (string.IsNullOrWhiteSpace(host) || host.Equals("localhost"))
             {
@@ -270,7 +268,7 @@ namespace SplitAndMerge
 
                 sender.Connect(remoteEP);
 
-                Interpreter.Instance.AppendOutput("Connected to [" + sender.RemoteEndPoint.ToString() + "]", true);
+                InterpreterInstance.AppendOutput("Connected to [" + sender.RemoteEndPoint.ToString() + "]", true);
 
                 ServerSocket.SendMessage(sender, request);
                 ServerSocket.ReceiveMessage(sender);
@@ -320,7 +318,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't change directory: " + exc.Message);
+                throw new ArgumentException("Couldn't change directory: " + exc.Message, exc);
             }
 
             return new Variable(newDir);
@@ -360,7 +358,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't change directory: " + exc.Message);
+                throw new ArgumentException("Couldn't change directory: " + exc.Message, exc);
             }
 
             return new Variable(newDir);
@@ -506,11 +504,11 @@ namespace SplitAndMerge
                 string pwd = Directory.GetCurrentDirectory();
                 List<string> files = Utils.GetStringInFiles(pwd, search, patterns.ToArray(), ignoreCase);
 
-                results = Utils.ConvertToResults(files.ToArray(), true);
+                results = Utils.ConvertToResults(files.ToArray(), InterpreterInstance);
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't find pattern: " + exc.Message);
+                throw new ArgumentException("Couldn't find pattern: " + exc.Message, exc);
             }
 
             return new Variable(results);
@@ -534,11 +532,11 @@ namespace SplitAndMerge
                 string pwd = Directory.GetCurrentDirectory();
                 List<string> files = Utils.GetFiles(pwd, patterns.ToArray());
 
-                results = Utils.ConvertToResults(files.ToArray(), true);
+                results = Utils.ConvertToResults(files.ToArray(), InterpreterInstance);
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't list directory: " + exc.Message);
+                throw new ArgumentException("Couldn't list directory: " + exc.Message, exc);
             }
 
             return new Variable(results);
@@ -572,7 +570,7 @@ namespace SplitAndMerge
                 }
                 catch (Exception exc)
                 {
-                    throw new ArgumentException("Couldn't create [" + dst + "] :" + exc.Message);
+                    throw new ArgumentException("Couldn't create [" + dst + "] :" + exc.Message, exc);
                 }
 
             }
@@ -627,7 +625,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't copy: " + exc.Message);
+                throw new ArgumentException("Couldn't copy: " + exc.Message, exc);
             }
 
             return Variable.EmptyInstance;
@@ -646,7 +644,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't create [" + dirname + "] :" + exc.Message);
+                throw new ArgumentException("Couldn't create [" + dirname + "] :" + exc.Message, exc);
             }
 
             return Variable.EmptyInstance;
@@ -679,7 +677,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't delete [" + pathname + "] :" + exc.Message);
+                throw new ArgumentException("Couldn't delete [" + pathname + "] :" + exc.Message, exc);
             }
 
             return Variable.EmptyInstance;
@@ -736,7 +734,7 @@ namespace SplitAndMerge
                 if (File.Exists(dir))
                 {
                     FileInfo fi = new FileInfo(dir);
-                    Interpreter.Instance.AppendOutput(Utils.GetPathDetails(fi, fi.Name), true);
+                    InterpreterInstance.AppendOutput(Utils.GetPathDetails(fi, fi.Name), true);
                     results.Add(new Variable(fi.Name));
                     return new Variable(results);
                 }
@@ -762,10 +760,10 @@ namespace SplitAndMerge
 
                 if (pattern == Constants.ALL_FILES)
                 {
-                    Interpreter.Instance.AppendOutput(Utils.GetPathDetails(dirInfo, "."), true);
+                    InterpreterInstance.AppendOutput(Utils.GetPathDetails(dirInfo, "."), true);
                     if (dirInfo.Parent != null)
                     {
-                        Interpreter.Instance.AppendOutput(Utils.GetPathDetails(dirInfo.Parent, ".."), true);
+                        InterpreterInstance.AppendOutput(Utils.GetPathDetails(dirInfo.Parent, ".."), true);
                     }
                 }
 
@@ -775,7 +773,7 @@ namespace SplitAndMerge
                 {
                     try
                     {
-                        Interpreter.Instance.AppendOutput(Utils.GetPathDetails(fi, fi.Name), true);
+                        InterpreterInstance.AppendOutput(Utils.GetPathDetails(fi, fi.Name), true);
                         results.Add(new Variable(fi.Name));
                     }
                     catch (Exception)
@@ -790,7 +788,7 @@ namespace SplitAndMerge
                 {
                     try
                     {
-                        Interpreter.Instance.AppendOutput(Utils.GetPathDetails(di, di.Name), true);
+                        InterpreterInstance.AppendOutput(Utils.GetPathDetails(di, di.Name), true);
                         results.Add(new Variable(di.Name));
                     }
                     catch (Exception)
@@ -801,7 +799,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't list directory: " + exc.Message);
+                throw new ArgumentException("Couldn't list directory: " + exc.Message, exc);
             }
 
             return new Variable(results);
@@ -923,7 +921,7 @@ namespace SplitAndMerge
 
             var result = new Variable(Variable.VarType.POINTER);
             result.Pointer = args[0];
-            ParserFunction.AddGlobalOrLocalVariable(m_name,
+            InterpreterInstance.AddGlobalOrLocalVariable(m_name,
                                         new GetVarFunction(result), script);
             return result;
         }
@@ -945,13 +943,13 @@ namespace SplitAndMerge
             {
                 return Variable.Undefined;
             }
-            var refPointer = ParserFunction.GetVariable(pointer, null, true) as GetVarFunction;
+            var refPointer = InterpreterInstance.GetVariable(pointer, null, true) as GetVarFunction;
             if (refPointer == null || string.IsNullOrWhiteSpace(refPointer.Value.Pointer))
             {
                 return Variable.Undefined;
             }
 
-            var result = ParserFunction.GetVariable(refPointer.Value.Pointer, null, true);
+            var result = InterpreterInstance.GetVariable(refPointer.Value.Pointer, null, true);
             if (result is GetVarFunction)
             {
                 return ((GetVarFunction)result).Value;

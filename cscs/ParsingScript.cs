@@ -119,9 +119,12 @@ namespace SplitAndMerge
         public CSCSClass CurrentClass { get; set; }
         public CSCSClass.ClassInstance ClassInstance { get; set; }
 
-        public ParsingScript(string data, int from = 0,
+        public Interpreter InterpreterInstance { get; private set; }
+
+        public ParsingScript(Interpreter interpreter, string data, int from = 0,
                              Dictionary<int, int> char2Line = null)
         {
+            InterpreterInstance = interpreter;
             m_data = data;
             m_from = from;
             m_char2Line = char2Line;
@@ -129,6 +132,7 @@ namespace SplitAndMerge
 
         public ParsingScript(ParsingScript other)
         {
+            InterpreterInstance = other.InterpreterInstance;
             m_data = other.String;
             m_from = other.Pointer;
             m_char2Line = other.Char2Line;
@@ -143,6 +147,13 @@ namespace SplitAndMerge
             AllLabels = other.AllLabels;
             LabelToFile = other.LabelToFile;
             FunctionName = other.FunctionName;
+        }
+
+        // Use a method instead of a settable property, because
+        // this should be very rare, and we want to flag it.
+        public void SetInterpreter(Interpreter interpreter)
+        {
+            InterpreterInstance = interpreter;
         }
 
         public int Size() { return m_data.Length; }
@@ -467,9 +478,9 @@ namespace SplitAndMerge
             return endGroupRead;
         }
 
-        public static Variable RunString(string str)
+        public static Variable RunString(Interpreter interpreter, string str)
         {
-            ParsingScript tempScript = new ParsingScript(str);
+            ParsingScript tempScript = new ParsingScript(interpreter, str);
             Variable result = tempScript.Execute();
             return result;
         }
@@ -486,8 +497,8 @@ namespace SplitAndMerge
 
             Variable result = null;
 
-            bool handleByDebugger = DebuggerServer.DebuggerAttached && !Debugger.Executing;
-            if (DebuggerServer.DebuggerAttached)
+            bool handleByDebugger = Debugger != null && DebuggerServer.DebuggerAttached && !Debugger.Executing;
+            if (handleByDebugger)
             {
                 result = Debugger.CheckBreakpoints(this).Result;
                 if (result != null)
@@ -539,8 +550,8 @@ namespace SplitAndMerge
 
             Variable result = null;
 
-            bool handleByDebugger = DebuggerServer.DebuggerAttached && !Debugger.Executing;
-            if (DebuggerServer.DebuggerAttached)
+            bool handleByDebugger = Debugger != null && DebuggerServer.DebuggerAttached && !Debugger.Executing;
+            if (handleByDebugger)
             {
                 result = await Debugger.CheckBreakpoints(this);
                 if (result != null)
@@ -602,7 +613,7 @@ namespace SplitAndMerge
 
         public ParsingScript GetTempScript(string str, int startIndex = 0)
         {
-            ParsingScript tempScript  = new ParsingScript(str, startIndex);
+            ParsingScript tempScript  = new ParsingScript(InterpreterInstance, str, startIndex);
             tempScript.Filename       = this.Filename;
             tempScript.InTryBlock     = this.InTryBlock;
             tempScript.ParentScript   = this;
@@ -626,8 +637,8 @@ namespace SplitAndMerge
 
             string includeFile = string.Join(Environment.NewLine, lines);
             Dictionary<int, int> char2Line;
-            var includeScript = Utils.ConvertToScript(includeFile, out char2Line, pathname);
-            ParsingScript tempScript = new ParsingScript(includeScript, 0, char2Line);
+            var includeScript = Utils.ConvertToScript(InterpreterInstance, includeFile, out char2Line, pathname);
+            ParsingScript tempScript = new ParsingScript(InterpreterInstance, includeScript, 0, char2Line);
             tempScript.Filename = pathname;
             tempScript.OriginalScript = string.Join(Constants.END_LINE.ToString(), lines);
             tempScript.ParentScript = this;

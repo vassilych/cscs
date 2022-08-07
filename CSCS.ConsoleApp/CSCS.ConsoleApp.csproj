@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cscs\cscs.csproj" />
+    <ProjectReference Include="..\Modules\CSCS.InterpreterManager\CSCS.InterpreterManager.csproj" />
+    <ProjectReference Include="..\Modules\CSCS.SqlClient\CSCS.SqlClient.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -81,15 +81,6 @@ namespace SplitAndMerge
 
     public abstract class CompiledClass : CSCSClass
     {
-        public static void Init()
-        {
-            RegisterClass("CompiledTest", new TestCompiledClass());
-            RegisterClass("CompiledTestAsync", new TestCompiledClassAsync());
-
-            RegisterFunction("TestObject",
-                new GetVarFunction(new Variable(new TestScriptObject())), true);
-        }
-
         public abstract ScriptObject GetImplementation(List<Variable> args);
     }
 

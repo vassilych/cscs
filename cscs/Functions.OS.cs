@@ -34,7 +34,7 @@ namespace SplitAndMerge
             return Variable.EmptyInstance;
         }
 
-        public static void AddOutput(List<Variable> args, ParsingScript script = null,
+        public void AddOutput(List<Variable> args, ParsingScript script = null,
                                      bool addLine = true, bool addSpace = true, string start = "")
         {
             StringBuilder sb = new StringBuilder();
@@ -46,7 +46,7 @@ namespace SplitAndMerge
 
             string output = sb.ToString() + (addLine ? Environment.NewLine : string.Empty);
             output = output.Replace("\\t", "\t").Replace("\\n", "\n");
-            Interpreter.Instance.AppendOutput(output);
+            InterpreterInstance.AppendOutput(output);
 
             Debugger debugger = script != null && script.Debugger != null ?
                                 script.Debugger : Debugger.MainInstance;
@@ -61,48 +61,57 @@ namespace SplitAndMerge
 
     class DataFunction : ParserFunction
     {
-        internal enum DataMode { ADD, SUBSCRIBE, SEND};
+        internal enum DataMode { ADD, SUBSCRIBE, SEND };
 
-        DataMode      m_mode;
-
-        static string s_method;
-        static string s_tracking;
-        static bool   s_updateImmediate = false;
-
-        static StringBuilder s_data = new StringBuilder();
+        DataMode m_mode;
 
         internal DataFunction(DataMode mode = DataMode.ADD)
         {
             m_mode = mode;
         }
+
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
             string result = "";
 
-            switch(m_mode)
+            switch (m_mode)
             {
                 case DataMode.ADD:
-                    Collect(args);
+                    InterpreterInstance.DataFunctionData.Collect(args);
                     break;
                 case DataMode.SUBSCRIBE:
-                    Subscribe(args);
+                    InterpreterInstance.DataFunctionData.Subscribe(args);
                     break;
                 case DataMode.SEND:
-                    result = SendData(s_data.ToString());
-                    s_data.Clear();
+                    result = InterpreterInstance.DataFunctionData.Send();
                     break;
             }
 
             return new Variable(result);
+        }
+    }
+
+    public class DataFunctionData
+    {
+        public string s_method;
+        public string s_tracking;
+        public bool s_updateImmediate = false;
+
+        public StringBuilder s_data = new StringBuilder();
+        private Interpreter _interpreterInstance;
+
+        public DataFunctionData(Interpreter interpreterInstance)
+        {
+            _interpreterInstance = interpreterInstance;
         }
 
         public void Subscribe(List<Variable> args)
         {
             s_data.Clear();
 
-            s_method          = Utils.GetSafeString(args, 0);
-            s_tracking        = Utils.GetSafeString(args, 1);
+            s_method = Utils.GetSafeString(args, 0);
+            s_tracking = Utils.GetSafeString(args, 1);
             s_updateImmediate = Utils.GetSafeDouble(args, 2) > 0;
         }
 
@@ -113,6 +122,7 @@ namespace SplitAndMerge
             {
                 sb.Append(arg.AsString());
             }
+
             if (s_updateImmediate)
             {
                 SendData(sb.ToString());
@@ -123,12 +133,19 @@ namespace SplitAndMerge
             }
         }
 
-        public string SendData(string data)
+        public string Send()
+        {
+            var result = SendData(s_data.ToString());
+            s_data.Clear();
+            return result;
+        }
+
+        private string SendData(string data)
         {
             if (!string.IsNullOrWhiteSpace(s_method))
             {
-                CustomFunction.Run(s_method, new Variable(s_tracking),
-                                   new Variable(data));
+                CustomFunction.Run(_interpreterInstance, s_method,
+                    new Variable(s_tracking), new Variable(data));
                 return "";
             }
             return data;
@@ -308,7 +325,7 @@ namespace SplitAndMerge
             Utils.CheckNotEmpty(script, varName, m_name);
 
             // 2. Get the current value of the variable.
-            ParserFunction func = ParserFunction.GetVariable(varName, script);
+            ParserFunction func = InterpreterInstance.GetVariable(varName, script);
             Variable currentValue = func.GetValue(script);
 
             // 3. Get the value to be added or appended.
@@ -323,7 +340,7 @@ namespace SplitAndMerge
             newValue.Reset();
             newValue.String = arg1 + arg2;
 
-            ParserFunction.AddGlobalOrLocalVariable(varName, new GetVarFunction(newValue), script);
+            InterpreterInstance.AddGlobalOrLocalVariable(varName, new GetVarFunction(newValue), script);
 
             return newValue;
         }
@@ -357,10 +374,10 @@ namespace SplitAndMerge
             return Variable.EmptyInstance;
         }
 
-        static void ThreadProc(Object stateInfo)
+        void ThreadProc(Object stateInfo)
         {
             string body = (string)stateInfo;
-            ParsingScript threadScript = new ParsingScript(body);
+            ParsingScript threadScript = NewParsingScript(body);
             threadScript.ExecuteAll();
         }
     }
@@ -392,7 +409,7 @@ namespace SplitAndMerge
         {
             string body = Utils.GetBodyBetween(script, Constants.START_ARG,
                                                        Constants.END_ARG);
-            ParsingScript threadScript = new ParsingScript(body);
+            ParsingScript threadScript = NewParsingScript(body);
 
             // BUGBUG: Alfred - what is this actually locking?
             // Vassili - it's a global (static) lock. used when called from different threads
@@ -509,6 +526,7 @@ namespace SplitAndMerge
             {
                 int port = Utils.GetSafeInt(args, 0, 13337);
                 bool allowRemote = Utils.GetSafeInt(args, 1, 0) == 1;
+
                 DebuggerServer.AllowedClients = Utils.GetSafeString(args, 2);
 
                 res = DebuggerServer.StartServer(port, allowRemote);
@@ -673,7 +691,7 @@ namespace SplitAndMerge
             customFunc.ParentScript = script;
             customFunc.ParentOffset = parentOffset;
 
-            ParserFunction.RegisterFunction(funcName, customFunc, false /* not native */);
+            InterpreterInstance.RegisterFunction(funcName, customFunc, false /* not native */);
 #endif
             return new Variable(funcName);
         }
@@ -785,10 +803,10 @@ namespace SplitAndMerge
             }
 
             Variable result = Precompiler.AsyncMode ?
-                m_precompiler.RunAsync(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false) :
-                m_precompiler.Run(argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false);
+                m_precompiler.RunAsync(InterpreterInstance, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false) :
+                m_precompiler.Run(InterpreterInstance, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar, false);
 
-            ParserFunction.PopLocalVariables(m_stackLevel.Id);
+            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
 
             return result;
         }
@@ -859,7 +877,7 @@ namespace SplitAndMerge
             return res;
         }
 
-        static Variable ProcessWebRequest(string uri, string method, string load,
+        Variable ProcessWebRequest(string uri, string method, string load,
                                             string onSuccess, string onFailure,
                                             string tracking, string contentType,
                                             Variable headers)
@@ -901,7 +919,7 @@ namespace SplitAndMerge
                 res = new Variable(result);
                 if (!string.IsNullOrWhiteSpace(onSuccess))
                 {
-                    CustomFunction.Run(onSuccess, new Variable(tracking), new Variable(responseCode), res);
+                    CustomFunction.Run(InterpreterInstance, onSuccess, new Variable(tracking), new Variable(responseCode), res);
                 }
             }
             catch (Exception exc)
@@ -909,14 +927,14 @@ namespace SplitAndMerge
                 res = new Variable(exc.Message);
                 if (!string.IsNullOrWhiteSpace(onFailure))
                 {
-                    CustomFunction.Run(onFailure, new Variable(tracking),
+                    CustomFunction.Run(InterpreterInstance, onFailure, new Variable(tracking),
                                        new Variable(""), res);
                 }
             }
             return res;
         }
 
-        static async Task<Variable> ProcessWebRequestAsync(string uri, string method, string load,
+        async Task<Variable> ProcessWebRequestAsync(string uri, string method, string load,
                                             string onSuccess, string onFailure,
                                             string tracking, string contentType,
                                             Variable headers, int timeout,
@@ -963,14 +981,14 @@ namespace SplitAndMerge
             {
                 if (!string.IsNullOrWhiteSpace(onFailure))
                 {
-                    await CustomFunction.RunAsync(onFailure, new Variable(tracking),
+                    await CustomFunction.RunAsync(InterpreterInstance, onFailure, new Variable(tracking),
                                                   new Variable(""), new Variable(exc.Message));
                 }
                 return new Variable(exc.Message);
             }
         }
 
-        static async Task<Variable> FinishRequest(string onSuccess, string onFailure,
+        async Task<Variable> FinishRequest(string onSuccess, string onFailure,
                                         string tracking, Task<WebResponse> responseTask,
                                         int timeoutMs)
         {
@@ -1010,7 +1028,7 @@ namespace SplitAndMerge
             string responseCode = response == null ? "" : response.StatusCode.ToString();
             if (!string.IsNullOrWhiteSpace(method))
             {
-                await CustomFunction.RunAsync(method, new Variable(tracking),
+                await CustomFunction.RunAsync(InterpreterInstance, method, new Variable(tracking),
                                               new Variable(responseCode), res);
             }
             return res;
@@ -1029,7 +1047,7 @@ namespace SplitAndMerge
             string json = args[0].AsString();
 
             Dictionary<int, int> d;
-            json = Utils.ConvertToScript(json, out d);
+            json = Utils.ConvertToScript(InterpreterInstance, json, out d);
 
             var tempScript = script.GetTempScript(json);
             Variable result = ExtractValue(tempScript);

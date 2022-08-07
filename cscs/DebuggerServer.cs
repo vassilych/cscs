@@ -248,10 +248,6 @@ namespace SplitAndMerge
             string data = null;
             Console.WriteLine("Starting client {0}", m_client.Client.RemoteEndPoint);
 
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-      Interpreter.Instance.Init ();
-#endif
-
             m_debugger = new Debugger();
 
             int i;

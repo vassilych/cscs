@@ -1,2 +1,0 @@
-#!/bin/sh
-/Library/Frameworks/Mono.framework/Versions/Current/bin/mono cscs.exe "$@"

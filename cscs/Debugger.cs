@@ -148,14 +148,14 @@ namespace SplitAndMerge
 
                 try
                 {
-                    m_script = Utils.ConvertToScript(rawScript, out m_char2Line, filename);
+                    m_script = Utils.ConvertToScript(Interpreter.Instance, rawScript, out m_char2Line, filename);
                 }
                 catch(ParsingException exc)
                 {
                     ProcessException(m_debugging, exc);
                     return;
                 }
-                m_debugging = new ParsingScript(m_script, 0, m_char2Line);
+                m_debugging = new ParsingScript(Interpreter.Instance, m_script, 0, m_char2Line);
                 m_debugging.Filename = filename;
                 m_debugging.MainFilename = m_debugging.Filename;
                 m_debugging.OriginalScript = rawScript;
@@ -328,7 +328,7 @@ namespace SplitAndMerge
 
         string GetAllVariables(ParsingScript script)
         {
-            string vars = ParserFunction.GetVariables(script);
+            string vars = Interpreter.Instance.GetVariables(script);
             return vars;
         }
 
@@ -355,8 +355,8 @@ namespace SplitAndMerge
             ReplMode = true;
 
             Dictionary<int, int> char2Line;
-            string script = Utils.ConvertToScript(repl, out char2Line);
-            ParsingScript tempScript = new ParsingScript(script, 0, char2Line);
+            string script = Utils.ConvertToScript(Interpreter.Instance, repl, out char2Line);
+            ParsingScript tempScript = new ParsingScript(Interpreter.Instance, script, 0, char2Line);
             tempScript.OriginalScript = repl;
             tempScript.Debugger = this;
             if (!string.IsNullOrWhiteSpace(filename))
@@ -500,7 +500,7 @@ namespace SplitAndMerge
                                     "Exception thrown: " + exc.Message + "\n";
                 debugger.SendBack(replResult, false);
                 debugger.LastResult = null;
-                ParserFunction.InvalidateStacksAfterLevel(0);
+                Interpreter.Instance.InvalidateStacksAfterLevel(0);
                 return;
             }
 
@@ -517,7 +517,7 @@ namespace SplitAndMerge
             debugger.SendBack(result, !debugger.ReplMode);
             debugger.LastResult = null;
 
-            ParserFunction.InvalidateStacksAfterLevel(0);
+            Interpreter.Instance.InvalidateStacksAfterLevel(0);
         }
 
         bool Completed(ParsingScript debugging)
@@ -556,7 +556,7 @@ namespace SplitAndMerge
 
             ProcessingBlock = true;
 
-            ParsingScript tempScript = new ParsingScript(stepInScript.String, stepInScript.Pointer);
+            ParsingScript tempScript = new ParsingScript(Interpreter.Instance, stepInScript.String, stepInScript.Pointer);
             tempScript.ParentScript = stepInScript;
             tempScript.InTryBlock = stepInScript.InTryBlock;
             /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
@@ -731,7 +731,7 @@ namespace SplitAndMerge
                 return null;
             }
 
-            m_debugging = new ParsingScript(m_script, 0, m_char2Line);
+            m_debugging = new ParsingScript(Interpreter.Instance, m_script, 0, m_char2Line);
             m_debugging.OriginalScript = m_script;
 
             Variable result = Variable.EmptyInstance;

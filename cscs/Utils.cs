@@ -266,11 +266,12 @@ namespace SplitAndMerge
             return true;
         }
 
-        public static ParsingScript GetTempScript(string str, ParserFunction.StackLevel stackLevel, string name = "",
+        public static ParsingScript GetTempScript(Interpreter interpreter, string str, ParserFunction.StackLevel stackLevel,
+            string name = "",
             ParsingScript script = null, ParsingScript parentScript = null,
             int parentOffset = 0, CSCSClass.ClassInstance instance = null)
         {
-            ParsingScript tempScript = new ParsingScript(str);
+            ParsingScript tempScript = new ParsingScript(interpreter, str);
             tempScript.ScriptOffset = parentOffset;
             if (parentScript != null)
             {
@@ -288,7 +289,7 @@ namespace SplitAndMerge
 
         public static bool ExtractParameterNames(List<Variable> args, string functionName, ParsingScript script)
         {
-            CustomFunction custFunc = ParserFunction.GetFunction(functionName) as CustomFunction;
+            CustomFunction custFunc = script.InterpreterInstance.GetFunction(functionName) as CustomFunction;
             if (custFunc == null)
             {
                 return false;
@@ -323,7 +324,7 @@ namespace SplitAndMerge
             return fileContents;
         }
 
-        public static void PrintScript(string script, ParsingScript parentSript)
+        public static void PrintScript(string script, ParsingScript parentScript)
         {
             StringBuilder item = new StringBuilder();
 
@@ -336,7 +337,7 @@ namespace SplitAndMerge
 
                 if (inQuotes)
                 {
-                    Interpreter.Instance.AppendOutput(ch.ToString());
+                    parentScript.InterpreterInstance.AppendOutput(ch.ToString());
                     continue;
                 }
                 if (!Constants.TOKEN_SEPARATION.Contains(ch))
@@ -347,10 +348,10 @@ namespace SplitAndMerge
                 if (item.Length > 0)
                 {
                     string token = item.ToString();
-                    Interpreter.Instance.AppendOutput(token);
+                    parentScript.InterpreterInstance.AppendOutput(token);
                     item.Clear();
                 }
-                Interpreter.Instance.AppendOutput(ch.ToString());
+                parentScript.InterpreterInstance.AppendOutput(ch.ToString());
             }
         }
 
@@ -370,7 +371,7 @@ namespace SplitAndMerge
             catch (Exception ex)
             {
                 throw new ArgumentException("Couldn't read file [" + filename +
-                                            "] from disk: " + ex.Message);
+                                            "] from disk: " + ex.Message, ex);
             }
         }
 
@@ -395,7 +396,7 @@ namespace SplitAndMerge
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("Couldn't read file from disk: " + ex.Message);
+                throw new ArgumentException("Couldn't read file from disk: " + ex.Message, ex);
             }
         }
 
@@ -407,18 +408,18 @@ namespace SplitAndMerge
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("Couldn't write file to disk: " + ex.Message);
+                throw new ArgumentException("Couldn't write file to disk: " + ex.Message, ex);
             }
         }
 
-        public static GetVarFunction ExtractArrayElement(string token)
+        public static GetVarFunction ExtractArrayElement(Interpreter interpreter, string token)
         {
             if (!token.Contains(Constants.START_ARRAY))
             {
                 return null;
             }
 
-            ParsingScript tempScript = new ParsingScript(token);
+            ParsingScript tempScript = new ParsingScript(interpreter, token);
             Variable result = tempScript.Execute();
             return new GetVarFunction(result);
         }
@@ -431,7 +432,7 @@ namespace SplitAndMerge
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("Couldn't write file to disk: " + ex.Message);
+                throw new ArgumentException("Couldn't write file to disk: " + ex.Message, ex);
             }
         }
 
@@ -439,7 +440,7 @@ namespace SplitAndMerge
                                           string errorToken = "", string excName2 = "")
         {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-            string msg = Translation.GetErrorString(excName1);
+            string msg = script.InterpreterInstance.Translation.GetErrorString(excName1);
 #else
             string msg = excName1;
 #endif
@@ -447,7 +448,7 @@ namespace SplitAndMerge
             {
                 msg = string.Format(msg, errorToken);
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-                string candidate = Translation.TryFindError(errorToken, script);
+                string candidate = script.InterpreterInstance.Translation.TryFindError(errorToken, script);
 #else
                 string candidate = null;
 #endif
@@ -457,7 +458,7 @@ namespace SplitAndMerge
                     !string.IsNullOrWhiteSpace(excName2))
                 {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-                    string extra = Translation.GetErrorString(excName2);
+                    string extra = script.InterpreterInstance.Translation.GetErrorString(excName2);
 #else
                     string extra = excName2;
 #endif
@@ -468,7 +469,7 @@ namespace SplitAndMerge
             if (!string.IsNullOrWhiteSpace(script.Filename))
             {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-                string fileMsg = Translation.GetErrorString("errorFile");
+                string fileMsg = script.InterpreterInstance.Translation.GetErrorString("errorFile");
 #else
                 string fileMsg = "File: {0}.";
 #endif
@@ -480,7 +481,7 @@ namespace SplitAndMerge
             if (lineNumber >= 0)
             {
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-                string lineMsg = Translation.GetErrorString("errorLine");
+                string lineMsg = script.InterpreterInstance.Translation.GetErrorString("errorLine");
 #else
                 string lineMsg = "Line {0}: [{1}]";
 #endif
@@ -573,15 +574,15 @@ namespace SplitAndMerge
             return token;
         }
 
-        public static Variable GetVariable(string varName, ParsingScript script = null, bool testNull = true)
+        public static Variable GetVariable(string varName, ParsingScript script, bool testNull = true)
         {
-            varName = varName.ToLower();
             if (script == null)
             {
-                script = new ParsingScript("");
+                script = new ParsingScript(script.InterpreterInstance, "");
             }
+            varName = varName.ToLower();
 
-            ParserFunction func = ParserFunction.GetVariable(varName, script);
+            ParserFunction func = script.InterpreterInstance.GetVariable(varName, script);
             if (!testNull && func == null)
             {
                 return null;
@@ -594,7 +595,7 @@ namespace SplitAndMerge
 
         public static async Task<Variable> GetVariableAsync(string varName, ParsingScript script, bool testNull = true)
         {
-            ParserFunction func = ParserFunction.GetVariable(varName, script);
+            ParserFunction func = script.InterpreterInstance.GetVariable(varName, script);
             if (!testNull && func == null)
             {
                 return null;
@@ -853,17 +854,15 @@ namespace SplitAndMerge
             {
                 --i;
             }
-            //int size = (int)(Math.Ceiling(i / 4.0) * 4.0);
-            int size = i + 1;
-            byte[] newArray = new byte[size];
-            Array.Copy(array, newArray, size);
+            byte[] newArray = new byte[i + 1];
+            Array.Copy(array, newArray, i + 1);
             return newArray;
         }
 
 
-        internal static string Pass { get; set; } = "mi_900.";
-        internal static string KeySalt { get; set; } = "poo12.";
-        internal static string IvSalt { get; set; } = "puu14T";
+        static string pass = "mi_900.";
+        static string keySalt = "poo12.";
+        static string ivSalt = "puu14T";
 
         static public string EncryptString(string plainText, string password = "")
         {
@@ -875,7 +874,7 @@ namespace SplitAndMerge
             {
                 return "";
             }
-            var byteArray = EncryptStringToBytes(plainText, password);
+            var byteArray =  EncryptStringToBytes(plainText, password);
             var encoded = Convert.ToBase64String(byteArray);
             return encoded;
         }
@@ -929,8 +928,8 @@ namespace SplitAndMerge
 
         static public byte[] EncryptStringToBytes(string plainText, string password = "")
         {
-            string keyStr = KeySalt + Pass + password;
-            string saltStr = IvSalt + Pass + password;
+            string keyStr = keySalt + pass + password;
+            string saltStr = ivSalt + pass + password;
 
             byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
             byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();
@@ -941,8 +940,8 @@ namespace SplitAndMerge
 
         static public string DecryptStringFromBytes(byte[] cipherText, string password = "")
         {
-            string keyStr = KeySalt + Pass + password;
-            string saltStr = IvSalt + Pass + password;
+            string keyStr = keySalt + pass + password;
+            string saltStr = ivSalt + pass + password;
 
             byte[] key = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(keyStr));
             byte[] iv = SHA256.Create().ComputeHash(Encoding.Unicode.GetBytes(saltStr)).Take(16).ToArray();

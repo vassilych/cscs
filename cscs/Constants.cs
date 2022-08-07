@@ -334,7 +334,7 @@ namespace SplitAndMerge
                 return name;
             }
 
-            string lower = name.ToLower();
+            string lower = name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
             if (name == lower || CONTROL_FLOW.Contains(lower))
             { // Do not permit using key words with no case, like IF, For
                 return name;

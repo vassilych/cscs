@@ -775,7 +775,7 @@ namespace SplitAndMerge
             }
             sb.Append("]");
             GetMapRep(sb);
-            
+
             return sb.ToString();
         }
 
@@ -1047,12 +1047,12 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = SetReflectedProperty(propName, value);
             if (reflectedProp != null)
-                return reflectedProp;
+                return reflectedProp;            
             Variable result = Variable.EmptyInstance;
 
-            var realName = GetRealName(propName);
             // Check for an existing custom setter
-            if (m_propertyMap.TryGetValue(realName, out result))
+            if ((m_propertyMap.TryGetValue(propName, out result) ||
+                m_propertyMap.TryGetValue(GetRealName(propName), out result)))
             {
                 if (!result.Writable)
                 {
@@ -1067,21 +1067,20 @@ namespace SplitAndMerge
                 }
                 if (!string.IsNullOrWhiteSpace(result.CustomSet))
                 {
-                    return ParsingScript.RunString(result.CustomSet);
+                    return ParsingScript.RunString(script.InterpreterInstance, result.CustomSet);
                 }
-                propName = realName;
-            }
-            else
-            {
-                m_propertyMap[propName] = value;
-                string converted = Constants.ConvertName(propName);
-                m_propertyStringMap[converted] = propName;
             }
 
+            m_propertyMap[propName] = value;
+
+            string converted = Constants.ConvertName(propName);
+            m_propertyStringMap[converted] = propName;
+
             Type = VarType.OBJECT;
-            ScriptObject obj = Object as ScriptObject;
-            if (obj != null)
-            {                
+
+            if (Object is ScriptObject)
+            {
+                ScriptObject obj = Object as ScriptObject;
                 result = obj.SetProperty(propName, value).Result;
             }
             return result;
@@ -1291,7 +1290,7 @@ namespace SplitAndMerge
                                 bestMethod = method;
                                 if (pConv.BestConversion == ParameterConverter.Conversion.Exact)
                                     break;
-                            }
+                            }    
                         }
                     }
 
@@ -1501,7 +1500,7 @@ namespace SplitAndMerge
 
             if (customFunc == null)
             {
-                customFunc = ParserFunction.GetFunction(token) as CustomFunction;
+                customFunc = script.InterpreterInstance.GetFunction(token) as CustomFunction;
             }
             if (customFunc == null)
             {
@@ -1514,7 +1513,7 @@ namespace SplitAndMerge
                                     script, token);
             }
 
-            var args = ParserFunction.VariablesSnaphot(script);
+            var args = script.InterpreterInstance.VariablesSnaphot(script);
             string propArg = customFunc.RealArgs[0];
             List<Variable> funcArgs = new List<Variable>();
 
@@ -1534,7 +1533,7 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = GetReflectedProperty(propName, script);
             if (reflectedProp != null)
-                return reflectedProp;
+                return reflectedProp;            
             Variable result = Variable.EmptyInstance;
 
             if (m_propertyMap.TryGetValue(propName, out result) ||

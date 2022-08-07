@@ -1090,8 +1090,8 @@ try {
 }
 Test(exceptionThrown, true);
 
-TestObject.MyNewProperty     = "NeW";
-Test(TestObject.MyneWproperty, "NeW");
+TestObject.MyNewProperty2     = "NeW";
+Test(TestObject.MyneWproperty2, "NeW");
 
 function CreateArray(size, initValue = 0) {
     result = {};

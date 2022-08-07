@@ -733,18 +733,29 @@ namespace SplitAndMerge
             return result;
         }
 
+        public static bool EndsWithFunction(string buffer, List<string> functions1, List<string> functions2)
+        {
+            if (EndsWithFunction(buffer, functions1))
+                return true;
+
+            return EndsWithFunction(buffer, functions2);
+        }
+
         public static bool EndsWithFunction(string buffer, List<string> functions)
         {
-            foreach (string key in functions)
+            if (functions != null)
             {
-                if (buffer.EndsWith(key, StringComparison.OrdinalIgnoreCase))
+                foreach (string key in functions)
                 {
-                    char prev = key.Length >= buffer.Length ?
-                        Constants.END_STATEMENT :
-                        buffer[buffer.Length - key.Length - 1];
-                    if (Constants.TOKEN_SEPARATION.Contains(prev))
+                    if (buffer.EndsWith(key, StringComparison.OrdinalIgnoreCase))
                     {
-                        return true;
+                        char prev = key.Length >= buffer.Length ?
+                            Constants.END_STATEMENT :
+                            buffer[buffer.Length - key.Length - 1];
+                        if (Constants.TOKEN_SEPARATION.Contains(prev))
+                        {
+                            return true;
+                        }
                     }
                 }
             }
@@ -759,16 +770,16 @@ namespace SplitAndMerge
                     next == Constants.EMPTY);
         }
 
-        public static bool KeepSpace(StringBuilder sb, char next)
+        public static bool KeepSpace(Interpreter interpreter, StringBuilder sb, char next)
         {
             if (SpaceNotNeeded(next))
             {
                 return false;
             }
 
-            return EndsWithFunction(sb.ToString(), Constants.FUNCT_WITH_SPACE);
+            return EndsWithFunction(sb.ToString(), Constants.FUNCT_WITH_SPACE, interpreter?.Translation?.AdditionalFunctWithSpace);
         }
-        public static bool KeepSpaceOnce(StringBuilder sb, char next)
+        public static bool KeepSpaceOnce(Interpreter interpreter, StringBuilder sb, char next)
         {
             if (SpaceNotNeeded(next))
             {
@@ -781,11 +792,11 @@ namespace SplitAndMerge
             {
                 return true;
             }
-            return EndsWithFunction(str, Constants.FUNCT_WITH_SPACE_ONCE);
+            return EndsWithFunction(str, Constants.FUNCT_WITH_SPACE_ONCE, interpreter?.Translation?.AdditionalFunctWithSpaceOnce);
         }
 
-        public static string GetNextToken(string source, ref int pointer, char sep ='\0',
-            char open = '<', char close = '>')
+        public static string GetNextToken(string source, ref int pointer, char sep = '\0',
+             char open = '<', char close = '>')
         {
             if (source.Length <= pointer)
             {
@@ -903,7 +914,7 @@ namespace SplitAndMerge
             return args;
         }
 
-        public static string ConvertToScript(string source, out Dictionary<int, int> char2Line, string filename = "")
+        public static string ConvertToScript(Interpreter interpreter, string source, out Dictionary<int, int> char2Line, string filename = "")
         {
             string curlyErrorMsg   = "Unbalanced curly braces.";
             string bracketErrorMsg = "Unbalanced square brackets.";
@@ -1032,11 +1043,11 @@ namespace SplitAndMerge
                         }
                         else
                         {
-                            bool keepSpace = KeepSpace(sb, next);
+                            bool keepSpace = KeepSpace(interpreter, sb, next);
                             bool usedSpace = spaceOK;
                             spaceOK = keepSpace ||
                                  (prev != Constants.EMPTY && prev != Constants.NEXT_ARG && spaceOK);
-                            if (spaceOK || KeepSpaceOnce(sb, next))
+                            if (spaceOK || KeepSpaceOnce(interpreter, sb, next))
                             {
                                 sb.Append(ch);
                             }
@@ -1575,9 +1586,9 @@ namespace SplitAndMerge
         {
             if (script == null)
             {
-                script = new ParsingScript("");
+                script = new ParsingScript(script.InterpreterInstance, "");
             }
-            ParserFunction function = ParserFunction.GetVariable(paramName, script);
+            ParserFunction function = script.InterpreterInstance.GetVariable(paramName, script);
             if (function == null)
             {
                 throw new ArgumentException("Variable [" + paramName + "] not found.");
@@ -1632,9 +1643,9 @@ namespace SplitAndMerge
             return tokens;
         }
 
-        public static Variable Calculate(string functionName, string argsStr)
+        public static Variable Calculate(Interpreter interpreter, string functionName, string argsStr)
         {
-            ParsingScript script = new ParsingScript(argsStr);
+            ParsingScript script = new ParsingScript(interpreter, argsStr);
             string action = "";
             ParserFunction func = new ParserFunction(script, functionName, Constants.EMPTY, ref action);
             Variable current = func.GetValue(script);

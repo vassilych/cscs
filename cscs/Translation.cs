@@ -7,47 +7,57 @@ using System.Text;
 
 namespace SplitAndMerge
 {
-    public class Translation
+    public class TranslationManager
     {
         static string[] latUp = { "Shch", "_MZn", "_TZn", "Ts", "Ch", "Sh", "Yu", "Ya", "Ye", "Yo", "Zh", "X", "Q", "W", "A", "B", "V", "G", "D", "Z", "I", "J", "K", "C", "L", "M", "N", "O", "P", "R", "S", "T", "U", "F", "H", "Y", "E" };
         static string[] latLo = { "shch", "_mzh", "_tzn", "ts", "ch", "sh", "yu", "ya", "ye", "yo", "zh", "x", "q", "w", "a", "b", "v", "g", "d", "z", "i", "j", "k", "c", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f", "h", "y", "e" };
         static string[] rusUp = { "Щ", "Ъ", "Ь", "Ц", "Ч", "Ш", "Ю", "Я", "Е", "Ё", "Ж", "Кс", "Кю", "Уи", "А", "Б", "В", "Г", "Д", "З", "И", "Й", "К", "К", "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х", "Ы", "Э" };
         static string[] rusLo = { "щ", "ъ", "ь", "ц", "ч", "ш", "ю", "я", "е", "ё", "ж", "кс", "кю", "уи", "а", "б", "в", "г", "д", "з", "и", "й", "к", "к", "л", "м", "н", "о", "п", "р", "с", "т", "у", "ф", "х", "ы", "э" };
 
-        private static HashSet<string> s_nativeWords = new HashSet<string>();
-        private static HashSet<string> s_tempWords = new HashSet<string>();
+        public List<string> AdditionalFunctWithSpace = new List<string>();
+        public List<string> AdditionalFunctWithSpaceOnce = new List<string>();
 
-        private static Dictionary<string, string> s_spellErrors =
+        private HashSet<string> s_nativeWords = new HashSet<string>();
+        private HashSet<string> s_tempWords = new HashSet<string>();
+
+        private Dictionary<string, string> s_spellErrors =
             new Dictionary<string, string>();
 
-        private static Dictionary<string, Dictionary<string, string>> s_keywords =
+        private Dictionary<string, Dictionary<string, string>> s_keywords =
             new Dictionary<string, Dictionary<string, string>>();
 
-        private static Dictionary<string, Dictionary<string, string>> s_dictionaries =
+        private Dictionary<string, Dictionary<string, string>> s_dictionaries =
             new Dictionary<string, Dictionary<string, string>>();
 
-        private static Dictionary<string, Dictionary<string, string>> s_errors =
+        private Dictionary<string, Dictionary<string, string>> s_errors =
             new Dictionary<string, Dictionary<string, string>>();
 
         // The default user language. Can be changed in settings.
-        private static string s_language = Constants.ENGLISH;
-        public static string Language { set { s_language = value; } }
+        private string s_language = Constants.ENGLISH;
+        private Interpreter _interpreter;
 
-        public static void AddNativeKeyword(string word)
+        public string Language { set { s_language = value; } }
+
+        public TranslationManager(Interpreter interpreter)
+        {
+            _interpreter = interpreter;
+        }
+
+        public void AddNativeKeyword(string word)
         {
             s_nativeWords.Add(word);
             AddSpellError(word);
         }
-        public static void AddTempKeyword(string word)
+        public void AddTempKeyword(string word)
         {
             s_tempWords.Add(word);
             AddSpellError(word);
         }
-        public static bool IsNativeWord(string word)
+        public bool IsNativeWord(string word)
         {
             return s_nativeWords.Contains(word);
         }
-        public static void AddSpellError(string word)
+        public void AddSpellError(string word)
         {
             if (word.Length > 2)
             {
@@ -56,27 +66,27 @@ namespace SplitAndMerge
             }
         }
 
-        public static Dictionary<string, string> KeywordsDictionary(string fromLang, string toLang)
+        public Dictionary<string, string> KeywordsDictionary(string fromLang, string toLang)
         {
             return GetDictionary(fromLang, toLang, s_keywords);
         }
-        public static Dictionary<string, string> TranslationDictionary(string fromLang, string toLang)
+        public Dictionary<string, string> TranslationDictionary(string fromLang, string toLang)
         {
             return GetDictionary(fromLang, toLang, s_dictionaries);
         }
-        public static Dictionary<string, string> ErrorDictionary(string lang)
+        public Dictionary<string, string> ErrorDictionary(string lang)
         {
             return GetDictionary(lang, s_dictionaries);
         }
 
-        static Dictionary<string, string> GetDictionary(string fromLang, string toLang,
+        Dictionary<string, string> GetDictionary(string fromLang, string toLang,
                              Dictionary<string, Dictionary<string, string>> dictionaries)
         {
             string key = fromLang + "-->" + toLang;
             return GetDictionary(key, dictionaries);
         }
 
-        static Dictionary<string, string> GetDictionary(string key,
+        Dictionary<string, string> GetDictionary(string key,
                              Dictionary<string, Dictionary<string, string>> dictionaries)
         {
             Dictionary<string, string> result;
@@ -88,7 +98,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        public static void TryLoadDictionary(string dirname, string fromLang, string toLang)
+        public void TryLoadDictionary(string dirname, string fromLang, string toLang)
         {
             if (String.IsNullOrEmpty(dirname) || !Directory.Exists(dirname))
             {
@@ -106,7 +116,7 @@ namespace SplitAndMerge
             }
         }
 
-        public static void LoadDictionary(string filename, string fromLang, string toLang)
+        public void LoadDictionary(string filename, string fromLang, string toLang)
         {
             Dictionary<string, string> dict1 = TranslationDictionary(fromLang, toLang);
             Dictionary<string, string> dict2 = TranslationDictionary(toLang, fromLang);
@@ -127,7 +137,7 @@ namespace SplitAndMerge
             }
         }
 
-        public static void LoadErrors(string filename)
+        public void LoadErrors(string filename)
         {
             if (!File.Exists(filename))
             {
@@ -153,7 +163,7 @@ namespace SplitAndMerge
             }
         }
 
-        public static string TryTranslit(string fromLang, string toLang,
+        public string TryTranslit(string fromLang, string toLang,
                                          string str)
         {
             if (fromLang == Constants.RUSSIAN)
@@ -167,7 +177,7 @@ namespace SplitAndMerge
 
             return str;
         }
-        private static string Transliterate(string[] up1, string[] up2,
+        private string Transliterate(string[] up1, string[] up2,
                                             string[] lo1, string[] lo2,
                                             string str)
         {
@@ -179,7 +189,7 @@ namespace SplitAndMerge
             return str;
         }
 
-        public static string GetErrorString(string key)
+        public string GetErrorString(string key)
         {
             string result = null;
             Dictionary<string, string> dict = GetDictionary(s_language, s_errors);
@@ -199,7 +209,7 @@ namespace SplitAndMerge
             return key;
         }
 
-        public static void Add(NameValueCollection langDictionary, string origName,
+        public void Add(NameValueCollection langDictionary, string origName,
                                Dictionary<string, string> translations1,
                                Dictionary<string, string> translations2)
         {
@@ -224,23 +234,23 @@ namespace SplitAndMerge
                 throw new ArgumentException("Translation of [" + translation + "] contains white spaces");
             }
 
-            ParserFunction origFunction = ParserFunction.GetFunction(origName);
+            ParserFunction origFunction = _interpreter.GetFunction(origName);
             Utils.CheckNotNull(origName, origFunction, null);
-            ParserFunction.RegisterFunction(translation, origFunction);
+            _interpreter.RegisterFunction(translation, origFunction);
 
             // Also add the translation to the list of functions after which there
             // can be a space (besides a parenthesis).
-            if (Constants.FUNCT_WITH_SPACE.Contains(origName))
+            if (IsFunctWithSpace(origName))
             {
-                Constants.FUNCT_WITH_SPACE.Add(translation);
+                AdditionalFunctWithSpace.Add(translation);
             }
-            if (Constants.FUNCT_WITH_SPACE_ONCE.Contains(origName))
+            if (IsFunctWithSpaceOnce(origName))
             {
-                Constants.FUNCT_WITH_SPACE_ONCE.Add(translation);
+                AdditionalFunctWithSpaceOnce.Add(translation);
             }
         }
 
-        public static void AddSubstatement(NameValueCollection langDictionary,
+        public void AddSubstatement(NameValueCollection langDictionary,
                                            string origName,
                                            List<string> keywordsArray,
                                            Dictionary<string, string> translations1,
@@ -268,7 +278,7 @@ namespace SplitAndMerge
             s_nativeWords.Add(translation);
         }
 
-        public static void TranslateScript(string[] args)
+        public void TranslateScript(string[] args)
         {
             if (args.Length < 3)
             {
@@ -278,14 +288,14 @@ namespace SplitAndMerge
             string toLang = args[1];
             string script = Utils.GetFileText(args[2]);
 
-            ParsingScript parentScript = new ParsingScript(script);
+            ParsingScript parentScript = new ParsingScript(_interpreter, script);
             parentScript.Filename = args[2];
 
             string result = TranslateScript(script, fromLang, toLang, parentScript);
             Console.WriteLine(result);
         }
 
-        public static string TranslateScript(string script, string toLang, ParsingScript parentScript)
+        public string TranslateScript(string script, string toLang, ParsingScript parentScript)
         {
             string tempScript = TranslateScript(script, Constants.ENGLISH, Constants.ENGLISH, parentScript);
             if (toLang == Constants.ENGLISH)
@@ -297,7 +307,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        static string TranslateScript(string script, string fromLang, string toLang, ParsingScript parentScript)
+        string TranslateScript(string script, string fromLang, string toLang, ParsingScript parentScript)
         {
             StringBuilder result = new StringBuilder();
             StringBuilder item = new StringBuilder();
@@ -327,7 +337,7 @@ namespace SplitAndMerge
                     string translation = string.Empty;
                     if (toLang == Constants.ENGLISH)
                     {
-                        ParserFunction func = ParserFunction.GetFunction(token);
+                        ParserFunction func = _interpreter.GetFunction(token);
                         if (func != null)
                         {
                             translation = func.Name;
@@ -348,7 +358,7 @@ namespace SplitAndMerge
             return result.ToString();
         }
 
-        public static string TryFindError(string item, ParsingScript script)
+        public string TryFindError(string item, ParsingScript script)
         {
             string candidate = null;
             int minSize = Math.Max(2, item.Length - 1);
@@ -372,6 +382,18 @@ namespace SplitAndMerge
             }
 
             return null;
+        }
+
+        public bool IsFunctWithSpace(string name)
+        {
+            return Constants.FUNCT_WITH_SPACE.Contains(name) ||
+                AdditionalFunctWithSpace.Contains(name);
+        }
+
+        public bool IsFunctWithSpaceOnce(string name)
+        {
+            return Constants.FUNCT_WITH_SPACE_ONCE.Contains(name) ||
+                AdditionalFunctWithSpaceOnce.Contains(name);
         }
     }
 
