@@ -456,8 +456,8 @@ namespace SplitAndMerge
         public CSCSClass(Interpreter interpreterInstance, string className)
         {
             InterpreterInstance = interpreterInstance;
-            InterpreterInstance.RegisterClass(Name, this);
-       }
+            InterpreterInstance.RegisterClass(className, this);
+        }
 
         public CSCSClass(Interpreter interpreterInstance, string className, string[] baseClasses)
         {

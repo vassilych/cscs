@@ -22,7 +22,7 @@ namespace CSCS.ConsoleApp
 
         protected InterpreterManagerModule _interpreterManager;
         protected Interpreter InterpreterInstance => _interpreterManager?.CurrentInterpreter;
-        protected bool _startDebugger;
+        protected bool _startDebugger = true;
 
         protected virtual List<ICscsModule> GetModuleList()
         {
@@ -53,7 +53,8 @@ namespace CSCS.ConsoleApp
 
             SetupMono();
 
-            _startDebugger = (args.Length < 1 || args[1] == "debugger");
+            if (_startDebugger)
+                _startDebugger = (args.Length < 1 || args[1] == "debugger");
 
             _interpreterManager = new InterpreterManagerModule();
             _interpreterManager.Modules = GetModuleList();

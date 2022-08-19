@@ -175,7 +175,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't start server: (" + exc.Message + ")");
+                throw new ArgumentException("Couldn't start server: (" + exc.Message + ")", exc);
             }
 
             return Variable.EmptyInstance;
@@ -281,7 +281,7 @@ namespace SplitAndMerge
             }
             catch (Exception exc)
             {
-                throw new ArgumentException("Couldn't connect to server: (" + exc.Message + ")");
+                throw new ArgumentException("Couldn't connect to server: (" + exc.Message + ")", exc);
             }
 
             return retValue;

@@ -606,6 +606,8 @@ namespace SplitAndMerge
                         list.Add(m_tuple[i].AsObject());
                     }
                     return list;
+                case VarType.NONE:
+                    return null;
             }
             return AsString();
         }
@@ -1368,6 +1370,15 @@ namespace SplitAndMerge
             {
                 try
                 {
+                    if (value == null)
+                    {
+                        if (Nullable.GetUnderlyingType(conversionType) == null)
+                            conversion = Conversion.Exact;
+                        else
+                            conversion = Conversion.Mismatch;
+                        return value;
+                    }
+
                     Type t = value.GetType();
                     if (t == conversionType)
                     {
@@ -1382,9 +1393,14 @@ namespace SplitAndMerge
                     }
 
                     conversion = Conversion.Convertible;
-                    if (value is string && conversionType.IsEnum)
+                    if (conversionType.IsEnum)
                     {
-                        return Enum.Parse(conversionType, (string)value, true);
+                        if (value is string svalue)
+                            return Enum.Parse(conversionType, svalue, true);
+                        if (value is double dvalue)
+                            return Enum.ToObject(conversionType, (long)dvalue);
+                        // Let's see if it's some other type that just happens to work
+                        return Enum.ToObject(conversionType, value);
                     }
 
                     IList genericList = ConvertToGenericList(value, conversionType);

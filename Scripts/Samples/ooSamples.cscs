@@ -1,0 +1,146 @@
+class Stuff1 {
+  x = 2;
+  Stuff1(a) {
+    x = a;
+  } 
+  function helloWorld() {
+    print("Hello, World!");
+  }
+}
+class Stuff2 {
+  y = 3;
+  Stuff2(b) {
+    y = b;
+  } 
+  function addStuff2(n) {
+    return n + y;
+  }
+}
+class CoolStuff : Stuff1, Stuff2 {
+  z = 3;
+  CoolStuff(a=1, b=2, c=3) {
+    x = a;
+    y = b;
+    z = c;
+  } 
+  function addCoolStuff() {
+    return x + addStuff2(z);
+  }
+  function ToString() {
+    return "{" + x + "," + y + "," + z + "}";
+  }
+}
+
+obj1 = new StufF1(10);
+obj2 = new StufF2(5);
+print(obj1.X + obj2.Y); // prints 15.
+print(obj1); // prints stuff1.obj1[x=10]
+
+obj3 = new CoolStuFf(11, 22, 33);
+obJ3.HelloWorld(); // prints “Hello, World!”
+print(obj3.AddStuFf2(20)); // prints 42
+print(obJ3); // prints {11,22,33}
+
+baseURL = "https://www.alphavantage.co/" +
+  "query?function=TIME_SERIES_DAILY&symbol=";
+apikey  = "Y12T0TY5EUS6BC5F";
+symbol  = "MSFT";
+stockUrl = baseURL + symbol + "&apikey=" + apikey;
+
+class Stock {
+  symbol = "";
+  date = "";
+  open = 0;
+  low = 0;
+  high = 0;
+  close = 0;
+  volume = 0;
+  Stock(symb, dt, data) {
+    symbol = symb;
+    date   = dt;
+    open   = Math.Round(data["1. open"], 2);
+    high   = Math.Round(data["2. high"], 2);
+    low    = Math.Round(data["3. low"],  2);
+    close  = Math.Round(data["4. close"],2);
+    volume = data["5. volume"];
+  }
+  function ToString() {
+    return symbol + " " + date + ". Open: " + open +
+      ", Close: " + close + ": Low: " + low + 
+      ", High: " + high + ", Volume: " + Volume;
+  }
+}
+function processResponse(text)
+{
+  if (text.contains("Error")) {
+    return text;
+  }
+  jsonFromText = GetVariableFromJSON(text);
+  metaData     = jsonFromText[0];
+  result       = jsonFromText[1];
+  symbol       = metaData["2. Symbol"];
+  last         = metaData["3. Last Refreshed"];
+  allDates     = result.keys;
+  dateData     = result[allDates[0]];
+  myStock = new Stock(symbol, last, dateData);
+  return myStock;
+}
+
+result = WebRequest("GET", stockUrl, "", symbol);
+stock = processResponse(result);
+print(stock);
+
+ms = Marshal(stock);
+// Returns:
+// <mystock:class:stock><symbol:STR:"MSFT">
+// <date:STR:"2022-05-27"><open:NUM:268.48>
+// <low:NUM:267.56><high:NUM:273.34>
+// <close:NUM:273.24><volume:STR:"26910806">
+
+ms.type; // Returns STRING
+
+
+ums = Unmarshal(ms);
+ums.type; 
+// Returns SplitAndMerge.CSCSClass+ClassInstance: Stock 
+
+
+str = "a string";
+mstr = Marshal(str); // Returns: <str:STR:"a string">
+umstr = Unmarshal(mstr);
+int = 13;
+mint = Marshal(int); // Returns: <int:NUM:13>
+umint = Unmarshal(mint);
+
+a="";
+a[0]=10;
+a[1]="blah";
+a[2]=[9, 8, 7];
+a["x:lol"]=12;
+a["y"]=13;
+ma = marshal(a);
+maa = unmarshal(ma);
+maa[1];
+// Returns:
+// ["x:lol":10, "y":11, 10, "blah", [9, 8, 7]] 
+maa.type; // Returns ARRAY
+
+
+counter = 0;
+function serverFunc(request, obj) {
+  counter++;
+  if (request == "stock") {
+    stockUrl  = baseURL + obj + "&apikey=" + apikey;
+    print(counter + " Making request: " + stockUrl);
+    data = WebRequest("GET", stockUrl, "", symbol);
+    result = processResponse(data);
+    return result;
+  }
+}
+
+startsrv("serverFunc", 12345);
+response = connectsrv("stock", "MSFT", 12345);
+print(response.Symbol + ": Close: " + response.Close + ", Volume: " + response.Volume);
+
+526163498
+i7b6xygp
