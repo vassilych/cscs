@@ -426,6 +426,10 @@ namespace SplitAndMerge
             {
                 foreach (object item in ienum)
                 {
+                    // We're using IEnumerable, which is typeless.
+                    // But it may be important to make the correct type.
+                    // TODO: Determine what type this is supposed to be (not sure how right now)
+                    // and set the type in the Variable
                     Variable current = new Variable(item);
 
                     script.Pointer = startForCondition;
@@ -490,6 +494,10 @@ namespace SplitAndMerge
             {
                 foreach (object item in ienum)
                 {
+                    // We're using IEnumerable, which is typeless.
+                    // But it may be important to make the correct type.
+                    // TODO: Determine what type this is supposed to be (not sure how right now)
+                    // and set the type in the Variable
                     Variable current = new Variable(item);
                     script.Pointer = startForCondition;
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current));

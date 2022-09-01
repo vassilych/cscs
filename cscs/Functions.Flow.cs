@@ -810,7 +810,7 @@ namespace SplitAndMerge
             if (t != null)
             {
                 object reflectedObj = CreateReflectedObj(t, args);
-                return new Variable(reflectedObj);
+                return new Variable(reflectedObj, t);
             }
 
             var c = InterpreterInstance.GetClass(className);
@@ -868,6 +868,13 @@ namespace SplitAndMerge
             className = Constants.ConvertName(className);
             script.MoveForwardIf(Constants.START_ARG);
             List<Variable> args = await script.GetFunctionArgsAsync();
+
+            Type t = TypeRefFunction.GetTypeAnywhere(className, true);
+            if (t != null)
+            {
+                object reflectedObj = CreateReflectedObj(t, args);
+                return new Variable(reflectedObj, t);
+            }
 
             var c = InterpreterInstance.GetClass(className);
 
@@ -2703,7 +2710,7 @@ namespace SplitAndMerge
             // TODO: Support Using to look in other namespaces
             if (t == null)
                 throw new ArgumentException($"Type [{typeName}] not found");
-            return new Variable(t);
+            return new Variable(t, typeof(Type));
         }
 
         public static Type GetTypeAnywhere(string typeName, bool ignoreCase = false)

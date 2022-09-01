@@ -115,10 +115,11 @@ namespace SplitAndMerge
             Original = OriginalType.ARRAY;
         }
 
-        public Variable(object o)
+        public Variable(object o, Type t = null)
         {
             Object = o;
             Original = OriginalType.OBJECT;
+            ObjectType = t == null ? o?.GetType() : t;
         }
 
         public virtual Variable Clone()
@@ -156,7 +157,7 @@ namespace SplitAndMerge
             return new Variable();
         }
 
-        public static Variable ConvertToVariable(object obj)
+        public static Variable ConvertToVariable(object obj, Type objectType = null)
         {
             if (obj == null)
             {
@@ -191,7 +192,7 @@ namespace SplitAndMerge
                 return new Variable(((List<double>)obj));
             }
 
-            return new Variable(obj);
+            return new Variable(obj, objectType);
         }
 
         public void Reset()
@@ -199,6 +200,7 @@ namespace SplitAndMerge
             m_value = Double.NaN;
             m_string = null;
             m_object = null;
+            ObjectType = null;
             m_tuple = null;
             m_byteArray = null;
             Action = null;
@@ -1217,7 +1219,7 @@ namespace SplitAndMerge
                 bf = BindingFlags.Static;
             }
             else
-                t = Object.GetType();
+                t = ObjectType;
 
             bf |= BindingFlags.Public | BindingFlags.SetProperty;
 
@@ -1251,7 +1253,7 @@ namespace SplitAndMerge
                 bf = BindingFlags.Static;
             }
             else
-                t = Object.GetType();
+                t = ObjectType;
 
             bf |= BindingFlags.Public;
 
@@ -1261,7 +1263,10 @@ namespace SplitAndMerge
                 foreach (var property in properties)
                 {
                     if (String.Compare(property.Name, propName, true) == 0)
-                        return ConvertToVariable(property.GetValue(Object));
+                    {
+                        object val = property.GetValue(Object);
+                        return ConvertToVariable(val, property.PropertyType);
+                    }
                 }
             }
 
@@ -1299,7 +1304,7 @@ namespace SplitAndMerge
                     if (bestMethod != null)
                     {
                         object res = bestMethod.Invoke(Object, pConv.BestTypedArgs);
-                        return ConvertToVariable(res);
+                        return ConvertToVariable(res, bestMethod.ReturnType);
                     }
                 }
             }
@@ -1946,7 +1951,7 @@ namespace SplitAndMerge
         {
             if (Type == VarType.OBJECT && Object != null)
             {
-                var result = Object.GetType().ToString();
+                var result = ObjectType.ToString();
                 var instance = Object as CSCSClass.ClassInstance;
                 if (instance != null)
                 {
@@ -2097,7 +2102,26 @@ namespace SplitAndMerge
         public object Object
         {
             get { return m_object; }
-            set { m_object = value; Type = VarType.OBJECT; }
+            private set
+            {
+                m_object = value;
+                Type = VarType.OBJECT;
+            }
+        }
+
+        Type _objectType;
+        public Type ObjectType
+        {
+            get
+            {
+                if (Type == VarType.OBJECT)
+                    return _objectType;
+                return AsObject()?.GetType();
+            }
+            set
+            {
+                _objectType = value;
+            }
         }
 
         public DateTime DateTime
