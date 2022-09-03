@@ -111,7 +111,7 @@ namespace SplitAndMerge
                 new GetVarFunction(new Variable(Variable.VarType.ARRAY)));
 
             InitStandalone();
-            RegisterCompiledClass();
+
         }
 
         public void RegisterFunctions()
@@ -2246,15 +2246,6 @@ namespace SplitAndMerge
             }
 
             return props;
-        }
-
-        private void RegisterCompiledClass()
-        {
-            RegisterClass("CompiledTest", new TestCompiledClass());
-            RegisterClass("CompiledTestAsync", new TestCompiledClassAsync());
-
-            RegisterFunction("TestObject",
-                new GetVarFunction(new Variable(new TestScriptObject())), true);
         }
 
         #endregion

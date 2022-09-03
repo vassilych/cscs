@@ -1,4 +1,5 @@
 ﻿using CSCS.InterpreterManager;
+using CSCS.Tests;
 using SplitAndMerge;
 using System;
 using System.Collections.Generic;
@@ -65,11 +66,16 @@ namespace CSCS.ConsoleApp
             scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
-            _interpreterManager.SetInterpreter(_interpreterManager.NewInterpreter());
+            var interpreterId = _interpreterManager.NewInterpreter();
+            _interpreterManager.SetInterpreter(interpreterId);
             if (_startDebugger)
                 DebuggerServer.StartServer(13337, true);
 
             int exitCode = 0;
+
+#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false && DEBUG
+            CSCS.Tests.TestScriptObject.RegisterTests(_interpreterManager.GetInterpreter(interpreterId));
+#endif
 
             if (args.Length >= 3)
             {

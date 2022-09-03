@@ -90,5 +90,10 @@ namespace CSCS.InterpreterManager
             lock (Interpreters)
                 return Interpreters.SingleOrDefault(x => x.Value == interpreter).Key;
         }
+        public Interpreter GetInterpreter(int handle)
+        {
+            lock (Interpreters)
+                return Interpreters.SingleOrDefault(x => x.Key == handle).Value;
+        }
     }
 }

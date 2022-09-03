@@ -997,7 +997,7 @@ print(xxx, xxx.properties);
 propsBefore = TestObject.properties;
 TestObject.Color = "blue";
 TestObject.Name  = "Testing";
-Test(TestObject.Type, "SplitAndMerge.TestScriptObject");
+Test(TestObject.Type, "CSCS.Tests.TestScriptObject");
 Test(TestObject.ColoR, "blue");
 Test(TestObject.NaME,  "Testing");
 Test(TestObject.properties, propsBefore);
@@ -1100,6 +1100,19 @@ function CreateArray(size, initValue = 0) {
     }
     return result;
 }
+
+Print("Testing Reflection");
+o = GetTestObj();
+iTest = o.TestInterface;
+runTest = iTest.RunTest();
+Test(runTest, "Test output");
+
+sysEnv = typeref("system.environment");
+Test(sysenv.exitcode, 0);
+guid = typeref("system.guid");
+newGuid = guid.NewGuid();
+Print("Got newGuid=", newGuid);
+Test(newGuid.Length > 0, True);
 
 pattern = "CreateArray(5, 'Test')";
 uniqueArray = Singleton(pattern);
