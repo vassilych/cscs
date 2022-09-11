@@ -16,7 +16,7 @@ namespace CSCS.InterpreterManager
 
         int _nextId = 1;
 
-        public IEnumerable<ICscsModule> Modules { get; set; }
+        public List<ICscsModule> Modules { get; set; }
 
         public int NewInterpreter()
         {
@@ -102,6 +102,7 @@ namespace CSCS.InterpreterManager
 
         public void AddModule(ICscsModule module, Interpreter interpreter)
         {
+            Modules.Add(module);
             module.CreateInstance(interpreter);
         }
     }

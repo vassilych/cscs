@@ -66,9 +66,6 @@ namespace CSCSMath
         }
     }
 
-    interface INumericFunction { }
-    interface IArrayFunction { }
-    interface IStringFunction { }
 
     class PiFunction : ParserFunction, INumericFunction
     {

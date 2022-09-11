@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 
 namespace SplitAndMerge
 {
+    public interface INumericFunction { }
+    public interface IArrayFunction { }
+    public interface IStringFunction { }
+
     public class ParserFunction
     {
         public Interpreter InterpreterInstance { get; set; }
