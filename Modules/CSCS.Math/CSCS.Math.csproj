@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\cscs\cscs.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Microsoft.CSharp" />
+    <ProjectReference Include="..\CSCS.InterpreterManager\CSCS.InterpreterManager.csproj" />
   </ItemGroup>
 </Project>

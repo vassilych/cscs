@@ -65,6 +65,7 @@ namespace SplitAndMerge
         public const string ENUM = "enum";
         public const string IF = "if";
         public const string INCLUDE = "include";
+        public const string IMPORT = "import";
         public const string NEW = "new";
         public const string QUIT = "quit";
         public const string RETURN = "return";

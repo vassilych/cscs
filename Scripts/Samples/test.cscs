@@ -1,5 +1,9 @@
 
 now = now("yyyy/MM/dd HH:mm:ss.fff");
+
+Import("CSCS.Math");
+Import("CSCS.Tests");
+
 Print("Starting tests.", now);
 ResetVariables();
 

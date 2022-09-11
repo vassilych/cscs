@@ -188,7 +188,7 @@ namespace SplitAndMerge
             string dataSize = Encoding.UTF8.GetString(bytes, 0, bytesRec);
             if (!int.TryParse(dataSize, out int size) || size < 1)
             {
-                Interpreter.Instance.AppendOutput("Received no valid data size: [" +
+                Interpreter.LastInstance.AppendOutput("Received no valid data size: [" +
                     dataSize + "]", true);
                 return "";
             }
@@ -200,7 +200,7 @@ namespace SplitAndMerge
             bytesRec = handler.Receive(bytes);
             string received = Encoding.UTF8.GetString(bytes, 0, bytesRec);
 
-            Interpreter.Instance.AppendOutput("Received from " + handler.RemoteEndPoint.ToString() +
+            Interpreter.LastInstance.AppendOutput("Received from " + handler.RemoteEndPoint.ToString() +
               ": [" + received + "]", true);
             return received;
         }

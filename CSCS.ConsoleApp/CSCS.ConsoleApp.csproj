@@ -8,7 +8,6 @@
     <ProjectReference Include="..\cscs\cscs.csproj" />
     <ProjectReference Include="..\Modules\CSCS.InterpreterManager\CSCS.InterpreterManager.csproj" />
     <ProjectReference Include="..\Modules\CSCS.SqlClient\CSCS.SqlClient.csproj" />
-    <ProjectReference Include="..\Modules\CSCS.Tests\CSCS.Tests.csproj" />
   </ItemGroup>
 
 </Project>

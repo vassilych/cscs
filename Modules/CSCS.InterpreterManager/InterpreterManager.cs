@@ -23,11 +23,15 @@ namespace CSCS.InterpreterManager
             var interpreter = new Interpreter();
 
             foreach (var module in Modules)
+            {
                 module.CreateInstance(interpreter);
+            }
 
             var handler = OnInterpreterCreated;
             if (handler != null)
+            {
                 handler(interpreter, EventArgs.Empty);
+            }
 
             lock (Interpreters)
             {
@@ -94,6 +98,11 @@ namespace CSCS.InterpreterManager
         {
             lock (Interpreters)
                 return Interpreters.SingleOrDefault(x => x.Key == handle).Value;
+        }
+
+        public void AddModule(ICscsModule module, Interpreter interpreter)
+        {
+            module.CreateInstance(interpreter);
         }
     }
 }

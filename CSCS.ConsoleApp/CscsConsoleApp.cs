@@ -1,5 +1,6 @@
 ﻿using CSCS.InterpreterManager;
-using CSCS.Tests;
+//using CSCS.Tests;
+//using CSCSMath;
 using SplitAndMerge;
 using System;
 using System.Collections.Generic;
@@ -30,6 +31,7 @@ namespace CSCS.ConsoleApp
             return new List<ICscsModule>
             {
                 new CscsSqlModule(),
+                //new CscsMathModule(),
                 _interpreterManager
             };
         }
@@ -62,7 +64,7 @@ namespace CSCS.ConsoleApp
 
             _interpreterManager.OnInterpreterCreated += InterpreterCreated;
 
-            string scriptFilename = "../../../Scripts/Samples/test.cscs";
+            string scriptFilename = "../../../Scripts/Samples/bug.cscs";
             scriptFilename = "";
             string script = Utils.GetFileContents(scriptFilename);
 
@@ -72,10 +74,6 @@ namespace CSCS.ConsoleApp
                 DebuggerServer.StartServer(13337, true);
 
             int exitCode = 0;
-
-#if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false && DEBUG
-            CSCS.Tests.TestScriptObject.RegisterTests(_interpreterManager.GetInterpreter(interpreterId));
-#endif
 
             if (args.Length >= 3)
             {

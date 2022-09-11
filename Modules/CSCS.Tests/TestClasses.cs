@@ -7,6 +7,26 @@ using SplitAndMerge;
 
 namespace CSCS.Tests
 {
+    public class CscsTestModule : ICscsModule
+    {
+        public ICscsModuleInstance CreateInstance(Interpreter interpreter)
+        {
+            return new CscsTestModuleInstance(interpreter);
+        }
+
+        public void Terminate()
+        {
+        }
+    }
+
+    public class CscsTestModuleInstance : ICscsModuleInstance
+    {
+        public CscsTestModuleInstance(Interpreter interpreter)
+        {
+            TestScriptObject.RegisterTests(interpreter);
+        }
+    }
+
     public class TestScriptObject : ScriptObject
     {
         static List<string> s_properties = new List<string> {
