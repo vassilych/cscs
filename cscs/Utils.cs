@@ -574,7 +574,7 @@ namespace SplitAndMerge
             return token;
         }
 
-        public static Variable GetVariable(string varName, ParsingScript script, bool testNull = true)
+        public static Variable GetVariable(string varName, ParsingScript script = null, bool testNull = true)
         {
             if (script == null)
             {

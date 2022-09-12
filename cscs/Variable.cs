@@ -2102,7 +2102,7 @@ namespace SplitAndMerge
         public object Object
         {
             get { return m_object; }
-            private set
+            set
             {
                 m_object = value;
                 Type = VarType.OBJECT;

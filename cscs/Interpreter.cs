@@ -1068,7 +1068,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        private Variable ProcessBlock(ParsingScript script)
+        internal Variable ProcessBlock(ParsingScript script)
         {
             int blockStart = script.Pointer;
             Variable result = null;
@@ -1102,7 +1102,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        private async Task<Variable> ProcessBlockAsync(ParsingScript script)
+        internal async Task<Variable> ProcessBlockAsync(ParsingScript script)
         {
             int blockStart = script.Pointer;
             Variable result = null;
@@ -1136,7 +1136,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        private void SkipBlock(ParsingScript script)
+        internal void SkipBlock(ParsingScript script)
         {
             int blockStart = script.Pointer;
             int startCount = 0;
