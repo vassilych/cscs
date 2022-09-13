@@ -363,21 +363,35 @@ namespace SplitAndMerge
         }
     }
 
-    class ThreadFunction : ParserFunction, INumericFunction
+    public class ThreadFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
             string body = script.TryPrev() == Constants.START_GROUP ?
                           Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP) :
                           Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
-            ThreadPool.QueueUserWorkItem(ThreadProc, body);
+            RunScript(body, script.InterpreterInstance);
             return Variable.EmptyInstance;
         }
 
-        void ThreadProc(Object stateInfo)
+        public void RunScript(string scriptBody, Interpreter interpreter, bool inNewThread = true)
+        {
+            InterpreterInstance = interpreter;
+            if (inNewThread)
+            {
+                ThreadPool.QueueUserWorkItem(RunScriptLocal, scriptBody);
+            }
+            else
+            {
+                RunScriptLocal(scriptBody);
+            }
+        }
+
+        void RunScriptLocal(Object stateInfo)
         {
             string body = (string)stateInfo;
             ParsingScript threadScript = NewParsingScript(body);
+            threadScript.SetInterpreter(InterpreterInstance);
             threadScript.ExecuteAll();
         }
     }

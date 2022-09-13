@@ -14,13 +14,21 @@ namespace CSCS.InterpreterManager
 
         private Dictionary<int, Interpreter> Interpreters { get; } = new Dictionary<int, Interpreter>();
 
-        int _nextId = 1;
+        static int _nextId = 1;
+        public int LastId { get { return _nextId - 1;} }
 
         public List<ICscsModule> Modules { get; set; }
 
+        public List<Interpreter> AllInterpreters { get { return Interpreters.Values.ToList<Interpreter>(); } }
+
         public int NewInterpreter()
         {
-            var interpreter = new Interpreter();
+            Interpreter interpreter;
+            lock (Interpreters)
+            {
+                interpreter = new Interpreter(_nextId++);
+                Interpreters.Add(interpreter.Id, interpreter);
+            }
 
             foreach (var module in Modules)
             {
@@ -33,12 +41,7 @@ namespace CSCS.InterpreterManager
                 handler(interpreter, EventArgs.Empty);
             }
 
-            lock (Interpreters)
-            {
-                int id = _nextId++;
-                Interpreters.Add(id, interpreter);
-                return id;
-            }
+            return interpreter.Id;
         }
 
         public bool RemoveInterpreter(int interpreterHandle)
@@ -60,7 +63,7 @@ namespace CSCS.InterpreterManager
                 if (!Interpreters.TryGetValue(interpreterHandle, out Interpreter interpreter))
                     return false;
 
-                CurrentInterpreter = interpreter;
+                Interpreter.LastInstance = CurrentInterpreter = interpreter;
             }
             return true;
         }
@@ -77,7 +80,7 @@ namespace CSCS.InterpreterManager
 
                 if (interpreter == CurrentInterpreter)
                 {
-                    CurrentInterpreter = Interpreters.FirstOrDefault().Value;
+                    Interpreter.LastInstance = CurrentInterpreter = Interpreters.FirstOrDefault().Value;
                 }
             }
             return true;
@@ -92,12 +95,18 @@ namespace CSCS.InterpreterManager
         public int GetInterpreterHandle(Interpreter interpreter)
         {
             lock (Interpreters)
-                return Interpreters.SingleOrDefault(x => x.Value == interpreter).Key;
+            {
+                var id = Interpreters.SingleOrDefault(x => x.Value == interpreter).Key;
+                return id;
+            }
         }
         public Interpreter GetInterpreter(int handle)
         {
             lock (Interpreters)
-                return Interpreters.SingleOrDefault(x => x.Key == handle).Value;
+            {
+                var interp = Interpreters.SingleOrDefault(x => x.Key == handle).Value;
+                return interp;
+            }
         }
 
         public void AddModule(ICscsModule module, Interpreter interpreter)

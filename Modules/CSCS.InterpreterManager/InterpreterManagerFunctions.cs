@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 using SplitAndMerge;
 
 namespace CSCS.InterpreterManager
@@ -9,6 +11,7 @@ namespace CSCS.InterpreterManager
     internal class NewInterpreterFunction : ParserFunction
     {
         private InterpreterManager _mgr;
+        private ParsingScript _script;
 
         public NewInterpreterFunction(InterpreterManager mgr)
         {
@@ -17,7 +20,41 @@ namespace CSCS.InterpreterManager
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            return new Variable(_mgr.NewInterpreter());
+            var args = script.GetFunctionArgs();
+
+            var load = Utils.GetSafeString(args, 0);
+            int newHandle = _mgr.NewInterpreter();
+
+            if (args.Count > 0)
+            {
+                _mgr.SetInterpreter(newHandle);
+                script.SetInterpreter(_mgr.CurrentInterpreter);
+            }
+            if (string.IsNullOrWhiteSpace(load))
+            {
+                return new Variable(newHandle);
+            }
+
+            bool newThread = Utils.GetSafeInt(args, 1) > 0;
+
+            InterpreterInstance = script.InterpreterInstance;
+            _script = script;
+            if (!newThread)
+            {
+                IncludeScriptLocal(load);
+            }
+            else
+            {
+                ThreadPool.QueueUserWorkItem(IncludeScriptLocal, load);
+            }
+
+            return new Variable(newHandle);
+        }
+
+        void IncludeScriptLocal(Object stateInfo)
+        {
+            string filename = (string)stateInfo;
+            IncludeFile.Execute(filename, InterpreterInstance, _script);
         }
     }
 
@@ -52,7 +89,8 @@ namespace CSCS.InterpreterManager
             var args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
-            bool changed = _mgr.SetInterpreter(Utils.GetSafeInt(args, 0));
+            int newId = Utils.GetSafeInt(args, 0);
+            bool changed = _mgr.SetInterpreter(newId);
 
             // Let's try to change the interpreter of the script.
             // This might not work, but it's better than not changing it, I think.
@@ -73,7 +111,45 @@ namespace CSCS.InterpreterManager
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            return new Variable(_mgr.GetInterpreterHandle(InterpreterInstance));
+            script.GetFunctionArgs();
+            var handle = _mgr.GetInterpreterHandle(InterpreterInstance);
+            return new Variable(handle);
+        }
+    }
+
+    internal class GetLastHandleFunction : ParserFunction
+    {
+        private InterpreterManager _mgr;
+
+        public GetLastHandleFunction(InterpreterManager mgr)
+        {
+            _mgr = mgr;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            script.GetFunctionArgs();
+            return new Variable(_mgr.LastId);
+        }
+    }
+
+    internal class ResetAllVariablesFunction : ParserFunction
+    {
+        private InterpreterManager _mgr;
+
+        public ResetAllVariablesFunction(InterpreterManager mgr)
+        {
+            _mgr = mgr;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var interpreters = _mgr.AllInterpreters;
+            foreach(var interpreter in interpreters)
+            {
+                interpreter.CleanUpVariables();
+            }
+            return Variable.EmptyInstance;
         }
     }
 

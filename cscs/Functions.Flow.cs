@@ -1722,7 +1722,7 @@ namespace SplitAndMerge
         }
     }
 
-    class IncludeFile : ParserFunction
+    public class IncludeFile : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {

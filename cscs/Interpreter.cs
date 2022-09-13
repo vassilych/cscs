@@ -58,14 +58,19 @@ namespace SplitAndMerge
                 }
                 return lastInstance;
             }
+            set
+            {
+                lastInstance = value;
+            }
         }
 
         // Global functions:
 
         // TODO: Pass this a collection of ScriptModule objects.
         // Each ScriptModule can add functionality
-        public Interpreter()
+        public Interpreter(int id = 1)
         {
+            Id = id;
             Init();
             if (firstInstance == null)
             {
@@ -73,6 +78,8 @@ namespace SplitAndMerge
             }
             lastInstance = this;
         }
+
+        public int Id { get; set; }
 
         private int MAX_LOOPS;
 

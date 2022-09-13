@@ -1,4 +1,12 @@
 
+function newThreadWork() {
+  sleep(50);
+  Print(now("yyyy/MM/dd HH:mm:ss.fff"), "Working in new thread... " + threadid());
+  sleep(1000);
+  Print(now("yyyy/MM/dd HH:mm:ss.fff"), "Finishing thread work in thread", threadid());
+}
+newThreadWork();
+/*
 clear_comp_definitions();
 clear_comp_namespaces();
 add_comp_namespace("System.Diagnostics");
