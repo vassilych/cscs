@@ -1051,7 +1051,7 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = SetReflectedProperty(propName, value);
             if (reflectedProp != null)
-                return reflectedProp;            
+                return reflectedProp;
             Variable result = Variable.EmptyInstance;
 
             // Check for an existing custom setter
@@ -1221,19 +1221,12 @@ namespace SplitAndMerge
             else
                 t = ObjectType;
 
-            bf |= BindingFlags.Public | BindingFlags.SetProperty;
+            var property = FindNestedMatchingProperty(t, propName, bf | BindingFlags.Public | BindingFlags.SetProperty);
 
-            var properties = t.GetProperties(bf);
-            if (properties != null)
+            if (property != null)
             {
-                foreach (var property in properties)
-                {
-                    if (String.Compare(property.Name, propName, true) == 0)
-                    {
-                        property.SetValue(Object, ParameterConverter.ChangeType(value.AsObject(), property.PropertyType));
-                        return value;
-                    }
-                }
+                property.SetValue(Object, ParameterConverter.ChangeType(value.AsObject(), property.PropertyType));
+                return value;
             }
 
             return null;
@@ -1257,17 +1250,12 @@ namespace SplitAndMerge
 
             bf |= BindingFlags.Public;
 
-            var properties = t.GetProperties(bf | BindingFlags.GetProperty);
-            if (properties != null)
+            var property = FindNestedMatchingProperty(t, propName, bf | BindingFlags.GetProperty);
+
+            if (property != null)
             {
-                foreach (var property in properties)
-                {
-                    if (String.Compare(property.Name, propName, true) == 0)
-                    {
-                        object val = property.GetValue(Object);
-                        return ConvertToVariable(val, property.PropertyType);
-                    }
-                }
+                object val = property.GetValue(Object);
+                return ConvertToVariable(val, property.PropertyType);
             }
 
             // TODO: If we couldn't find the property, there is other code I could write
@@ -1277,35 +1265,64 @@ namespace SplitAndMerge
 
             if (script != null)
             {
-                var methods = t.GetMethods(bf);
+                int startPointer = script.Pointer;
+                List<Variable> args = GetArgs(script);
+                ParameterConverter pConv = new ParameterConverter();
 
-                if (methods != null)
+                MethodInfo bestMethod = pConv.FindBestMethod(t, propName, args, bf);
+                if (pConv.BestConversion != ParameterConverter.Conversion.Exact)
                 {
-                    List<Variable> args = null;
-                    System.Reflection.MethodInfo bestMethod = null;
-                    ParameterConverter pConv = new ParameterConverter();
-                    foreach (var method in methods)
+                    if (t.IsInterface)
                     {
-                        if (String.Compare(method.Name, propName, true) == 0)
+                        foreach (Type implementedInterface in t.GetInterfaces())
                         {
-                            if (args == null)
-                                args = GetArgs(script);
-
-                            var parameters = method.GetParameters();
-                            if (pConv.ConvertVariablesToTypedArgs(args, parameters))
+                            var newMethod = pConv.FindBestMethod(implementedInterface, propName, args, bf);
+                            if (newMethod != null)
                             {
-                                bestMethod = method;
+                                bestMethod = newMethod;
                                 if (pConv.BestConversion == ParameterConverter.Conversion.Exact)
                                     break;
-                            }    
+                            }
                         }
                     }
+                }
 
-                    if (bestMethod != null)
-                    {
-                        object res = bestMethod.Invoke(Object, pConv.BestTypedArgs);
-                        return ConvertToVariable(res, bestMethod.ReturnType);
-                    }
+                if (bestMethod != null)
+                {
+                    object res = bestMethod.Invoke(Object, pConv.BestTypedArgs);
+                    return ConvertToVariable(res, bestMethod.ReturnType);
+                }
+
+                script.Pointer = startPointer;
+            }
+
+            return null;
+        }
+
+        PropertyInfo FindNestedMatchingProperty(Type t, string propName, BindingFlags bf)
+        {
+            var property = FindMatchingProperty(t, propName, bf);
+            if (property == null && t.IsInterface)
+            {
+                foreach (Type implementedInterface in t.GetInterfaces())
+                {
+                    property = FindMatchingProperty(implementedInterface, propName, bf);
+                    if (property != null)
+                        break;
+                }
+            }
+            return property;
+        }
+
+        PropertyInfo FindMatchingProperty(Type t, string propName, BindingFlags bf)
+        {
+            var properties = t.GetProperties(bf);
+            if (properties != null)
+            {
+                foreach (var property in properties)
+                {
+                    if (String.Compare(property.Name, propName, true) == 0)
+                        return property;
                 }
             }
 
@@ -1320,6 +1337,31 @@ namespace SplitAndMerge
             public ParameterConverter()
             {
                 BestConversion = Conversion.Mismatch;
+            }
+
+            public MethodInfo FindBestMethod(Type t, string propName, List<Variable> args, BindingFlags bf)
+            {
+                MethodInfo bestMethod = null;
+
+                var methods = t.GetMethods(bf);
+
+                if (methods != null)
+                {
+                    foreach (var method in methods)
+                    {
+                        if (String.Compare(method.Name, propName, true) == 0)
+                        {
+                            var parameters = method.GetParameters();
+                            if (ConvertVariablesToTypedArgs(args, parameters))
+                            {
+                                bestMethod = method;
+                                if (BestConversion == Conversion.Exact)
+                                    break;
+                            }
+                        }
+                    }
+                }
+                return bestMethod;
             }
 
             public bool ConvertVariablesToTypedArgs(List<Variable> args, ParameterInfo[] parameters)
@@ -1554,7 +1596,7 @@ namespace SplitAndMerge
         {
             Variable reflectedProp = GetReflectedProperty(propName, script);
             if (reflectedProp != null)
-                return reflectedProp;            
+                return reflectedProp;
             Variable result = Variable.EmptyInstance;
 
             if (m_propertyMap.TryGetValue(propName, out result) ||
