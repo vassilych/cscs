@@ -591,13 +591,15 @@ namespace SplitAndMerge
             return result;
         }
 
-        public void ExecuteAll()
+        public Variable ExecuteAll()
         {
+            Variable result = Variable.EmptyInstance;
             while (StillValid())
             {
-                Execute(Constants.END_LINE_ARRAY);
+                result = Execute(Constants.END_LINE_ARRAY);
                 GoToNextStatement();
             }
+            return result;
         }
         public Variable ExecuteScript()
         {

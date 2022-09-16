@@ -64,16 +64,16 @@ namespace CSCS.ConsoleApp
 
             _interpreterManager.OnInterpreterCreated += InterpreterCreated;
 
-            string scriptFilename = "../../../Scripts/Samples/bug.cscs";
-            scriptFilename = "";
-            string script = Utils.GetFileContents(scriptFilename);
-
             var interpreterId = _interpreterManager.NewInterpreter();
             _interpreterManager.SetInterpreter(interpreterId);
             if (_startDebugger)
                 DebuggerServer.StartServer(13337, true);
 
             int exitCode = 0;
+
+            string scriptFilename = "../../../Scripts/Samples/bug.cscs";
+            scriptFilename = "";
+            string script = "";
 
             if (args.Length >= 3)
             {
