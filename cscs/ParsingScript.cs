@@ -593,7 +593,7 @@ namespace SplitAndMerge
 
         public Variable ExecuteAll()
         {
-            Variable result = Variable.EmptyInstance;
+            Variable result = null;
             while (StillValid())
             {
                 result = Execute(Constants.END_LINE_ARRAY);
