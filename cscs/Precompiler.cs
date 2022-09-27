@@ -440,13 +440,6 @@ namespace SplitAndMerge
                 m_converted.AppendLine("    public static Variable " + m_functionName);
             }
 
-            if (m_scriptInCSharp)
-            {
-                /*m_converted.AppendLine(m_cscsCode);
-                m_converted.AppendLine("\n    }\n    }\n}");
-                return m_converted.ToString();*/
-            }
-
             m_converted.AppendLine(
                            "(Interpreter __interpreter,\n" +
                            " List<string> " + STRING_VAR_ARG + ",\n" +
