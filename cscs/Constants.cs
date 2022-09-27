@@ -364,10 +364,12 @@ namespace SplitAndMerge
         {
             switch (type)
             {
-                case Variable.VarType.NUMBER:   return "NUMBER";
+                case Variable.VarType.INT:
+                case Variable.VarType.NUMBER: return "NUMBER";
                 case Variable.VarType.STRING:   return "STRING";
                 case Variable.VarType.ARRAY_STR:
                 case Variable.VarType.ARRAY_NUM:
+                case Variable.VarType.ARRAY_INT:
                 case Variable.VarType.ARRAY:    return "ARRAY";
                 case Variable.VarType.MAP_STR:
                 case Variable.VarType.MAP_NUM:  return "MAP";
@@ -384,13 +386,13 @@ namespace SplitAndMerge
             switch (type)
             {
                 case "BOOL":
-                case "INT":
+                case "INT": return Variable.VarType.INT;
                 case "FLOAT":
                 case "DOUBLE":
                 case "NUMBER": return Variable.VarType.NUMBER;
                 case "CHAR":
                 case "STRING": return Variable.VarType.STRING;
-                case "LIST<INT>":
+                case "LIST<INT>": return Variable.VarType.ARRAY_INT;
                 case "LIST<DOUBLE>": return Variable.VarType.ARRAY_NUM;
                 case "LIST<STRING>": return Variable.VarType.ARRAY_STR;
                 case "MAP<INT>":

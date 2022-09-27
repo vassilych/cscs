@@ -715,16 +715,18 @@ namespace SplitAndMerge
 
             string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
             List<string> args = GetCompiledArgs(argStr);
-            //string[] args = argStr.Split(Constants.NEXT_ARG_ARRAY, StringSplitOptions.RemoveEmptyEntries);
 
             dict = new Dictionary<string, Variable>(args.Count);
             var sep = new char[] { ' ' };
             for (int i = 0; i < args.Count; i++)
             {
-                string[] pair = args[i].ToLower().Trim().Split(sep, StringSplitOptions.RemoveEmptyEntries);
-                Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair[0]) : Variable.VarType.STRING;
-                dict.Add(pair[pair.Length - 1], new Variable(type));
-                args[i] = pair[pair.Length - 1];
+                var arg1 = args[i].ToLower().Trim();
+                string[] pair = arg1.Split(sep, StringSplitOptions.RemoveEmptyEntries);
+                var pair1 = pair[0];
+                var pair2 = pair[pair.Length - 1];
+                Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair1) : Variable.VarType.STRING;
+                dict.Add(pair2, new Variable(type));
+                args[i] = pair2;
             }
 
             string[] result = args.Select(element => element.Trim()).ToArray();

@@ -44,10 +44,10 @@ namespace SplitAndMerge
         ParsingScript m_parentScript;
         public string CSharpCode { get; private set; }
 
-        Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+        Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> m_compiledFunc;
 
-        Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+        Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>> m_compiledFuncAsync;
 
         static List<string> s_definitions = new List<string>();
@@ -55,12 +55,14 @@ namespace SplitAndMerge
 
         public static bool AsyncMode { get; set; } = true;
 
-        static string NUMERIC_VAR_ARG   = "__varNum";
         static string STRING_VAR_ARG    = "__varStr";
-        static string NUMERIC_ARRAY_ARG = "__varArrNum";
+        static string NUMERIC_VAR_ARG   = "__varNum";
+        static string INT_VAR_ARG       = "__varInt";
         static string STRING_ARRAY_ARG  = "__varArrStr";
-        static string NUMERIC_MAP_ARG   = "__varMapNum";
+        static string NUMERIC_ARRAY_ARG = "__varArrNum";
+        static string INT_ARRAY_ARG     = "__varArrInt";
         static string STRING_MAP_ARG    = "__varMapStr";
+        static string NUMERIC_MAP_ARG   = "__varMapNum";
         static string CSCS_VAR_ARG      = "__varVar";
 
         static string ARGS_TEMP_VAR     = "__argsTempStr";
@@ -180,7 +182,7 @@ namespace SplitAndMerge
             }
         }
 
-        static Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+        static Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                            List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable>
                             CompileAndCache(CompilerResults compile, string functionName)
         {
@@ -191,7 +193,7 @@ namespace SplitAndMerge
             List<ParameterExpression> paramTypes = tuple.Item2;
 
             var lambda =
-              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                                      List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable>>(
                 methodCall, paramTypes.ToArray());
             var func = lambda.Compile();
@@ -199,7 +201,7 @@ namespace SplitAndMerge
             return func;
         }
 
-        static Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+        static Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                    List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>>
                     CompileAndCacheAsync(CompilerResults compile, string functionName)
         {
@@ -210,7 +212,7 @@ namespace SplitAndMerge
             List<ParameterExpression> paramTypes = tuple.Item2;
 
             var lambda =
-              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<List<string>>, List<List<double>>,
+              Expression.Lambda<Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                                      List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>>>(
                 methodCall, paramTypes.ToArray());
             var func = lambda.Compile();
@@ -228,8 +230,10 @@ namespace SplitAndMerge
             paramTypes.Add(Expression.Parameter(typeof(Interpreter), "__interpreter"));
             paramTypes.Add(Expression.Parameter(typeof(List<string>), STRING_VAR_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<double>), NUMERIC_VAR_ARG));
+            paramTypes.Add(Expression.Parameter(typeof(List<int>), INT_VAR_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<List<string>>), STRING_ARRAY_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<List<double>>), NUMERIC_ARRAY_ARG));
+            paramTypes.Add(Expression.Parameter(typeof(List<List<int>>), INT_ARRAY_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<Dictionary<string, string>>), STRING_MAP_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<Dictionary<string, double>>), NUMERIC_MAP_ARG));
             paramTypes.Add(Expression.Parameter(typeof(List<Variable>), CSCS_VAR_ARG));
@@ -245,9 +249,10 @@ namespace SplitAndMerge
             return new Tuple<MethodCallExpression, List<ParameterExpression>>(methodCall, paramTypes);
         }
 
-        public Variable Run(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
-                            List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
-                            List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
+        public Variable Run(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<int> argsInt,
+            List<List<string>> argsArrStr, List<List<double>> argsArrNum, List<List<int>> argsArrInt,
+            List<Dictionary<string, string>> argsMapStr,
+            List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
         {
             if (m_compiledFunc == null)
             {
@@ -255,12 +260,14 @@ namespace SplitAndMerge
                 Compile();
             }
 
-            Variable result = m_compiledFunc.Invoke(interpreter, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
+            Variable result = m_compiledFunc.Invoke(interpreter, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt,
+                argsMapStr, argsMapNum, argsVar);
             return result;
         }
-        public Variable RunAsync(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<List<string>> argsArrStr,
-                            List<List<double>> argsArrNum, List<Dictionary<string, string>> argsMapStr,
-                            List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
+        public Variable RunAsync(Interpreter interpreter, List<string> argsStr, List<double> argsNum, List<int> argsInt,
+            List<List<string>> argsArrStr, List<List<double>> argsArrNum, List<List<int>> argsArrInt,
+            List<Dictionary<string, string>> argsMapStr,
+            List<Dictionary<string, double>> argsMapNum, List<Variable> argsVar, bool throwExc = true)
         {
             if (m_compiledFuncAsync == null)
             {
@@ -268,7 +275,8 @@ namespace SplitAndMerge
                 Compile();
             }
 
-            var task = m_compiledFuncAsync.Invoke(interpreter, argsStr, argsNum, argsArrStr, argsArrNum, argsMapStr, argsMapNum, argsVar);
+            var task = m_compiledFuncAsync.Invoke(interpreter, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt,
+                argsMapStr, argsMapNum, argsVar);
             Variable result = task.Result;
             return result;
         }
@@ -300,10 +308,19 @@ namespace SplitAndMerge
             {
                 return Variable.VarType.NUMBER;
             }
+            if (resolved.StartsWith(INT_VAR_ARG, StringComparison.InvariantCulture))
+            {
+                return Variable.VarType.INT;
+            }
             if (resolved.StartsWith(NUMERIC_ARRAY_ARG, StringComparison.InvariantCulture) &&
                 paramName.Count(x => x == '[') >= 2)
             {
                 return Variable.VarType.NUMBER;
+            }
+            if (resolved.StartsWith(INT_ARRAY_ARG, StringComparison.InvariantCulture) &&
+                paramName.Count(x => x == '[') >= 2)
+            {
+                return Variable.VarType.INT;
             }
 
             Variable arg;
@@ -353,22 +370,27 @@ namespace SplitAndMerge
         {
             m_converted.Clear();
 
-            int numIndex = 0;
             int strIndex = 0;
-            int arrNumIndex = 0;
+            int numIndex = 0;
+            int intIndex = 0;
             int arrStrIndex = 0;
-            int mapNumIndex = 0;
+            int arrNumIndex = 0;
+            int arrIntIndex = 0;
             int mapStrIndex = 0;
+            int mapNumIndex = 0;
             int varIndex = 0;
             // Create a mapping from the original function argument to the element array it is in.
             for (int i = 0; i < m_actualArgs.Length; i++)
             {
-                Variable typeVar = m_argsMap[m_actualArgs[i]];
-                m_paramMap[m_actualArgs[i]] =
+                string argName = m_actualArgs[i];
+                Variable typeVar = m_argsMap[argName];
+                m_paramMap[argName] =
                     typeVar.Type == Variable.VarType.STRING ? STRING_VAR_ARG + "[" + (strIndex++) + "]" :
                     typeVar.Type == Variable.VarType.NUMBER ? NUMERIC_VAR_ARG + "[" + (numIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.INT ? INT_VAR_ARG + "[" + (intIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_STR ? STRING_ARRAY_ARG + "[" + (arrStrIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_NUM ? NUMERIC_ARRAY_ARG + "[" + (arrNumIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.ARRAY_INT ? INT_ARRAY_ARG + "[" + (arrIntIndex++) + "]" :
                     typeVar.Type == Variable.VarType.MAP_STR ? STRING_MAP_ARG + "[" + (mapStrIndex++) + "]" :
                     typeVar.Type == Variable.VarType.MAP_NUM ? NUMERIC_MAP_ARG + "[" + (mapNumIndex++) + "]" :
                     typeVar.Type == Variable.VarType.VARIABLE ? CSCS_VAR_ARG + "[" + (varIndex++) + "]" :
@@ -417,12 +439,22 @@ namespace SplitAndMerge
             {
                 m_converted.AppendLine("    public static Variable " + m_functionName);
             }
+
+            if (m_scriptInCSharp)
+            {
+                /*m_converted.AppendLine(m_cscsCode);
+                m_converted.AppendLine("\n    }\n    }\n}");
+                return m_converted.ToString();*/
+            }
+
             m_converted.AppendLine(
                            "(Interpreter __interpreter,\n" +
                            " List<string> " + STRING_VAR_ARG + ",\n" +
                            " List<double> " + NUMERIC_VAR_ARG + ",\n" +
+                           " List<int> " + INT_VAR_ARG + ",\n" +
                            " List<List<string>> " + STRING_ARRAY_ARG + ",\n" +
                            " List<List<double>> " + NUMERIC_ARRAY_ARG + ",\n" +
+                           " List<List<int>> " + INT_ARRAY_ARG + ",\n" +
                            " List<Dictionary<string, string>> " + STRING_MAP_ARG + ",\n" +
                            " List<Dictionary<string, double>> " + NUMERIC_MAP_ARG + ",\n" +
                            " List<Variable> " + CSCS_VAR_ARG + ") {\n");
@@ -450,6 +482,7 @@ namespace SplitAndMerge
             {
                 m_currentStatement = m_statements[m_statementId];
                 m_nextStatement = m_statementId < m_statements.Count - 1 ? m_statements[m_statementId + 1] : "";
+                var current = m_converted.ToString();
                 string converted = m_scriptInCSharp ? ProcessCSStatement(m_currentStatement, m_nextStatement, true) :
                                    ProcessStatement(m_currentStatement, m_nextStatement, true);
                 if (!string.IsNullOrWhiteSpace(converted))
@@ -542,7 +575,10 @@ namespace SplitAndMerge
                 result += token;
                 m_tokenId++;
             }
-            result += ";\n";
+            if (!result.EndsWith("{") && (!nextStatement.StartsWith("{") || !result.EndsWith(")")))
+            {
+                result += ";\n";
+            }
 
             return result;
         }

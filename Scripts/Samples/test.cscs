@@ -7,7 +7,7 @@ ResetVariables();
 Print("Testing Multiple Interpreters.");
 inter1 = NewInterpreter("functions.cscs");
 xxx = "First interpreter";
-print("interpreter1=" + GetInterpreterHandle() + ", xxx=" + xxx); // 1, First interpreter
+print("interpreter1=" + GetInterpreterHandle() + ", xxx=" + xxx);
 
 NewInterpreter("functions.cscs");
 excThrown = false;

@@ -13,7 +13,7 @@ namespace SplitAndMerge
         public enum VarType
         {
             NONE, UNDEFINED, NUMBER, STRING, ARRAY,
-            ARRAY_NUM, ARRAY_STR, MAP_NUM, MAP_STR, BYTE_ARRAY, QUIT,
+            ARRAY_NUM, ARRAY_STR, ARRAY_INT, INT, MAP_INT, MAP_NUM, MAP_STR, BYTE_ARRAY, QUIT,
             BREAK, CONTINUE, OBJECT, ENUM, VARIABLE, DATETIME, CUSTOM, POINTER
         };
         public enum OriginalType
