@@ -14,4 +14,9 @@ namespace SplitAndMerge
     {
     }
 
+    public interface ICscsDLL
+    {
+        string DoWork(object load);
+    }
+
 }

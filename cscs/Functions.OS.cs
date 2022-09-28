@@ -5,6 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -1169,6 +1172,102 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
             return result == null ? Variable.EmptyInstance : result;
+        }
+    }
+
+    public class ImportDLLFunction : ParserFunction
+    {
+        bool m_executeMode;
+        static List<ICscsDLL> s_dlls = new List<ICscsDLL>();
+
+        public ImportDLLFunction(bool executeMode = false)
+        {
+            m_executeMode = executeMode;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            if (m_executeMode)
+            {
+                var handle = Utils.GetSafeInt(args, 0);
+                var load = Utils.GetSafeString(args, 1);
+                if (handle < 0 || handle >= s_dlls.Count)
+                {
+                    Utils.ThrowErrorMsg("Couldn´t find handle: " + handle, script, m_name);
+                }
+                var dll = s_dlls[handle];
+                var result = dll.DoWork(load);
+                return new Variable(result);
+            }
+
+            var name = Utils.GetSafeString(args, 0);
+
+            var DLL = LoadDLL(name, script);
+            var types = DLL.GetExportedTypes();
+
+            foreach (var type in types)
+            {
+                //var c = Activator.CreateInstance(type);
+                var needed = typeof(ICscsDLL).IsAssignableFrom(type);
+                if (!needed)
+                {
+                    continue;
+                }
+                var module = Activator.CreateInstance(type) as ICscsDLL;
+                if (module == null)
+                {
+                    Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, m_name); ;
+                }
+
+                s_dlls.Add(module);
+                return new Variable(s_dlls.Count - 1);
+            }
+
+            Utils.ThrowErrorMsg("Couldn´t add dll: " + name, script, m_name);
+            return Variable.EmptyInstance;
+        }
+
+        public static Assembly LoadDLL(string name, ParsingScript script = null)
+        {
+            if (!name.ToLower().EndsWith(".dll"))
+            {
+                name += ".dll";
+            }
+
+            var absolute = Path.IsPathRooted(name);
+            var filename = name;
+            if (!absolute)
+            {
+                var pwd = Directory.GetCurrentDirectory();
+                var baseDir = Path.GetFullPath(Path.Combine(pwd, "..", "..", ".."));
+                var files = Directory.EnumerateFiles(baseDir, name, SearchOption.AllDirectories).ToList<string>();
+                if (files.Count > 0)
+                {
+                    filename = files[0];
+                }
+            }
+
+            if (!File.Exists(filename))
+            {
+                Utils.ThrowErrorMsg("Couldn´t find DLL: " + filename + ", current dir: " +
+                    Directory.GetCurrentDirectory(), script, name);
+            }
+
+            Assembly DLL = null;
+            try
+            {
+                DLL = Assembly.LoadFile(filename);
+            }
+            catch(Exception exc)
+            {
+                Utils.ThrowErrorMsg("Couldn´t load DLL: " + filename + ", current dir: " +
+                    Directory.GetCurrentDirectory() + ":" + exc.Message, script, name);
+            }
+
+            return DLL;
         }
     }
 }

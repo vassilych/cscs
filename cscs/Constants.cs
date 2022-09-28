@@ -66,6 +66,8 @@ namespace SplitAndMerge
         public const string IF = "if";
         public const string INCLUDE = "include";
         public const string IMPORT = "import";
+        public const string IMPORT_DLL = "importDll";
+        public const string INVOKE_DLL = "invokeDll";
         public const string NEW = "new";
         public const string QUIT = "quit";
         public const string RETURN = "return";

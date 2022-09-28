@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using SplitAndMerge;
@@ -7,6 +8,19 @@ using SplitAndMerge;
 
 namespace CSCS.Tests
 {
+    public class CscsLogger : ICscsDLL
+    {
+        public string DoWork(object load)
+        {
+            var msg = load as string;
+            System.Diagnostics.Debug.WriteLine("{0:yyyy-MM-dd HH:mm:ss.fff}[{1}]: {2}",
+                DateTime.Now, Thread.CurrentThread.ManagedThreadId, msg);
+            Console.WriteLine(msg);
+
+            return "OK";
+        }
+    }
+
     public class CscsTestModule : ICscsModule
     {
         public ICscsModuleInstance CreateInstance(Interpreter interpreter)

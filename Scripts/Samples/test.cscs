@@ -1202,8 +1202,8 @@ someDate.Add("-1h2m3s");
 Test(string(someDate, "HH:mm:ss"), "18:29:48");
 
 dateNow = DateTime();
-dateNow.Add("3y5M");
-dateNow.Add("-3y5M");
+dateNow.Add("3y");
+dateNow.Add("-3y");
 Test(string(dateNow, "M/d/yyyy"), string(DateTime(), "M/d/yyyy"));
 
 x=2;
