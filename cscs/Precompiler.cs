@@ -55,6 +55,8 @@ namespace SplitAndMerge
 
         public static bool AsyncMode { get; set; } = true;
 
+        public string OutputDLL { get; private set; } = "";
+
         static string STRING_VAR_ARG    = "__varStr";
         static string NUMERIC_VAR_ARG   = "__varNum";
         static string INT_VAR_ARG       = "__varInt";
@@ -119,16 +121,30 @@ namespace SplitAndMerge
             m_parentScript = parentScript;
         }
 
-        public void Compile(bool scriptInCSharp = false)
+        public void Compile(bool scriptInCSharp = false, string outputDLL = "")
         {
             m_scriptInCSharp = scriptInCSharp;
 
             var compilerParams = new CompilerParameters();
 
-            compilerParams.GenerateInMemory = true;
             compilerParams.TreatWarningsAsErrors = false;
-            compilerParams.GenerateExecutable = false;
             compilerParams.CompilerOptions = "/optimize";
+            compilerParams.GenerateExecutable = false;
+            compilerParams.GenerateInMemory = !string.IsNullOrWhiteSpace(outputDLL);
+            if (!string.IsNullOrWhiteSpace(outputDLL))
+            {
+                if (!outputDLL.ToLower().EndsWith(".dll"))
+                {
+                    outputDLL += ".dll";
+                }
+                var absolute = Path.IsPathRooted(outputDLL);
+                if (!absolute)
+                {
+                    var pwd = Directory.GetCurrentDirectory();
+                    outputDLL = Path.Combine(pwd, outputDLL);
+                }
+                compilerParams.OutputAssembly = OutputDLL = outputDLL;
+            }            
 
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (Assembly asm in assemblies)

@@ -59,6 +59,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.CLEAR_COMP_DEFINITIONS, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_DEFINITIONS));
             RegisterFunction(Constants.CLEAR_COMP_NAMESPACES, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_NAMESPACES));
             RegisterFunction(Constants.CSHARP_FUNCTION, new CompiledFunctionCreator(true));
+            RegisterFunction(Constants.DLL_FUNCTION, new DLLCreator(true));
 
             RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));

@@ -697,7 +697,7 @@ namespace SplitAndMerge
             string[] args = Utils.GetCompiledFunctionSignature(script, out argsMap);
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
-            int parentOffset = script.Pointer;
+            script.ParentOffset = script.Pointer;
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
@@ -706,7 +706,7 @@ namespace SplitAndMerge
 
             CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap, script);
             customFunc.ParentScript = script;
-            customFunc.ParentOffset = parentOffset;
+            customFunc.ParentOffset = script.ParentOffset;
 
             InterpreterInstance.RegisterFunction(funcName, customFunc, false /* not native */);
 #endif
@@ -715,6 +715,43 @@ namespace SplitAndMerge
     }
 
 #if __ANDROID__ == false && __IOS__ == false
+    class DLLCreator : ParserFunction
+    {
+        bool m_scriptInCSharp = false;
+
+        public DLLCreator(bool scriptInCSharp)
+        {
+            m_scriptInCSharp = scriptInCSharp;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var precompiler = CompileDLL(script, m_scriptInCSharp, true);
+            return new Variable(precompiler.OutputDLL);
+        }
+
+        public static Precompiler CompileDLL(ParsingScript script, bool scriptInCSharp, bool createDLL = false)
+        {
+            Utils.GetCompiledArgs(script, out string funcReturn, out string funcName);
+
+            Precompiler.RegisterReturnType(funcName, funcReturn);
+
+            Dictionary<string, Variable> argsMap;
+            string[] args = Utils.GetCompiledFunctionSignature(script, out argsMap);
+
+            script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
+            script.ParentOffset = script.Pointer;
+
+            string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
+
+            Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
+            precompiler.Compile(scriptInCSharp, createDLL ? funcName: "");
+
+            return precompiler;
+        }
+
+    }
+
     class CustomCompiledFunction : CustomFunction
     {
         public bool ScriptInCSharp { get; set; }
@@ -1242,11 +1279,16 @@ namespace SplitAndMerge
             if (!absolute)
             {
                 var pwd = Directory.GetCurrentDirectory();
-                var baseDir = Path.GetFullPath(Path.Combine(pwd, "..", "..", ".."));
-                var files = Directory.EnumerateFiles(baseDir, name, SearchOption.AllDirectories).ToList<string>();
-                if (files.Count > 0)
+                var baseDir = Directory.GetParent(pwd);
+                for (int i = 0; i < 3 && baseDir != null; i++)
                 {
-                    filename = files[0];
+                    var files = Directory.EnumerateFiles(baseDir.FullName, name, SearchOption.AllDirectories).ToList<string>();
+                    if (files.Count > 0)
+                    {
+                        filename = files[0];
+                        break;
+                    }
+                    baseDir = Directory.GetParent(baseDir.FullName);
                 }
             }
 

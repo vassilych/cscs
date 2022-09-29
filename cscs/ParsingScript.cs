@@ -114,6 +114,8 @@ namespace SplitAndMerge
         public bool InTryBlock;
         public string MainFilename;
 
+        public int ParentOffset { get; set; }
+
         public ParsingScript ParentScript;
 
         public CSCSClass CurrentClass { get; set; }
