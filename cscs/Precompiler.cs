@@ -42,7 +42,7 @@ namespace SplitAndMerge
         bool m_scriptInCSharp;
 
         ParsingScript m_parentScript;
-        public string CSharpCode { get; private set; }
+        public string CSharpCode { get; set; }
 
         Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
              List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> m_compiledFunc;
@@ -53,9 +53,14 @@ namespace SplitAndMerge
         static List<string> s_definitions = new List<string>();
         static List<string> s_namespaces  = new List<string>();
 
-        public static bool AsyncMode { get; set; } = true;
+        public static bool AsyncMode { get; set; } = false;
 
         public string OutputDLL { get; private set; } = "";
+        public string Name { get; set; } = "";
+
+        public string ClassHeader { get; set; } = "  public partial class Precompiler {";
+        public string ClassName { get; set; } = "Precompiler";
+        public bool IsStatic { get; set; } = true;
 
         static string STRING_VAR_ARG    = "__varStr";
         static string NUMERIC_VAR_ARG   = "__varNum";
@@ -121,14 +126,29 @@ namespace SplitAndMerge
             m_parentScript = parentScript;
         }
 
-        public void Compile(bool scriptInCSharp = false, string outputDLL = "")
+        public string GetCSharpCode(bool scriptInCSharp = false)
         {
             m_scriptInCSharp = scriptInCSharp;
 
+            m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
+            RemoveIrrelevant(m_cscsCode);
+
+            CSharpCode = ConvertScript();
+            return CSharpCode;
+        }
+
+        public void Compile(bool scriptInCSharp = false, string outputDLL = "")
+        {
+            if (string.IsNullOrWhiteSpace(CSharpCode))
+            {
+                GetCSharpCode(scriptInCSharp);
+            }
             var compilerParams = new CompilerParameters();
 
             compilerParams.TreatWarningsAsErrors = false;
             compilerParams.CompilerOptions = "/optimize";
+            //compilerParams.CompilerOptions = "/debug";
+            //compilerParams.IncludeDebugInformation = true;
             compilerParams.GenerateExecutable = false;
             compilerParams.GenerateInMemory = !string.IsNullOrWhiteSpace(outputDLL);
             if (!string.IsNullOrWhiteSpace(outputDLL))
@@ -162,11 +182,6 @@ namespace SplitAndMerge
                 }
             }
 
-            m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
-            RemoveIrrelevant(m_cscsCode);
-
-            CSharpCode = ConvertScript();
-
             var provider = new CSharpCodeProvider();
             CompilerResults compile = provider.CompileAssemblyFromSource(compilerParams, CSharpCode);
 
@@ -198,7 +213,7 @@ namespace SplitAndMerge
             }
         }
 
-        static Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
+        Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                            List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable>
                             CompileAndCache(CompilerResults compile, string functionName)
         {
@@ -217,7 +232,7 @@ namespace SplitAndMerge
             return func;
         }
 
-        static Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
+        Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
                    List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Task<Variable>>
                     CompileAndCacheAsync(CompilerResults compile, string functionName)
         {
@@ -236,11 +251,11 @@ namespace SplitAndMerge
             return func;
         }
 
-        static Tuple<MethodCallExpression, List<ParameterExpression>>
+        Tuple<MethodCallExpression, List<ParameterExpression>>
               CompileBase(CompilerResults compile, string functionName)
         {
             Module module = compile.CompiledAssembly.GetModules()[0];
-            Type mt = module.GetType("SplitAndMerge.Precompiler");
+            Type mt = module.GetType("SplitAndMerge." + ClassName);
 
             List<ParameterExpression> paramTypes = new List<ParameterExpression>();
             paramTypes.Add(Expression.Parameter(typeof(Interpreter), "__interpreter"));
@@ -260,7 +275,9 @@ namespace SplitAndMerge
             }
 
             MethodInfo methodInfo = mt.GetMethod(functionName, argTypes.ToArray());
-            MethodCallExpression methodCall = Expression.Call(methodInfo, paramTypes);
+            MethodCallExpression methodCall = methodInfo.IsStatic ?
+                Expression.Call(methodInfo, paramTypes) :
+                Expression.Call(Expression.New(mt), methodInfo, paramTypes);
 
             return new Tuple<MethodCallExpression, List<ParameterExpression>>(methodCall, paramTypes);
         }
@@ -401,15 +418,15 @@ namespace SplitAndMerge
                 string argName = m_actualArgs[i];
                 Variable typeVar = m_argsMap[argName];
                 m_paramMap[argName] =
-                    typeVar.Type == Variable.VarType.STRING ? STRING_VAR_ARG + "[" + (strIndex++) + "]" :
-                    typeVar.Type == Variable.VarType.NUMBER ? NUMERIC_VAR_ARG + "[" + (numIndex++) + "]" :
-                    typeVar.Type == Variable.VarType.INT ? INT_VAR_ARG + "[" + (intIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.STRING    ? STRING_VAR_ARG + "[" + (strIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.NUMBER    ? NUMERIC_VAR_ARG + "[" + (numIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.INT       ? INT_VAR_ARG + "[" + (intIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_STR ? STRING_ARRAY_ARG + "[" + (arrStrIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_NUM ? NUMERIC_ARRAY_ARG + "[" + (arrNumIndex++) + "]" :
                     typeVar.Type == Variable.VarType.ARRAY_INT ? INT_ARRAY_ARG + "[" + (arrIntIndex++) + "]" :
-                    typeVar.Type == Variable.VarType.MAP_STR ? STRING_MAP_ARG + "[" + (mapStrIndex++) + "]" :
-                    typeVar.Type == Variable.VarType.MAP_NUM ? NUMERIC_MAP_ARG + "[" + (mapNumIndex++) + "]" :
-                    typeVar.Type == Variable.VarType.VARIABLE ? CSCS_VAR_ARG + "[" + (varIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.MAP_STR   ? STRING_MAP_ARG + "[" + (mapStrIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.MAP_NUM   ? NUMERIC_MAP_ARG + "[" + (mapNumIndex++) + "]" :
+                    typeVar.Type == Variable.VarType.VARIABLE  ? CSCS_VAR_ARG + "[" + (varIndex++) + "]" :
                             "";
             }
 
@@ -430,8 +447,7 @@ namespace SplitAndMerge
 
                 m_converted.AppendLine(ns);
             }
-            m_converted.AppendLine("namespace SplitAndMerge {\n" +
-                                   "  public partial class Precompiler {");
+            m_converted.AppendLine("namespace SplitAndMerge {\n" + ClassHeader);
 
             for (int i = 0; i < s_definitions.Count; i++)
             {
@@ -449,11 +465,11 @@ namespace SplitAndMerge
             }
             if (AsyncMode)
             {
-                m_converted.AppendLine("    public static async Task<Variable> " + m_functionName);
+                m_converted.AppendLine("    public " + (IsStatic ? "static " : "") + "async Task<Variable> " + m_functionName);
             }
             else
             {
-                m_converted.AppendLine("    public static Variable " + m_functionName);
+                m_converted.AppendLine("    public " + (IsStatic ? "static " : "") + "Variable " + m_functionName);
             }
 
             m_converted.AppendLine(
@@ -506,7 +522,7 @@ namespace SplitAndMerge
                 m_converted.AppendLine(CreateReturnStatement("Variable.EmptyInstance"));
             }
 
-            m_converted.AppendLine("\n    }\n    }\n}");
+            m_converted.AppendLine("\n    }\n    }}");
             return m_converted.ToString();
         }
 
@@ -1645,6 +1661,77 @@ namespace SplitAndMerge
             }
 
             return -1;
+        }
+
+        public static Precompiler ImplementCustomDLL(ParsingScript script, bool scriptInCSharp = true, bool createDLL = true)
+        {
+            Utils.GetCompiledArgs(script, out string funcReturn, out string funcName);
+            Precompiler.RegisterReturnType(funcName, funcReturn);
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append("  public bool ArgData(int id, out string name, out Variable.VarType type) {\n" +
+                      "    name = \"\"; type = Variable.VarType.NONE;\n");
+            script.MoveForwardIf(Constants.START_ARG, Constants.SPACE);
+
+            int endArgs = script.FindFirstOf(Constants.END_ARG.ToString());
+            if (endArgs < 0)
+            {
+                throw new ArgumentException("Couldn't extract function signature");
+            }
+
+            string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
+            List<string> args = Utils.GetCompiledArgs(argStr);
+
+            var dict = new Dictionary<string, Variable>(args.Count);
+            var sep = new char[] { ' ' };
+            for (int i = 0; i < args.Count; i++)
+            {
+                var arg1 = args[i].ToLower().Trim();
+                string[] pair = arg1.Split(sep, StringSplitOptions.RemoveEmptyEntries);
+                var argType = pair[0];
+                var argName = pair[pair.Length - 1];
+                Variable.VarType type = pair.Length > 1 ? Constants.StringToType(argType) : Variable.VarType.STRING;
+                sb.Append("      if (id == " + i + ") { name = \"" + argName + "\"; type = Variable.VarType." + type.ToString() + "; return true; }\n");
+                dict.Add(argName, new Variable(type));
+                args[i] = argName;
+            }
+            sb.Append("return false;\n    }\n  }\n}");
+
+            string[] funcArgs = args.Select(element => element.Trim()).ToArray();
+            script.Pointer = endArgs + 1;
+
+            script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
+            script.ParentOffset = script.Pointer;
+
+            string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
+
+            Precompiler precompiler = new Precompiler("DoWork", funcArgs, dict, body, script);
+            precompiler.ClassName = "CustomPrecompiler";
+            precompiler.ClassHeader = "  public class " + precompiler.ClassName + " : ICustomDLL {";
+            precompiler.IsStatic = false;
+            precompiler.GetCSharpCode(scriptInCSharp);
+            precompiler.CSharpCode = precompiler.CSharpCode.Substring(0, precompiler.CSharpCode.Length - 3);
+            precompiler.CSharpCode += sb.ToString();
+            precompiler.Compile(scriptInCSharp, createDLL ? funcName : "");
+
+            return precompiler;
+        }
+
+        public static void ExtractArgsFromDLL(ICustomDLL dll, out string[] args, out Dictionary<string, Variable> argsMap)
+        {
+            var argsList = new List<string>();
+            argsMap = new Dictionary<string, Variable>();
+
+            for (int id = 0; ; id++)
+            {
+                if (!dll.ArgData(id, out string name, out Variable.VarType type))
+                {
+                    break;
+                }
+                argsList.Add(name);
+                argsMap[name] = new Variable(type);
+            }
+            args = argsList.ToArray();
         }
 
         public static string TypeToCSString(Variable.VarType type)

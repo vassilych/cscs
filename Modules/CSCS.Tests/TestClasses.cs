@@ -21,6 +21,36 @@ namespace CSCS.Tests
         }
     }
 
+    public class CscsDLL : ICustomDLL
+    {
+        public Variable DoWork
+            (Interpreter __interpreter,
+             List<string> __varStr,
+             List<double> __varNum,
+             List<int> __varInt,
+             List<List<string>> __varArrStr,
+             List<List<double>> __varArrNum,
+             List<List<int>> __varArrInt,
+             List<Dictionary<string, string>> __varMapStr,
+             List<Dictionary<string, double>> __varMapNum,
+             List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public bool ArgData(int id, out string name, out Variable.VarType type)
+        {
+            name = "";
+            type = Variable.VarType.NONE;
+            if (id == 0)
+            {
+                name = "X";
+                type = Variable.VarType.INT;
+                return true;
+            }
+            return false;
+        }
+    }
+
     public class CscsTestModule : ICscsModule
     {
         public ICscsModuleInstance CreateInstance(Interpreter interpreter)

@@ -693,8 +693,7 @@ namespace SplitAndMerge
 #if __ANDROID__ == false && __IOS__ == false
             Precompiler.RegisterReturnType(funcName, funcReturn);
 
-            Dictionary<string, Variable> argsMap;
-            string[] args = Utils.GetCompiledFunctionSignature(script, out argsMap);
+            string[] args = Utils.GetCompiledFunctionSignature(script, out Dictionary<string, Variable>  argsMap);
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
             script.ParentOffset = script.Pointer;
@@ -726,30 +725,9 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            var precompiler = CompileDLL(script, m_scriptInCSharp, true);
+            var precompiler = Precompiler.ImplementCustomDLL(script, m_scriptInCSharp, true);
             return new Variable(precompiler.OutputDLL);
         }
-
-        public static Precompiler CompileDLL(ParsingScript script, bool scriptInCSharp, bool createDLL = false)
-        {
-            Utils.GetCompiledArgs(script, out string funcReturn, out string funcName);
-
-            Precompiler.RegisterReturnType(funcName, funcReturn);
-
-            Dictionary<string, Variable> argsMap;
-            string[] args = Utils.GetCompiledFunctionSignature(script, out argsMap);
-
-            script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
-            script.ParentOffset = script.Pointer;
-
-            string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
-
-            Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
-            precompiler.Compile(scriptInCSharp, createDLL ? funcName: "");
-
-            return precompiler;
-        }
-
     }
 
     class CustomCompiledFunction : CustomFunction
@@ -791,19 +769,37 @@ namespace SplitAndMerge
         {
             RegisterArguments(args);
 
-            List<string> argsStr = new List<string>();
-            List<double> argsNum = new List<double>();
-            List<int> argsInt = new List<int>();
-            List<List<string>> argsArrStr = new List<List<string>>();
-            List<List<double>> argsArrNum = new List<List<double>>();
-            List<List<int>> argsArrInt = new List<List<int>>();
-            List<Dictionary<string, string>> argsMapStr = new List<Dictionary<string, string>>();
-            List<Dictionary<string, double>> argsMapNum = new List<Dictionary<string, double>>();
-            List<Variable> argsVar = new List<Variable>();
+            PrepareArgs(args, m_args, m_argsMap, out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
+            out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
+            out List<Dictionary<string, string>> argsMapStr, out List <Dictionary<string, double>> argsMapNum, out List < Variable > argsVar);
 
-            for (int i = 0; i < m_args.Length; i++)
+            Variable result = Precompiler.AsyncMode ?
+                m_precompiler.RunAsync(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false) :
+                m_precompiler.Run(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false);
+
+            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
+
+            return result;
+        }
+
+        public static void PrepareArgs(List<Variable> args, string[] definedArgs, Dictionary<string, Variable> argsMap,
+            out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
+            out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
+            out List<Dictionary<string, string>> argsMapStr, out List<Dictionary<string, double>> argsMapNum, out List<Variable> argsVar)
+        {
+            argsStr = new List<string>();
+            argsNum = new List<double>();
+            argsInt = new List<int>();
+            argsArrStr = new List<List<string>>();
+            argsArrNum = new List<List<double>>();
+            argsArrInt = new List<List<int>>();
+            argsMapStr = new List<Dictionary<string, string>>();
+            argsMapNum = new List<Dictionary<string, double>>();
+            argsVar = new List<Variable>();
+
+            for (int i = 0; i < definedArgs.Length; i++)
             {
-                Variable typeVar = m_argsMap[m_args[i]];
+                Variable typeVar = argsMap[definedArgs[i]];
                 if (typeVar.Type == Variable.VarType.STRING)
                 {
                     argsStr.Add(args[i].AsString());
@@ -873,14 +869,6 @@ namespace SplitAndMerge
                     argsVar.Add(args[i]);
                 }
             }
-
-            Variable result = Precompiler.AsyncMode ?
-                m_precompiler.RunAsync(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false) :
-                m_precompiler.Run(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false);
-
-            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
-
-            return result;
         }
 
         Precompiler m_precompiler;
@@ -1214,12 +1202,23 @@ namespace SplitAndMerge
 
     public class ImportDLLFunction : ParserFunction
     {
+        public struct DLLData
+        {
+            public string name;
+            public string[] args;
+            public Dictionary<string, Variable> argsMap;
+            public ICustomDLL dll;
+        }
         bool m_executeMode;
-        static List<ICscsDLL> s_dlls = new List<ICscsDLL>();
+        bool m_customDLL;
 
-        public ImportDLLFunction(bool executeMode = false)
+        static List<ICscsDLL> s_cscsDlls = new List<ICscsDLL>();
+        static List<DLLData> s_dlls = new List<DLLData>();
+
+        public ImportDLLFunction(bool executeMode = false, bool customDLL = false)
         {
             m_executeMode = executeMode;
+            m_customDLL = customDLL;
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -1231,20 +1230,35 @@ namespace SplitAndMerge
             {
                 var handle = Utils.GetSafeInt(args, 0);
                 var load = Utils.GetSafeString(args, 1);
-                if (handle < 0 || handle >= s_dlls.Count)
+                if (handle < 0 || handle >= (m_customDLL ? s_dlls.Count : s_cscsDlls.Count))
                 {
                     Utils.ThrowErrorMsg("Couldn´t find handle: " + handle, script, m_name);
                 }
-                var dll = s_dlls[handle];
-                var result = dll.DoWork(load);
-                return new Variable(result);
+                var result = m_customDLL ? ExecuteCustom(handle, load, script, args) : ExecuteCscs(handle, load);
+                return result;
             }
 
             var name = Utils.GetSafeString(args, 0);
 
             var DLL = LoadDLL(name, script);
-            var types = DLL.GetExportedTypes();
+            var loaded = m_customDLL ? LoadCustom(DLL, script) : LoadICscs(DLL, script);
+            if (loaded == null)
+            {
+                Utils.ThrowErrorMsg("Couldn´t add dll: " + name, script, m_name);
+            }
+            return loaded;
+        }
 
+        static Variable ExecuteCscs(int handle, string load)
+        {
+            var dll = s_cscsDlls[handle];
+            var result = dll.DoWork(load);
+            return new Variable(result);
+        }
+
+        static Variable LoadICscs(Assembly DLL, ParsingScript script = null)
+        {
+            var types = DLL.GetExportedTypes();
             foreach (var type in types)
             {
                 //var c = Activator.CreateInstance(type);
@@ -1256,15 +1270,65 @@ namespace SplitAndMerge
                 var module = Activator.CreateInstance(type) as ICscsDLL;
                 if (module == null)
                 {
-                    Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, m_name); ;
+                    Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, DLL.GetName().Name);
                 }
 
-                s_dlls.Add(module);
+                s_cscsDlls.Add(module);
+                return new Variable(s_cscsDlls.Count - 1);
+            }
+            return null;
+        }
+
+        static Variable ExecuteCustom(int handle, string load, ParsingScript script, List<Variable> args)
+        {
+            if (handle < 0 || handle >= s_dlls.Count)
+            {
+                Utils.ThrowErrorMsg("Invalid handle: " + handle, script, load);
+            }
+            var dll = s_dlls[handle];
+            return Execute(dll, script, args);
+        }
+
+        static Variable Execute(DLLData dll, ParsingScript script, List<Variable> args)
+        {
+            args.RemoveAt(0);
+
+            Type type = dll.GetType();
+            var module = Activator.CreateInstance(type) as SplitAndMerge.ICustomDLL;
+
+            CustomCompiledFunction.PrepareArgs(args, dll.args, dll.argsMap,
+                out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
+                out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
+                out List<Dictionary<string, string>> argsMapStr, out List<Dictionary<string, double>> argsMapNum, out List<Variable> argsVar);
+
+            var result = dll.dll.DoWork(script.InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar);
+            return result;
+        }
+
+        static Variable LoadCustom(Assembly DLL, ParsingScript script = null)
+        {
+            var types = DLL.GetExportedTypes();
+            DLLData data = new DLLData();
+            data.name = Path.GetFileNameWithoutExtension(DLL.FullName);
+            foreach (var type in types)
+            {
+                var needed = typeof(SplitAndMerge.ICustomDLL).IsAssignableFrom(type);
+                if (!needed)
+                {
+                    continue;
+                }
+
+                var module = Activator.CreateInstance(type) as SplitAndMerge.ICustomDLL;
+                if (module == null)
+                {
+                    Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, DLL.GetName().Name);
+                }
+                Precompiler.ExtractArgsFromDLL(module, out data.args, out data.argsMap);
+                data.dll = module; 
+                s_dlls.Add(data);
                 return new Variable(s_dlls.Count - 1);
             }
-
-            Utils.ThrowErrorMsg("Couldn´t add dll: " + name, script, m_name);
-            return Variable.EmptyInstance;
+            return null;
         }
 
         public static Assembly LoadDLL(string name, ParsingScript script = null)

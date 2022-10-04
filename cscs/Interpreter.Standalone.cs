@@ -69,8 +69,11 @@ namespace SplitAndMerge
             RegisterFunction(Constants.READ, new ReadConsole());
             RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
-            RegisterFunction(Constants.IMPORT_DLL, new ImportDLLFunction(false));
-            RegisterFunction(Constants.INVOKE_DLL, new ImportDLLFunction(true));
+
+            RegisterFunction(Constants.IMPORT_DLL, new ImportDLLFunction(false, true));
+            RegisterFunction(Constants.INVOKE_DLL, new ImportDLLFunction(true, true));
+            RegisterFunction(Constants.IMPORTCSCS_DLL, new ImportDLLFunction(false, false));
+            RegisterFunction(Constants.INVOKECSCS_DLL, new ImportDLLFunction(true, false));
 
             RegisterFunction(Constants.ENCODE_FILE, new EncodeFileFunction(true));
             RegisterFunction(Constants.DECODE_FILE, new EncodeFileFunction(false));
