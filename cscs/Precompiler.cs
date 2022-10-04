@@ -126,14 +126,14 @@ namespace SplitAndMerge
             m_parentScript = parentScript;
         }
 
-        public string GetCSharpCode(bool scriptInCSharp = false)
+        public string GetCSharpCode(bool scriptInCSharp = false, bool finish = true)
         {
             m_scriptInCSharp = scriptInCSharp;
 
             m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
             RemoveIrrelevant(m_cscsCode);
 
-            CSharpCode = ConvertScript();
+            CSharpCode = ConvertScript(finish);
             return CSharpCode;
         }
 
@@ -399,7 +399,7 @@ namespace SplitAndMerge
                      "\", new GetVarFunction(Variable.ConvertToVariable(" + paramValue + ")));\n";
         }
 
-        string ConvertScript()
+        string ConvertScript(bool finish = true)
         {
             m_converted.Clear();
 
@@ -522,7 +522,11 @@ namespace SplitAndMerge
                 m_converted.AppendLine(CreateReturnStatement("Variable.EmptyInstance"));
             }
 
-            m_converted.AppendLine("\n    }\n    }}");
+            m_converted.AppendLine("\n    }");
+            if (finish)
+            {
+                m_converted.AppendLine("}}");
+            }
             return m_converted.ToString();
         }
 
@@ -1709,8 +1713,7 @@ namespace SplitAndMerge
             precompiler.ClassName = "CustomPrecompiler";
             precompiler.ClassHeader = "  public class " + precompiler.ClassName + " : ICustomDLL {";
             precompiler.IsStatic = false;
-            precompiler.GetCSharpCode(scriptInCSharp);
-            precompiler.CSharpCode = precompiler.CSharpCode.Substring(0, precompiler.CSharpCode.Length - 3);
+            precompiler.GetCSharpCode(scriptInCSharp, false);
             precompiler.CSharpCode += sb.ToString();
             precompiler.Compile(scriptInCSharp, createDLL ? funcName : "");
 
