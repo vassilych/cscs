@@ -1106,6 +1106,24 @@ cfunction ct(int n) {
 }
 Test(ct(10), 1026.6);
 
+print("Testig creating and loading DLLs");
+dllfunction RunCycle(int loops) {
+    double result = 0;
+    for (int i = 0; i < loops; i++)
+    {
+      result += Cycle(i);
+    }
+    return result;
+}
+dllsub double Cycle(double x) {
+    var result = Math.Sqrt(Math.PI * Math.E - Math.Sin(x) * Math.Cos(x));
+    return result;
+}
+h=ImportDll("RunCycle");
+ires = InvokeDLL(h, 1000000);
+Test(ires < 2900000, false);
+Test(ires < 3000000, true);
+
 exceptionThrown = false;
 try {
   x = TestObject.MyNewProperty;

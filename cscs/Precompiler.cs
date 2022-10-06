@@ -1714,6 +1714,27 @@ namespace SplitAndMerge
             precompiler.ClassHeader = "  public class " + precompiler.ClassName + " : ICustomDLL {";
             precompiler.IsStatic = false;
             precompiler.GetCSharpCode(scriptInCSharp, false);
+
+            while (true)
+            {
+                int pos = script.Pointer;
+                script.GoToNextStatement();
+                if (script.Rest.StartsWith(Constants.DLL_SUB + " "))
+                {
+                    script.Pointer += Constants.DLL_SUB.Length + 1;
+                    var body2 = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP, '\0', true);
+                    if (body2.EndsWith(";"))
+                    {
+                        body2 = body2.Substring(0, body2.Length - 1);
+                    }
+                    precompiler.CSharpCode += "\n  " + body2 + "\n\n";
+                }
+                else
+                {
+                    script.Pointer = pos;
+                    break;
+                }
+            }
             precompiler.CSharpCode += sb.ToString();
             precompiler.Compile(scriptInCSharp, createDLL ? funcName : "");
 

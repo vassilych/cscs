@@ -1321,7 +1321,7 @@ namespace SplitAndMerge
         }
 
         public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG,
-                                            char close = Constants.END_ARG, char end = '\0')
+                                            char close = Constants.END_ARG, char end = '\0', bool stopIfBraces0 = false)
         {
             // We are supposed to be one char after the beginning of the string, i.e.
             // we must not have the opening char as the first one.
@@ -1367,6 +1367,10 @@ namespace SplitAndMerge
                 else if (checkBraces && ch == close)
                 {
                     braces--;
+                    if (braces == 0 && stopIfBraces0)
+                    {
+                        braces = -1;
+                    }
                 }
 
                 sb.Append(ch);
@@ -1374,7 +1378,7 @@ namespace SplitAndMerge
                 prev = ch;
                 if (braces < 0)
                 {
-                    if (ch == close)
+                    if (ch == close && !stopIfBraces0)
                     {
                         sb.Remove(sb.Length - 1, 1);
                     }

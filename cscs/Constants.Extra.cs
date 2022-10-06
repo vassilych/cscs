@@ -57,6 +57,7 @@ namespace SplitAndMerge
         public const string CLEAR_COMP_NAMESPACES = "clear_comp_namespaces";
         public const string CSHARP_FUNCTION = "csfunction";
         public const string DLL_FUNCTION = "dllfunction";
+        public const string DLL_SUB = "dllsub";
 
         public const string ENGLISH = "en";
         public const string GERMAN = "de";
