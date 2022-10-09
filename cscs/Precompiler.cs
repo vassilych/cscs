@@ -600,7 +600,7 @@ namespace SplitAndMerge
         string ConvertTokenIfNeeded(string token, string first = "")
         {
             string result = token;
-            string functionName = GetFunctionName(token, out string suffix, out bool isArray);
+            string functionName = GetFunctionName(token, out string suffix, out bool isArray).ToLower();
             if (!suffix.Contains('.') && m_argsMap.TryGetValue(functionName, out _))
             {
                 string actualName = m_paramMap[functionName];
