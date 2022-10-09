@@ -59,7 +59,10 @@ namespace SplitAndMerge
             RegisterFunction(Constants.CLEAR_COMP_DEFINITIONS, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_DEFINITIONS));
             RegisterFunction(Constants.CLEAR_COMP_NAMESPACES, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_NAMESPACES));
             RegisterFunction(Constants.CSHARP_FUNCTION, new CompiledFunctionCreator(true));
+
             RegisterFunction(Constants.DLL_FUNCTION, new DLLCreator(true));
+            RegisterFunction(Constants.IMPORT_DLL, new ImportDLLFunction(false));
+            RegisterFunction(Constants.INVOKE_DLL, new ImportDLLFunction(true));
 
             RegisterFunction(Constants.CONSOLE_CLR, new ClearConsole());
             RegisterFunction(Constants.PRINT_BLACK, new PrintColorFunction(ConsoleColor.Black));
@@ -70,10 +73,6 @@ namespace SplitAndMerge
             RegisterFunction(Constants.READNUMBER, new ReadConsole(true));
             RegisterFunction(Constants.TRANSLATE, new TranslateFunction());
 
-            RegisterFunction(Constants.IMPORT_DLL, new ImportDLLFunction(false, true));
-            RegisterFunction(Constants.INVOKE_DLL, new ImportDLLFunction(true, true));
-            RegisterFunction(Constants.IMPORTCSCS_DLL, new ImportDLLFunction(false, false));
-            RegisterFunction(Constants.INVOKECSCS_DLL, new ImportDLLFunction(true, false));
 
             RegisterFunction(Constants.ENCODE_FILE, new EncodeFileFunction(true));
             RegisterFunction(Constants.DECODE_FILE, new EncodeFileFunction(false));

@@ -1120,7 +1120,7 @@ dllsub double Cycle(double x) {
     return result;
 }
 h=ImportDll("RunCycle");
-ires = InvokeDLL(h, 1000000);
+ires = InvokeDLL(h, "RunCycle", 1000000);
 Test(ires < 2900000, false);
 Test(ires < 3000000, true);
 

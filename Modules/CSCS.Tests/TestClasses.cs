@@ -8,22 +8,9 @@ using SplitAndMerge;
 
 namespace CSCS.Tests
 {
-    public class CscsLogger : ICscsDLL
-    {
-        public string DoWork(object load)
-        {
-            var msg = load as string;
-            System.Diagnostics.Debug.WriteLine("{0:yyyy-MM-dd HH:mm:ss.fff}[{1}]: {2}",
-                DateTime.Now, Thread.CurrentThread.ManagedThreadId, msg);
-            Console.WriteLine(msg);
-
-            return "OK";
-        }
-    }
-
     public class CscsDLL : ICustomDLL
     {
-        public Variable DoWork
+        public Variable DoWork1
             (Interpreter __interpreter,
              List<string> __varStr,
              List<double> __varNum,
@@ -37,17 +24,155 @@ namespace CSCS.Tests
         {
             return new Variable("OK");
         }
-        public bool ArgData(int id, out string name, out Variable.VarType type)
+        public ArgData GetArgData1(int id)
         {
-            name = "";
-            type = Variable.VarType.NONE;
+            ArgData arg = new ArgData();
             if (id == 0)
             {
-                name = "X";
-                type = Variable.VarType.INT;
-                return true;
+                arg.exists = true;
+                arg.name = "X";
+                arg.type = Variable.VarType.STRING;
+                arg.defValue = new Variable(arg.type);
+                arg.defValue.String = null;
             }
-            return false;
+            return arg;
+        }
+        public Variable DoWork2
+            (Interpreter __interpreter,
+             List<string> __varStr,
+             List<double> __varNum,
+             List<int> __varInt,
+             List<List<string>> __varArrStr,
+             List<List<double>> __varArrNum,
+             List<List<int>> __varArrInt,
+             List<Dictionary<string, string>> __varMapStr,
+             List<Dictionary<string, double>> __varMapNum,
+             List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData2(int id)
+        {
+            ArgData arg = new ArgData();
+            return arg;
+        }
+        public Variable DoWork3(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+             List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+             List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar) {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData3(int id)
+        {
+            return null;
+        }
+        public Variable DoWork4(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+             List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+             List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData4(int id)
+        {
+            return null;
+        }
+        public Variable DoWork5(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData5(int id)
+        {
+            return null;
+        }
+        public Variable DoWork6(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData6(int id)
+        {
+            return null;
+        }
+        public Variable DoWork7(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData7(int id)
+        {
+            return null;
+        }
+        public Variable DoWork8(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData8(int id)
+        {
+            return null;
+        }
+        public Variable DoWork9(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData9(int id)
+        {
+            return null;
+        }
+        public Variable DoWork10(Interpreter __interpreter, List<string> __varStr, List<double> __varNum, List<int> __varInt,
+     List<List<string>> __varArrStr, List<List<double>> __varArrNum, List<List<int>> __varArrInt,
+     List<Dictionary<string, string>> __varMapStr, List<Dictionary<string, double>> __varMapNum, List<Variable> __varVar)
+        {
+            return new Variable("OK");
+        }
+        public ArgData GetArgData10(int id)
+        {
+            return null;
+        }
+
+        public Func<Interpreter, List<string>, List<double>, List<int>,
+            List<List<string>>, List<List<double>>, List<List<int>>,
+            List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> GetWorkFunction(string name)
+        {
+            if (name == "a")
+            {
+                return DoWork1;
+            }
+            if (name == "b")
+            {
+                return DoWork2;
+            }
+            return null;
+        }
+
+        public Func<int, ArgData> GetArgFunction(string name)
+        {
+            if (name == "a")
+            {
+                return this.GetArgData1;
+            }
+            if (name == "b")
+            {
+                return this.GetArgData2;
+            }
+            return null;
+        }
+
+        public int NumberWorkMethods()
+        {
+            return 2;
+        }
+        public List<string> MethodNames()
+        {
+            var res = new List<string>();
+            res.Add("A");
+            return res;
         }
     }
 

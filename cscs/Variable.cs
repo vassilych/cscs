@@ -38,6 +38,11 @@ namespace SplitAndMerge
             Value = d;
             Original = OriginalType.DOUBLE;
         }
+        public Variable(int d)
+        {
+            Value = d;
+            Original = OriginalType.INT;
+        }
         public Variable(long d)
         {
             Value = d;
