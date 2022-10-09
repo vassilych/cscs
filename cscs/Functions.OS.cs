@@ -714,21 +714,6 @@ namespace SplitAndMerge
     }
 
 #if __ANDROID__ == false && __IOS__ == false
-    class DLLCreator : ParserFunction
-    {
-        bool m_scriptInCSharp = false;
-
-        public DLLCreator(bool scriptInCSharp)
-        {
-            m_scriptInCSharp = scriptInCSharp;
-        }
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            var precompiler = Precompiler.ImplementCustomDLL(script, m_scriptInCSharp, true);
-            return new Variable(precompiler.OutputDLL);
-        }
-    }
 
     class CustomCompiledFunction : CustomFunction
     {
@@ -1170,7 +1155,6 @@ namespace SplitAndMerge
         }
     }
 
-
     class IncludeFileSecure : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
@@ -1198,169 +1182,6 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
             return result == null ? Variable.EmptyInstance : result;
-        }
-    }
-
-    public class ImportDLLFunction : ParserFunction
-    {
-        public class DLLData
-        {
-            public string name;
-            public Dictionary<string, DLLFunctionData> functionMap;
-            public ICustomDLL dll;
-        }
-        public class DLLFunctionData
-        {
-            public string name;
-            public string[] args;
-            public Variable[] defArgs;
-            public Dictionary<string, Variable> argsMap;
-            public Func<Interpreter, List<string>, List<double>, List<int>,
-                List<List<string>>, List<List<double>>, List<List<int>>,
-                List<Dictionary<string, string>>, List<Dictionary<string, double>>, List<Variable>, Variable> workMethod;
-            public Func<int, ArgData> argMethod;
-        }
-
-        bool m_executeMode;
-
-        static List<DLLData> s_dlls = new List<DLLData>();
-
-        public ImportDLLFunction(bool executeMode = false)
-        {
-            m_executeMode = executeMode;
-        }
-
-        protected override Variable Evaluate(ParsingScript script)
-        {
-            var args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name);
-
-            if (m_executeMode)
-            {
-                var handle = Utils.GetSafeInt(args, 0);
-                var funcName = Utils.GetSafeString(args, 1);
-                var load = Utils.GetSafeString(args, 2);
-                if (handle < 0 || handle >= s_dlls.Count)
-                {
-                    Utils.ThrowErrorMsg("Couldn´t find handle: " + handle, script, m_name);
-                }
-                var result = ExecuteCustom(handle, funcName, load, script, args);
-                return result;
-            }
-
-            var name = Utils.GetSafeString(args, 0);
-
-            var DLL = LoadDLL(name, script);
-            var loaded = LoadCustom(DLL, script);
-            if (loaded == null)
-            {
-                Utils.ThrowErrorMsg("Couldn´t add dll: " + name, script, m_name);
-            }
-            return loaded;
-        }
-
-        static Variable ExecuteCustom(int handle, string funcName, string load, ParsingScript script, List<Variable> args)
-        {
-            if (handle < 0 || handle >= s_dlls.Count)
-            {
-                Utils.ThrowErrorMsg("Invalid handle: " + handle, script, load);
-            }
-            var dll = s_dlls[handle];
-            return Execute(dll, funcName, script, args);
-        }
-
-        static Variable Execute(DLLData dll, string funcName, ParsingScript script, List<Variable> args)
-        {
-            args.RemoveAt(0);
-            args.RemoveAt(0);
-
-            Type type = dll.GetType();
-            var module = Activator.CreateInstance(type) as SplitAndMerge.ICustomDLL;
-
-            if (!dll.functionMap.TryGetValue(funcName, out DLLFunctionData dllFuncData))
-            {
-                Utils.ThrowErrorMsg("Couldn't find function: " + funcName, script, dll.name);
-            }
-
-            CustomCompiledFunction.PrepareArgs(args, dllFuncData.args, dllFuncData.defArgs, dllFuncData.argsMap,
-                out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
-                out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
-                out List<Dictionary<string, string>> argsMapStr, out List<Dictionary<string, double>> argsMapNum, out List<Variable> argsVar);
-
-            var result = dllFuncData.workMethod(script.InterpreterInstance, argsStr, argsNum, argsInt,
-                argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar);
-            return result;
-        }
-
-        static Variable LoadCustom(Assembly DLL, ParsingScript script = null)
-        {
-            var types = DLL.GetExportedTypes();
-            var data = new DLLData();
-            data.name = Path.GetFileNameWithoutExtension(DLL.FullName);
-            foreach (var type in types)
-            {
-                var needed = typeof(SplitAndMerge.ICustomDLL).IsAssignableFrom(type);
-                if (!needed)
-                {
-                    continue;
-                }
-
-                var module = Activator.CreateInstance(type) as SplitAndMerge.ICustomDLL;
-                if (module == null)
-                {
-                    Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, DLL.GetName().Name);
-                }
-                Precompiler.ExtractArgsFromDLL(module, ref data);
-                data.dll = module; 
-                s_dlls.Add(data);
-                return new Variable(s_dlls.Count - 1);
-            }
-            return null;
-        }
-
-        public static Assembly LoadDLL(string name, ParsingScript script = null)
-        {
-            if (!name.ToLower().EndsWith(".dll"))
-            {
-                name += ".dll";
-            }
-
-            var absolute = Path.IsPathRooted(name);
-            var filename = name;
-            if (!absolute)
-            {
-                var pwd = Directory.GetCurrentDirectory();
-                var baseDir = Directory.GetParent(pwd);
-                for (int i = 0; i < 3 && baseDir != null; i++)
-                {
-                    var files = Directory.EnumerateFiles(baseDir.FullName, name, SearchOption.AllDirectories).ToList<string>();
-                    if (files.Count > 0)
-                    {
-                        filename = files[0];
-                        break;
-                    }
-                    baseDir = Directory.GetParent(baseDir.FullName);
-                }
-            }
-
-            if (!File.Exists(filename))
-            {
-                Utils.ThrowErrorMsg("Couldn´t find DLL: " + filename + ", current dir: " +
-                    Directory.GetCurrentDirectory(), script, name);
-            }
-
-            Assembly DLL = null;
-            try
-            {
-                DLL = Assembly.LoadFile(filename);
-            }
-            catch(Exception exc)
-            {
-                Utils.ThrowErrorMsg("Couldn´t load DLL: " + filename + ", current dir: " +
-                    Directory.GetCurrentDirectory() + ":" + exc.Message, script, name);
-            }
-
-            return DLL;
         }
     }
 }

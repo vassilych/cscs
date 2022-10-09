@@ -1711,7 +1711,7 @@ namespace SplitAndMerge
             }
 
             string argStr = script.Substr(script.Pointer, endArgs - script.Pointer);
-            var args = ImplementArgExtractFunction(argStr, "GetArgData" + id, out Dictionary<string, Variable> dict, out string funcBody);
+            var args = ImplementArgExtractFunction(argStr, DLLConst.GetArgsMethod(id), out Dictionary<string, Variable> dict, out string funcBody);
 
             string[] funcArgs = args.Select(element => element.Trim()).ToArray();
             script.Pointer = endArgs + 1;
@@ -1721,9 +1721,9 @@ namespace SplitAndMerge
 
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
-            Precompiler precompiler = new Precompiler("DoWork" + id, funcArgs, dict, body, script);
-            precompiler.ClassName = "CustomPrecompiler";
-            precompiler.ClassHeader = "  public class " + precompiler.ClassName + " : ICustomDLL {";
+            Precompiler precompiler = new Precompiler(DLLConst.GetWorkerMethod(id), funcArgs, dict, body, script);
+            precompiler.ClassName = DLLConst.ClassName;
+            precompiler.ClassHeader = DLLConst.ClassHeader;
             precompiler.IsStatic = false;
             var cscode = precompiler.GetCSharpCode(scriptInCSharp, id == 1, false);
 
@@ -1766,13 +1766,13 @@ namespace SplitAndMerge
             sb.Append("    return null;\n }\n\n");
 
             // Implement not needed:
-            for (int i = workDir.Count; i < ArgData.MaxWorkMethods; i++)
+            for (int i = workDir.Count; i < DLLConst.MaxWorkMethods; i++)
             {
-                sb.Append("  public Variable DoWork" + (i+1) + "(Interpreter __interpreter, List<string> __varStr,List<double> __varNum," +
+                sb.Append("  public Variable " + DLLConst.GetWorkerMethod(i+1) + "(Interpreter __interpreter, List<string> __varStr,List<double> __varNum," +
                     " List<int> __varInt,List<List<string>> __varArrStr,List<List<double>> __varArrNum,List<List<int>> __varArrInt,"+
                     " List<Dictionary<string, string>> __varMapStr,List<Dictionary<string, double>> __varMapNum,List<Variable> __varVar) {\n" +
                     "    return null;}\n");
-                sb.Append("  public ArgData GetArgData" + (i+1) + "(int id) {\n" +
+                sb.Append("  public ArgData " + DLLConst.GetArgsMethod(i+1) + "(int id) {\n" +
                     "    return null;}\n");
             }
 
@@ -1786,12 +1786,12 @@ namespace SplitAndMerge
 
             string dllname = "";
             string cscode = "";
-            for (int id = 1; id < ArgData.MaxWorkMethods + 1; id++)
+            for (int id = 1; id < DLLConst.MaxWorkMethods + 1; id++)
             {
                 cscode += GetMainDLLFunction(script, id, out string funcName, scriptInCSharp) + "\n";
                 dllname = string.IsNullOrWhiteSpace(dllname) ? funcName : dllname;
-                workDict[funcName] = "DoWork" + id;
-                argDict[funcName] = "GetArgData" + id;
+                workDict[funcName] = DLLConst.GetWorkerMethod(id);
+                argDict[funcName] = DLLConst.GetArgsMethod(id);
 
                 int pos = script.Pointer;
                 script.GoToNextStatement();
@@ -1806,8 +1806,8 @@ namespace SplitAndMerge
                 }
             }
 
-            Precompiler precompiler = new Precompiler("DoWork1");
-            precompiler.ClassName = "CustomPrecompiler";
+            Precompiler precompiler = new Precompiler(DLLConst.GetWorkerMethod());
+            precompiler.ClassName = DLLConst.ClassName;
             precompiler.CSharpCode = cscode;
 
             while (true)
@@ -1896,14 +1896,14 @@ namespace SplitAndMerge
                 var fd = new ImportDLLFunction.DLLFunctionData();
                 fd.name = name;
                 fd.workMethod = dll.GetWorkFunction(name);
-                fd.argMethod = dll.GetArgFunction(name);
+                var argMethod = dll.GetArgFunction(name);
 
                 var argsList = new List<string>();
                 var defArgsList = new List<Variable>();
                 var argsMap = new Dictionary<string, Variable>();
                 for (int id = 0; ; id++)
                 {
-                    var argData = fd.argMethod(id);
+                    var argData = argMethod(id);
                     if (!argData.exists)
                     {
                         break;
