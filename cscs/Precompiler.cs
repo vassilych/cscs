@@ -1915,7 +1915,7 @@ namespace SplitAndMerge
                 fd.args = argsList.ToArray();
                 fd.defArgs = defArgsList.ToArray();
                 fd.argsMap = argsMap;
-                data.functionMap[name] = fd;
+                data.functionMap[name.ToLower()] = fd;
             }
         }
 

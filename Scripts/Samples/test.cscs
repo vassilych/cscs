@@ -1124,6 +1124,9 @@ ires = InvokeDLL(h, "RunCycle", 1000000);
 Test(ires < 2900000, false);
 Test(ires < 3000000, true);
 
+direct = RunCycle(1000000);
+Test(ires, direct);
+
 exceptionThrown = false;
 try {
   x = TestObject.MyNewProperty;

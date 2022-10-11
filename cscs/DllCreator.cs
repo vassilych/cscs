@@ -195,6 +195,25 @@ namespace SplitAndMerge
         }
     }
 
+    public class DLLFunction : ParserFunction
+    {
+        ImportDLLFunction.DLLData m_dllData;
+        string m_funcName;
+
+        public DLLFunction(ImportDLLFunction.DLLData dllData, string funcName)
+        {
+            m_dllData = dllData;
+            m_funcName = funcName;
+        }
+
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            var args = script.GetFunctionArgs();
+            var result = ImportDLLFunction.Execute(m_dllData, m_funcName, script, args);
+            return result;
+        }
+    }
+
     public class ImportDLLFunction : ParserFunction
     {
         public class DLLData
@@ -215,10 +234,20 @@ namespace SplitAndMerge
         bool m_executeMode;
 
         static List<DLLData> s_dlls = new List<DLLData>();
+        static Dictionary<string, DLLData> s_func2dll = new Dictionary<string, DLLData>();
 
         public ImportDLLFunction(bool executeMode = false)
         {
             m_executeMode = executeMode;
+        }
+
+        public static DLLFunction GetDllFunction(string funcName)
+        {
+            if (!s_func2dll.TryGetValue(funcName, out DLLData dllData))
+            {
+                return null;
+            }
+            return new DLLFunction(dllData, funcName);
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -228,14 +257,7 @@ namespace SplitAndMerge
 
             if (m_executeMode)
             {
-                var handle = Utils.GetSafeInt(args, 0);
-                var funcName = Utils.GetSafeString(args, 1);
-                var load = Utils.GetSafeString(args, 2);
-                if (handle < 0 || handle >= s_dlls.Count)
-                {
-                    Utils.ThrowErrorMsg("Couldn´t find handle: " + handle, script, m_name);
-                }
-                var result = ExecuteCustom(handle, funcName, load, script, args);
+                var result = ExecuteCustom(script, args);
                 return result;
             }
 
@@ -250,25 +272,28 @@ namespace SplitAndMerge
             return loaded;
         }
 
-        static Variable ExecuteCustom(int handle, string funcName, string load, ParsingScript script, List<Variable> args)
+        Variable ExecuteCustom(ParsingScript script, List<Variable> args)
         {
+            var handle = Utils.GetSafeInt(args, 0);
+            var funcName = Utils.GetSafeString(args, 1);
             if (handle < 0 || handle >= s_dlls.Count)
             {
-                Utils.ThrowErrorMsg("Invalid handle: " + handle, script, load);
+                Utils.ThrowErrorMsg("Couldn´t find handle: " + handle, script, m_name);
             }
+
+            args.RemoveAt(0); // dll handle
+            args.RemoveAt(0); // function name
+
             var dll = s_dlls[handle];
             return Execute(dll, funcName, script, args);
         }
 
-        static Variable Execute(DLLData dll, string funcName, ParsingScript script, List<Variable> args)
+        public static Variable Execute(DLLData dll, string funcName, ParsingScript script, List<Variable> args)
         {
-            args.RemoveAt(0);
-            args.RemoveAt(0);
-
             Type type = dll.GetType();
             var module = Activator.CreateInstance(type) as SplitAndMerge.ICustomDLL;
 
-            if (!dll.functionMap.TryGetValue(funcName, out DLLFunctionData dllFuncData))
+            if (!dll.functionMap.TryGetValue(funcName.ToLower(), out DLLFunctionData dllFuncData))
             {
                 Utils.ThrowErrorMsg("Couldn't find function: " + funcName, script, dll.name);
             }
@@ -301,7 +326,14 @@ namespace SplitAndMerge
                 {
                     Utils.ThrowErrorMsg("Couldn´t load dll: " + DLL.FullName, script, DLL.GetName().Name);
                 }
+
                 Precompiler.ExtractArgsFromDLL(module, ref data);
+                var names = module.MethodNames();
+                foreach (var name in names)
+                {
+                    s_func2dll[name.ToLower()] = data;
+                }
+
                 data.dll = module;
                 s_dlls.Add(data);
                 return new Variable(s_dlls.Count - 1);

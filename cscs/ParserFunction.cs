@@ -69,6 +69,12 @@ namespace SplitAndMerge
                 return;
             }
 
+            m_impl = ImportDLLFunction.GetDllFunction(item);
+            if (m_impl != null)
+            {
+                return;
+            }
+
             if (m_impl == s_strOrNumFunction && string.IsNullOrWhiteSpace(item))
             {
                 string problem = (!string.IsNullOrWhiteSpace(action) ? action : ch.ToString());
