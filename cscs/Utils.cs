@@ -280,6 +280,7 @@ namespace SplitAndMerge
                 tempScript.OriginalScript = parentScript.OriginalScript;
             }
             tempScript.ParentScript = script;
+            tempScript.Context = script == null ? null : script.Context;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
             tempScript.StackLevel = stackLevel;

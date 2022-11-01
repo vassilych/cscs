@@ -279,14 +279,14 @@ namespace SplitAndMerge
             return Process(script, filename, mainFile);
         }
 
-        public async Task<Variable> ProcessFileAsync(string filename, bool mainFile = false)
+        public async Task<Variable> ProcessFileAsync(string filename, bool mainFile = false, object context = null)
         {
             string script = Utils.GetFileContents(filename);
-            Variable result = await ProcessAsync(script, filename, mainFile);
+            Variable result = await ProcessAsync(script, filename, mainFile, context);
             return result;
         }
 
-        public Variable Process(string script, string filename = "", bool mainFile = false)
+        public Variable Process(string script, string filename = "", bool mainFile = false, object context = null)
         {
             Dictionary<int, int> char2Line;
             string data = Utils.ConvertToScript(this, script, out char2Line, filename);
@@ -298,6 +298,7 @@ namespace SplitAndMerge
             ParsingScript toParse = new ParsingScript(this, data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
+            toParse.Context = context;
 
             if (mainFile)
             {
@@ -318,7 +319,7 @@ namespace SplitAndMerge
 
             return result;
         }
-        public async Task<Variable> ProcessAsync(string script, string filename = "", bool mainFile = false)
+        public async Task<Variable> ProcessAsync(string script, string filename = "", bool mainFile = false, object context = null)
         {
             Dictionary<int, int> char2Line;
             string data = Utils.ConvertToScript(this, script, out char2Line, filename);
@@ -330,6 +331,7 @@ namespace SplitAndMerge
             ParsingScript toParse = new ParsingScript(this, data, 0, char2Line);
             toParse.OriginalScript = script;
             toParse.Filename = filename;
+            toParse.Context = context;
 
             if (mainFile)
             {
