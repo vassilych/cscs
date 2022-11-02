@@ -186,7 +186,7 @@ namespace SplitAndMerge
 
         public static async Task ProcessQueue()
         {
-            string data;
+            string data = "";
 #if UNITY_EDITOR || UNITY_STANDALONE || MAIN_THREAD_CHECK
             while (m_queue.TryTake(out data))
             { // Exit as soon as done processing.
@@ -198,7 +198,14 @@ namespace SplitAndMerge
 #else
             while (DebuggerAttached)
             { // A blocking call.
-                data = m_queue.Take(s_cancelTokenSource.Token);
+                try
+                {
+                    data = m_queue.Take(s_cancelTokenSource.Token);
+                }
+                catch (Exception)
+                {
+                    DebuggerAttached = false;
+                }
                 if (!DebuggerAttached)
                 {
                     return;
