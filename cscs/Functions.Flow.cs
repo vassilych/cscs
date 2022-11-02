@@ -92,9 +92,8 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
-            InterpreterInstance.ExitCode = Utils.GetSafeInt(args, 0, 0);
-            //            Environment.Exit(code);
-            InterpreterInstance.IsRunning = false;
+            var code = Utils.GetSafeInt(args, 0, 0);
+            Environment.Exit(code);
             return new Variable(Variable.VarType.QUIT);
         }
         public override string Description()
@@ -106,6 +105,9 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            List<Variable> args = script.GetFunctionArgs();
+            InterpreterInstance.ExitCode = Utils.GetSafeInt(args, 0, 0);
+            InterpreterInstance.IsRunning = false;
             return new Variable(Variable.VarType.QUIT);
         }
         public override string Description()
