@@ -23,40 +23,40 @@ namespace SplitAndMerge
                     " arguments but got " + args + " in " + msg);
             }
         }
-        public static void CheckPosInt(Variable variable, ParsingScript script)
+        public static void CheckPosInt(Variable variable, ParsingScript script = null)
         {
             CheckInteger(variable, script);
             if (variable.Value <= 0)
             {
                 ThrowErrorMsg("Expected a positive integer instead of [" +
-                              variable.Value + "].", script, script.Current.ToString());
+                              variable.Value + "].", script, script == null ? "" : script.Current.ToString());
             }
         }
 
-        public static void CheckNonNegativeInt(Variable variable, ParsingScript script)
+        public static void CheckNonNegativeInt(Variable variable, ParsingScript script = null)
         {
             CheckInteger(variable, script);
             if (variable.Value < 0)
             {
                 ThrowErrorMsg("Expected a non-negative integer instead of [" +
-                              variable.Value + "].", script, script.Current.ToString());
+                              variable.Value + "].", script, script == null ? "" : script.Current.ToString());
             }
         }
-        public static void CheckInteger(Variable variable, ParsingScript script)
+        public static void CheckInteger(Variable variable, ParsingScript script = null)
         {
             CheckNumber(variable, script);
             if (variable.Value % 1 != 0.0)
             {
                 ThrowErrorMsg("Expected an integer instead of [" +
-                              variable.Value + "].", script, script.Current.ToString());
+                              variable.Value + "].", script, script == null ? "" : script.Current.ToString());
             }
         }
-        public static void CheckNumber(Variable variable, ParsingScript script)
+        public static void CheckNumber(Variable variable, ParsingScript script = null)
         {
             if (variable.Type != Variable.VarType.NUMBER)
             {
                 ThrowErrorMsg("Expected a number instead of [" +
-                              variable.AsString() + "].", script, script.Current.ToString());
+                              variable.AsString() + "].", script, script == null ? "" : script.Current.ToString());
             }
         }
         public static void CheckArray(Variable variable, string name)
@@ -280,6 +280,7 @@ namespace SplitAndMerge
                 tempScript.OriginalScript = parentScript.OriginalScript;
             }
             tempScript.ParentScript = script;
+            tempScript.Context = script == null ? null : script.Context;
             tempScript.InTryBlock = script == null ? false : script.InTryBlock;
             tempScript.ClassInstance = instance;
             tempScript.StackLevel = stackLevel;

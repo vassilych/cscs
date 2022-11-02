@@ -100,6 +100,8 @@ namespace SplitAndMerge
 
         public List<int> PointersBack { get; set; } = new List<int>();
 
+        public object Context { get; set; }
+
         string m_functionName = "";
         public string FunctionName
         {
@@ -122,6 +124,13 @@ namespace SplitAndMerge
         public CSCSClass.ClassInstance ClassInstance { get; set; }
 
         public Interpreter InterpreterInstance { get; private set; }
+
+        public static ParsingScript Default(object context = null)
+        {
+            var script = new ParsingScript(Interpreter.LastInstance, "");
+            script.Context = context;
+            return script;
+        }
 
         public ParsingScript(Interpreter interpreter, string data, int from = 0,
                              Dictionary<int, int> char2Line = null)
