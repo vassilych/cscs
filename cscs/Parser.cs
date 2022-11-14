@@ -603,9 +603,10 @@ namespace SplitAndMerge
             }
             else if (leftCell.Type == Variable.VarType.OBJECT && rightCell.Type == Variable.VarType.OBJECT)
             {
-                typeof(Parser).GetMethod("MergeObjects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-                    .MakeGenericMethod(leftCell.ObjectType)
-                    .Invoke(null, new object[] { leftCell, rightCell, script });
+                //typeof(Parser).GetMethod("MergeObjects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                //    .MakeGenericMethod(leftCell.ObjectType)
+                //    .Invoke(null, new object[] { leftCell, rightCell, script });
+                MergeObjects(leftCell, rightCell, script, leftCell.Object);
             }
             else
             {
@@ -615,7 +616,7 @@ namespace SplitAndMerge
             leftCell.Action = rightCell.Action;
         }
 
-        private static void MergeObjects<T>(Variable leftCell, Variable rightCell, ParsingScript script)
+        private static void MergeObjects<T>(Variable leftCell, Variable rightCell, ParsingScript script, T _)
         {
             try
             {
