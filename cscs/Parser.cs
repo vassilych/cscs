@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -600,12 +601,86 @@ namespace SplitAndMerge
             {
                 OperatorAssignFunction.DateOperator(leftCell, rightCell, leftCell.Action, script);
             }
+            else if (leftCell.Type == Variable.VarType.OBJECT && rightCell.Type == Variable.VarType.OBJECT)
+            {
+                typeof(Parser).GetMethod("MergeObjects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                    .MakeGenericMethod(leftCell.ObjectType)
+                    .Invoke(null, new object[] { leftCell, rightCell, script });
+            }
             else
             {
                 MergeStrings(leftCell, rightCell, script);
             }
 
             leftCell.Action = rightCell.Action;
+        }
+
+        private static void MergeObjects<T>(Variable leftCell, Variable rightCell, ParsingScript script)
+        {
+            try
+            {
+                ParameterExpression leftParameter = Expression.Parameter(typeof(T), "left");
+                ParameterExpression rightParameter = Expression.Parameter(typeof(T), "right");
+                switch (leftCell.Action)
+                {
+                    case "%":
+                        leftCell.Object = Expression.Lambda<Func<T, T, T>>(Expression.Modulo(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object);
+                        break;
+                    case "*":
+                        leftCell.Object = Expression.Lambda<Func<T, T, T>>(Expression.Multiply(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object);
+                        break;
+                    case "/":
+                        leftCell.Object = Expression.Lambda<Func<T, T, T>>(Expression.Divide(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object); 
+                        break;
+                    case "+":
+                        leftCell.Object = Expression.Lambda<Func<T, T, T>>(Expression.Add(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object); 
+                        break;
+                    case "-":
+                        leftCell.Object = Expression.Lambda<Func<T, T, T>>(Expression.Subtract(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object); 
+                        break;
+                    case "<":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.LessThan(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case ">":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.GreaterThan(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case "<=":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.LessThanOrEqual(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case ">=":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.GreaterThanOrEqual(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case "==":
+                    case "===":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.Equal(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case "!=":
+                    case "!==":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.NotEqual(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case "&&":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.And(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    case "||":
+                        leftCell.Value = Expression.Lambda<Func<T, T, bool>>(Expression.Or(leftParameter, rightParameter), leftParameter, rightParameter).Compile()((T)leftCell.Object, (T)rightCell.Object) ? 1 : 0;
+                        leftCell.Type = Variable.VarType.NUMBER;
+                        break;
+                    default:
+                        MergeStrings(leftCell, rightCell, script);
+                        break;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                MergeStrings(leftCell, rightCell, script);
+            }
         }
 
         private static void MergeNumbers(Variable leftCell, Variable rightCell, ParsingScript script)
