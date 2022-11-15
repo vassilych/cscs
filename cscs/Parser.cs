@@ -603,10 +603,7 @@ namespace SplitAndMerge
             }
             else if (leftCell.Type == Variable.VarType.OBJECT && rightCell.Type == Variable.VarType.OBJECT)
             {
-                //typeof(Parser).GetMethod("MergeObjects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-                //    .MakeGenericMethod(leftCell.ObjectType)
-                //    .Invoke(null, new object[] { leftCell, rightCell, script });
-                var convertedObject = Convert.ChangeType(leftCell.Object, leftCell.ObjectType);
+                dynamic convertedObject = leftCell.Object;
                 MergeObjects(leftCell, rightCell, script, convertedObject);
             }
             else
