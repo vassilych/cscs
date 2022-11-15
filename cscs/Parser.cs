@@ -606,7 +606,8 @@ namespace SplitAndMerge
                 //typeof(Parser).GetMethod("MergeObjects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
                 //    .MakeGenericMethod(leftCell.ObjectType)
                 //    .Invoke(null, new object[] { leftCell, rightCell, script });
-                MergeObjects(leftCell, rightCell, script, leftCell.Object);
+                var convertedObject = Convert.ChangeType(leftCell.Object, leftCell.ObjectType);
+                MergeObjects(leftCell, rightCell, script, convertedObject);
             }
             else
             {
