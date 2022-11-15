@@ -27,8 +27,7 @@ namespace CSCS.InterpreterManager
 
             if (args.Count > 0)
             {
-                _mgr.SetInterpreter(newHandle);
-                script.SetInterpreter(_mgr.CurrentInterpreter);
+                SetInterpreterFunction.SetInterpreter(newHandle, _mgr, script);
             }
             if (string.IsNullOrWhiteSpace(load))
             {
@@ -82,6 +81,10 @@ namespace CSCS.InterpreterManager
         public SetInterpreterFunction(InterpreterManager mgr)
         {
             _mgr = mgr;
+            if (Debugger.InterpreterNotification == null)
+            {
+                Debugger.InterpreterNotification += Debugger.SetInterpreter;
+            }
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -89,14 +92,20 @@ namespace CSCS.InterpreterManager
             var args = script.GetFunctionArgs();
             Utils.CheckArgs(args.Count, 1, m_name, true);
 
-            int newId = Utils.GetSafeInt(args, 0);
-            bool changed = _mgr.SetInterpreter(newId);
-
-            // Let's try to change the interpreter of the script.
-            // This might not work, but it's better than not changing it, I think.
-            if (changed)
-                script.SetInterpreter(_mgr.CurrentInterpreter);
+            int newHandle = Utils.GetSafeInt(args, 0);
+            var changed = SetInterpreter(newHandle, _mgr, script);
             return new Variable(changed);
+        }
+
+        public static bool SetInterpreter(int newHandle, InterpreterManager mgr, ParsingScript script)
+        {
+            bool changed = mgr.SetInterpreter(newHandle);
+            if (changed)
+            {
+                script.SetInterpreter(mgr.CurrentInterpreter);
+                Debugger.InterpreterNotification?.Invoke(mgr.CurrentInterpreter);
+            }
+            return changed;
         }
     }
 

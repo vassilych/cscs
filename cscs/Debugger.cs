@@ -79,6 +79,27 @@ namespace SplitAndMerge
             }
         }
 
+        public static Action<Interpreter> InterpreterNotification { get; set; }
+        static Interpreter m_interpreter;
+        public static Interpreter TheInterpreter {
+            get
+            {
+                if (m_interpreter == null)
+                {
+                    m_interpreter = Interpreter.LastInstance;
+                }
+                return m_interpreter;
+            }
+            private set
+            {
+                m_interpreter = value;
+            }
+        }
+        public static void SetInterpreter(Interpreter interpreter)
+        {
+            TheInterpreter = interpreter;
+        }
+
         public async Task ProcessClientCommands(string data)
         {
             string[] commands = data.Split(new char[] { '\n' });
@@ -148,14 +169,14 @@ namespace SplitAndMerge
 
                 try
                 {
-                    m_script = Utils.ConvertToScript(Interpreter.LastInstance, rawScript, out m_char2Line, filename);
+                    m_script = Utils.ConvertToScript(TheInterpreter, rawScript, out m_char2Line, filename);
                 }
                 catch(ParsingException exc)
                 {
                     ProcessException(m_debugging, exc);
                     return;
                 }
-                m_debugging = new ParsingScript(Interpreter.LastInstance, m_script, 0, m_char2Line);
+                m_debugging = new ParsingScript(TheInterpreter, m_script, 0, m_char2Line);
                 m_debugging.Filename = filename;
                 m_debugging.MainFilename = m_debugging.Filename;
                 m_debugging.OriginalScript = rawScript;
@@ -328,7 +349,7 @@ namespace SplitAndMerge
 
         string GetAllVariables(ParsingScript script)
         {
-            string vars = Interpreter.LastInstance.GetVariables(script);
+            string vars = TheInterpreter.GetVariables(script);
             return vars;
         }
 
@@ -355,8 +376,8 @@ namespace SplitAndMerge
             ReplMode = true;
 
             Dictionary<int, int> char2Line;
-            string script = Utils.ConvertToScript(Interpreter.LastInstance, repl, out char2Line);
-            ParsingScript tempScript = new ParsingScript(Interpreter.LastInstance, script, 0, char2Line);
+            string script = Utils.ConvertToScript(TheInterpreter, repl, out char2Line);
+            ParsingScript tempScript = new ParsingScript(TheInterpreter, script, 0, char2Line);
             tempScript.OriginalScript = repl;
             tempScript.Debugger = this;
             if (!string.IsNullOrWhiteSpace(filename))
@@ -500,7 +521,7 @@ namespace SplitAndMerge
                                     "Exception thrown: " + exc.Message + "\n";
                 debugger.SendBack(replResult, false);
                 debugger.LastResult = null;
-                Interpreter.LastInstance.InvalidateStacksAfterLevel(0);
+                TheInterpreter.InvalidateStacksAfterLevel(0);
                 return;
             }
 
@@ -517,7 +538,7 @@ namespace SplitAndMerge
             debugger.SendBack(result, !debugger.ReplMode);
             debugger.LastResult = null;
 
-            Interpreter.LastInstance.InvalidateStacksAfterLevel(0);
+            TheInterpreter.InvalidateStacksAfterLevel(0);
         }
 
         bool Completed(ParsingScript debugging)
@@ -556,7 +577,7 @@ namespace SplitAndMerge
 
             ProcessingBlock = true;
 
-            ParsingScript tempScript = new ParsingScript(Interpreter.LastInstance, stepInScript.String, stepInScript.Pointer);
+            ParsingScript tempScript = new ParsingScript(TheInterpreter, stepInScript.String, stepInScript.Pointer);
             tempScript.ParentScript = stepInScript;
             tempScript.InTryBlock = stepInScript.InTryBlock;
             /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
@@ -731,7 +752,7 @@ namespace SplitAndMerge
                 return null;
             }
 
-            m_debugging = new ParsingScript(Interpreter.LastInstance, m_script, 0, m_char2Line);
+            m_debugging = new ParsingScript(TheInterpreter, m_script, 0, m_char2Line);
             m_debugging.OriginalScript = m_script;
 
             Variable result = Variable.EmptyInstance;
