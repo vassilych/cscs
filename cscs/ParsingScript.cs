@@ -181,6 +181,11 @@ namespace SplitAndMerge
                 {
                     return pathname;
                 }
+                pathname = Path.GetFullPath(path);
+                if (File.Exists(pathname))
+                {
+                    return pathname;
+                }
             }
             return path;
         }
