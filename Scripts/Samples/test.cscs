@@ -1412,10 +1412,11 @@ function OnFailure( object, errorCode, text )
 WebRequest( "GET", weatherURL, "", "", "OnSuccess", "OnFailure" );
 
 print("Testing Web Requests/JSON/Marshalling");
-baseURL = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=";
+baseURL = "https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=";
 apikey  = "Y12T0TY5EUS6BC5F";
 symbol  = "MSFT";
 stockUrl = baseURL + symbol + "&apikey=" + apikey;
+
 
 class Stock {
   symbol = "";
@@ -1466,7 +1467,9 @@ ms = Marshal(stock); // Returns:
 // <low:NUM:254.47><high:NUM:264.74><close:NUM:256.06><volume:STR:"22855380">
 Test(ms.type, "STRING");
 ums = Unmarshal(ms);
-Test(stock, ums); // test that we can unmarshall to the original
+calculated = stock;
+expected = ums;
+Test(stock.ToString(), ums.ToString()); // test that we can unmarshall to the original
 Test(ums.type, "SplitAndMerge.CSCSClass+ClassInstance: Stock");
 
 str = "a string";
