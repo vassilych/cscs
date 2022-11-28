@@ -655,6 +655,36 @@ namespace SplitAndMerge
                 }
                 return true;
             }
+
+            public bool ReferenceEquals(object obj)
+            {
+                return ReferenceEquals(obj, this);
+            }
+
+            public override bool Equals(object obj)
+            {
+
+                return obj is ClassInstance instance &&
+                       EqualityComparer<CSCSClass>.Default.Equals(m_cscsClass, instance.m_cscsClass) &&
+                       (m_properties.Count == instance.m_properties.Count) &&
+                       (m_properties.Count == instance.m_properties
+                       .Where(x => m_properties.ContainsKey(x.Key) && m_properties[x.Key].Equals(x.Value)).Count());
+            }
+
+            public static bool operator ==(ClassInstance instance1, ClassInstance instance2)
+            {
+                return (instance1 is null && instance2 is null)
+                    || ((!(instance1 is null || instance2 is null))
+                    && (instance1.Equals(instance2)
+                    || instance1.ReferenceEquals(instance2)));
+
+
+            }
+
+            public static bool operator !=(ClassInstance instance1, ClassInstance instance2)
+            {
+                return !(instance1 == instance2);
+            }
         }
     }
 
