@@ -132,6 +132,22 @@ namespace SplitAndMerge
         private bool m_changeColor = false;
         private ConsoleColor m_fgcolor;
     }
+
+    class TerminateFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            var code = Utils.GetSafeInt(args, 0, 0);
+            Environment.Exit(code);
+            return new Variable(Variable.VarType.QUIT);
+        }
+        public override string Description()
+        {
+            return "Stops execution and exits process with the specified return code (default 0).";
+        }
+    }
+
 #endif
 #endif
 }

@@ -93,12 +93,12 @@ namespace SplitAndMerge
         {
             List<Variable> args = script.GetFunctionArgs();
             var code = Utils.GetSafeInt(args, 0, 0);
-            Environment.Exit(code);
+            QuitFunction.QuitScript(script, code);
             return new Variable(Variable.VarType.QUIT);
         }
         public override string Description()
         {
-            return "Stops execution and exits process with the specified return code (default 0).";
+            return "Stops execution of the current interpreter with the specified return code (default 0).";
         }
     }
     class QuitFunction : ParserFunction
