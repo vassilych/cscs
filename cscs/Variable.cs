@@ -1422,12 +1422,19 @@ namespace SplitAndMerge
             {
                 try
                 {
+                    Type underlyingType = Nullable.GetUnderlyingType(conversionType);
+
                     if (value == null)
                     {
-                        if (Nullable.GetUnderlyingType(conversionType) == null)
-                            conversion = Conversion.Exact;
-                        else
+                        if (underlyingType == null && conversionType.IsValueType)
+                        {
                             conversion = Conversion.Mismatch;
+                        }
+                        else
+                        {
+                                conversion = Conversion.Exact;
+                        }
+
                         return value;
                     }
 
@@ -1438,20 +1445,39 @@ namespace SplitAndMerge
                         return value;
                     }
 
+                    if (t == underlyingType)
+                    {
+                        conversion = Conversion.Convertible;
+                        return value;
+                    }
+
                     if (conversionType.IsAssignableFrom(t))
                     {
                         conversion = Conversion.Assignable;
-                        return Convert.ChangeType(value, conversionType);
+                        return value;
+                    }
+
+                    if (underlyingType != null && underlyingType.IsAssignableFrom(t))
+                    {
+                        conversion = Conversion.Convertible;
+                        return value;
                     }
 
                     conversion = Conversion.Convertible;
                     if (conversionType.IsEnum)
                     {
                         if (value is string svalue)
-                            return Enum.Parse(conversionType, svalue, true);
+                        {
+                             return Enum.Parse(conversionType, svalue, true);
+                        }
+
                         if (value is double dvalue)
+                        {
                             return Enum.ToObject(conversionType, (long)dvalue);
+                        }
+
                         // Let's see if it's some other type that just happens to work
+                        conversion = Conversion.Mismatch;
                         return Enum.ToObject(conversionType, value);
                     }
 
@@ -1463,7 +1489,18 @@ namespace SplitAndMerge
                         return genericList;
                     }
 
-                    return Convert.ChangeType(value, conversionType);
+                    try
+                    {
+                        return Convert.ChangeType(value, conversionType);
+                    }
+
+                    catch (Exception)
+                    {
+                        if (underlyingType != null)
+                        {
+                            return Convert.ChangeType(value, underlyingType);
+                        }
+                    }
                 }
                 catch (InvalidCastException)
                 {
