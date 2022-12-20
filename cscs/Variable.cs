@@ -1242,17 +1242,10 @@ namespace SplitAndMerge
             if (Object == null)
                 return null;
 
-            BindingFlags bf = BindingFlags.Instance;
-
-            Type t;
-            if (Object is Type ot)
-            {
-                t = ot;
-                bf = BindingFlags.Static;
-            }
-            else
-                t = ObjectType;
-
+            Type t = Object is Type ot ?
+                ot : ObjectType;
+            BindingFlags bf = Object is Type ?
+                BindingFlags.Static : BindingFlags.Instance;
             bf |= BindingFlags.Public;
 
             var property = FindNestedMatchingProperty(t, propName, bf | BindingFlags.GetProperty);
