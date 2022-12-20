@@ -2037,6 +2037,8 @@ namespace SplitAndMerge
     }
     class IncrementDecrementFunction : ActionFunction, INumericFunction
     {
+        protected bool m_prefix;
+
         protected override Variable Evaluate(ParsingScript script)
         {
             bool prefix = string.IsNullOrWhiteSpace(m_name);
@@ -2047,26 +2049,33 @@ namespace SplitAndMerge
 
             Utils.CheckForValidName(Name, script);
 
+            return ProcessAction(m_name, m_action, prefix, script);
+        }
+
+        public static Variable ProcessAction(string name, string action, bool isPrefix, ParsingScript script)
+        {
+            var interpreter = script.InterpreterInstance;
+
             // Value to be added to the variable:
-            int valueDelta = m_action == Constants.INCREMENT ? 1 : -1;
-            int returnDelta = prefix ? valueDelta : 0;
+            int valueDelta = action == Constants.INCREMENT ? 1 : -1;
+            int returnDelta = isPrefix ? valueDelta : 0;
 
             // Check if the variable to be set has the form of x[a][b],
             // meaning that this is an array element.
             double newValue = 0;
-            List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
+            List<Variable> arrayIndices = Utils.GetArrayIndices(script, name, (string _name) => { name = _name; });
 
-            ParserFunction func = InterpreterInstance.GetVariable(m_name, script);
-            Utils.CheckNotNull(m_name, func, script);
+            ParserFunction func = interpreter.GetVariable(name, script);
+            Utils.CheckNotNull(name, func, script);
 
             Variable currentValue = func.GetValue(script);
             currentValue = currentValue.DeepClone();
 
             if (arrayIndices.Count > 0 || script.TryCurrent() == Constants.START_ARRAY)
             {
-                if (prefix)
+                if (isPrefix)
                 {
-                    string tmpName = m_name + script.Rest;
+                    string tmpName = name + script.Rest;
                     int delta = 0;
                     arrayIndices = Utils.GetArrayIndices(script, tmpName, delta, (string t, int d) => { tmpName = t; delta = d; });
                     script.Forward(Math.Max(0, delta - tmpName.Length));
@@ -2084,7 +2093,7 @@ namespace SplitAndMerge
                 currentValue.Value += valueDelta;
             }
 
-            InterpreterInstance.AddGlobalOrLocalVariable(m_name,
+            interpreter.AddGlobalOrLocalVariable(name,
                                                     new GetVarFunction(currentValue), script);
             return new Variable(newValue);
         }
@@ -2101,13 +2110,19 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            return ProcessOperator(m_name, m_action, script);
+        }
+
+        public static Variable ProcessOperator(string name, string action, ParsingScript script)
+        {
+            var interpreter = script.InterpreterInstance;
             // Value to be added to the variable:
             Variable right = Utils.GetItem(script);
 
-            List<Variable> arrayIndices = Utils.GetArrayIndices(script, m_name, (string name) => { m_name = name; });
+            List<Variable> arrayIndices = Utils.GetArrayIndices(script, name, (string _name) => { name = _name; });
 
-            ParserFunction func = InterpreterInstance.GetVariable(m_name, script);
-            Utils.CheckNotNull(func, m_name, script);
+            ParserFunction func = interpreter.GetVariable(name, script);
+            Utils.CheckNotNull(func, name, script);
 
             Variable currentValue = func.GetValue(script);
             currentValue = currentValue.DeepClone();
@@ -2119,31 +2134,37 @@ namespace SplitAndMerge
                 script.MoveForwardIf(Constants.END_ARRAY);
             }
 
-            if (left.Type == Variable.VarType.NUMBER)
-            {
-                NumberOperator(left, right, m_action);
-            }
-            else if (left.Type == Variable.VarType.DATETIME)
-            {
-                DateOperator(left, right, m_action, script,m_name);
-            }
-            else
-            {
-                StringOperator(left, right, m_action);
-            }
+            ProcessOperator(left, right, action, script, name);
 
             if (arrayIndices.Count > 0)
             {// array element
                 AssignFunction.ExtendArray(currentValue, arrayIndices, 0, left);
-                InterpreterInstance.AddGlobalOrLocalVariable(m_name,
-                                                         new GetVarFunction(currentValue), script);
+                interpreter.AddGlobalOrLocalVariable(name,
+                                                     new GetVarFunction(currentValue), script);
             }
             else
             {
-                InterpreterInstance.AddGlobalOrLocalVariable(m_name,
-                                                         new GetVarFunction(left), script);
+                interpreter.AddGlobalOrLocalVariable(name,
+                                                     new GetVarFunction(left), script);
             }
             return left;
+        }
+
+        public static void ProcessOperator(Variable left, Variable right, string action, 
+            ParsingScript script = null, string name = "")
+        {
+            if (left.Type == Variable.VarType.NUMBER)
+            {
+                NumberOperator(left, right, action);
+            }
+            else if (left.Type == Variable.VarType.DATETIME)
+            {
+                DateOperator(left, right, action, script, name);
+            }
+            else
+            {
+                StringOperator(left, right, action);
+            }
         }
 
         public static void DateOperator(Variable valueA,
@@ -2167,7 +2188,7 @@ namespace SplitAndMerge
             valueA.AddToDate(valueB, sign);
         }
 
-        static void NumberOperator(Variable valueA,
+        public static void NumberOperator(Variable valueA,
                                    Variable valueB, string action)
         {
             switch (action)
@@ -2198,7 +2219,7 @@ namespace SplitAndMerge
                     break;
             }
         }
-        static void StringOperator(Variable valueA,
+        public static void StringOperator(Variable valueA,
           Variable valueB, string action)
         {
             switch (action)
