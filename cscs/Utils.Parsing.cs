@@ -1256,6 +1256,74 @@ namespace SplitAndMerge
             return sb.ToString();
         }
 
+        public static string GetSubscript(ParsingScript script, HashSet<string> tokens)
+        {
+            var start = script.Pointer;
+            var sb = new StringBuilder();
+            while (script.StillValid() )
+            {
+                var token = GetNextToken(script).ToLower();
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    script.Forward();
+                    continue;
+                }
+                var needed = tokens.Contains(token);
+                string extracted = token;
+                if (!needed)
+                {
+                    extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_STATEMENT);
+                }
+                else
+                {
+                    extracted += script.TryCurrent();
+                }
+                if (script.Current == Constants.END_STATEMENT)
+                {
+                    extracted += script.CurrentAndForward();
+                    if (needed)
+                    {
+                        sb.Append(extracted);
+                    }
+                    continue;
+                }
+
+                if (script.Current == Constants.SPACE)
+                {
+                    script.Forward();
+                    var token2 = GetNextToken(script);
+                    extracted += token2 + script.CurrentAndForward();
+                }
+                if (script.Current == Constants.SPACE)
+                {
+                    extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_STATEMENT);
+                }
+                if (script.Prev == Constants.START_ARG)
+                {
+                    extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_ARG);
+                    extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                }
+
+                var startBody = script.Current == Constants.START_GROUP ? Constants.START_GROUP : Constants.SPACE;
+                var endBody = script.Current == Constants.START_GROUP ? Constants.END_GROUP : Constants.END_STATEMENT;
+                var endExtract = endBody == Constants.END_STATEMENT ? Constants.END_STATEMENT : Constants.EMPTY;
+                extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                extracted += GetBodyBetween(script, startBody, endBody, endExtract);
+                extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                if (script.Current == Constants.END_GROUP || script.Current == Constants.END_STATEMENT)
+                {
+                    extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                }
+                if (needed)
+                {
+                    sb.Append(extracted);
+                }
+            }
+            script.Pointer = start;
+            var result = sb.ToString();
+            return result;
+        }
+
         public static string GetBodySize(ParsingScript script, string endToken1, string endToken2 = null)
         {
             int start = script.Pointer;
