@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -1254,6 +1255,46 @@ namespace SplitAndMerge
                 sb.Remove(sb.Length - 1, 1);
             }
             return sb.ToString();
+        }
+
+        public static void PreprocessScriptFile(string file, HashSet<string> tokens, string scriptsDirStr = "", object context = null)
+        {
+            var fileName = Path.IsPathRooted(file) ? file :
+                (!string.IsNullOrWhiteSpace(scriptsDirStr) ?
+                    Path.Combine(scriptsDirStr, file) : Path.GetFullPath(file));
+            if (!File.Exists(fileName))
+            {
+                fileName = Path.GetFullPath(file);
+            }
+            if (string.IsNullOrWhiteSpace(file) || !File.Exists(fileName))
+            {
+                throw new ArgumentException("Preprocessing file not found: [" + fileName + "]");
+            }
+            string script = Utils.GetFileContents(fileName);
+            PreprocessScript(script, tokens, fileName, context);
+        }
+
+        public static void PreprocessScript(string script, HashSet<string> tokens, string fileName = "", object context = null)
+        {
+            Dictionary<int, int> char2Line;
+            string data = Utils.ConvertToScript(Interpreter.LastInstance, script, out char2Line, fileName);
+            if (string.IsNullOrWhiteSpace(data))
+            {
+                return;
+            }
+
+            ParsingScript toParse = new ParsingScript(Interpreter.LastInstance, data, 0, char2Line);
+            toParse.OriginalScript = script;
+            toParse.Filename = fileName;
+            toParse.Context = Interpreter.LastInstance;
+
+            var firstScript = Utils.GetSubscript(toParse, tokens);
+            if (string.IsNullOrWhiteSpace(firstScript))
+            {
+                return;
+            }
+
+            Interpreter.LastInstance.Process(firstScript, fileName, false, context);
         }
 
         public static string GetSubscript(ParsingScript script, HashSet<string> tokens)
