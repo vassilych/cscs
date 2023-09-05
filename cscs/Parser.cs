@@ -215,7 +215,7 @@ namespace SplitAndMerge
             return result;
         }
 
-        static bool UpdateResult(ParsingScript script, char[] to, List<Variable> listToMerge, string token, bool negSign,
+        public static bool UpdateResult(ParsingScript script, char[] to, List<Variable> listToMerge, string token, bool negSign,
                                  ref Variable current, ref int negated, ref string action)
         {
             if (current == null)
@@ -288,7 +288,7 @@ namespace SplitAndMerge
             return false;
         }
 
-        static bool CheckConsistencyAndSign(ParsingScript script, List<Variable> listToMerge, string action, ref string token)
+        public static bool CheckConsistencyAndSign(ParsingScript script, List<Variable> listToMerge, string action, ref string token)
         {
             if (Constants.CONTROL_FLOW.Contains(token) && listToMerge.Count > 0)
             {//&&
@@ -446,7 +446,7 @@ namespace SplitAndMerge
             return true;
         }
 
-        static bool UpdateIfTernary(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
+        public static bool UpdateIfTernary(ParsingScript script, string token, char ch, List<Variable> listInput, Action<List<Variable>> listToMerge)
         {
             if (listInput.Count < 1 || ch != Constants.TERNARY_OPERATOR || token.Length > 0)
             {
@@ -769,6 +769,9 @@ namespace SplitAndMerge
             {
                 case "+":
                     leftCell.String = leftCell.AsString() + rightCell.AsString();
+                    break;
+                case "*":
+                    leftCell.String = leftCell.AsString().Trim() + rightCell.AsString().Trim();
                     break;
                 case "<":
                     string arg1 = leftCell.AsString();

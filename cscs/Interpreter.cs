@@ -300,6 +300,9 @@ namespace SplitAndMerge
             toParse.Filename = filename;
             toParse.Context = context;
 
+            var tokens = new HashSet<string>() { "function", "dllfunction", "define" };
+            var first = Utils.GetSubscript(toParse, tokens);
+
             if (mainFile)
             {
                 toParse.MainFilename = toParse.Filename;
