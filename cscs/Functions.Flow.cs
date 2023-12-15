@@ -2409,7 +2409,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = InterpreterInstance.GetVariable(name, script);
+            ParserFunction existing = InterpreterInstance.GetVariable(name, script, true);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
             baseValue.SetProperty(prop, varValue, script, name);
 
@@ -2449,7 +2449,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = InterpreterInstance.GetVariable(name, script);
+            ParserFunction existing = InterpreterInstance.GetVariable(name, script, true);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
             await baseValue.SetPropertyAsync(prop, varValue, script, name);
 
