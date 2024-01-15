@@ -591,9 +591,22 @@ namespace SplitAndMerge
                 return sb.ToString();
             }
 
-            public Task<Variable> SetProperty(string name, Variable value)
+            public Task<Variable> SetProperty(string name, Variable value) => SetProperty(name, value, null);
+
+            public Task<Variable> SetProperty(string name, Variable value, ParsingScript script)
             {
                 var namelower = name.ToLower();
+
+                int ind = namelower.IndexOf(".");
+                if (ind >= 0)
+                {
+                    string property = namelower.Substring(0, ind);
+                    string subProperty = namelower.Substring(ind + 1);
+                    Variable propertyVariable = m_properties.ContainsKey(property) ? m_properties[property] : new Variable(Variable.VarType.ARRAY);
+                    propertyVariable.SetProperty(subProperty, value, script, property);
+                    return Task.FromResult(Variable.EmptyInstance);
+                }
+
                 m_properties[namelower] = value;
                 m_propSet.Add(name);
                 m_propSetLower.Add(namelower);
@@ -2376,7 +2389,7 @@ namespace SplitAndMerge
             if (script.ClassInstance != null)
             {
                 //varName = script.ClassInstance.InstanceName + "." + m_name;
-                varValue = script.ClassInstance.SetProperty(m_name, varValue).Result;
+                varValue = script.ClassInstance.SetProperty(m_name, varValue, script).Result;
                 return varValue.DeepClone();
             }
 
@@ -2396,7 +2409,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = InterpreterInstance.GetVariable(name, script);
+            ParserFunction existing = InterpreterInstance.GetVariable(name, script, true);
             Variable baseValue = existing != null ? existing.GetValue(script) : new Variable(Variable.VarType.ARRAY);
             baseValue.SetProperty(prop, varValue, script, name);
 
@@ -2416,7 +2429,7 @@ namespace SplitAndMerge
             if (script.ClassInstance != null)
             {
                 //varName = script.ClassInstance.InstanceName + "." + m_name;
-                await script.ClassInstance.SetProperty(m_name, varValue);
+                await script.ClassInstance.SetProperty(m_name, varValue, script);
                 return varValue.DeepClone();
             }
 
@@ -2436,7 +2449,7 @@ namespace SplitAndMerge
                 return varValue.DeepClone();
             }
 
-            ParserFunction existing = InterpreterInstance.GetVariable(name, script);
+            ParserFunction existing = InterpreterInstance.GetVariable(name, script, true);
             Variable baseValue = existing != null ? await existing.GetValueAsync(script) : new Variable(Variable.VarType.ARRAY);
             await baseValue.SetPropertyAsync(prop, varValue, script, name);
 
