@@ -124,7 +124,7 @@ namespace SplitAndMerge
             script.CurrentModule = "";
             script.SetDone();
 
-            return Variable.EmptyInstance;// new Variable(Variable.VarType.QUIT);
+            return new Variable(Variable.VarType.QUIT); // Variable.EmptyInstance;// 
         }
 
         public override string Description()
