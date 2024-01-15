@@ -183,6 +183,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.CANCEL, new CancelFunction());
             RegisterFunction(Constants.CANCEL_RUN, new ScheduleRunFunction(false));
             RegisterFunction(Constants.CHECK_LOADER_MAIN, new CheckLoaderMainFunction());
+            RegisterFunction(Constants.COMMLINE_ARGS, new CommandLineArgsFunction());
             RegisterFunction(Constants.CONTAINS, new ContainsFunction());
             RegisterFunction(Constants.CURRENT_PATH, new CurrentPathFunction());
             RegisterFunction(Constants.DATE_TIME, new DateTimeFunction(false));

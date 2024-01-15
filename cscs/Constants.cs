@@ -89,6 +89,7 @@ namespace SplitAndMerge
         public const string ADD_ALL_TO_HASH = "AddAllToHash";
         public const string CANCEL_RUN = "CancelRun";
         public const string CHECK_LOADER_MAIN = "LoaderMain";
+        public const string COMMLINE_ARGS = "CommandLineArgs";
         public const string CONTAINS = "contains";
         public const string CURRENT_PATH = "CurrentPath";
         public const string DATE_TIME = "DateTime";

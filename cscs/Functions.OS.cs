@@ -1184,4 +1184,22 @@ namespace SplitAndMerge
             return result == null ? Variable.EmptyInstance : result;
         }
     }
+
+    class CommandLineArgsFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            var cmdArgs = Environment.GetCommandLineArgs();
+
+            List<Variable> results = new List<Variable>();
+            for (int i = 0; i < cmdArgs.Length; i++)
+            {
+                string token = cmdArgs[i];
+                results.Add(new Variable(token));
+            }
+
+            return new Variable(results);
+        }
+    }
 }
