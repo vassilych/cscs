@@ -157,6 +157,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.CONTINUE, new ContinueStatement());
             RegisterFunction(Constants.CLASS, new ClassCreator());
             RegisterFunction(Constants.ENUM, new EnumFunction());
+            RegisterFunction(Constants.FREE, new FreeFunction());
             RegisterFunction(Constants.NEW, new NewObjectFunction());
             RegisterFunction(Constants.NULL, new NullFunction());
             RegisterFunction(Constants.RETURN, new ReturnStatement());
@@ -1972,6 +1973,23 @@ namespace SplitAndMerge
             {
                 handle.Invoke(local.Name, localFunction.Value, exists);
             }
+        }
+
+        public bool RemoveVariable(string name)
+        {
+            name = Constants.ConvertName(name);
+            var result = RemoveGlobal(name);
+            if (result)
+            {
+                return true;
+            }
+            result = s_lastExecutionLevel!= null && s_lastExecutionLevel.Variables.Remove(name);
+            if (result)
+            {
+                return true;
+            }
+
+            return UnregisterFunction(name);
         }
 
         public void PopLocalVariables(int id)

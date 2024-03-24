@@ -1783,6 +1783,23 @@ namespace SplitAndMerge
             return "A case inside of a switch statement.";
         }
     }
+    class FreeFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+
+            var name = args[0].ParamName;
+
+            var removed = InterpreterInstance.RemoveVariable(name);
+            return new Variable(removed);
+        }
+        public override string Description()
+        {
+            return "Free memory occupied by the apssed globar or local variable or a function.";
+        }
+    }
 
     public class IncludeFile : ParserFunction
     {

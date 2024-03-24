@@ -100,6 +100,7 @@ namespace SplitAndMerge
         public const string ENCODE = "encode";
         public const string EXIT = "exit";
         public const string FIND_INDEX = "find_index";
+        public const string FREE = "free";
         public const string GET_COLUMN = "GetColumn";
         public const string GET_PROPERTIES = "GetPropertyStrings";
         public const string GET_PROPERTY = "GetProperty";
