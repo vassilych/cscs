@@ -191,6 +191,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.DECODE, new EncodeDecodeFunction(false));
             RegisterFunction(Constants.DEEP_COPY, new DeepCopyFunction());
             RegisterFunction(Constants.DEFINE_LOCAL, new DefineLocalFunction());
+            RegisterFunction(Constants.DOWNLOAD, new DownloadFileFunction());
             RegisterFunction(Constants.ENCODE, new EncodeDecodeFunction(true));
             RegisterFunction(Constants.ENV, new GetEnvFunction());
             RegisterFunction(Constants.FIND_INDEX, new FindIndexFunction());

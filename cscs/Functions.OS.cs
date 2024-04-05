@@ -5,9 +5,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -190,7 +192,7 @@ namespace SplitAndMerge
             return Tokenize(data, sep, option);
         }
 
-        static public Variable Tokenize(string data, string sep, string option = "", int max = int.MaxValue-1)
+        static public Variable Tokenize(string data, string sep, string option = "", int max = int.MaxValue - 1)
         {
             if (sep == "\\t")
             {
@@ -613,7 +615,7 @@ namespace SplitAndMerge
 
             Utils.CheckArgs(args.Count, 2, m_name);
             string pattern = Utils.GetSafeString(args, 0);
-            string text    = Utils.GetSafeString(args, 1);
+            string text = Utils.GetSafeString(args, 1);
 
             Variable result = new Variable(Variable.VarType.ARRAY);
 
@@ -693,7 +695,7 @@ namespace SplitAndMerge
 #if __ANDROID__ == false && __IOS__ == false
             Precompiler.RegisterReturnType(funcName, funcReturn);
 
-            string[] args = Utils.GetCompiledFunctionSignature(script, out Dictionary<string, Variable>  argsMap);
+            string[] args = Utils.GetCompiledFunctionSignature(script, out Dictionary<string, Variable> argsMap);
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
             script.ParentOffset = script.Pointer;
@@ -756,7 +758,7 @@ namespace SplitAndMerge
 
             PrepareArgs(args, m_args, null, m_argsMap, out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
             out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
-            out List<Dictionary<string, string>> argsMapStr, out List <Dictionary<string, double>> argsMapNum, out List < Variable > argsVar);
+            out List<Dictionary<string, string>> argsMapStr, out List<Dictionary<string, double>> argsMapNum, out List<Variable> argsVar);
 
             Variable result = Precompiler.AsyncMode ?
                 m_precompiler.RunAsync(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false) :
@@ -1143,7 +1145,7 @@ namespace SplitAndMerge
             {
                 return ExtractArray(script);
             }
-            
+
             bool canBeNumeric = script.Current != '"';
             var token = Utils.GetToken(script, SEP);
 
@@ -1200,6 +1202,49 @@ namespace SplitAndMerge
             }
 
             return new Variable(results);
+        }
+    }
+
+    public class DownloadFileFunction : ParserFunction
+    {
+        static int s_timeout = 15 * 1000;
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            string url = Utils.GetSafeString(args, 0);
+
+            return Download(url);
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            List<Variable> args = await script.GetFunctionArgsAsync();
+            Utils.CheckArgs(args.Count, 1, m_name);
+            string url = Utils.GetSafeString(args, 0);
+
+            var result = await DownloadAsync(url);
+            return result;
+        }
+        public static Variable Download(string requestUrl)
+        {
+            var task = DownloadAsync(requestUrl);
+            task.Wait(s_timeout);
+            var result = task.Result;
+
+            return result;
+        }
+        public static async Task<Variable> DownloadAsync(string requestUrl)
+        {
+            var localFilePath = Path.GetTempFileName();
+            var httpClient = new HttpClient();
+            var responseStream = await httpClient.GetStreamAsync(requestUrl);
+            var fileStream = new FileStream(localFilePath, FileMode.Create);
+            responseStream.CopyTo(fileStream);
+            fileStream.Close();
+            responseStream.Close();
+            httpClient.Dispose();
+
+            return new Variable(localFilePath);
         }
     }
 }

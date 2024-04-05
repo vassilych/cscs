@@ -96,6 +96,7 @@ namespace SplitAndMerge
         public const string DECODE = "decode";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
+        public const string DOWNLOAD = "Download";
         public const string ENV = "env";
         public const string ENCODE = "encode";
         public const string EXIT = "exit";
