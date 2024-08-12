@@ -1227,17 +1227,17 @@ namespace SplitAndMerge
         }
         public static Variable Download(string requestUrl)
         {
-            var task = DownloadAsync(requestUrl);
-            task.Wait(s_timeout);
-            var result = task.Result;
+            var awaiter = DownloadAsync(requestUrl).GetAwaiter();
+            var result = awaiter.GetResult();
 
             return result;
         }
         public static async Task<Variable> DownloadAsync(string requestUrl)
         {
-            var localFilePath = Path.GetTempFileName();
+            var ext = Path.GetExtension(requestUrl);
+            var localFilePath = Path.GetTempFileName() + ext;
             var httpClient = new HttpClient();
-            var responseStream = await httpClient.GetStreamAsync(requestUrl);
+            var responseStream = await httpClient.GetStreamAsync(requestUrl).ConfigureAwait(false);
             var fileStream = new FileStream(localFilePath, FileMode.Create);
             responseStream.CopyTo(fileStream);
             fileStream.Close();

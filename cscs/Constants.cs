@@ -267,6 +267,7 @@ namespace SplitAndMerge
 
         public static char[] COMPARE_ARRAY = "<>=)".ToCharArray();
         public static char[] IF_ARG_ARRAY = "&|)".ToCharArray();
+        public static char[] END_SPACE_ARRAY = { SPACE, END_STATEMENT };
         public static char[] END_PARSE_ARRAY = { SPACE, END_STATEMENT, END_ARG, END_GROUP, '\n' };
         public static char[] NEXT_OR_END_ARRAY = { NEXT_ARG, END_ARG, END_GROUP, END_STATEMENT, SPACE };
         public static char[] NEXT_OR_END_ARRAY_EXT = { NEXT_ARG, END_ARG, END_GROUP, END_ARRAY, END_STATEMENT, SPACE };
