@@ -81,7 +81,8 @@ namespace SplitAndMerge
 
         public static Action<Interpreter> InterpreterNotification { get; set; }
         static Interpreter m_interpreter;
-        public static Interpreter TheInterpreter {
+        public static Interpreter TheInterpreter
+        {
             get
             {
                 if (m_interpreter == null)
@@ -171,7 +172,7 @@ namespace SplitAndMerge
                 {
                     m_script = Utils.ConvertToScript(TheInterpreter, rawScript, out m_char2Line, filename);
                 }
-                catch(ParsingException exc)
+                catch (ParsingException exc)
                 {
                     ProcessException(m_debugging, exc);
                     return;
@@ -184,7 +185,7 @@ namespace SplitAndMerge
 
                 m_steppingIns.Clear();
                 m_completedStepIn.Reset();
-                ProcessingBlock = SendBackResult = InInclude = End =  false;      
+                ProcessingBlock = SendBackResult = InInclude = End = false;
                 m_blockLevel = m_maxBlockLevel = 0;
             }
             else if (action == DebuggerUtils.DebugAction.VARS)
@@ -267,6 +268,7 @@ namespace SplitAndMerge
         {
             if (result != null &&
                 result.Type == Variable.VarType.ARRAY &&
+                result.Tuple != null &&
                 result.Tuple.Count >= 3 &&
                 result.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
             {
@@ -443,7 +445,7 @@ namespace SplitAndMerge
             {
                 Debugger stepIn = MainInstance.m_steppingIns.Peek();
                 m_startFilename = stepIn.m_debugging.Filename;
-                m_startLine     = stepIn.m_debugging.OriginalLineNumber;
+                m_startLine = stepIn.m_debugging.OriginalLineNumber;
                 stepIn.m_completedStepIn.Set();
                 return null;
             }
@@ -580,7 +582,8 @@ namespace SplitAndMerge
             ParsingScript tempScript = new ParsingScript(TheInterpreter, stepInScript.String, stepInScript.Pointer);
             tempScript.ParentScript = stepInScript;
             tempScript.InTryBlock = stepInScript.InTryBlock;
-            /* string body = */ Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
+            /* string body = */
+            Utils.GetBodyBetween(tempScript, Constants.START_GROUP, Constants.END_GROUP);
 
             m_blockLevel++;
             m_maxBlockLevel = Math.Max(m_maxBlockLevel, m_blockLevel);
