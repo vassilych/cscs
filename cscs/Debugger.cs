@@ -267,7 +267,6 @@ namespace SplitAndMerge
         {
             if (result != null &&
                 result.Type == Variable.VarType.ARRAY &&
-                result.Tuple != null &&
                 result.Tuple.Count >= 3 &&
                 result.Tuple[0].AsString() == Constants.GET_FILE_FROM_DEBUGGER)
             {
