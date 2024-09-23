@@ -136,7 +136,7 @@ namespace SplitAndMerge
         public virtual Variable DeepClone(string newName = "")
         {
             Variable newVar = (Variable)this.MemberwiseClone();
-            if (m_tuple != null)
+            if (Type == VarType.ARRAY && m_tuple != null)
             {
                 List<Variable> newTuple = new List<Variable>();
                 foreach (var item in m_tuple)
@@ -1436,7 +1436,7 @@ namespace SplitAndMerge
                         }
                         else
                         {
-                            conversion = Conversion.Exact;
+                                conversion = Conversion.Exact;
                         }
 
                         return value;
@@ -1472,7 +1472,7 @@ namespace SplitAndMerge
                     {
                         if (value is string svalue)
                         {
-                            return Enum.Parse(conversionType, svalue, true);
+                             return Enum.Parse(conversionType, svalue, true);
                         }
 
                         if (value is double dvalue)
