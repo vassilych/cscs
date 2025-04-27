@@ -33,6 +33,12 @@ namespace SplitAndMerge
             Id = id;
             m_text = Utils.RemovePrefix(OriginalText);
         }
+        public WordHint(string word, string text, int id)
+        {
+            OriginalText = word;
+            Id = id;
+            m_text = text;
+        }
     }
     public class TrieCell
     {
@@ -120,13 +126,25 @@ namespace SplitAndMerge
             m_root.AddChild(hint);
 
             string text = hint.Text;
+            if (text.StartsWith("¡") || text.StartsWith("¿"))
+            {
+                text = text.Substring(1);
+            }
             int space = text.IndexOf(' ');
+            /*if (word.Contains("number"))
+            {
+                int x = 0;
+            }*/
             while (space > 0)
             {
                 string candidate = text.Substring(space + 1);
+                if (candidate.StartsWith("("))
+                {
+                    candidate = candidate.Substring(1);
+                }
                 if (!string.IsNullOrWhiteSpace(candidate))
                 {
-                    hint = new WordHint(candidate, index);
+                    hint = new WordHint(word, candidate, index);
                     m_root.AddChild(hint);
                     //Console.WriteLine("TRIE candidate [{0}] voice {1}", candidate, m_voice);
                 }
