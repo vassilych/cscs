@@ -967,6 +967,16 @@ namespace SplitAndMerge
             }
 
             SkipRestBlocks(script);
+            var pos = script.Pointer;
+            var fin = Utils.GetNextToken(script);
+            if (string.Compare(fin, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                result = ProcessBlock(script);
+            }
+            else
+            {
+                script.Pointer = pos;
+            }
             return result;
         }
         internal async Task<Variable> ProcessTryAsync(ParsingScript script)
@@ -1033,6 +1043,16 @@ namespace SplitAndMerge
             }
 
             SkipRestBlocks(script);
+            var pos = script.Pointer;
+            var fin = Utils.GetNextToken(script);
+            if (string.Compare(fin, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                result = await ProcessBlockAsync(script);
+            }
+            else
+            {
+                script.Pointer = pos;
+            }
             return result;
         }
 

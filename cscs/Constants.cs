@@ -59,6 +59,7 @@ namespace SplitAndMerge
         public const string DO = "do";
         public const string ELSE = "else";
         public const string ELSE_IF = "elif";
+        public const string FINALLY = "finally";
         public const string FOR = "for";
         public const string FUNCTION = "function";
         public const string CLASS = "class";

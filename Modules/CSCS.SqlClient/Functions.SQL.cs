@@ -317,10 +317,24 @@ namespace SplitAndMerge
                 }
                 var parameter = new SqlParameter(paramData.Tuple[0].AsString(),
                                                  paramData.Tuple[1].AsObject());
+                parameter.DbType = GetType(paramData.Tuple[1], parameter.DbType);
                 sp.Add(parameter);
             }
 
             return sp.Count == 0 ? null : sp;
+        }
+
+        public static DbType GetType(Variable var, DbType initType)
+        {
+            if (initType == DbType.Double)
+            {
+                var numValue = var.AsDouble();
+                if (Math.Abs(numValue % 1) <= (Double.Epsilon * 100))
+                {
+                    return DbType.Int32;
+                }
+            }
+            return initType;
         }
 
         public Dictionary<string, SqlDbType> GetColumnData(string tableName)
