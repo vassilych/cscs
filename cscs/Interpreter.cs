@@ -1568,7 +1568,8 @@ namespace SplitAndMerge
             name = Constants.ConvertName(name);
             Utils.CheckLegalName(name, script);
 
-            bool globalOnly = !localIfPossible && !LocalNameExists(name);
+            bool shouldbeLocal = script.StackLevel != null;
+            bool globalOnly = !localIfPossible && !LocalNameExists(name) && !shouldbeLocal;
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
             if (!globalOnly && lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
             {
