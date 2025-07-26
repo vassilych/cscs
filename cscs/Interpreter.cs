@@ -146,6 +146,7 @@ namespace SplitAndMerge
         public void RegisterFunctions()
         {
             RegisterFunction(Constants.IF, new IfStatement());
+            RegisterFunction(Constants.IFF, new IffStatement());
             RegisterFunction(Constants.DO, new DoWhileStatement());
             RegisterFunction(Constants.WHILE, new WhileStatement());
             RegisterFunction(Constants.SWITCH, new SwitchStatement());
@@ -903,6 +904,45 @@ namespace SplitAndMerge
                    result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
         }
 
+        internal Variable ProcessIff(ParsingScript script)
+        {
+            Variable result = script.Execute(Constants.NEXT_ARG_ARRAY);
+            bool isTrue = Convert.ToBoolean(result.Value);
+            script.MoveForwardIf(Constants.NEXT_ARG);
+
+            if (isTrue)
+            {
+                result = script.Execute(Constants.NEXT_ARG_ARRAY);
+                SkipExpression(script);
+            }
+            else
+            {
+                SkipExpression(script);
+                result = script.Execute(Constants.NEXT_ARG_ARRAY);
+            }
+
+            return result;
+        }
+        internal async Task<Variable> ProcessIffAsync(ParsingScript script)
+        {
+            Variable result = await script.ExecuteAsync(Constants.NEXT_ARG_ARRAY);
+            bool isTrue = Convert.ToBoolean(result.Value);
+            script.MoveForwardIf(Constants.NEXT_ARG);
+
+            if (isTrue)
+            {
+                result = await script.ExecuteAsync(Constants.NEXT_ARG_ARRAY);
+                SkipExpression(script);
+            }
+            else
+            {
+                SkipExpression(script);
+                result = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
+            }
+
+            return result;
+        }
+
         internal Variable ProcessTry(ParsingScript script)
         {
             int startTryCondition = script.Pointer - 1;
@@ -1223,6 +1263,75 @@ namespace SplitAndMerge
             if (startCount != endCount)
             {
                 throw new ArgumentException("Mismatched parentheses");
+            }
+        }
+
+        internal void SkipExpression(ParsingScript script)
+        {
+            int blockStart = script.Pointer;
+            int startParenthesis = 0;
+            int endParenthesis = 0;
+            bool inQuotes = false;
+            bool inQuotes1 = false;
+            bool inQuotes2 = false;
+            char previous = Constants.EMPTY;
+            char prevprev = Constants.EMPTY;
+            bool done = false;
+            script.MoveForwardIf(Constants.NEXT_ARG);
+
+            while (!done)
+            {
+                if (!script.StillValid())
+                {
+                    throw new ArgumentException("Couldn't skip expression [" +
+                        script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
+                }
+                char currentChar = script.CurrentAndForward();
+                switch (currentChar)
+                {
+                    case Constants.QUOTE1:
+                        if (!inQuotes2 && (previous != '\\' || prevprev == '\\'))
+                        {
+                            inQuotes = inQuotes1 = !inQuotes1;
+                        }
+                        break;
+                    case Constants.QUOTE:
+                        if (!inQuotes1 && (previous != '\\' || prevprev == '\\'))
+                        {
+                            inQuotes = inQuotes2 = !inQuotes2;
+                        }
+                        break;
+                    case Constants.START_ARG:
+                        if (!inQuotes)
+                        {
+                            startParenthesis++;
+                            done = startParenthesis < endParenthesis;
+                        }
+                        break;
+                    case Constants.END_ARG:
+                        if (!inQuotes)
+                        {
+                            endParenthesis++;
+                            done = startParenthesis < endParenthesis;
+                        }
+                        break;
+                    case Constants.NEXT_ARG:
+                        if (!inQuotes)
+                        {
+                            done = startParenthesis <= endParenthesis;
+                        }
+                        break;
+                    case Constants.START_GROUP:
+                    case Constants.END_GROUP:
+                        if (!inQuotes)
+                        {
+                            throw new ArgumentException("Not sllowed to have curly braces in this block [" +
+                            script.Substr(blockStart, Constants.MAX_CHARS_TO_SHOW) + "]");
+                        }
+                        break;
+                }
+                prevprev = previous;
+                previous = currentChar;
             }
         }
 
@@ -1568,7 +1677,7 @@ namespace SplitAndMerge
             name = Constants.ConvertName(name);
             Utils.CheckLegalName(name, script);
 
-            bool shouldbeLocal = script.StackLevel != null;
+            bool shouldbeLocal = script != null && script.StackLevel != null && script.ParentScript != null;
             bool globalOnly = !localIfPossible && !LocalNameExists(name) && !shouldbeLocal;
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
             if (!globalOnly && lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))

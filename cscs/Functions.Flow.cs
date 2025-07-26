@@ -1716,6 +1716,24 @@ namespace SplitAndMerge
         }
     }
 
+    class IffStatement : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            Variable result = InterpreterInstance.ProcessIff(script);
+            return result;
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            Variable result = await InterpreterInstance.ProcessIffAsync(script);
+            return result;
+        }
+        public override string Description()
+        {
+            return "A short-cut of an if-else statement: iff (condition, condition_true, condition_false)";
+        }
+    }
+
     class ForStatement : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)

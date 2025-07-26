@@ -65,6 +65,7 @@ namespace SplitAndMerge
         public const string CLASS = "class";
         public const string ENUM = "enum";
         public const string IF = "if";
+        public const string IFF = "iff";
         public const string INCLUDE = "include";
         public const string IMPORT = "import";
         public const string IMPORT_DLL = "importDll";

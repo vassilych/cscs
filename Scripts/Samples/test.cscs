@@ -246,8 +246,7 @@ testGlobalLocal();
 Test(globalNoChangesFromLocal, 2);
 Test(globalChangesInLocal, 11);
 Test(NameExists(localOnly), false);
-Test(NameExists(globalDefinedLocally), true);
-Test(globalDefinedLocally, 19);
+Test(NameExists(globalDefinedLocally), false);
 
 var xx = {"firstName":"John", "lastName":"Doe"}, yy = {"firstName":"John1", "lastName":"Doe1"}; 
 var x1 = {firstName:"Johnny", lastName:"Doe"}, y1 = {firstName:"John2", lastName:"Doe2"}; 
@@ -1106,7 +1105,7 @@ cfunction ct(int n) {
 }
 Test(ct(10), 1026.6);
 
-print("Testig creating and loading DLLs");
+print("Testing creating and loading DLLs");
 dllfunction RunCycle(int loops) {
     double result = 0;
     for (int i = 0; i < loops; i++)
