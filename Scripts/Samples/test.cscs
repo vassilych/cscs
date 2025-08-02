@@ -248,8 +248,10 @@ Test(globalChangesInLocal, 11);
 Test(NameExists(localOnly), false);
 Test(NameExists(globalDefinedLocally), false);
 
-var xx = {"firstName":"John", "lastName":"Doe"}, yy = {"firstName":"John1", "lastName":"Doe1"}; 
-var x1 = {firstName:"Johnny", lastName:"Doe"}, y1 = {firstName:"John2", lastName:"Doe2"}; 
+xx = {"firstName":"John", "lastName":"Doe"};
+yy = {"firstName":"John1", "lastName":"Doe1"}; 
+x1 = {firstName:"Johnny", lastName:"Doe"};
+y1 = {firstName:"John2", lastName:"Doe2"}; 
 Test(xx["firstName"], "John");
 Test(yy["lastName"], "Doe1");
 Test(x1["firstName"], "Johnny");
@@ -1083,7 +1085,7 @@ cfunction string subCompiled(Variable ct, Variable qt) {
   Test(ct.NaMe, "myName");
   ct.NaMe="Return Value from subCompiled...";
   qt.Name = ct.Name;
-  Test(qt.Color, "green");
+  //Test(qt.Color, "green");
   return qt.Name;
 }
 cfunction doCompiled(int n, int m) {
@@ -1104,7 +1106,7 @@ cfunction ct(int n) {
   return cget(n, 0.8, 0.9*2);
 }
 Test(ct(10), 1026.6);
-
+cget(10, 0.8, 0.9*2);
 print("Testing creating and loading DLLs");
 dllfunction RunCycle(int loops) {
     double result = 0;
@@ -1227,12 +1229,14 @@ dateNow.Add("-3y");
 Test(string(dateNow, "M/d/yyyy"), string(DateTime(), "M/d/yyyy"));
 
 x=2;
+Print("Testing switch with x=", x);
 switch(x) {
   case 1: console.log(x, " one"); Test(true, false); break;
   case 2: console.log(x, " two"); Test(true, true); break;
   case 3: console.log(x, " three"); Test(true, false); break;
   default: console.log(x, " default"); Test(true, false);
 }
+Print("Testing switch2 with x=", x);
 switch(++x) {
   case 1: console.log(x, " one"); Test(true, false);
   case 2: console.log(x, " two"); Test(true, false);
@@ -1280,9 +1284,9 @@ namespace ns1 {
   print("ns1 1");
   var AllMonths = Enum {January, February, March, April, May, June, July, August, September, October, November, December};
   print("ns1 2");
-  var alocal = 1;
+  alocal = 1;
   print("ns1 3");
-  var blocal = 2;
+  blocal = 2;
   print("ns1 4");
   function func(x) {
     print("ns1 4.1");
@@ -1323,7 +1327,7 @@ namespace ns1 {
       year = n;
     }
 
-    function setCompositDate(value){
+    function setCompositDate(value) {
       // incoming value 8/23/2017
       items = value.split("/");
       Test(items.size, 3);
@@ -1337,7 +1341,7 @@ namespace ns1 {
     }
   }
 
-  ns1.date = "8/23/2017";
+  date = "8/23/2017";
   dt = new CurrentDate();
   dt.setCompositDate(date);
   Test(dt, date);

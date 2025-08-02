@@ -294,6 +294,8 @@ namespace SplitAndMerge
                 }
                 var varName = arg.Substring(0, ind);
                 ParsingScript tempScript = NewParsingScript(arg.Substring(ind + 1));
+                tempScript.StackLevel = script.StackLevel;
+                tempScript.ParentScript = script.ParentScript;
                 AssignFunction assign = new AssignFunction(InterpreterInstance);
                 result = assign.Assign(tempScript, varName, true);
             }
@@ -320,6 +322,8 @@ namespace SplitAndMerge
                 }
                 var varName = arg.Substring(0, ind);
                 ParsingScript tempScript = NewParsingScript(arg.Substring(ind + 1));
+                tempScript.StackLevel = script.StackLevel;
+                tempScript.ParentScript = script.ParentScript;
                 AssignFunction assign = new AssignFunction(InterpreterInstance);
                 result = assign.AssignAsync(tempScript, varName, true);
             }
@@ -967,6 +971,7 @@ namespace SplitAndMerge
 
                 ParsingScript tempScript = script.GetTempScript(body);
                 tempScript.DisableBreakpoints = true;
+                tempScript.Namespace = namespaceName;
                 tempScript.MoveForwardIf(Constants.START_GROUP);
 
                 Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
@@ -1137,7 +1142,7 @@ namespace SplitAndMerge
                 }
             }
 
-            InterpreterInstance.AddLocalVariables(m_stackLevel);
+            InterpreterInstance.AddLocalVariables(m_stackLevel.Clone());
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -1193,6 +1198,7 @@ namespace SplitAndMerge
             ParsingScript tempScript = Utils.GetTempScript(InterpreterInstance,
                                                            m_body, m_stackLevel, m_name, script,
                                                            m_parentScript, m_parentOffset, instance);
+            tempScript.Namespace = script?.Namespace;
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (script != null && debugger != null)
@@ -1232,6 +1238,7 @@ namespace SplitAndMerge
             ParsingScript tempScript = Utils.GetTempScript(InterpreterInstance,
                                                            m_body, m_stackLevel, m_name, script,
                                                            m_parentScript, m_parentOffset, instance);
+            tempScript.Namespace = script?.Namespace != null ? script.Namespace : (NamespaceData != null ? NamespaceData.Name : null);
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (debugger != null)
@@ -1395,20 +1402,19 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            var item = string.IsNullOrEmpty(script.Item) ? "" : script.Item;
             // First check if the passed expression is a string between quotes.
-            if (Item.Length > 1 &&
-              ((Item[0] == Constants.QUOTE  && Item[Item.Length - 1] == Constants.QUOTE) ||
-               (Item[0] == Constants.QUOTE1 && Item[Item.Length - 1] == Constants.QUOTE1)))
+            if (item.Length > 1 &&
+              ((item[0] == Constants.QUOTE  && item[item.Length - 1] == Constants.QUOTE) ||
+               (item[0] == Constants.QUOTE1 && item[item.Length - 1] == Constants.QUOTE1)))
             {
-                return new Variable(Item.Substring(1, Item.Length - 2));
+                return new Variable(item.Substring(1, item.Length - 2));
             }
 
             // Otherwise this should be a number.
-            double num = Utils.ConvertToDouble(Item, script);
+            double num = Utils.ConvertToDouble(item, script);
             return new Variable(num);
         }
-
-        public string Item { private get; set; }
     }
 
     class AddFunction : ParserFunction
@@ -2315,7 +2321,6 @@ namespace SplitAndMerge
             m_name = Constants.GetRealName(varName);
             script.CurrentAssign = m_name;
             Variable varValue = Utils.GetItem(script);
-
             script.MoveBackIfPrevious(Constants.END_ARG);
             varValue.TrySetAsMap();
 
@@ -2902,7 +2907,7 @@ namespace SplitAndMerge
 
             if (script.StackLevel != null)
             {
-                InterpreterInstance.AddLocalVariable(new GetVarFunction(currentValue), varName);
+                InterpreterInstance.AddLocalVariable(new GetVarFunction(currentValue), script, varName);
             }
             else if (script.CurrentClass != null)
             {

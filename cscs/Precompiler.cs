@@ -1386,7 +1386,7 @@ namespace SplitAndMerge
             }
 
             sb.AppendLine(m_depth + ARGS_TEMP_VAR + " =\"" + argsStr + "\";");
-            sb.AppendLine(m_depth + SCRIPT_TEMP_VAR + " = new ParsingScript(__interpreter, " + ARGS_TEMP_VAR + ");");
+            sb.AppendLine(m_depth + SCRIPT_TEMP_VAR + " = new ParsingScript(__interpreter, " + ARGS_TEMP_VAR + ", true);");
             sb.AppendLine(m_depth + PARSER_TEMP_VAR + " = new ParserFunction(" + SCRIPT_TEMP_VAR + ", \"" + functionName +
                 "\", '" + ch + "', ref " + ACTION_TEMP_VAR + ");");
 

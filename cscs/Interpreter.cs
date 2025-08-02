@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using static SplitAndMerge.ParserFunction;
 using System.IO;
+using System.Xml.Linq;
+using static System.Collections.Specialized.BitVector32;
 
 
 namespace SplitAndMerge
@@ -918,7 +920,7 @@ namespace SplitAndMerge
             else
             {
                 SkipExpression(script);
-                result = script.Execute(Constants.NEXT_ARG_ARRAY);
+                result = script.Execute(Constants.END_ARG_ARRAY);
             }
 
             return result;
@@ -1266,6 +1268,7 @@ namespace SplitAndMerge
             }
         }
 
+        // Skips an expression up to a , or a closing ). Does not let {}.
         internal void SkipExpression(ParsingScript script)
         {
             int blockStart = script.Pointer;
@@ -1555,8 +1558,13 @@ namespace SplitAndMerge
             }
             name = Constants.ConvertName(name);
             ParserFunction impl;
-            StackLevel localStack = script != null && script.StackLevel != null ?
-                 script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
+            StackLevel localStack = script?.StackLevel != null ? script.StackLevel : script != null && script.Compiled ?
+                s_lastExecutionLevel : null;
+            if (localStack == null && !string.IsNullOrWhiteSpace(script.Namespace) &&
+                s_namespaces.TryGetValue(script.Namespace, out StackLevel level))
+            {
+                localStack = level;
+            }
             if (localStack != null)
             {
                 Dictionary<string, ParserFunction> local = localStack.Variables;
@@ -1577,6 +1585,18 @@ namespace SplitAndMerge
             {
                 return impl.NewInstance();
             }
+            if (!string.IsNullOrWhiteSpace(script.Namespace))
+            {
+                var cand = script.Namespace + "." + name;
+                if (s_variables.TryGetValue(cand, out impl))
+                {
+                    return impl.NewInstance();
+                }
+                if (localStack != null && localStack.Variables.TryGetValue(cand, out impl))
+                {
+                    return impl.NewInstance();
+                }
+            }
 
             return GetFunction(name);
         }
@@ -1585,7 +1605,7 @@ namespace SplitAndMerge
         {
             name = Constants.ConvertName(name);
             ParserFunction impl = null;
-            StackLevel localStack = script != null && script.StackLevel != null ?
+            StackLevel localStack = script?.StackLevel != null ?
                  script.StackLevel : s_locals.Count > StackLevelDelta ? s_lastExecutionLevel : null;
             if (localStack != null && localStack.Variables.TryGetValue(name, out impl) &&
                 impl is GetVarFunction)
@@ -1677,30 +1697,35 @@ namespace SplitAndMerge
             name = Constants.ConvertName(name);
             Utils.CheckLegalName(name, script);
 
-            bool shouldbeLocal = script != null && script.StackLevel != null && script.ParentScript != null;
+            bool shouldbeLocal = script?.StackLevel != null && script?.ParentScript != null;
             bool globalOnly = !localIfPossible && !LocalNameExists(name) && !shouldbeLocal;
             Dictionary<string, ParserFunction> lastLevel = GetLastLevel();
             if (!globalOnly && lastLevel != null && s_lastExecutionLevel.IsNamespace && !string.IsNullOrWhiteSpace(s_namespace))
             {
                 name = s_namespacePrefix + name;
             }
+            else if (!string.IsNullOrWhiteSpace(script?.Namespace))
+            {
+                name = script.Namespace + "." + name;
+            }
 
             function.Name = Constants.GetRealName(name);
             function.Value.ParamName = function.Name;
 
-            if (!globalOnly && !localIfPossible && script != null && script.StackLevel != null && !GlobalNameExists(name))
+            if (!globalOnly && !localIfPossible && script?.StackLevel != null && !GlobalNameExists(name))
             {
                 script.StackLevel.Variables[name] = function;
             }
 
-            if (!globalOnly && s_locals.Count > StackLevelDelta &&
+            if (!globalOnly && s_locals.Count > StackLevelDelta && shouldbeLocal &&
                (localIfPossible || LocalNameExists(name) || !GlobalNameExists(name)))
             {
-                AddLocalVariable(function);
+                AddLocalVariable(function, script);
             }
             else
             {
                 AddGlobal(name, function, false /* not native */);
+                var val = function is GetVarFunction ? (function as GetVarFunction).Value.AsInt() : -1;
             }
         }
 
@@ -1921,7 +1946,7 @@ namespace SplitAndMerge
             {
                 AddVariables(vars, lastLevel);
             }
-            if (script != null && script.StackLevel != null)
+            if (script?.StackLevel != null)
             {
                 AddVariables(vars, script.StackLevel.Variables);
             }
@@ -1945,7 +1970,7 @@ namespace SplitAndMerge
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
             if (!isNative)
             {
-                Translation.AddTempKeyword(name);
+                //Translation.AddTempKeyword(name);
             }
 #endif
             if (handle != null && function is GetVarFunction)
@@ -2069,36 +2094,40 @@ namespace SplitAndMerge
             }
         }
 
-        public void AddLocalVariable(ParserFunction local, string varName = "")
+        public void AddLocalVariable(ParserFunction local, ParsingScript script, string varName = "")
         {
             local.InterpreterInstance = this;
 
             NormalizeValue(local);
             local.m_isGlobal = false;
+            var handle = OnVariableChange;
+            bool exists = false;
 
             lock (s_variables)
             {
-
                 if (s_lastExecutionLevel == null)
                 {
                     s_lastExecutionLevel = new StackLevel();
                     s_locals.Push(s_lastExecutionLevel);
                 }
+
+                var name = Constants.ConvertName(string.IsNullOrWhiteSpace(varName) ? local.Name : varName);
+                local.Name = Constants.GetRealName(name);
+                if (local is GetVarFunction getVarFunction)
+                {
+                    getVarFunction.Value.ParamName = local.Name;
+                }
+
+                exists = handle != null && s_lastExecutionLevel.Variables.ContainsKey(name);
+
+                s_lastExecutionLevel.Variables[name] = local;
+                if (script?.StackLevel != null)
+                {
+                    script.StackLevel.Variables[name] = local;
+                }
             }
-
-            var name = Constants.ConvertName(string.IsNullOrWhiteSpace(varName) ? local.Name : varName);
-            local.Name = Constants.GetRealName(name);
-            if (local is GetVarFunction getVarFunction)
-            {
-                getVarFunction.Value.ParamName = local.Name;
-            }
-
-            var handle = OnVariableChange;
-            bool exists = handle != null && s_lastExecutionLevel.Variables.ContainsKey(name);
-
-            s_lastExecutionLevel.Variables[name] = local;
 #if UNITY_EDITOR == false && UNITY_STANDALONE == false && __ANDROID__ == false && __IOS__ == false
-            Translation.AddTempKeyword(name);
+            //Translation.AddTempKeyword(name);
 #endif
             if (handle != null && local is GetVarFunction localFunction)
             {

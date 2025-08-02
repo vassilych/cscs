@@ -58,6 +58,12 @@
     <ProjectReference Include="..\Modules\CSCS.Tests\CSCS.Tests.csproj">
       <Name>CSCS.Tests</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Modules\CSCS.Math\CSCS.Math.csproj">
+      <Name>CSCS.Math</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Modules\CSCS.SqlClient\CSCS.SqlClient.csproj">
+      <Name>CSCS.SqlClient</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

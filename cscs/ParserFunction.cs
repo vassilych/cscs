@@ -83,8 +83,8 @@ namespace SplitAndMerge
             }
 
             // Function not found, will try to parse this as a string in quotes or a number.
-            s_strOrNumFunction.Item = item;
             m_impl = s_strOrNumFunction;
+            script.Item = item;
         }
 
         static ParserFunction CheckString(ParsingScript script, string item, char ch)
@@ -94,12 +94,12 @@ namespace SplitAndMerge
                (item[0] == Constants.QUOTE1 && item[item.Length - 1] == Constants.QUOTE1)))
             {
                 // We are dealing with a string.
-                s_strOrNumFunction.Item = item;
+                script.Item = item;
                 return s_strOrNumFunction;
             }
             if (script.ProcessingList && ch == ':')
             {
-                s_strOrNumFunction.Item = '"' + item + '"';
+                script.Item = '"' + item + '"';
                 return s_strOrNumFunction;
             }
             return null;
@@ -171,6 +171,13 @@ namespace SplitAndMerge
                 Name = name;
                 IsNamespace = isNamespace;
                 Variables = new Dictionary<string, ParserFunction>();
+            }
+            public StackLevel Clone()
+            {
+                var clone = new StackLevel(Name, IsNamespace);
+                clone.Variables = Variables.ToDictionary(entry => entry.Key,
+                                               entry => entry.Value);
+                return clone;
             }
 
             public string Name { get; private set; }
