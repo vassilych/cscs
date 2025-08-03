@@ -462,6 +462,20 @@ namespace SplitAndMerge
                 result = script.Execute(Constants.TERNARY_SEPARATOR);
                 script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
                 Utils.SkipRestExpr(script, Constants.END_STATEMENT);
+                script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+                if (script.Current == '+')
+                {
+                    script.Forward();
+                    var rest = GetNextItem(script);
+                    if (result.Type == Variable.VarType.NUMBER)
+                    {
+                        result.Value += rest.AsDouble();
+                    }
+                    else
+                    {
+                        result.String += rest.AsString();
+                    }
+                }
             }
             else
             {
@@ -475,6 +489,17 @@ namespace SplitAndMerge
             listToMerge(listInput);
 
             return true;
+        }
+
+        public static Variable GetNextItem(ParsingScript script)
+        {
+            ParsingScript tempScript = script.GetTempScript(script.Rest);
+            tempScript.Namespace = script.Namespace;
+            tempScript.CurrentClass = script.CurrentClass;
+            tempScript.MoveForwardIf(Constants.START_GROUP);
+            tempScript.DisableBreakpoints = true;
+            var result = script.Execute();
+            return result;
         }
 
         static bool UpdateIfBool(ParsingScript script, Variable current, Action<Variable> updateCurrent, List<Variable> listInput, Action<List<Variable>> listToMerge)
