@@ -410,7 +410,12 @@ namespace SplitAndMerge
                                    ch == Constants.START_GROUP ||
                                  next == Constants.EMPTY)
             {
-                return false;
+                // Special case: collect all array indices. Except when we explicitly collect them
+                if (!(ch == Constants.END_ARRAY && to.Length > 1 && to.Contains(Constants.END_ARRAY) &&
+                    next == Constants.START_ARRAY))
+                {
+                    return false;
+                }
             }
 
             // Case of a negative number, or a pointer, or starting with the closing bracket:
