@@ -2319,6 +2319,26 @@ namespace SplitAndMerge
             return varFunc;
         }
 
+        public static Variable TryExtractArray(Variable candidate, string data, ParsingScript script)
+        {
+            if (candidate.Type == Variable.VarType.ARRAY && script.Current == Constants.START_ARRAY)
+            {
+                GetVarFunction varFunc = new GetVarFunction(candidate);
+                var varName = data + script.Rest;
+                var delta = 0;
+                var arrayName = "";
+                var arrayIndices = Utils.GetArrayIndices(script, varName, delta,
+                    (string arr, int del) => { arrayName = arr; delta = del; });
+                delta -= data.Length;
+                script.Forward(1);
+                varFunc.Indices = arrayIndices;
+                varFunc.Delta = delta;
+
+                candidate = varFunc.GetValue(script);
+            }
+            return candidate;
+        }
+
         static bool ActionForUndefined(string action)
         {
             return !string.IsNullOrWhiteSpace(action) && action.EndsWith("=") && action.Length > 1;

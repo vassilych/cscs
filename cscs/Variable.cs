@@ -1753,7 +1753,10 @@ namespace SplitAndMerge
                 var option = Utils.GetSafeString(args, 1);
                 var max = Utils.GetSafeInt(args, 2, int.MaxValue - 1);
 
-                return TokenizeFunction.Tokenize(AsString(), sep, option, max);
+                var data = AsString();
+                var candidate = TokenizeFunction.Tokenize(data, sep, option, max);
+                var splitResult = Interpreter.TryExtractArray(candidate, data, script);
+                return splitResult;
             }
             else if (script != null && propName.Equals(Constants.JOIN, StringComparison.OrdinalIgnoreCase))
             {
