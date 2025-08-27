@@ -77,8 +77,8 @@ namespace SplitAndMerge
                 bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
                 {
-                    continue;
-                    //return listToMerge;
+                    //continue;
+                    return listToMerge;
                 }
 
                 bool negSign = CheckConsistencyAndSign(script, listToMerge, action, ref token);
@@ -126,8 +126,8 @@ namespace SplitAndMerge
                 bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
                 {
-                    continue;
-                    //return listToMerge;
+                    //continue;
+                    return listToMerge;
                 }
 
                 bool negSign = CheckConsistencyAndSign(script, listToMerge, action, ref token);

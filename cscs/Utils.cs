@@ -196,7 +196,8 @@ namespace SplitAndMerge
             string code = script == null || string.IsNullOrWhiteSpace(script.OriginalScript) ? "" : script.OriginalScript;
             int lineNumber = script == null ? 0 : script.OriginalLineNumber;
             string filename = script == null || string.IsNullOrWhiteSpace(script.Filename) ? "" : script.Filename;
-            int minLines = script == null || script.OriginalLine.ToLower().Contains(token.ToLower()) ? 1 : 2;
+            int minLines = script == null || (!string.IsNullOrEmpty(token) &&
+                script.OriginalLine.ToLower().Contains(token.ToLower())) ? 1 : 2;
 
             ThrowErrorMsg(msg, code, lineNumber, filename, minLines);
         }

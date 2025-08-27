@@ -23,10 +23,12 @@ namespace SplitAndMerge
 
         public Variable()
         {
+            ID = ++GlobalID;
             Reset();
         }
         public Variable(VarType type)
         {
+            ID = ++GlobalID;
             Type = type;
             if (Type == VarType.ARRAY)
             {
@@ -35,46 +37,55 @@ namespace SplitAndMerge
         }
         public Variable(double d)
         {
+            ID = ++GlobalID;
             Value = d;
             Original = OriginalType.DOUBLE;
         }
         public Variable(int d)
         {
+            ID = ++GlobalID;
             Value = d;
             Original = OriginalType.INT;
         }
         public Variable(long d)
         {
+            ID = ++GlobalID;
             Value = d;
             Original = OriginalType.LONG;
         }
         public Variable(bool d)
         {
+            ID = ++GlobalID;
             Value = d ? 1.0 : 0.0;
             Original = OriginalType.BOOL;
         }
         public Variable(string s)
         {
+            ID = ++GlobalID;
             String = s;
             Original = OriginalType.STRING;
         }
         public Variable(DateTime dt)
         {
+            ID = ++GlobalID;
             DateTime = dt;
             Original = OriginalType.DATE_TIME;
         }
         public Variable(byte[] ba)
         {
+            ID = ++GlobalID;
             ByteArray = ba;
             Original = OriginalType.BYTE_ARRAY;
         }
         public Variable(List<Variable> a)
         {
+            ID = ++GlobalID;
             this.Tuple = a;
             Original = OriginalType.ARRAY;
         }
         public Variable(List<string> a)
         {
+            ID = ++GlobalID;
             List<Variable> tuple = new List<Variable>(a.Count);
             for (int i = 0; i < a.Count; i++)
             {
@@ -85,6 +96,7 @@ namespace SplitAndMerge
         }
         public Variable(List<double> a)
         {
+            ID = ++GlobalID;
             List<Variable> tuple = new List<Variable>(a.Count);
             for (int i = 0; i < a.Count; i++)
             {
@@ -95,6 +107,7 @@ namespace SplitAndMerge
         }
         public Variable(Dictionary<string, string> a)
         {
+            ID = ++GlobalID;
             List<Variable> tuple = new List<Variable>(a.Count);
             foreach (string key in a.Keys)
             {
@@ -108,6 +121,7 @@ namespace SplitAndMerge
         }
         public Variable(Dictionary<string, double> a)
         {
+            ID = ++GlobalID;
             List<Variable> tuple = new List<Variable>(a.Count);
             foreach (string key in a.Keys)
             {
@@ -122,6 +136,7 @@ namespace SplitAndMerge
 
         public Variable(object o, Type t = null)
         {
+            ID = ++GlobalID;
             Object = o;
             Original = OriginalType.OBJECT;
             ObjectType = t == null ? o?.GetType() : t;
@@ -130,12 +145,14 @@ namespace SplitAndMerge
         public virtual Variable Clone()
         {
             Variable newVar = (Variable)this.MemberwiseClone();
+            newVar.ID = ++GlobalID;
             return newVar;
         }
 
         public virtual Variable DeepClone(string newName = "")
         {
             Variable newVar = (Variable)this.MemberwiseClone();
+            newVar.ID = ++GlobalID;
             if (Type == VarType.ARRAY && m_tuple != null)
             {
                 List<Variable> newTuple = new List<Variable>();
@@ -418,8 +435,7 @@ namespace SplitAndMerge
             string hash = indexVar.AsString();
             string lower = hash.ToLower();
             int ptr = m_tuple.Count;
-            if (m_dictionary.TryGetValue(lower, out ptr) &&
-                ptr < m_tuple.Count)
+            if (m_dictionary.TryGetValue(lower, out ptr) && ptr < m_tuple.Count)
             {
                 return ptr;
             }
@@ -429,6 +445,36 @@ namespace SplitAndMerge
                 Int32.TryParse(indexVar.String, out result))
             {
                 return result;
+            }
+            if ((m_dictionary == null || m_dictionary.Count == 0) && Type == VarType.ARRAY && Tuple != null)
+            { // reassign map links from children to the parent
+                m_dictionary = new Dictionary<string, int>();
+                m_keyMappings = new Dictionary<string, string>();
+                for (int i = 0; i < Tuple.Count; i++)
+                {
+                    Variable arg = Tuple[i];
+                    if (arg.m_dictionary == null || arg.m_dictionary.Count == 0)
+                    {
+                        continue;
+                    }
+                    foreach (var kvp in arg.m_dictionary)
+                    {
+                        m_dictionary[kvp.Key] = i;
+                    }
+                    foreach (var kvp in arg.m_keyMappings)
+                    {
+                        m_keyMappings[kvp.Key] = kvp.Value;
+                    }
+                    if (arg.Type == VarType.ARRAY && arg.Tuple != null && arg.Tuple.Count == 1)
+                    {
+                        arg = arg.Tuple[0];
+                        Tuple[i] = arg;
+                    }
+                }
+                if (m_dictionary.TryGetValue(lower, out ptr) && ptr < m_tuple.Count)
+                {
+                    return ptr;
+                }
             }
 
             return -1;
@@ -2297,6 +2343,8 @@ namespace SplitAndMerge
         Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
         Dictionary<int, string> m_enumMap;
 
+        public static int GlobalID { get; private set; }
+        public int ID { get; private set; }
         //Dictionary<string, Func<ParsingScript, Variable, string, Variable>> m_properties = new Dictionary<string, Func<ParsingScript, Variable, string, Variable>>();
     }
 
