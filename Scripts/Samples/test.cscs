@@ -1542,6 +1542,68 @@ Test(c[0], valStr);
 Test(c[1], "value2");
 Test(c.size, 2);
 
+Print("Testing local vars in parallel methods");
+function func1(){
+    localVar = 100;
+    for(iii = 0; iii < 4; iii++){
+        sleep(100);
+        localVar += 1;
+    }
+    //print("exiting func1, localVar=", localVar, ",iii=", iii)
+    return localVar;
+}
+function func2(){
+    localVar = 200;
+    for(iii = 0; iii < 5; iii++){
+        sleep(100);
+        localVar += 1;
+    }
+    return localVar;
+}
+function func3(){
+    localVar = 300;
+    for(iii = 0; iii < 6; iii++){
+        sleep(100);
+        localVar += 1;
+    }
+    return localVar;
+}
+thr1 = newThread(func1()); thr2 = newThread(func2()); thr3 = newThread(func3());
+res1 = threadResult(thr1); res2 = threadResult(thr2); res3 = threadResult(thr3);
+Test(res1, 104); Test(res2, 205); Test(res3, 306);
+thr1 = newThread(func3()); thr2 = newThread(func3()); thr3 = newThread(func3());
+res1 = threadResult(thr1); res2 = threadResult(thr2); res3 = threadResult(thr3);
+Test(res1, 306); Test(res2, 306); Test(res3, 306);
+thr1 = newThread(func1()); thr2 = newThread(func2()); thr3 = newThread(func3());
+res1 = threadResult(thr1);
+print(res1);
+thr1 = newThread(func1());
+res1 = threadResult(thr1);
+Test(res1, 104);
+
+Print("Testing Ternary");
+str = "PREFIX1_" + "ABC_" + ((1 < 2) ? "DEF" : "GHI") + "_JKL" + "_EXTRA" + "_EXTRA2"; 
+Test(str, "PREFIX1_ABC_DEF_JKL_EXTRA_EXTRA2");
+
+Print("Testing dictionaries");
+myDatabases = {}; sqlResults = {};
+sqlResults[0][0] = "lol00"; sqlResults[0][1] = "lol01"; sqlResults[0][2] = "lol02";
+sqlResults[1][0] = "lol10"; sqlResults[1][1] = "lol11"; sqlResults[1][2] = "lol12";
+sqlResults[2][0] = "lol20"; sqlResults[2][1] = "lol21"; sqlResults[2][2] = "lol22";
+for(i = 0; i < Size(sqlResults); i++){
+    line = {"ID" : strTrim(sqlResults[i][0]),
+            "Name" : strTrim(sqlResults[i][1]),
+            "COLLATION" : strTrim(sqlResults[i][2])};
+    myDatabases.Add(line);
+}
+Test(myDatabases[0]["ID"], "lol00");
+Test(myDatabases[1]["Name"], "lol11");
+Test(myDatabases[2]["COLLATION"], "lol22");
+
+varA = "1,2,3,4,5";
+varB = varA.split(",")[1];
+Test(varB, "2");
+
 Timeout = 100;
 MySender = "Tester";
 print(Now(), "Scheduling to run in ", Timeout, "ms.");

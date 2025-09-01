@@ -207,6 +207,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.LOCK, new LockFunction());
             RegisterFunction(Constants.NAMESPACE, new NamespaceFunction());
             RegisterFunction(Constants.NAME_EXISTS, new NameExistsFunction());
+            RegisterFunction(Constants.NEW_THREAD, new ThreadFunction(false, false));
             RegisterFunction(Constants.NOW, new DateTimeFunction());
             RegisterFunction(Constants.PRINT, new PrintFunction());
             RegisterFunction(Constants.PSTIME, new ProcessorTimeFunction());
@@ -237,6 +238,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.STR_UPPER, new StringManipulationFunction(StringManipulationFunction.Mode.UPPER));
             RegisterFunction(Constants.THREAD, new ThreadFunction());
             RegisterFunction(Constants.THREAD_ID, new ThreadIDFunction());
+            RegisterFunction(Constants.THREAD_RESULT, new ThreadFunction(false, true));
             RegisterFunction(Constants.TOKENIZE, new TokenizeFunction());
             RegisterFunction(Constants.TOKENIZE_LINES, new TokenizeLinesFunction());
             RegisterFunction(Constants.TOKEN_COUNTER, new TokenCounterFunction());

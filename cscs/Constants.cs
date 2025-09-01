@@ -113,6 +113,7 @@ namespace SplitAndMerge
         public const string MARSHAL = "marshal";
         public const string NAME_EXISTS = "NameExists";
         public const string NAMESPACE = "Namespace";
+        public const string NEW_THREAD = "NewThread";
         public const string NOW = "Now";
         public const string ON_EXCEPTION = "OnException";
         public const string OBJECT_PROPERTIES = "Properties";
@@ -146,7 +147,8 @@ namespace SplitAndMerge
         public const string STR_TRIM = "StrTrim";
         public const string STR_UPPER = "StrUpper";
         public const string THREAD = "thread";
-        public const string THREAD_ID = "threadid";
+        public const string THREAD_ID = "ThreadId";
+        public const string THREAD_RESULT = "ThreadResult";
         public const string TOKENIZE_LINES = "TokenizeLines";
         public const string TOKEN_COUNTER = "CountTokens";
         public const string TO_BOOL = "bool";

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,7 +10,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
-using System.Security.Policy;
+//using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -370,13 +371,68 @@ namespace SplitAndMerge
 
     public class ThreadFunction : ParserFunction, INumericFunction
     {
+        bool m_poolThread;
+        bool m_extractResult;
+        static ConcurrentDictionary<int, Variable> ThreadResult = new ConcurrentDictionary<int, Variable>();
+        static ConcurrentDictionary<int, Thread> Threads = new ConcurrentDictionary<int, Thread>();
+
+        public ThreadFunction(bool isPoolThread = true, bool extractResult = false)
+        {
+            m_poolThread = isPoolThread;
+            m_extractResult = extractResult;
+        }
         protected override Variable Evaluate(ParsingScript script)
         {
+            if (m_extractResult)
+            {
+                List<Variable> args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, m_name);
+                var threadId = Utils.GetSafeInt(args, 0);
+                return ExtractResult(threadId);
+            }
             string body = script.TryPrev() == Constants.START_GROUP ?
                           Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP) :
                           Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
+
+            if (!m_poolThread)
+            {
+                return NewThread(body);
+            }
+
             RunScript(body, script.InterpreterInstance);
             return Variable.EmptyInstance;
+        }
+
+        public Variable NewThread(string scriptBody)
+        {
+            Thread thread = new Thread(() =>
+            {
+                ParsingScript threadScript = NewParsingScript(scriptBody);
+                threadScript.SetInterpreter(InterpreterInstance);
+                var result = threadScript.ExecuteAll();
+                ThreadResult[Thread.CurrentThread.ManagedThreadId] = result;
+            });
+            thread.Start();
+            Threads[thread.ManagedThreadId] = thread;
+
+            return new Variable(thread.ManagedThreadId);
+        }
+        public Variable ExtractResult(int threadId)
+        {
+            if (!Threads.TryGetValue(threadId, out Thread thread))
+            {
+                return Variable.EmptyInstance;
+            }
+            thread.Join();
+            if (!ThreadResult.TryGetValue(threadId, out Variable result))
+            {
+                return Variable.EmptyInstance;
+            }
+
+            Threads.TryRemove(threadId, out _);
+            ThreadResult.TryRemove(threadId, out _);
+
+            return result;
         }
 
         public void RunScript(string scriptBody, Interpreter interpreter, bool inNewThread = true)
