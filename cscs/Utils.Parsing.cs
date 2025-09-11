@@ -1317,7 +1317,7 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    extracted += script.TryCurrent();
+                    extracted += script.TryCurrentAndForward();
                 }
                 if (script.Current == Constants.END_STATEMENT)
                 {
@@ -1342,15 +1342,15 @@ namespace SplitAndMerge
                 if (script.Prev == Constants.START_ARG)
                 {
                     extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_ARG);
-                    extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                    extracted += script.TryCurrentAndForward();
                 }
 
                 var startBody = script.Current == Constants.START_GROUP ? Constants.START_GROUP : Constants.SPACE;
                 var endBody = script.Current == Constants.START_GROUP ? Constants.END_GROUP : Constants.END_STATEMENT;
                 var endExtract = endBody == Constants.END_STATEMENT ? Constants.END_STATEMENT : Constants.EMPTY;
-                extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                extracted += script.TryCurrentAndForward();
                 extracted += GetBodyBetween(script, startBody, endBody, endExtract);
-                extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
+                extracted += script.TryCurrentAndForward();
                 if (script.Current == Constants.END_GROUP || script.Current == Constants.END_STATEMENT)
                 {
                     extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
@@ -1560,6 +1560,15 @@ namespace SplitAndMerge
             return await GetArrayIndicesAsync(script, varName, end, (string str, int i) => { updateVarName(str); end = i; });
         }
 
+        public static List<Variable> GetArrayIndices(ParsingScript script, string varName, int end, out string arrName, out int delta)
+        {
+            int deltaRes = 0;
+            string arrayName = "";
+            var arrayIndices = Utils.GetArrayIndices(script, varName, end, (string arr, int del) => { arrayName = arr; deltaRes = del; });
+            arrName = arrayName;
+            delta = deltaRes;
+            return arrayIndices;
+        }
         public static List<Variable> GetArrayIndices(ParsingScript script, string varName, int end, Action<string, int> updateVals)
         {
             List<Variable> indices = new List<Variable>();

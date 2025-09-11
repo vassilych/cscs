@@ -358,6 +358,10 @@ namespace SplitAndMerge
         {
             return m_from < m_data.Length ? m_data[m_from] : Constants.EMPTY;
         }
+        public char TryCurrentAndForward()
+        {
+            return m_from < m_data.Length ? m_data[m_from++] : Constants.EMPTY;
+        }
         public char TryNext()
         {
             return m_from + 1 < m_data.Length ? m_data[m_from + 1] : Constants.EMPTY;
