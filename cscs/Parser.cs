@@ -466,7 +466,8 @@ namespace SplitAndMerge
             double condition = arg1.AsDouble();
             if (condition != 0)
             {
-                result = script.Execute(Constants.TERNARY_SEPARATOR);
+                result = Utils.GetItem(script, true, Constants.TERNARY_SEPARATOR);
+                result.TrySetAsMap();
                 script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
                 Utils.SkipRestExpr(script, Constants.END_STATEMENT);
                 script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
@@ -488,7 +489,8 @@ namespace SplitAndMerge
             {
                 Utils.SkipRestExpr(script, Constants.TERNARY_SEPARATOR[0]);
                 script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
-                result = script.Execute(Constants.NEXT_OR_END_ARRAY);
+                result = Utils.GetItem(script);
+                result.TrySetAsMap();
             }
 
             listInput.Clear();

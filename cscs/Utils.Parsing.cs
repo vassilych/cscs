@@ -9,7 +9,7 @@ namespace SplitAndMerge
 {
     public partial class Utils
     {
-        public static Variable GetItem(ParsingScript script, bool eatLast = true)
+        public static Variable GetItem(ParsingScript script, bool eatLast = true, char[] extraSep = null)
         {
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
             Utils.CheckNotEnd(script);
@@ -24,6 +24,8 @@ namespace SplitAndMerge
             }
 
             var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
+            sep = TryAddCharToArray(sep, extraSep);
+
             // A variable, a function, or a number.
             Variable var = script.Execute(sep);
             //value = var.Clone();
@@ -43,12 +45,21 @@ namespace SplitAndMerge
             return var;
         }
 
-        public static async Task<Variable> GetItemAsync(ParsingScript script, bool eatLast = true)
+        static char[] TryAddCharToArray(char[] array, char[] extraSep)
+        {
+            if (extraSep == null)
+            {
+                return array;
+            }
+            return array.Concat(extraSep).ToArray();
+        }
+
+        public static async Task<Variable> GetItemAsync(ParsingScript script, bool eatLast = true, char[] extraSep = null)
         {
             script.MoveForwardIf(Constants.NEXT_ARG, Constants.SPACE);
             Utils.CheckNotEnd(script);
 
-            bool inQuotes  = script.Current == Constants.QUOTE;
+            bool inQuotes = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
             bool isList = script.Current == Constants.START_GROUP || script.Current == Constants.START_ARRAY;
@@ -58,6 +69,8 @@ namespace SplitAndMerge
             }
 
             var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
+            sep = TryAddCharToArray(sep, extraSep);
+
             // A variable, a function, or a number.
             Variable var = await script.ExecuteAsync(sep);
             //value = var.Clone();
@@ -1289,11 +1302,11 @@ namespace SplitAndMerge
             toParse.Context = Interpreter.LastInstance;
 
             var firstScript = Utils.GetSubscript(toParse, tokens);
+            firstScript = firstScript.Replace(Constants.EMPTY.ToString(), "").Trim();
             if (string.IsNullOrWhiteSpace(firstScript))
             {
                 return;
             }
-
             Interpreter.LastInstance.Process(firstScript, fileName, false, context);
         }
 
@@ -1310,6 +1323,7 @@ namespace SplitAndMerge
                     continue;
                 }
                 var needed = tokens.Contains(token);
+                var needForward = false;
                 string extracted = token;
                 if (!needed)
                 {
@@ -1317,7 +1331,8 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    extracted += script.TryCurrentAndForward();
+                    extracted += script.TryCurrent();
+                    needForward = true;
                 }
                 if (script.Current == Constants.END_STATEMENT)
                 {
@@ -1334,21 +1349,31 @@ namespace SplitAndMerge
                     script.Forward();
                     var token2 = GetNextToken(script);
                     extracted += token2 + script.CurrentAndForward();
+                    needForward = false;
                 }
                 if (script.Current == Constants.SPACE)
                 {
                     extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_STATEMENT);
+                    needForward = false;
                 }
                 if (script.Prev == Constants.START_ARG)
                 {
                     extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_ARG);
                     extracted += script.TryCurrentAndForward();
+                    needForward = false;
                 }
 
                 var startBody = script.Current == Constants.START_GROUP ? Constants.START_GROUP : Constants.SPACE;
                 var endBody = script.Current == Constants.START_GROUP ? Constants.END_GROUP : Constants.END_STATEMENT;
                 var endExtract = endBody == Constants.END_STATEMENT ? Constants.END_STATEMENT : Constants.EMPTY;
-                extracted += script.TryCurrentAndForward();
+                if (needForward)
+                {
+                    script.Forward();
+                }
+                else
+                {
+                    extracted += script.TryCurrentAndForward();
+                }
                 extracted += GetBodyBetween(script, startBody, endBody, endExtract);
                 extracted += script.TryCurrentAndForward();
                 if (script.Current == Constants.END_GROUP || script.Current == Constants.END_STATEMENT)

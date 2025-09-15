@@ -43,6 +43,7 @@ namespace SplitAndMerge
                 script.Backward();
             }
             Variable result = Utils.GetItem(script);
+            result.TrySetAsMap();
 
             // If we are in Return, we are done:
             script.SetDone();
@@ -58,6 +59,7 @@ namespace SplitAndMerge
                 script.Backward();
             }
             Variable result = await Utils.GetItemAsync(script);
+            result.TrySetAsMap();
 
             // If we are in Return, we are done:
             script.SetDone();
