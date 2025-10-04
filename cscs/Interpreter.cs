@@ -366,40 +366,42 @@ namespace SplitAndMerge
 
         internal Variable ProcessFor(ParsingScript script)
         {
+            Variable result = Variable.EmptyInstance;
             string forString = Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
             script.Forward();
             if (forString.Contains(Constants.END_STATEMENT.ToString()))
             {
                 // Looks like: "for(i = 0; i < 10; i++)".
-                ProcessCanonicalFor(script, forString);
+                result = ProcessCanonicalFor(script, forString);
             }
             else
             {
                 // Otherwise looks like: "for(item : array)"
-                ProcessArrayFor(script, forString);
+                result = ProcessArrayFor(script, forString);
             }
 
-            return Variable.EmptyInstance;
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
         internal async Task<Variable> ProcessForAsync(ParsingScript script)
         {
+            Variable result = Variable.EmptyInstance;
             string forString = Utils.GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG);
             script.Forward();
             if (forString.Contains(Constants.END_STATEMENT.ToString()))
             {
                 // Looks like: "for(i = 0; i < 10; i++)".
-                await ProcessCanonicalForAsync(script, forString);
+                result = await ProcessCanonicalForAsync(script, forString);
             }
             else
             {
                 // Otherwise looks like: "for(item : array)"
-                await ProcessArrayForAsync(script, forString);
+                result = await ProcessArrayForAsync(script, forString);
             }
 
-            return Variable.EmptyInstance;
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
-        void ProcessArrayFor(ParsingScript script, string forString)
+        Variable ProcessArrayFor(ParsingScript script, string forString)
         {
             var tokens = forString.Split(' ');
             var sep = tokens.Length > 2 ? tokens[1] : "";
@@ -418,7 +420,7 @@ namespace SplitAndMerge
 
             ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
             forScript.Debugger = script.Debugger;
-
+            Variable result = Variable.EmptyInstance;
             Variable arrayValue = Utils.GetItem(forScript);
 
             int startForCondition = script.Pointer;
@@ -435,7 +437,7 @@ namespace SplitAndMerge
 
                     script.Pointer = startForCondition;
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
-                    Variable result = ProcessBlock(script);
+                    result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -457,7 +459,7 @@ namespace SplitAndMerge
 
                     script.Pointer = startForCondition;
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
-                    Variable result = ProcessBlock(script);
+                    result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -466,9 +468,10 @@ namespace SplitAndMerge
             }
             script.Pointer = startForCondition;
             SkipBlock(script);
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
-        async Task ProcessArrayForAsync(ParsingScript script, string forString)
+        async Task<Variable> ProcessArrayForAsync(ParsingScript script, string forString)
         {
             var tokens = forString.Split(' ');
             var sep = tokens.Length > 2 ? tokens[1] : "";
@@ -487,7 +490,7 @@ namespace SplitAndMerge
 
             ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
             forScript.Debugger = script.Debugger;
-
+            Variable result = Variable.EmptyInstance;
             Variable arrayValue = await Utils.GetItemAsync(forScript);
 
             int startForCondition = script.Pointer;
@@ -502,7 +505,7 @@ namespace SplitAndMerge
                     Variable current = new Variable(item);
                     script.Pointer = startForCondition;
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
-                    Variable result = ProcessBlock(script);
+                    result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -524,7 +527,7 @@ namespace SplitAndMerge
 
                     script.Pointer = startForCondition;
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
-                    Variable result = await ProcessBlockAsync(script);
+                    result = await ProcessBlockAsync(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -533,9 +536,10 @@ namespace SplitAndMerge
             }
             script.Pointer = startForCondition;
             SkipBlock(script);
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
-        void ProcessCanonicalFor(ParsingScript script, string forString)
+        Variable ProcessCanonicalFor(ParsingScript script, string forString)
         {
             string[] forTokens = forString.Split(Constants.END_STATEMENT);
             if (forTokens.Length != 3)
@@ -553,7 +557,7 @@ namespace SplitAndMerge
 
             int cycles = 0;
             bool stillValid = true;
-
+            Variable result = Variable.EmptyInstance;
             while (stillValid)
             {
                 Variable condResult = condScript.Execute(null, 0);
@@ -570,7 +574,7 @@ namespace SplitAndMerge
                 }
 
                 script.Pointer = startForCondition;
-                Variable result = ProcessBlock(script);
+                result = ProcessBlock(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     //script.Pointer = startForCondition;
@@ -583,8 +587,9 @@ namespace SplitAndMerge
 
             script.Pointer = startForCondition;
             SkipBlock(script);
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
-        async Task ProcessCanonicalForAsync(ParsingScript script, string forString)
+        async Task<Variable> ProcessCanonicalForAsync(ParsingScript script, string forString)
         {
             string[] forTokens = forString.Split(Constants.END_STATEMENT);
             if (forTokens.Length != 3)
@@ -599,6 +604,7 @@ namespace SplitAndMerge
             ParsingScript loopScript = script.GetTempScript(forTokens[2] + Constants.END_STATEMENT);
 
             await initScript.ExecuteAsync(null, 0);
+            Variable result = Variable.EmptyInstance;
 
             int cycles = 0;
             bool stillValid = true;
@@ -619,7 +625,7 @@ namespace SplitAndMerge
                 }
 
                 script.Pointer = startForCondition;
-                Variable result = await ProcessBlockAsync(script);
+                result = await ProcessBlockAsync(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     //script.Pointer = startForCondition;
@@ -632,6 +638,7 @@ namespace SplitAndMerge
 
             script.Pointer = startForCondition;
             SkipBlock(script);
+            return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
         internal Variable ProcessWhile(ParsingScript script)

@@ -22,7 +22,7 @@ namespace SplitAndMerge
             {
                 return ProcessArrayMap(script);
             }
-
+            var rest = script.Rest;
             var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
             sep = TryAddCharToArray(sep, extraSep);
 
@@ -534,6 +534,7 @@ namespace SplitAndMerge
             while (script.Pointer < tempScript.Pointer)
             {
                 Variable item = Utils.GetItem(script, false);
+                item.TrySetAsMap();
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
@@ -589,6 +590,7 @@ namespace SplitAndMerge
             while (script.Pointer < tempScript.Pointer)
             {
                 Variable item = await Utils.GetItemAsync(script, false);
+                item.TrySetAsMap();
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
