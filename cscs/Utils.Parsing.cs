@@ -17,8 +17,11 @@ namespace SplitAndMerge
             bool inQuotes = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
-            bool isList = script.Current == Constants.START_GROUP || script.Current == Constants.START_ARRAY;
-            if (isList)
+            if (script.Current == Constants.START_GROUP)
+            {
+                return ProcessList(script);
+            }
+            if (script.Current == Constants.START_ARRAY)
             {
                 return ProcessArrayMap(script);
             }
@@ -62,8 +65,11 @@ namespace SplitAndMerge
             bool inQuotes = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
-            bool isList = script.Current == Constants.START_GROUP || script.Current == Constants.START_ARRAY;
-            if (isList)
+            if (script.Current == Constants.START_GROUP)
+            {
+                return ProcessList(script);
+            }
+            if (script.Current == Constants.START_ARRAY)
             {
                 return ProcessArrayMap(script);
             }
@@ -90,6 +96,32 @@ namespace SplitAndMerge
             return var;
         }
 
+        public static Variable ProcessList(ParsingScript script)
+        {
+            Variable value = new Variable();
+            List<Variable> args = new List<Variable>();
+            var rest = script.Rest;
+            script.MoveForwardIf(Constants.START_GROUP); // Skip the first brace.
+            while (script.StillValid())
+            {
+                Variable item = Utils.GetItem(script);
+                if (item.Type == Variable.VarType.NONE)
+                {
+                    break;
+                }
+                item.TrySetAsMap();
+                args.Add(item);
+                if (script.Current == Constants.END_ARG)
+                {
+                    break;
+                }
+            }
+            var rest2 = script.Rest;
+            value.Tuple = args;
+            value.TrySetAsMap();
+
+            return value;
+        }
         public static Variable ProcessArrayMap(ParsingScript script)
         {
             bool isList = true;
@@ -530,11 +562,9 @@ namespace SplitAndMerge
 #pragma warning restore 219
             // After the statement above tempScript.Parent will point to the last
             // character belonging to the body between start and end characters. 
-
             while (script.Pointer < tempScript.Pointer)
             {
                 Variable item = Utils.GetItem(script, false);
-                item.TrySetAsMap();
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
@@ -590,7 +620,6 @@ namespace SplitAndMerge
             while (script.Pointer < tempScript.Pointer)
             {
                 Variable item = await Utils.GetItemAsync(script, false);
-                item.TrySetAsMap();
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {

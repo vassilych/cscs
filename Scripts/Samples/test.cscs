@@ -250,8 +250,8 @@ Test(NameExists(globalDefinedLocally), false);
 
 xx = {"firstName":"John", "lastName":"Doe"};
 yy = {"firstName":"John1", "lastName":"Doe1"}; 
-x1 = {firstName:"Johnny", lastName:"Doe"};
-y1 = {firstName:"John2", lastName:"Doe2"}; 
+x1 = {"firstName":"Johnny", "lastName":"Doe"};
+y1 = {"firstName":"John2", "lastName":"Doe2"}; 
 Test(xx["firstName"], "John");
 Test(yy["lastName"], "Doe1");
 Test(x1["firstName"], "Johnny");
@@ -1006,6 +1006,53 @@ Test(arr2["zzZ"].Length, 2);
 arr2[0] = "item";
 Test(arr2.contains("item"), true);
 Test(arr2.contains("ite"), false);
+
+print("Testing dictionaries and other values parameters");
+function func1() {
+    for(i = 0; i < 2; i++) {
+        return "returnValue";
+    }
+}
+Test(func1(), "returnValue");
+
+abc = fields = {"key1", "key2", "key3"};
+lol = valuesDict = {"key1": "value1", "key2": "value2", "key3": "value3"};
+values = {};
+for(i = 0; i < Size(fields); i++) {
+    values.Add({i, valuesDict[fields[i]]});
+}
+Test(values[0][0], 0);
+Test(values[0][1], "value1");
+Test(values[1][0], 1);
+Test(values[1][1], "value2");
+Test(values[2][0], 2);
+Test(values[2][1], "value3");
+
+function Response(a,b,c){
+    return {"headers" : a, "body" : b, "statusCode" : c};
+}
+r = Response({"Content-Type": "text/bbbb"}, "bbbb", 200);
+Test(r["headers"]["Content-Type"], "text/bbbb");
+Test(r["body"], "bbbb");
+Test(r[1], "bbbb");
+Test(r["statusCode"], 200);
+Test(r[2], 200);
+
+listOfDicts = {};
+listOfDicts.Add({"name": "aaaaa", "script": "bbbbb"});
+listOfDicts.Add({"name": "ccccc", "script": "ddddd"});
+Test(listOfDicts[0]["name"], "aaaaa");
+Test(listOfDicts[0]["script"], "bbbbb");
+Test(listOfDicts[1]["name"], "ccccc");
+Test(listOfDicts[1]["script"], "ddddd");
+
+obj1 = {};
+obj1["mainKeyLol"] = {"key1": "val1", "key2": 555, "key3": 12.5, "key4": true, "key5": ["item1", "item2", "item3"]};
+obj1["keyLol2"] = "Some message";
+Test(size(obj1["mainKeyLol"]["key5"]), 3);
+Test(obj1["keyLol2"], "Some message");
+Test(obj1["mainKeyLol"]["key3"], 12.5);
+
 
 ct = new CompiledTestAsync();
 ct.NaMe="Lala";
