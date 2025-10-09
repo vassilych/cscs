@@ -1275,7 +1275,14 @@ namespace SplitAndMerge
                 }
             }
 
-            return GetCoreProperty(propName, script);
+            (string purePropName, string rest) = Utils.Extract(propName);
+            var propValue = GetCoreProperty(purePropName, script);
+            if (!string.IsNullOrWhiteSpace(rest))
+            {
+                var arrayIndices = Utils.GetArrayIndices(script, propName);
+                propValue = Utils.ExtractArrayElement(propValue, arrayIndices, script);
+            }
+            return propValue;
         }
 
         List<Variable> GetArgs(ParsingScript script)
@@ -1671,7 +1678,14 @@ namespace SplitAndMerge
                 }
             }
 
-            return GetCoreProperty(propName, script);
+            (string purePropName, string rest) = Utils.Extract(propName);
+            var propValue = GetCoreProperty(purePropName, script);
+            if (!string.IsNullOrWhiteSpace(rest))
+            {
+                var arrayIndices = Utils.GetArrayIndices(script, propName);
+                propValue = Utils.ExtractArrayElement(propValue, arrayIndices, script);
+            }
+            return propValue;
         }
 
         bool ProcessForEach(ParsingScript script)

@@ -1485,6 +1485,24 @@ namespace SplitAndMerge
             return "";
         }
 
+        public static (string, string) Extract(string token, char open = Constants.START_ARRAY,
+                                   char close = Constants.END_ARRAY)
+        {
+            var index1 = token.IndexOf(open);
+            if (index1 < 0)
+            {
+                return (token, null);
+            }
+            var index2 = token.IndexOf(close, index1 + 1);
+            if (index2 < 0 || index2 - index1 <= 1)
+            {
+                return (token, null);
+            }
+            var newToken = token.Substring(0, index1);
+            var inside = token.Substring(index1 + 1, index2 - index1 - 1);
+            return (newToken, inside);
+        }
+
         public static string GetBodyBetween(ParsingScript script, char open = Constants.START_ARG,
                                             char close = Constants.END_ARG, char end = '\0', bool stopIfBraces0 = false)
         {
@@ -1605,6 +1623,11 @@ namespace SplitAndMerge
             return null;
         }
 
+        public static List<Variable> GetArrayIndices(ParsingScript script, string varName)
+        {
+            int end = 0;
+            return GetArrayIndices(script, varName, end);
+        }
         public static List<Variable> GetArrayIndices(ParsingScript script, string varName, Action<string> updateVarName)
         {
             int end = 0;
@@ -1625,7 +1648,7 @@ namespace SplitAndMerge
             delta = deltaRes;
             return arrayIndices;
         }
-        public static List<Variable> GetArrayIndices(ParsingScript script, string varName, int end, Action<string, int> updateVals)
+        public static List<Variable> GetArrayIndices(ParsingScript script, string varName, int end, Action<string, int> updateVals=null)
         {
             List<Variable> indices = new List<Variable>();
 
@@ -1660,7 +1683,10 @@ namespace SplitAndMerge
                 end = argStart - 1;
             }
 
-            updateVals(varName, end);
+            if (updateVals != null)
+            {
+                updateVals(varName, end);
+            }
             return indices;
         }
         public static async Task<List<Variable>> GetArrayIndicesAsync(ParsingScript script, string varName, int end, Action<string, int> updateVals)

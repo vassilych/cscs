@@ -2357,7 +2357,7 @@ namespace SplitAndMerge
 
             Variable array;
 
-            ParserFunction pf = InterpreterInstance.GetVariable(m_name, script);
+            ParserFunction pf = InterpreterInstance.GetVariable(m_name, script, true);
             array = pf != null ? (pf.GetValue(script)) : new Variable();
 
             ExtendArray(array, arrayIndices, 0, varValue);
@@ -2411,7 +2411,7 @@ namespace SplitAndMerge
 
             Variable array;
 
-            ParserFunction pf = InterpreterInstance.GetVariable(m_name, script);
+            ParserFunction pf = InterpreterInstance.GetVariable(m_name, script, true);
             array = pf != null ? (await pf.GetValueAsync(script)) : new Variable();
 
             ExtendArray(array, arrayIndices, 0, varValue);

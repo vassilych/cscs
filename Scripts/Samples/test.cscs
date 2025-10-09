@@ -1028,6 +1028,18 @@ Test(values[1][1], "value2");
 Test(values[2][0], 2);
 Test(values[2][1], "value3");
 
+dict = {};
+dict["key1"] = "value1";
+dict["key2"] = "value2";
+dict["key3"] = func1();
+Test(size(dict), 3);
+Test(dict["key1"], "value1");
+Test(dict.keys[2], "key3");
+
+op1 = "x_";
+op1 += func1();
+Test(op1, "x_returnValue");
+
 function Response(a,b,c){
     return {"headers" : a, "body" : b, "statusCode" : c};
 }
