@@ -1,69 +1,19 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{50736A2E-EE76-4511-BDBB-4F960CA63DA8}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>CscsScript</RootNamespace>
     <AssemblyName>CscsScript</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
-    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <ProjectReference Include="../CSCS.ConsoleApp/CSCS.ConsoleApp.csproj" />
+    <ProjectReference Include="../Modules/CSCS.Tests/CSCS.Tests.csproj" />
+    <ProjectReference Include="../Modules/CSCS.Math/CSCS.Math.csproj" />
+    <ProjectReference Include="../Modules/CSCS.SqlClient/CSCS.SqlClient.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CSCS.ConsoleApp\CSCS.ConsoleApp.csproj">
-      <Project>{A88B9787-5448-40A2-B93E-C3C1B5D2DB38}</Project>
-      <Name>CSCS.ConsoleApp</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Modules\CSCS.Tests\CSCS.Tests.csproj">
-      <Name>CSCS.Tests</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Modules\CSCS.Math\CSCS.Math.csproj">
-      <Name>CSCS.Math</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Modules\CSCS.SqlClient\CSCS.SqlClient.csproj">
-      <Name>CSCS.SqlClient</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>

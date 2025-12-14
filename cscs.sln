@@ -1,23 +1,22 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.2.32505.173
+VisualStudioVersion = 17.12.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cscs", "cscs\cscs.csproj", "{17121706-1760-4713-9DFE-BA449BC96426}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cscs", "cscs/cscs.csproj", "{17121706-1760-4713-9DFE-BA449BC96426}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{00144162-434A-4608-B8A2-5837F03560AB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.SqlClient", "Modules\CSCS.SqlClient\CSCS.SqlClient.csproj", "{9351136D-D399-490C-B627-3E4DF2CABCB2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.SqlClient", "Modules/CSCS.SqlClient/CSCS.SqlClient.csproj", "{9351136D-D399-490C-B627-3E4DF2CABCB2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.InterpreterManager", "Modules\CSCS.InterpreterManager\CSCS.InterpreterManager.csproj", "{CA91C5D0-4C50-4402-A2C6-DF7E66F5C04A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.InterpreterManager", "Modules/CSCS.InterpreterManager/CSCS.InterpreterManager.csproj", "{CA91C5D0-4C50-4402-A2C6-DF7E66F5C04A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.ConsoleApp", "CSCS.ConsoleApp\CSCS.ConsoleApp.csproj", "{A88B9787-5448-40A2-B93E-C3C1B5D2DB38}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.ConsoleApp", "CSCS.ConsoleApp/CSCS.ConsoleApp.csproj", "{A88B9787-5448-40A2-B93E-C3C1B5D2DB38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CscsScript", "CscsScript\CscsScript.csproj", "{50736A2E-EE76-4511-BDBB-4F960CA63DA8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CscsScript", "CscsScript/CscsScript.csproj", "{50736A2E-EE76-4511-BDBB-4F960CA63DA8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSCS.Tests", "Modules\CSCS.Tests\CSCS.Tests.csproj", "{41A92FFD-4FD6-4501-9EC4-339E2DC7ED85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.Tests", "Modules/CSCS.Tests/CSCS.Tests.csproj", "{41A92FFD-4FD6-4501-9EC4-339E2DC7ED85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSCS.Math", "Modules\CSCS.Math\CSCS.Math.csproj", "{6F1737CC-6992-4F0A-B411-A8C95BFDFCB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSCS.Math", "Modules/CSCS.Math/CSCS.Math.csproj", "{6F1737CC-6992-4F0A-B411-A8C95BFDFCB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,21 +64,5 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4B74C338-BC41-4876-8DF9-B1990BA5B560}
-	EndGlobalSection
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 2
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://laplink.visualstudio.com/defaultcollection
-		SccProjectUniqueName0 = cscs\\cscs.csproj
-		SccProjectName0 = cscs
-		SccAuxPath0 = https://laplink.visualstudio.com/defaultcollection
-		SccLocalPath0 = cscs
-		SccProvider0 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccProjectUniqueName1 = Modules\\CSCS.SqlClient\\CSCS.SqlClient.csproj
-		SccProjectTopLevelParentUniqueName1 = Cscs.sln
-		SccProjectName1 = Modules/CSCS.SqlClient
-		SccAuxPath1 = https://laplink.visualstudio.com/defaultcollection
-		SccLocalPath1 = Modules\\CSCS.SqlClient
-		SccProvider1 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 	EndGlobalSection
 EndGlobal

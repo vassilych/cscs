@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
+using System.Xml.Linq;
 using SplitAndMerge;
 
 namespace CSCS.InterpreterManager
@@ -173,37 +174,48 @@ namespace CSCS.InterpreterManager
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            var args = script.GetFunctionArgs();
-            Utils.CheckArgs(args.Count, 1, m_name);
-            var name = Utils.GetSafeString(args, 0);
-
-            var DLL = ImportDLLFunction.LoadDLL(name, script);
-            var types = DLL.GetExportedTypes();
-
-            bool added = false;
-            foreach (var type in types)
+            Console.WriteLine("ImportModuleFunction _mgr: {0}", _mgr);
+            try
             {
-                //var c = Activator.CreateInstance(type);
-                var needed = typeof(ICscsModule).IsAssignableFrom(type);
-                if (!needed)
-                {
-                    continue;
-                }
-                var module = Activator.CreateInstance(type) as ICscsModule;
-                if (module != null)
-                {
-                    _mgr.AddModule(module, InterpreterInstance);
-                    added = true;
-                    break;
-                }
-            }
-            if (!added)
-            {
-                Utils.ThrowErrorMsg("Couldn´t add module: " + name,
-                                     script, m_name);
-            }
+                var args = script.GetFunctionArgs();
+                Utils.CheckArgs(args.Count, 1, m_name);
+                var name = Utils.GetSafeString(args, 0);
 
-            return new Variable(DLL.Location);
+                var DLL = ImportDLLFunction.LoadDLL(name, script);
+                Console.WriteLine("Extracted DLL {0}: {1}", name, (DLL != null));
+                var types = DLL.GetExportedTypes();
+
+                bool added = false;
+                foreach (var type in types)
+                {
+                    //var c = Activator.CreateInstance(type);
+                    var needed = typeof(ICscsModule).IsAssignableFrom(type);
+                    if (!needed)
+                    {
+                        continue;
+                    }
+                    var module = Activator.CreateInstance(type) as ICscsModule;
+                    if (module != null)
+                    {
+                        _mgr.AddModule(module, InterpreterInstance);
+                        added = true;
+                        break;
+                    }
+                }
+                if (!added)
+                {
+                    Utils.ThrowErrorMsg("Couldn´t add module: " + name,
+                                         script, m_name);
+                }
+
+                return new Variable(DLL.Location);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Couldn't extract [" + m_name +
+                                            "]: " + ex.Message, ex);
+                return new Variable(ex.Message);
+            }
         }
     }
 
