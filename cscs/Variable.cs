@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -148,6 +149,21 @@ namespace SplitAndMerge
             Object = o;
             Original = OriginalType.OBJECT;
             ObjectType = t == null ? o?.GetType() : t;
+        }
+
+        /// <summary>
+        /// Indexers so precompiled code can write a[i] and m["key"] the way the script does.
+        /// Both delegate to GetVariable, so out-of-range and missing keys behave exactly as
+        /// they do in the interpreter rather than throwing.
+        /// </summary>
+        public Variable this[int index]
+        {
+            get { return GetVariable(index); }
+        }
+
+        public Variable this[string key]
+        {
+            get { return GetVariable(key); }
         }
 
         public virtual Variable Clone()
@@ -351,6 +367,29 @@ namespace SplitAndMerge
                 results.Add(key);
             }
             return results;
+        }
+
+        /// <summary>
+        /// Assigns through an index, numeric or string, the way the interpreter does:
+        /// GetArrayIndex resolves the key, a key with no index becomes a new map entry, and
+        /// a numeric index past the end extends the array. Mirrors ExtendArrayHelper so
+        /// compiled and interpreted assignment stay identical.
+        /// </summary>
+        public void SetVariable(Variable index, Variable value)
+        {
+            SetAsArray();
+            int arrayIndex = GetArrayIndex(index);
+            if (arrayIndex < 0)
+            {
+                SetHashVariable(index.AsString(), value);
+                return;
+            }
+            while (m_tuple.Count <= arrayIndex)
+            {
+                m_tuple.Add(Variable.NewEmpty());
+            }
+            value.Parent = this;
+            m_tuple[arrayIndex] = value;
         }
 
         public int SetHashVariable(string hash, Variable var)
@@ -697,7 +736,7 @@ namespace SplitAndMerge
         {
             if (Type == VarType.DATETIME && !string.IsNullOrWhiteSpace(format))
             {
-                return DateTime.ToString(format);
+                return DateTime.ToString(format, CultureInfo.InvariantCulture);
             }
 
             return AsString();
@@ -808,7 +847,7 @@ namespace SplitAndMerge
                 {
                     if (!string.IsNullOrEmpty(m_format))
                     {
-                        res = DateTime.ToString(m_format);
+                        res = DateTime.ToString(m_format, CultureInfo.InvariantCulture);
                         return res;
                     }
                 }
@@ -1083,6 +1122,15 @@ namespace SplitAndMerge
             {
                 m_tuple = new List<Variable>();
             }
+        }
+
+        /// <summary>
+        /// Scripts spell this "Size", and precompiled code copies the script's spelling
+        /// through, so the generated C# needs a member of that name.
+        /// </summary>
+        public int Size
+        {
+            get { return Count; }
         }
 
         public int Count

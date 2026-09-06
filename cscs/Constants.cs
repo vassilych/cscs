@@ -37,6 +37,7 @@ namespace SplitAndMerge
         public const string NOT = "!";
         public const string INCREMENT = "++";
         public const string DECREMENT = "--";
+        public const string POWER = "**";
         public const string EQUAL = "==";
         public const string NOT_EQUAL = "!=";
         public const string LESS = "<";

@@ -1,185 +1,244 @@
-include("scripts/functions.cscs");
+//----------------------------------------
 
-function f(x) {
-  print("called f(",x, ")");
-  return x;
+jsonString = '[{"Name":"Invoice1.xml","Content":"<Invoice>...</Invoice>"},{"Name":"Invoice2.xml","Content":"<Invoice>...</Invoice>"}]';
+jsonString1 = '{"Name":"Invoice1.xml","Content":"<Invoice>...</Invoice>"}';
+jsonString2 = '{"Name":"Invoice2.xml","Content":"<Invoice>...</Invoice>"}';
+
+jsonString = '{ "eins" : 1, "zwei" : 2, "drei": "dreiString", "vier": 4.9, "mehr" : { "uno": "uno in spanish" }, "arrayValue" : [ "une", "deux" ] }';
+a = GetVariableFromJSON(jsonString);
+Test(a.size, 6);
+Test(a["vier"], 4.9);
+mehr = a["mehr"];
+Test(mehr["uno"], "uno in spanish");
+arrayValue = a["arrayValue"];
+Test(arrayValue.size, 2);
+Test(arrayValue[0], "une");
+Test(arrayValue[1], "deux");
+
+jsonVar1 = GetVariableFromJSON(jsonString1);
+jsonVar2 = GetVariableFromJSON(jsonString2);
+jsonVar = [jsonVar1, jsonVar2];
+
+jsonVar1["Name"];
+jsonVar = [GetVariableFromJSON('{"Name":"Invoice1.xml","Content":"<Invoice>...</Invoice>"}'), GetVariableFromJSON('{"Name":"Invoice2.xml","Content":"<Invoice>...</Invoice>"}')];
+msg("1.:\n" + jsonVar); // expected: [["Name" : "Invoice1.xml", "Content" : "<Invoice>...</Invoice"], ["Name" : "Invoice2.xml", "Content" : "<Invoice>...</Invoice"]]
+                    // actual: ["Name" : "Invoice2.xml", "Invoice1.xml"]
+
+//----------------------------------------
+
+dict1 = {};
+dict1["Name"] = "Invoice1.xml";
+dict1["Content"] = "<Invoice>...</Invoice>";
+
+dict2 = {};
+dict2["Name"] = "Invoice2.xml";
+dict2["Content"] = "<Invoice>...</Invoice>";
+
+array = {};
+array.Add(dict1);
+array.Add(dict2);
+
+msg("2.:\n" + array); // here it's ok
+            // expected and actual: [["Name" : "Invoice1.xml", "Content" : "<Invoice>...</Invoice"], ["Name" : "Invoice2.xml", "Content" : "<Invoice>...</Invoice"]]
+
+//----------------------------------------
+
+dictinaryArray = {{"val" : 1}, {"val" : 2}};
+dictinaryArray = {["val" : 1], ["val" : 2]};
+dictinaryArray = [{"val" : 1}, {"val" : 2}];
+dictinaryArray = [["val" : 1], ["val" : 2]];
+dictinaryArray["val"]
+dictinaryArray[0][0]
+
+Msg("3.:\n" + dictinaryArray); // expected: [["val" : 1], ["val" : 2]]
+                    // actual: [[["val" : 1]], [["val" : 2]]]
+
+//----------------------------------------
+
+dict1 = {"val" : 1};
+dict2 = {"val" : 2};
+dictinaryArray = {dict1, dict2};
+Msg("4.:\n" + dictinaryArray); // expected: [["val" : 1], ["val" : 2]]
+                    // actual: ["val" : 2, 1]
+
+//----------------------------------------
+
+jsonString = '[{"Name":"Invoice1.xml","Content":"<Invoice>...</Invoice>"},{"Name":"Invoice2.xml","Content":"<Invoice>...</Invoice>"}]';
+jsonObject = {};
+jsonObject = DeserializeJson(jsonString);
+msg("5.:\n" + jsonObject); // expected: [["Name" : "Invoice1.xml", "Content" : "<Invoice>...</Invoice"], ["Name" : "Invoice2.xml", "Content" : "<Invoice>...</Invoice"]]
+                    // actual: ["Name" : "Invoice2.xml", "Invoice1.xml"]
+
+
+//----------------------------------------
+
+
+dict1 = {};
+dict1["Name"] = "Invoice1.xml";
+dict1["Content"] = "<Invoice>...</Invoice>";
+
+dict2 = {};
+dict2["Name"] = "Invoice2.xml";
+dict2["Content"] = "<Invoice>...</Invoice>";
+
+array = {};
+array.Add(dict1);
+array.Add(dict2);
+
+msg("6.:\n" + array); // here it's ok
+                    // expected and actual: [["Name" : "Invoice1.xml", "Content" : "<Invoice>...</Invoice"], ["Name" : "Invoice2.xml", "Content" : "<Invoice>...</Invoice"]]
+
+
+
+// this here also breaks the array structure
+array = array;
+msg("7.:\n" + array); // expected: [["Name" : "Invoice1.xml", "Content" : "<Invoice>...</Invoice"], ["Name" : "Invoice2.xml", "Content" : "<Invoice>...</Invoice"]]
+                    //actual: ["Name" : "Invoice2.xml", "Invoice1.xml"]
+
+
+// //----------------------------------------
+
+// this works fine because there is no assignment to another variable ( there's no "=" )
+msg("8.:\n" + DeserializeJson('[{"Name":"Invoice1.xml","Content":"<Invoice>...</Invoice>"},{"Name":"Invoice2.xml","Content":"<Invoice>...</Invoice>"}]'));
+
+
+// //----------------------------------------
+
+
+exit;
+
+
+args = CommandLineArgs();
+print("args=", args);
+a=" XAXA " + " lol ";
+b="  XEXE  ";
+c= a*b;
+print("c=" + c);
+x=lala-20;
+a=5;
+c=10;
+RunCycle(10);
+dllfunction RunCycle(int loops) {
+    double result = 0;
+    for (int i = 0; i < loops; i++)
+    {
+      result += Cycle(i);
+    }
+    return result;
 }
-
-a = f(0) && f(1);
-test(a, 0);
-b = f(1) || f(2);
-test(b, 1);
-c = f(0) || f(3);
-test(c, 1);
-d = f(5) && f(6);
-test(d, 1);
-
-a=1;b=2;c=0;
-x=a||b;
-y=c&&a;
-
-
-function callfunction(n)
-{
-  bla = 10;
-  blu = 13;
-
-  m = fibonacci(n);
-
-  allvars();
-  return m;
+if (a==5) {
+  return;
 }
-function callfunc(n)
-{
-  lala = 22;
-  blu  = 33;
-
-  m = callfunction(n);
-  return m;
+while(a < 9) {
+  runcycle(a);
 }
-function cf(n)
-{
-  m = callfunc(n);
-  return m;
-}
-
-ff= 11;
-n= 50;
-try {
-  f = cf(n);
-  print("Fibonacci(", n, ")=", f);
-} catch(exc) {
-  print("Caught: " + exc);
-}
-
-print("1");
-test(cos(pi/2), 0);
-print("2");
-palabras = {"Este", "sentido", "es", "en", "Español"};
-tam = tamaño(palabras);
-i = 0;
-mientras(i < tam) {
-  si (i % 2 == 0) {
-    imprimir(palabras[i]);
-  }
-  i++;
-}
-
-b=((2+3))-6;
-
-palabras = {"Este", "sentido", "es", "en", "Español"};
-tam = tamaño(palabras);
-i = 10;
-while(--i > 0) {
-  array[i] = 2*i;
-}
-print("array[9]=", array[9]);       // prints 18
-print("size(array)=", size(array)); // prints 10
-a=10;
-arr={++a - a--, ++a*exp(0)/a--, -2*(--a - ++a), (++a + 1)/(2*2)};
-i=0;
-while(i < size(arr)) {
-  print("arr[", i, "]=", arr[i], ", expecting ", i);
-  i++;
-}
-
-i = 10;
-while(--i > 0) {
-  array[i] = 2*i;
-}
-print("array[9]=", array[9]);       // prints 18
-print("size(array)=", size(array)); // prints 10
-
-
-включить("scripts/functions.cscs");
-
-нечётные = {};
-чётные = {};
-ч = 0;
-пока (ч++ < 10) {
-  если (ч % 2 == 1) {
-    нечётные[размер(нечётные)] = ч;
-  } иначе {
-    чётные[размер(чётные)] = ч;
-  }
-}
-
-для (и : нечётные) {
-  печать("нечётное число: ", и);
-}
-
-odd  = {};
-even = {};
-c = 0;
-while (c++ < 10) {
-  if (c % 2 == 1) {
-    odd[size(odd)] = c;
-  } else {
-    even[size(even)] = c;
-  }
-}
-
-for (i : odd) {
-  print("odd number: ", i);
-}
-
-функция факториал(н) {
-  если (н < 0) {
-    текст = "Число " + число + " меньше нуля!";
-    ошибка(текст);
-  }
-  если (н <= 1) {
-    вернуть 1;
-  }
-
-  вернуть н * факториал(н - 1);
-}
-
-попытка {
-  число = -6;
-  печать("Факториал(", число, ")=", факториал(число));
-} поймать (проблема) {
-  печать(проблема);
-}
-число = 6;
-печать("Факториал(", число, ")=", факториал(число));
-
-function factorial(n) {
-  if (n < 0) {
-    exc = "Negative number (n="+ n +") for factorial";
-    throw (exc);
-  }
-  if (n <= 1) {
-    return 1;
-  }
-
-  return n * factorial(n - 1);
-}
-
-try {
-  number = -6;
-  print("Factorial(", number, ")=", factorial(number));
-} catch (problem) {
-  print(problem);
-}
-number = 6;
-print("Factorial(", number, ")=", factorial(number));
-
+DEFINE lol,b,c d,e,f x,y,z;
+RunCycle(20);
+xxx=17;
+print("xaxa");
+//ResetAllInterpreters();
 /*
+inter1 = NewInterpreter("functions.cscs");
+xxx = "First interpreter";
+//print("interpreter1=" + GetInterpreterHandle() + ", xxx=" + xxx); // 1, First interpreter
 
-Chapter 1. Introduccion
+NewInterpreter("functions.cscs");
+//print("Set New Interpreter: " + GetInterpreterHandle());
+inter2 = GetInterpreterHandle();
+print("interpreter2=" + inter2 + ", xxx=" + xxx); // 2, Second interpreter
+xxx= "Second interpreter";
+Test(xxx, "Second interpreter");
 
-- An algorithm to parse expressions
-- A brief history of other parsing algorithms
-- Its usage: for parsing and to create a custom language
-- Custom language: keywords in any language
-- An example of a CSCS program: this is what you will be able to do
-- Script and Shell (Windows and Unix-like systems)
-- Shell: uniform commands for Win and Unix
+SetInterpreter(inter2 - 1);
+SetInterpreter(2);
+SetInterpreter(6);
+//print("interpreter3=" + GetInterpreterHandle() + ", xxx=" + xxx); // 1, First interpreter
+Test(xxx, "First interpreter");
 
-Chapter 2. The Split-and-Merge Algorithm
+Sleep(1000);
+Print("Completed.");
 
-Chapter 5. Developing a More Command
+for (cnt = 0; cnt < 10; cnt++) {
+  arr[cnt] = cnt;
+}
+cnt = 5;
 
+Import("CSCS.Tests");
+h = ImportDLL("CSCS.Tests.dll");
+
+dllfunction DoWork1(string data, double eps, int ct) {
+    Console.WriteLine("XaxaxA " + eps + " " + ct);
+    return "OOk3";
+}
+dllfunction DoWork2(string data, double eps, int ct) {
+    Console.WriteLine("Lala " + eps + " " + ct);
+    return "OOk4";
+}
+lala=101;
+dllfunction DoWork(string data = "nein", double eps = 0.1, int i = 9) {
+    Console.WriteLine(data + " Lala " + eps + " " + i);
+    return data;
+}
+dllfunction RunCycle(int loops) {
+    double result = 0;
+    for (int i = 0; i < loops; i++)
+    {
+      result += Cycle(i);
+    }
+    return result;
+}
+dllsub double Cycle(double x) {
+    var result = Math.Sqrt(Math.Abs(Math.PI - Math.Sin(x) * Math.Cos(x)));
+    return result;
+}
+h=ImportDll("DoWork");
+InvokeDLL(h, "DoWork", "jawo", 0.2, 19);
+InvokeDLL(h, "RunCyclE", 100000);
+DoWorK("loL", 7.999);
+RunCyclE(10000);
+
+h1=ImportDll("DoWork");
+h2=ImportDll("DoWork2");
+InvokeDLL(h1, "blah1");//, 0.1, 9);
+InvokeDLL(h2, "blah2", 0.2, 19);
+
+using System; using System.Collections; using System.Collections.Generic; using System.Collections.Specialized; using System.Globalization; using System.Linq; using System.Linq.Expressions; using System.Reflection; using System.Text; using System.Threading; using System.Threading.Tasks;
+namespace SplitAndMerge {
+  public partial class Precompiler {
+    public static async Task<Variable> DoPrint
+(Interpreter __interpreter,
+ List<string> __varStr,
+ List<double> __varNum,
+ List<int> __varInt,
+ List<List<string>> __varArrStr,
+ List<List<double>> __varArrNum,
+ List<List<int>> __varArrInt,
+ List<Dictionary<string, string>> __varMapStr,
+ List<Dictionary<string, double>> __varMapNum,
+ List<Variable> __varVar) {
+
+     string __argsTempStr= "";
+     string __actionTempVar = "";
+     ParsingScript __scriptTempVar = null;
+     ParserFunction __funcTempVar = null;
+     GetVarFunction __varTempGetVar = null;
+     Variable __varTempVar = null;
+     bool __boolTempVar = false;
+      Console.WriteLine("Xaxaxa");
+      __varTempVar = Variable.EmptyInstance;
+      return __varTempVar;
+
+
+    }
+    }
+}
+
+         Che Cho Pe
+мы       1
+Гр       1   1
+Ив       1   1
+ЖП       1        1
+Мар          1    1
+Лу       1
+Уч                1
 */
-

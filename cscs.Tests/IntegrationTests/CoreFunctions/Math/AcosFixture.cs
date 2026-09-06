@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -32,7 +32,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
         public void Should_Return_Acosine(double input)
         {
             var expected = System.Math.Acos(input);
-            var script = $"acos({input}); // Should return: {expected}";
+            var script = $"Math.Acos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(OutputBuffer);
@@ -46,7 +46,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
         public void Should_Throw_Cscs_Exception(double input)
         {
             var expected = System.Math.Acos(input);
-            var script = $"acos({input}); // Should return: {expected}";
+            var script = $"Math.Acos({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(OutputBuffer);

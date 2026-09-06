@@ -1,3 +1,20 @@
+query = "
+        SELECT a.ARTI_ARTIKL,
+        a.ARTI_NAZIV, 
+        a.ARTI_JED_MJERE, 
+        k.ZAMK_CENA_PROD, 
+        k.ZAMK_TAXNUM, 
+        t.PKFK_TAX_STOPA 
+        FROM " + sd["DatabaseName"] + ".dbo.NKMKARTK k 
+        LEFT JOIN " + sd["DatabaseName"] + ".dbo.NKMKARTI a 
+        ON a.ARTI_ARTIKL = k.ZAMK_SIF_ARTIKL 
+        AND k.ZAMK_SKLADISTE = '" + sd["POS_Store"] + "' 
+        LEFT JOIN " + sd["DatabaseName"] + ".dbo.PKFKPORZ t 
+        ON k.ZAMK_TAXNUM = t.PKFK_TAX_CODE
+        " + whereClause + "
+        ORDER BY a.ARTI_NAZIV 
+        OFFSET " + offset + " ROWS FETCH NEXT " + pageSize + " ROWS ONLY
+        ";
 
 function newThreadWork() {
   sleep(50);
@@ -6,30 +23,45 @@ function newThreadWork() {
   Print(now("yyyy/MM/dd HH:mm:ss.fff"), "Finishing thread work in thread", threadid());
 }
 newThreadWork();
-/*
+
 clear_comp_definitions();
 clear_comp_namespaces();
+
 add_comp_namespace("System.Diagnostics");
 add_comp_definition("int m_counter;");
 
-csfunction double cstest(int arg) {
-  Stopwatch stopWatch = new Stopwatch();
-  stopWatch.Start();
-  Thread.Sleep(1000);
-  stopWatch.Stop();
-  TimeSpan ts = stopWatch.Elapsed;
-  if (arg < 10 && ts.Seconds < 30) Console.WriteLine("small");
-  else Console.WriteLine("bigger");
-
+dllfunction double CStest(int n) {
   m_counter++;
-  string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
-      ts.Hours, ts.Minutes, ts.Seconds,
-      ts.Milliseconds / 10);
-  Console.WriteLine("Counter: " + m_counter, ", arg: " + arg + ", elapsedTime=" + elapsedTime);
+  var stopWatch = new Stopwatch();
+  stopWatch.Start();
+  var x = 0.0;
+  for (int i = 0; i < n; i++) {
+      x += Cycle(i);
+  }
+  stopWatch.Stop();
+  var ts = stopWatch.Elapsed;
   return ts;
 }
-x = cstest(1);
+dllsub double Cycle(double x) {
+  var result = Math.Sqrt(Math.PI * Math.E -
+     Math.Sin(x) * Math.Cos(x));
+  return result;
+}
+x = cstest(10 * 1000 * 1000);
+h=ImportDll("CStest");
 
+dllfunction RunCycle(int loops) {
+    double result = 0;
+    for (int i = 0; i < loops; i++)
+    {
+      result += Cycle(i);
+    }
+    return result;
+}
+dllsub double Cycle(double x) {
+    var result = Math.Sqrt(Math.PI * Math.E - Math.Sin(x) * Math.Cos(x));
+    return result;
+}
 
 csfunction int cscode(sender, int arg) {
   var x = sender;
@@ -270,3 +302,7 @@ try {
 number = 6;
 print("Factorial(", number, ")=", factorial(number));
 */
+
+withList();
+withList(what = {1,2,3,5}, action = "*");
+withList(action = "+", what = {1,2,3,5});

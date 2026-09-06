@@ -341,6 +341,24 @@ namespace SplitAndMerge
             return null;
         }
 
+        /// <summary>
+        /// First match for <paramref name="name"/> under <paramref name="dir"/>, or null.
+        /// An unreadable subdirectory ends the search rather than throwing: a directory the
+        /// user cannot read must not turn a module lookup into a crash.
+        /// </summary>
+        static string FindFirstFile(string dir, string name)
+        {
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, name, SearchOption.AllDirectories))
+                {
+                    return file;
+                }
+            }
+            catch (Exception) { }
+            return null;
+        }
+
         public static Assembly LoadDLL(string name, ParsingScript script = null)
         {
             if (!name.ToLower().EndsWith(".dll"))
@@ -353,13 +371,28 @@ namespace SplitAndMerge
             if (!absolute)
             {
                 var pwd = Directory.GetCurrentDirectory();
-                var baseDir = Directory.GetParent(pwd);
+                // Look where the application's own assemblies live first. Import("CSCS.Tests")
+                // means the module that shipped with the app, not whichever same-named DLL
+                // happens to sit somewhere above the working directory -- searching upwards
+                // first made the result depend on where the app was launched from.
+                foreach (var candidate in new[] { AppContext.BaseDirectory, pwd })
+                {
+                    if (string.IsNullOrEmpty(candidate)) continue;
+                    var direct = Path.Combine(candidate, name);
+                    if (File.Exists(direct))
+                    {
+                        filename = direct;
+                        break;
+                    }
+                }
+
+                var baseDir = File.Exists(filename) ? null : Directory.GetParent(pwd);
                 for (int i = 0; i < 3 && baseDir != null; i++)
                 {
-                    var files = Directory.EnumerateFiles(baseDir.FullName, name, SearchOption.AllDirectories).ToList<string>();
-                    if (files.Count > 0)
+                    var found = FindFirstFile(baseDir.FullName, name);
+                    if (found != null)
                     {
-                        filename = files[0];
+                        filename = found;
                         break;
                     }
                     baseDir = Directory.GetParent(baseDir.FullName);

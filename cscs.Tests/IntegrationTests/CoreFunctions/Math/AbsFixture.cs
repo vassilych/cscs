@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
@@ -31,7 +31,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
         public void Should_Return_AbsoluteValue(double input)
         {
             var expected = System.Math.Abs(input);
-            var script = $"abs({input}); // Should return: {expected}";
+            var script = $"Math.Abs({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(OutputBuffer);
@@ -45,7 +45,7 @@ namespace cscs.Tests.IntegrationTests.CoreFunctions.Math
         public void Should_Throw_Cscs_Exception(double input)
         {
             var expected = System.Math.Abs(input);
-            var script = $"abs({input}); // Should return: {expected}";
+            var script = $"Math.Abs({input}); // Should return: {expected}";
             var actual = Process(script);
             Console.WriteLine(script);
             Console.WriteLine(OutputBuffer);

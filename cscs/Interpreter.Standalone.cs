@@ -58,6 +58,9 @@ namespace SplitAndMerge
             RegisterFunction(Constants.ADD_COMP_NAMESPACE, new EditCompiledEntry(EditCompiledEntry.EditMode.ADD_NAMESPACE));
             RegisterFunction(Constants.CLEAR_COMP_DEFINITIONS, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_DEFINITIONS));
             RegisterFunction(Constants.CLEAR_COMP_NAMESPACES, new EditCompiledEntry(EditCompiledEntry.EditMode.CLEAR_NAMESPACES));
+            RegisterFunction(Constants.COLLECT_COMP_CSHARP, new CollectCompiledCSharp());
+            RegisterFunction(Constants.WRITE_COMP_CSHARP, new WriteCompiledCSharp());
+            RegisterFunction(Constants.IS_PRECOMPILED, new IsPrecompiledFunction());
             RegisterFunction(Constants.CSHARP_FUNCTION, new CompiledFunctionCreator(true));
 
             RegisterFunction(Constants.DLL_FUNCTION, new DLLCreator(true));

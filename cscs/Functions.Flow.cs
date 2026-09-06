@@ -1200,7 +1200,11 @@ namespace SplitAndMerge
             ParsingScript tempScript = Utils.GetTempScript(InterpreterInstance,
                                                            m_body, m_stackLevel, m_name, script,
                                                            m_parentScript, m_parentOffset, instance);
-            tempScript.Namespace = script?.Namespace;
+            // Match RunAsync: when the caller is outside the namespace (ns1.func(20)),
+            // script.Namespace is null and the function's own namespace has to supply it,
+            // otherwise namespace-level variables the body refers to cannot be resolved.
+            tempScript.Namespace = script?.Namespace != null ? script.Namespace :
+                (NamespaceData != null ? NamespaceData.Name : null);
 
             Debugger debugger = script != null && script.Debugger != null ? script.Debugger : Debugger.MainInstance;
             if (script != null && debugger != null)

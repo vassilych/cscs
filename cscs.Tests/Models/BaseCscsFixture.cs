@@ -15,12 +15,15 @@ namespace cscs.Tests
             {
                 if (!Initialized)
                 {
-                    Interpreter.Instance.InitStandalone();
-                    Interpreter.Instance.OnOutput += (o, args) => OutputBuffer.Append(args.Output);
+                    Interpreter.LastInstance.InitStandalone();
+                    // The Math fixtures exercise abs/sin/cos/... which live in the
+                    // CSCS.Math module, not in the core interpreter.
+                    new CSCSMath.CscsMathModule().CreateInstance(Interpreter.LastInstance);
+                    Interpreter.LastInstance.OnOutput += (o, args) => OutputBuffer.Append(args.Output);
                     Initialized = true;
                 }
 
-                return Interpreter.Instance.Process(script);
+                return Interpreter.LastInstance.Process(script);
             }
             catch (ParsingException ex)
             {

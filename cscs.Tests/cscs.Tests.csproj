@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../cscs/cscs.csproj" />
+    <ProjectReference Include="../Modules/CSCS.Math/CSCS.Math.csproj" />
   </ItemGroup>
 
 </Project>

@@ -355,3 +355,6 @@ cscs/.DS_Store
 Article/*
 
 .idea/*
+
+# Build output from the dllfunction test in Scripts/Samples/test.cscs
+RunCycle.dll

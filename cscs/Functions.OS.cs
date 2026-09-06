@@ -515,7 +515,7 @@ namespace SplitAndMerge
 
             if (m_stringVersion)
             {
-                return new Variable(DateTime.Now.ToString(strFormat));
+                return new Variable(DateTime.Now.ToString(strFormat, CultureInfo.InvariantCulture));
             }
 
             var date = DateTime.Now;
@@ -732,6 +732,73 @@ namespace SplitAndMerge
         }
     }
 
+    /// <summary>
+    /// collect_comp_csharp(true|false) -- start/stop capturing the C# generated for each
+    /// cfunction, so it can be written out with write_comp_csharp() and compiled into an
+    /// AOT target (iOS) where runtime code generation is not available.
+    /// </summary>
+    class CollectCompiledCSharp : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            bool collect = args.Count == 0 || Utils.GetSafeInt(args, 0, 1) != 0;
+#if __ANDROID__ == false && __IOS__ == false
+            AotGenerator.Collecting = collect;
+            if (collect)
+            {
+                AotGenerator.Clear();
+            }
+#endif
+            return new Variable(collect);
+        }
+    }
+
+    /// <summary>
+    /// write_comp_csharp(path, className, namespace) -- writes every cfunction captured
+    /// since collect_comp_csharp(true) into one compilable C# file.
+    /// </summary>
+    class WriteCompiledCSharp : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            string path = Utils.GetSafeString(args, 0);
+            string className = Utils.GetSafeString(args, 1, "CscsPrecompiled");
+            string nameSpace = Utils.GetSafeString(args, 2, "SplitAndMerge");
+#if __ANDROID__ == false && __IOS__ == false
+            var written = AotGenerator.WriteSource(path, className, nameSpace);
+            return new Variable(written);
+#else
+            return Variable.EmptyInstance;
+#endif
+        }
+    }
+
+    /// <summary>
+    /// is_precompiled(name) -- true when the named cfunction was actually translated to C#,
+    /// false when it fell back to the interpreter (or is a plain function).
+    ///
+    /// Behaviour is identical either way, so nothing else reveals the difference; this is
+    /// how a script or test can assert that something really is being compiled.
+    /// </summary>
+    class IsPrecompiledFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            List<Variable> args = script.GetFunctionArgs();
+            Utils.CheckArgs(args.Count, 1, m_name, true);
+            string funcName = Utils.GetSafeString(args, 0);
+#if __ANDROID__ == false && __IOS__ == false
+            var func = InterpreterInstance.GetFunction(funcName);
+            return new Variable(func is CustomCompiledFunction);
+#else
+            return new Variable(false);
+#endif
+        }
+    }
+
     class CompiledFunctionCreator : ParserFunction
     {
         bool m_scriptInCSharp = false;
@@ -759,7 +826,31 @@ namespace SplitAndMerge
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
             Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
-            precompiler.Compile(m_scriptInCSharp);
+            try
+            {
+                precompiler.Compile(m_scriptInCSharp);
+            }
+            catch (Exception exc)
+            {
+                if (!Precompiler.FallbackToInterpreter)
+                {
+                    throw;
+                }
+                // The translator handles a subset of CSCS. Rather than kill the script,
+                // register this one as an ordinary interpreted function: same behaviour,
+                // just without the speedup. Precompiler.Fallbacks records what happened.
+                Precompiler.RecordFallback(funcName, exc.Message);
+                // A cfunction body is captured raw, because the precompiler runs
+                // ConvertToScript on it itself. CustomFunction executes its body directly and
+                // therefore needs the converted form -- handing over the raw text leaves the
+                // whitespace in and the body no longer parses.
+                var interpretedBody = Utils.ConvertToScript(InterpreterInstance, body, out _);
+                CustomFunction interpretedFunc = new CustomFunction(funcName, interpretedBody, args, script);
+                interpretedFunc.ParentScript = script;
+                interpretedFunc.ParentOffset = script.ParentOffset;
+                InterpreterInstance.RegisterFunction(funcName, interpretedFunc, false /* not native */);
+                return new Variable(funcName);
+            }
 
             CustomCompiledFunction customFunc = new CustomCompiledFunction(funcName, body, args, precompiler, argsMap, script);
             customFunc.ParentScript = script;
@@ -1264,6 +1355,12 @@ namespace SplitAndMerge
     public class DownloadFileFunction : ParserFunction
     {
         static int s_timeout = 15 * 1000;
+        // One client for the process: a new HttpClient per download leaks sockets, and
+        // the timeout above was never applied to it, so a dead host blocked for however
+        // long the OS took to give up (over a minute) instead of 15 seconds.
+        static readonly HttpClient s_httpClient =
+            new HttpClient { Timeout = TimeSpan.FromMilliseconds(s_timeout) };
+
         protected override Variable Evaluate(ParsingScript script)
         {
             List<Variable> args = script.GetFunctionArgs();
@@ -1292,13 +1389,12 @@ namespace SplitAndMerge
         {
             var ext = Path.GetExtension(requestUrl);
             var localFilePath = Path.GetTempFileName() + ext;
-            var httpClient = new HttpClient();
-            var responseStream = await httpClient.GetStreamAsync(requestUrl).ConfigureAwait(false);
-            var fileStream = new FileStream(localFilePath, FileMode.Create);
-            responseStream.CopyTo(fileStream);
-            fileStream.Close();
+            var responseStream = await s_httpClient.GetStreamAsync(requestUrl).ConfigureAwait(false);
+            using (var fileStream = new FileStream(localFilePath, FileMode.Create))
+            {
+                responseStream.CopyTo(fileStream);
+            }
             responseStream.Close();
-            httpClient.Dispose();
 
             return new Variable(localFilePath);
         }

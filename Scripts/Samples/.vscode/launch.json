@@ -8,7 +8,7 @@
             "type": "cscs",
             "request": "launch",
             "name": "CSCS Launch",
-            "program": "${workspaceFolder}/${command:RunLocal}",
+            "program": "${workspaceFolder}/test.cscs",
             "stopOnEntry": true,
             "connectType": "sockets",
             "serverPort": 13337,

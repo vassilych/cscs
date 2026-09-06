@@ -860,6 +860,14 @@ namespace SplitAndMerge
 
         static bool CanMergeCells(Variable leftCell, Variable rightCell)
         {
+            // Exponentiation is right-associative, as it is in Python, Ruby, F#, JavaScript
+            // and Fortran: 2**3**2 is 2**(3**2) = 512, not (2**3)**2 = 64. Deferring here
+            // lets the right-hand pair merge first. Every other operator is
+            // left-associative, which the ">=" below already gives.
+            if (leftCell.Action == Constants.POWER && rightCell.Action == Constants.POWER)
+            {
+                return false;
+            }
             return GetPriority(leftCell.Action) >= GetPriority(rightCell.Action);
         }
 

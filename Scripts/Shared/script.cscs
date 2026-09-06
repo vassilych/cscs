@@ -1,0 +1,113 @@
+// script.cscs -- served from <webroot>/shared/script.cscs and fetched over HTTP.
+//
+// Deliberately self-contained: it arrives as a single downloaded file in a temp
+// directory, so it cannot include() anything and must not assume any module beyond the
+// core interpreter. Everything it needs is defined below.
+//
+// It reports its own results and throws on the first failure, so the client can tell
+// whether the whole thing passed just by whether an exception came back.
+
+sharedScriptName    = "script.cscs";
+sharedScriptVersion = 5;
+
+failures = 0;
+
+// Throws immediately rather than only counting: the verdict must not depend on where a
+// check sits in the file. An earlier version summarised at the end, so a check added after
+// the summary was printed as FAIL and still reported an overall pass.
+function check(what, calculated, expected) {
+  if (calculated == expected) {
+    Print("  OK   ", what, " = ", calculated);
+    return true;
+  }
+  failures++;
+  Print("  FAIL ", what, ": expected [", expected, "] but got [", calculated, "]");
+  throw(sharedScriptName + ": check failed: " + what +
+        " (expected [" + expected + "] but got [" + calculated + "])");
+}
+
+Print("--- ", sharedScriptName, " v", sharedScriptVersion, " --- ",
+      now("yyyy/MM/dd HH:mm:ss"));
+
+// ---------------------------------------------------------------- interpreted basics
+check("arithmetic",    3 / 2 + 1,                2.5);
+check("string concat", "ab" + "cd",              "abcd");
+sample = "abcdef";
+check("substring",     sample.Substring(1, 3), "bcd");
+
+numbers = {};
+for (i = 1; i <= 5; i++) {
+  numbers.Add(i * i);
+}
+check("array built in a loop", numbers.Size, 5);
+check("last array element",    numbers[4],   25);
+
+lookup = {"one" : 1, "two" : 2};
+lookup["three"] = 3;
+check("map lookup", lookup["three"], 3);
+
+// ------------------------------------------------------- precompiled (cfunction) code
+// Each compiled function is paired with an identical interpreted one. Declaring a
+// function "cfunction" must never change what it computes, so the pair must agree.
+
+cfunction double sumSquaresCompiled(int n) {
+  total = 0.0;
+  for (i = 1; i <= n; i++) {
+    total += i * i;
+  }
+  return total;
+}
+function sumSquaresInterpreted(n) {
+  total = 0.0;
+  for (i = 1; i <= n; i++) {
+    total += i * i;
+  }
+  return total;
+}
+check("sumSquares compiled == interpreted",
+      sumSquaresCompiled(100), sumSquaresInterpreted(100));
+check("sumSquares value", sumSquaresCompiled(100), 338350);
+
+// Division is real division everywhere in CSCS, including inside compiled code.
+cfunction double divideCompiled(int a, int b) {
+  return a / b;
+}
+check("compiled division is not integer division", divideCompiled(3, 2), 1.5);
+
+// Comparison and logical operators, and booleans held in variables.
+cfunction int classifyCompiled(double n) {
+  inRange = n > 10 && n < 100;
+  isEdge  = n == 10 || n == 100;
+  if (inRange) {
+    return 1;
+  }
+  if (isEdge) {
+    return 2;
+  }
+  return 3;
+}
+check("classify inside range", classifyCompiled(50),  1);
+check("classify on edge",      classifyCompiled(10),  2);
+check("classify outside",      classifyCompiled(500), 3);
+
+// A compiled function calling another compiled function.
+cfunction double scaleCompiled(double x, double factor) {
+  return x * factor;
+}
+cfunction double outerCompiled(double x) {
+  return scaleCompiled(x, 3) + 1;
+}
+check("compiled calling compiled", outerCompiled(5), 16);
+
+// Strings inside compiled code.
+cfunction string tidyCompiled(string s) {
+  loud = s.Substring(1, 5).Upper;
+  return loud + ":" + s.Length;
+}
+check("compiled string handling", tidyCompiled("abcdefgh"), "BCDEF:8");
+
+// ------------------------------------------------------------------------- conclusion
+Print("--- ", sharedScriptName, ": ",
+      (failures == 0 ? "all checks passed" : failures + " CHECK(S) FAILED"), " ---");
+
+

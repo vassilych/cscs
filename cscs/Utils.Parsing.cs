@@ -1341,6 +1341,40 @@ namespace SplitAndMerge
             Interpreter.LastInstance.Process(firstScript, fileName, false, context);
         }
 
+        /// <summary>
+        /// Whether an extracted declaration can be run during the preprocessing pass.
+        ///
+        /// include("functions.cscs") names a file that is known before the script runs, so
+        /// hoisting it is exactly what preprocessing is for. include(path) computes the name
+        /// at run time -- during preprocessing that variable does not exist yet, so hoisting
+        /// it fails with "Couldn't find variable". Those are left for the main pass, where
+        /// they work normally.
+        /// </summary>
+        static bool CanHoist(string token, string extracted)
+        {
+            if (!token.Equals(Constants.INCLUDE, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            int argStart = extracted.IndexOf(Constants.START_ARG);
+            if (argStart < 0)
+            {
+                return true;
+            }
+
+            for (int i = argStart + 1; i < extracted.Length; i++)
+            {
+                if (extracted[i] == ' ')
+                {
+                    continue;
+                }
+                // A quoted literal is resolvable now; anything else is a runtime expression.
+                return extracted[i] == '"';
+            }
+            return false;
+        }
+
         public static string GetSubscript(ParsingScript script, HashSet<string> tokens)
         {
             var start = script.Pointer;
@@ -1368,7 +1402,7 @@ namespace SplitAndMerge
                 if (script.Current == Constants.END_STATEMENT)
                 {
                     extracted += script.CurrentAndForward();
-                    if (needed)
+                    if (needed && CanHoist(token, extracted))
                     {
                         sb.Append(extracted);
                     }
@@ -1377,20 +1411,31 @@ namespace SplitAndMerge
 
                 if (script.Current == Constants.SPACE)
                 {
+                    // Copy the rest of the signature verbatim: an optional return type,
+                    // the name, and the balanced parameter list. Reading a single token
+                    // here meant declarations that carry a return type -- 'cfunction string
+                    // f(..)', 'dllsub double f(..)' -- or that contain spaces inside the
+                    // parameter list stopped mid-signature, so the body was then extracted
+                    // as if it ended at the first ';' and the result was unbalanced.
                     script.Forward();
-                    var token2 = GetNextToken(script);
-                    extracted += token2 + script.CurrentAndForward();
-                    needForward = false;
-                }
-                if (script.Current == Constants.SPACE)
-                {
-                    extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_STATEMENT);
-                    needForward = false;
-                }
-                if (script.Prev == Constants.START_ARG)
-                {
-                    extracted += GetBodyBetween(script, Constants.START_ARG, Constants.END_ARG, Constants.END_ARG);
-                    extracted += script.TryCurrentAndForward();
+                    while (script.StillValid() && script.Current != Constants.START_ARG &&
+                           script.Current != Constants.START_GROUP &&
+                           script.Current != Constants.END_STATEMENT)
+                    {
+                        extracted += script.CurrentAndForward();
+                    }
+                    if (script.StillValid() && script.Current == Constants.START_ARG)
+                    {
+                        int argDepth = 0;
+                        while (script.StillValid())
+                        {
+                            var ch = script.Current;
+                            if (ch == Constants.START_ARG) argDepth++;
+                            else if (ch == Constants.END_ARG) argDepth--;
+                            extracted += script.CurrentAndForward();
+                            if (argDepth == 0) break;
+                        }
+                    }
                     needForward = false;
                 }
 
@@ -1407,11 +1452,15 @@ namespace SplitAndMerge
                 }
                 extracted += GetBodyBetween(script, startBody, endBody, endExtract);
                 extracted += script.TryCurrentAndForward();
-                if (script.Current == Constants.END_GROUP || script.Current == Constants.END_STATEMENT)
+                // Only a trailing ';' belongs to this declaration. A '}' at this point closes
+                // an enclosing block that the extraction never opened -- a function declared
+                // as the last member of a class, for instance -- so consuming it would leave
+                // the extracted subscript with unbalanced braces.
+                if (script.Current == Constants.END_STATEMENT)
                 {
                     extracted += script.StillValid() ? script.CurrentAndForward() : Constants.EMPTY;
                 }
-                if (needed)
+                if (needed && CanHoist(token, extracted))
                 {
                     sb.Append(extracted);
                 }
