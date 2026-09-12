@@ -414,14 +414,25 @@ namespace SplitAndMerge
             }
         }
 
-        public static GetVarFunction ExtractArrayElement(Interpreter interpreter, string token)
+        public static GetVarFunction ExtractArrayElement(Interpreter interpreter, string token,
+                                                         ParsingScript script = null)
         {
             if (!token.Contains(Constants.START_ARRAY))
             {
                 return null;
             }
 
-            ParsingScript tempScript = new ParsingScript(interpreter, token);
+            // Evaluated in the caller's context when there is one. A fresh script could not
+            // see a function's own locals -- they live in its script's stack level -- so
+            // "a[0].Substring(1)" on a local "a" failed with "Couldn't find variable [a[0]]"
+            // inside a function while working at the top level.
+            ParsingScript tempScript = script == null ? new ParsingScript(interpreter, token) :
+                                                        script.GetTempScript(token);
+            if (script != null)
+            {
+                tempScript.Namespace = script.Namespace;
+                tempScript.CurrentClass = script.CurrentClass;
+            }
             Variable result = tempScript.Execute();
             return new GetVarFunction(result);
         }

@@ -884,7 +884,13 @@ namespace SplitAndMerge
             List<Variable> args = script.GetFunctionArgs();
             script.MoveBackIf(Constants.START_GROUP);
 
-            if (args.Count != m_args.Length)
+            // Only too many is wrong here. What is missing -- a default, or an argument given
+            // by name -- is bound by RegisterArguments, which Run calls before it prepares the
+            // typed lists, and which is the same code an interpreted function uses. Filling
+            // the defaults here instead appended one for the last position, so "f(b = 2)" on
+            // "f(int a = 5, int b = 7)" gave a the default of b: 72 where the interpreter has
+            // 52. RegisterArguments still reports an argument that has no default at all.
+            if (args.Count > m_args.Length)
             {
                 throw new ArgumentException("Function [" + m_name + "] arguments mismatch: " +
                                     m_args.Length + " declared, " + args.Count + " supplied");
@@ -901,7 +907,7 @@ namespace SplitAndMerge
 
         public Variable Run(List<Variable> args)
         {
-            RegisterArguments(args);
+            var level = RegisterArguments(args);
 
             PrepareArgs(args, m_args, null, m_argsMap, out List<string> argsStr, out List<double> argsNum, out List<int> argsInt,
             out List<List<string>> argsArrStr, out List<List<double>> argsArrNum, out List<List<int>> argsArrInt,
@@ -911,7 +917,7 @@ namespace SplitAndMerge
                 m_precompiler.RunAsync(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false) :
                 m_precompiler.Run(InterpreterInstance, argsStr, argsNum, argsInt, argsArrStr, argsArrNum, argsArrInt, argsMapStr, argsMapNum, argsVar, false);
 
-            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
+            InterpreterInstance.PopLocalVariables(level.Id);
 
             return result;
         }

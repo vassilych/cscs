@@ -34,6 +34,9 @@ namespace CSCSMath
             interpreter.RegisterFunction(Constants.MATH_ATANH, new AtanhFunction());
             interpreter.RegisterFunction(Constants.MATH_CBRT, new CbrtFunction());
             interpreter.RegisterFunction(Constants.MATH_CEIL, new CeilFunction());
+            // Both spellings: scripts written against .NET reach for Math.Ceiling, and it
+            // is also what the precompiler emits, since C# has no Math.Ceil.
+            interpreter.RegisterFunction(Constants.MATH_CEILING, new CeilFunction());
             interpreter.RegisterFunction(Constants.MATH_COS, new CosFunction());
             interpreter.RegisterFunction(Constants.MATH_COSH, new CoshFunction());
             interpreter.RegisterFunction(Constants.MATH_E, new EFunction());

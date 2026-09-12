@@ -36,6 +36,15 @@ namespace SplitAndMerge
                 m_impl = s_idFunction;
                 return;
             }
+            if (item.Length == 0 && ch == Constants.START_GROUP)
+            {
+                // A brace literal in the middle of an expression: the value in
+                // {"x": {1, 2}}, where ":" is an operator and its right side comes through
+                // here. Arguments and whole right-hand sides check for "{" before they get
+                // this far; this one went on to a lookup of an empty name and failed.
+                m_impl = s_listFunction;
+                return;
+            }
 
             m_impl = CheckString(script, item, ch);
             if (m_impl != null)
@@ -192,6 +201,8 @@ namespace SplitAndMerge
 
         static StringOrNumberFunction s_strOrNumFunction =
           new StringOrNumberFunction();
+        static ListLiteralFunction s_listFunction = new ListLiteralFunction();
+
         static IdentityFunction s_idFunction =
           new IdentityFunction();
 

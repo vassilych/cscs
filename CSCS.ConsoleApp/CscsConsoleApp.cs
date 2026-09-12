@@ -89,6 +89,20 @@ namespace CSCS.ConsoleApp
             _interpreterManager.SetInterpreter(interpreterId);
             if (_startDebugger)
             {
+                // A client is meant to send the script to debug, and some do not: a stepping
+                // command then arrives with nothing loaded. This names the script to fall
+                // back on, so a session still runs.
+                var fallback = Environment.GetEnvironmentVariable("CSCS_DEBUG_SCRIPT");
+                if (string.IsNullOrWhiteSpace(fallback))
+                {
+                    // Nothing was named, so fall back on whatever the last session debugged.
+                    fallback = Debugger.LastRememberedScriptFile();
+                }
+                if (!string.IsNullOrWhiteSpace(fallback))
+                {
+                    Debugger.DefaultScriptFile = fallback;
+                }
+
                 var started = DebuggerServer.StartServer(DebuggerPort,
                     !string.IsNullOrWhiteSpace(DebuggerServer.AllowedClients));
                 if (started != "OK")
@@ -118,6 +132,11 @@ namespace CSCS.ConsoleApp
             {
                 Console.WriteLine("CSCS debug server listening on port " + DebuggerPort +
                     ". Waiting for a client to attach (Ctrl+C to stop).");
+                if (!string.IsNullOrWhiteSpace(Debugger.DefaultScriptFile))
+                {
+                    Console.WriteLine("A client that sends no file will debug: " +
+                                      Debugger.DefaultScriptFile);
+                }
                 var stopRequested = new ManualResetEventSlim(false);
                 Console.CancelKeyPress += (sender, e) => { e.Cancel = true; stopRequested.Set(); };
                 stopRequested.Wait();

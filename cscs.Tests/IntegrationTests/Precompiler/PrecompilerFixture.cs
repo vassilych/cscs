@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SplitAndMerge;
 
@@ -155,15 +155,20 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             // The translator covers a subset of CSCS. A construct outside that subset must
             // not kill the script: the function is registered as an ordinary interpreted
             // one, and the reason is recorded rather than swallowed.
-            // "**" is the stable example: C# has no exponentiation operator, and rewriting it
-            // to Math.Pow needs precedence-aware operand extraction, so it stays interpreted.
-            // try/catch and switch each played this role until they started compiling.
+            // "===" between a string and a number is the stable example, and unlike the ones
+            // before it this is a fallback by design rather than a gap: the strict form is
+            // false when the types differ, but folding it to a constant is unsafe because of
+            // the undefined cases, so it stays interpreted. try/catch, switch, "**", "===" on
+            // numbers and class fields each played this role until they started compiling.
             SplitAndMerge.Precompiler.ClearFallbacks();
             var result = Process(@"
-                cfunction double tricky(double a) {
-                  return 2**3**a;
+                cfunction double tricky(string a) {
+                  if (a === 5) {
+                    return 0;
+                  }
+                  return 512;
                 }
-                tricky(2);");
+                tricky(""5"");");
 
             AssertNoCscsException();
             Assert.AreEqual(512.0, result.AsDouble(), 1e-9,

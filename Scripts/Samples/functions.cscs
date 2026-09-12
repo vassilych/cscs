@@ -115,23 +115,61 @@ function tan(x) {
 function cot(x) {
   return Math.cos(x) / Math.sin(x);
 }
+// How many tests ran, and how they went. testSummary() prints the totals.
+// The counts live in a map rather than in two plain numbers because of namespaces: a
+// function called from inside "namespace ns1 { ... }" writes a scalar global into the
+// namespace instead of the global scope, so four of test.cscs's assertions were counted
+// as ns1.testsPassed and the total came out short. An *element* write reaches the
+// collection itself from either scope, which is what makes these totals add up.
+testCounts = {};
+testCounts["passed"] = 0;
+testCounts["failed"] = 0;
+// A failing test throws, and stepin_tests.cscs relies on that to produce an exception.
+// A suite that would rather see *all* of its failures, and a count at the end, sets
+// testsContinueOnFail = 1: the failure is then printed in red and the script carries on.
+testsContinueOnFail = 0;
+
+function testFailed(msg) {
+  testCounts["failed"] = testCounts["failed"] + 1;
+  if (testsContinueOnFail) {
+    printred(msg);
+    return;
+  }
+  throw(msg);
+}
+
+function testSummary(suite) {
+  passed = testCounts["passed"];
+  failed = testCounts["failed"];
+  total = passed + failed;
+  msg = suite + ": " + passed + " OK, " + failed + " Failed, " + total + " total.";
+  if (failed == 0) {
+    printgreen(msg);
+    return;
+  }
+  printred(msg);
+}
+
 function test(calculated, expected) {
   if (calculated == expected) {
+    testCounts["passed"] = testCounts["passed"] + 1;
     print(calculated, " as expected. OK");
     return;
-  } 
+  }
   if (expected.type != "NUMBER") {
     print("expected.type = [" + expected.type + "]");
-    throw("ERROR. Test failed. Expecting [" + expected + "] but calculated [" + calculated + "]");
+    testFailed("ERROR. Test failed. Expecting [" + expected + "] but calculated [" + calculated + "]");
+    return;
   }
 
   epsilon = 0.000001;
   if ((expected == 0 && Math.abs(calculated) <= epsilon) ||
       (expected != 0 && Math.abs(calculated - expected) / expected <= epsilon)) {
+    testCounts["passed"] = testCounts["passed"] + 1;
     print(calculated, " within epsion to ", expected, ". almost OK");
   } else {
     diff = expected - calculated;
-    throw("ERROR. Test failed. Expecting " + expected + " but calculated " + calculated + ", diff=", diff);;
+    testFailed("ERROR. Test failed. Expecting " + expected + " but calculated " + calculated + ", diff=" + diff);
   }
 }
 

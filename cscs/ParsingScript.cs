@@ -695,12 +695,13 @@ namespace SplitAndMerge
             int arrayIndexDepth = 0;
             bool inQuotes = false;
             int negated = 0;
+            int bitNegated = 0;
             char ch;
             string action;
 
             do
             { // Main processing cycle of the first part.
-                string token = Parser.ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
+                string token = Parser.ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, ref bitNegated, out ch, out action);
 
                 bool ternary = Parser.UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
@@ -716,7 +717,7 @@ namespace SplitAndMerge
                 ParserFunction func = new ParserFunction(script, token, ch, ref action);
                 Variable current = func.GetValue(script); //Variable.EmptyInstance;
 
-                //if (Parser.UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref action))
+                //if (Parser.UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref bitNegated, ref action))
                 {
                   //  return listToMerge;
                 }

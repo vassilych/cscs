@@ -263,6 +263,15 @@ namespace SplitAndMerge
                 while ((i = m_stream.Read(bytes, 0, bytes.Length)) != 0 && Connected)
                 {
                     data = System.Text.Encoding.UTF8.GetString(bytes, 0, i);
+                    // Counted here, on the reading thread and before anything is dispatched,
+                    // so that a step read after it always knows a file is on its way.
+                    foreach (var line in data.Split('\n'))
+                    {
+                        if (line.TrimStart().StartsWith("file|", StringComparison.Ordinal))
+                        {
+                            Debugger.FileCommandReceived();
+                        }
+                    }
                     string rest = "";
                     DebuggerUtils.DebugAction action = DebuggerUtils.StringToAction(data, ref rest);
 

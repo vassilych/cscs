@@ -159,34 +159,19 @@ namespace SplitAndMerge
             if (action == DebuggerUtils.DebugAction.FILE)
             {
                 MainInstance = this;
-                string filename = load;
-                string rawScript = Utils.GetFileContents(filename);
-
-                if (string.IsNullOrWhiteSpace(rawScript))
-                {
-                    ProcessException(null, new ParsingException("Could not load script " + filename));
-                    return;
-                }
-
+                bool loaded;
                 try
                 {
-                    m_script = Utils.ConvertToScript(TheInterpreter, rawScript, out m_char2Line, filename);
+                    loaded = LoadScriptToDebug(load);
                 }
-                catch (ParsingException exc)
+                finally
                 {
-                    ProcessException(m_debugging, exc);
+                    FileCommandDone();
+                }
+                if (!loaded)
+                {
                     return;
                 }
-                m_debugging = new ParsingScript(TheInterpreter, m_script, 0, m_char2Line);
-                m_debugging.Filename = filename;
-                m_debugging.MainFilename = m_debugging.Filename;
-                m_debugging.OriginalScript = rawScript;
-                m_debugging.Debugger = this;
-
-                m_steppingIns.Clear();
-                m_completedStepIn.Reset();
-                ProcessingBlock = SendBackResult = InInclude = End = false;
-                m_blockLevel = m_maxBlockLevel = 0;
             }
             else if (action == DebuggerUtils.DebugAction.VARS)
             {
@@ -231,8 +216,25 @@ namespace SplitAndMerge
             {
                 if (m_debugging == null)
                 {
+                    // The file may still be loading: see FileCommandReceived.
+                    WaitForFileLoad(FileLoadTimeoutMs);
+                }
+                if (m_debugging == null && !string.IsNullOrWhiteSpace(DefaultScriptFile))
+                {
+                    // The client stepped without ever sending "file|<path>". Rather than
+                    // stall the session, debug the script we were told to fall back to.
+                    Console.WriteLine("No file was sent by the client; debugging " +
+                                      DefaultScriptFile);
+                    LoadScriptToDebug(DefaultScriptFile);
+                }
+                if (m_debugging == null)
+                {
                     result = "Error: Not initialized";
-                    Console.WriteLine(result);
+                    Console.WriteLine(result + ": the client sent no \"file\" command. Set " +
+                        "CSCS_DEBUG_SCRIPT to the script to debug.");
+                    // Not sent to the client as an exception: this one treats any exception
+                    // response as permanent and stops sending the file at all afterwards,
+                    // which is what leads here in the first place.
                 }
                 else
                 {
@@ -284,6 +286,143 @@ namespace SplitAndMerge
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// The script to debug when the client never names one. A client is meant to send
+        /// "file|&lt;path&gt;" before stepping, and a stepping command that arrives without it
+        /// leaves nothing to run. Set from the CSCS_DEBUG_SCRIPT environment variable at
+        /// startup, and remembered from the last file a client did send.
+        /// </summary>
+        public static string DefaultScriptFile { get; set; }
+
+        // A "file" command runs on a work item of its own, while a step goes through the
+        // queue onto another one, and nothing orders the two. Loading a large script takes
+        // long enough -- test.cscs, close to two seconds -- that a step sent right behind the
+        // file, in a separate read, arrived with nothing loaded yet: "Error: Not initialized".
+        // The VS Code client sends exactly that: "file", then the breakpoints and the first
+        // step, which TCP tends to deliver as a second read. The server counts the file
+        // commands it has received but not finished, and a step waits for them.
+        static readonly object s_fileLoadLock = new object();
+        static int s_filesLoading;
+        const int FileLoadTimeoutMs = 60 * 1000;
+
+        /// <summary>Called by the server, before dispatching, for each "file" command.</summary>
+        public static void FileCommandReceived()
+        {
+            lock (s_fileLoadLock)
+            {
+                s_filesLoading++;
+            }
+        }
+
+        static void FileCommandDone()
+        {
+            lock (s_fileLoadLock)
+            {
+                s_filesLoading = Math.Max(0, s_filesLoading - 1);
+                Monitor.PulseAll(s_fileLoadLock);
+            }
+        }
+
+        static void WaitForFileLoad(int timeoutMs)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            lock (s_fileLoadLock)
+            {
+                while (s_filesLoading > 0)
+                {
+                    var left = deadline - DateTime.UtcNow;
+                    if (left <= TimeSpan.Zero || !Monitor.Wait(s_fileLoadLock, left))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reads the script and makes it the one being debugged. False when it could not be
+        /// read or parsed, in which case the client has already been told why.
+        /// </summary>
+        bool LoadScriptToDebug(string filename)
+        {
+            string rawScript = Utils.GetFileContents(filename);
+            if (string.IsNullOrWhiteSpace(rawScript))
+            {
+                ProcessException(null, new ParsingException("Could not load script " + filename));
+                return false;
+            }
+
+            try
+            {
+                m_script = Utils.ConvertToScript(TheInterpreter, rawScript, out m_char2Line, filename);
+            }
+            catch (ParsingException exc)
+            {
+                ProcessException(m_debugging, exc);
+                return false;
+            }
+
+            m_debugging = new ParsingScript(TheInterpreter, m_script, 0, m_char2Line);
+            m_debugging.Filename = filename;
+            m_debugging.MainFilename = m_debugging.Filename;
+            m_debugging.OriginalScript = rawScript;
+            m_debugging.Debugger = this;
+
+            m_steppingIns.Clear();
+            m_completedStepIn.Reset();
+            ProcessingBlock = SendBackResult = InInclude = End = false;
+            m_blockLevel = m_maxBlockLevel = 0;
+
+            // Remembered so a later session that forgets to send the file still has one --
+            // on disk as well, since the server is usually restarted between sessions.
+            DefaultScriptFile = filename;
+            RememberScriptFile(filename);
+            return true;
+        }
+
+        /// <summary>
+        /// Where the last debugged script is noted between runs. In the home directory rather
+        /// than the temporary one: TMPDIR differs between a shell and an IDE-launched process,
+        /// and the note is only useful if the next run can find it.
+        /// </summary>
+        static string RememberedScriptPath =>
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".cscs_last_debug_script");
+
+        static void RememberScriptFile(string filename)
+        {
+            try
+            {
+                System.IO.File.WriteAllText(RememberedScriptPath, filename);
+            }
+            catch (Exception)
+            {
+                // Only a convenience: a server that cannot write here still debugs normally.
+            }
+        }
+
+        /// <summary>
+        /// The script the last session debugged, or null. Used when nothing else names one,
+        /// so that a client which sends no "file" command still has something to run.
+        /// </summary>
+        public static string LastRememberedScriptFile()
+        {
+            try
+            {
+                if (!System.IO.File.Exists(RememberedScriptPath))
+                {
+                    return null;
+                }
+                var filename = System.IO.File.ReadAllText(RememberedScriptPath).Trim();
+                return System.IO.File.Exists(filename) ? filename : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public string CreateResult(string output, ParsingScript script = null)

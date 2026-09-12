@@ -166,6 +166,34 @@ namespace SplitAndMerge
             get { return GetVariable(key); }
         }
 
+        /// <summary>
+        /// Loop counters in precompiled code are declared double so that "/" is not integer
+        /// division, so a subscript arrives as one. Truncates exactly as the interpreter's
+        /// GetArrayIndex does.
+        /// </summary>
+        public Variable this[double index]
+        {
+            get { return GetVariable((int)index); }
+        }
+
+        /// <summary>
+        /// Indexing by a Variable, which is what "m[keys[i]]" produces: the subscript is
+        /// itself read out of a collection, so its type is only known at run time. Dispatches
+        /// the way the interpreter does -- a number indexes the tuple, anything else is a key.
+        /// </summary>
+        public Variable this[Variable index]
+        {
+            get
+            {
+                if (index == null)
+                {
+                    return EmptyInstance;
+                }
+                return index.Type == VarType.NUMBER ?
+                    GetVariable((int)index.Value) : GetVariable(index.AsString());
+            }
+        }
+
         public virtual Variable Clone()
         {
             Variable newVar = (Variable)this.MemberwiseClone();
@@ -1090,7 +1118,7 @@ namespace SplitAndMerge
                     }
                     Variable propValue = GetProperty(prop);
                     string value = "";
-                    if (propValue != null && propValue != Variable.EmptyInstance)
+                    if (propValue != null && propValue.Type != VarType.NONE)
                     {
                         value = propValue.AsString();
                         if (!string.IsNullOrEmpty(value))
@@ -1128,9 +1156,15 @@ namespace SplitAndMerge
         /// Scripts spell this "Size", and precompiled code copies the script's spelling
         /// through, so the generated C# needs a member of that name.
         /// </summary>
+        /// <summary>
+        /// What a script sees for ".Size": the element count of a collection, and 0 for
+        /// anything else -- a number, a string, a class instance. Not Count, which answers 1
+        /// for those, so "a[0].Size" on a scalar element came back as 1 where the interpreter
+        /// says 0. Nothing in the interpreter reads this; it exists for precompiled code.
+        /// </summary>
         public int Size
         {
-            get { return Count; }
+            get { return Type == VarType.ARRAY ? Count : 0; }
         }
 
         public int Count
@@ -1140,6 +1174,390 @@ namespace SplitAndMerge
                 return Type == VarType.ARRAY ? m_tuple.Count :
                        Type == VarType.NONE ? 0 : 1;
             }
+        }
+
+        /// <summary>
+        /// The "+" precompiled code uses when it cannot know whether a value is a number or a
+        /// string until it runs -- an interpreter callback's result, typically. CSCS decides
+        /// this from the operands at run time, so translating it to a fixed AsDouble() or
+        /// AsString() had to guess, and a wrong guess did not fail to compile, it quietly
+        /// changed the answer: "helper(n) + helper(n)" over strings came back as 0.
+        ///
+        /// Mirrors Parser.MergeNumbers and Parser.MergeStrings exactly: a string on the left
+        /// concatenates, and a number on the left concatenates unless the right is a number
+        /// too.
+        /// </summary>
+        public static Variable operator +(Variable left, Variable right)
+        {
+            if (left == null || right == null)
+            {
+                return left ?? right ?? Variable.EmptyInstance;
+            }
+            if (!BothNumbers(left, right))
+            {
+                return new Variable(left.AsString() + right.AsString());
+            }
+            return new Variable(left.Value + right.Value);
+        }
+
+        public static Variable operator +(Variable left, double right)
+        {
+            return left + new Variable(right);
+        }
+
+        public static Variable operator +(double left, Variable right)
+        {
+            return new Variable(left) + right;
+        }
+
+        public static Variable operator +(Variable left, string right)
+        {
+            return left + new Variable(right);
+        }
+
+        public static Variable operator +(string left, Variable right)
+        {
+            return new Variable(left) + right;
+        }
+
+        /// <summary>
+        /// Scripts spell this "Keys", and precompiled code copies the script's spelling
+        /// through, so the generated C# needs a member of that name. Same list the
+        /// interpreter returns for the Keys property.
+        /// </summary>
+        public Variable Keys
+        {
+            get { return new Variable(GetAllKeys()); }
+        }
+
+        /// <summary>
+        /// The remaining arithmetic and relational operators, for the same reason as "+":
+        /// precompiled code holds values whose type is only known at run time -- a global read
+        /// back through the interpreter, or a callback's result -- and C# has no operators for
+        /// those. Each mirrors Parser.MergeNumbers and Parser.MergeStrings, including the
+        /// cases the interpreter refuses: "*" concatenates trimmed strings, while "-", "/" and
+        /// "%" on a string raise the same error the interpreter raises.
+        /// </summary>
+        /// <summary>
+        /// Whether the pair takes the numeric path. Parser.MergeCells uses MergeNumbers only
+        /// when *both* sides are numbers and sends everything else to MergeStrings, so a
+        /// number against a string concatenates and compares as text -- 5 &lt; "abc" is true
+        /// there, because "5" sorts before "a". Reading the left side alone got that backwards.
+        /// </summary>
+        static bool BothNumbers(Variable left, Variable right)
+        {
+            return left != null && right != null &&
+                   left.Type == VarType.NUMBER && right.Type == VarType.NUMBER;
+        }
+
+        static Variable Arithmetic(Variable left, Variable right, string action)
+        {
+            if (left == null || right == null)
+            {
+                return EmptyInstance;
+            }
+            if (!BothNumbers(left, right))
+            {
+                if (action == "*")
+                {
+                    return new Variable(left.AsString().Trim() + right.AsString().Trim());
+                }
+                throw new ArgumentException("Can't process operation [" + action + "] on strings.");
+            }
+            switch (action)
+            {
+                case "-": return new Variable(left.Value - right.Value);
+                case "*": return new Variable(left.Value * right.Value);
+                case "/": return new Variable(left.Value / right.Value);
+                default: return new Variable(left.Value % right.Value);
+            }
+        }
+
+        static bool Compare(Variable left, Variable right, string action)
+        {
+            int order;
+            if (!BothNumbers(left, right))
+            {
+                order = string.Compare(left == null ? "" : left.AsString(),
+                                       right == null ? "" : right.AsString());
+            }
+            else
+            {
+                double l = left == null ? 0 : left.Value;
+                double r = right == null ? 0 : right.Value;
+                order = l < r ? -1 : l > r ? 1 : 0;
+            }
+            switch (action)
+            {
+                case "<": return order < 0;
+                case ">": return order > 0;
+                case "<=": return order <= 0;
+                default: return order >= 0;
+            }
+        }
+
+        // Unary minus mirrors the interpreter, which negates the numeric field rather than
+        // the parsed text: "-a[0]" over the element "7" is -0 there, not -7.
+        public static Variable operator -(Variable value)
+        {
+            return new Variable(-(value == null ? 0 : value.Value));
+        }
+        // "++" and "--" step the numeric field for the same reason: incrementing the element
+        // "7" gives 1 in the interpreter, not 8, because a string's numeric field is 0.
+        public static Variable operator ++(Variable value)
+        {
+            return new Variable((value == null ? 0 : value.Value) + 1);
+        }
+        public static Variable operator --(Variable value)
+        {
+            return new Variable((value == null ? 0 : value.Value) - 1);
+        }
+        public static Variable operator -(Variable left, Variable right) { return Arithmetic(left, right, "-"); }
+        public static Variable operator -(Variable left, double right) { return Arithmetic(left, new Variable(right), "-"); }
+        public static Variable operator -(double left, Variable right) { return Arithmetic(new Variable(left), right, "-"); }
+        public static Variable operator *(Variable left, Variable right) { return Arithmetic(left, right, "*"); }
+        public static Variable operator *(Variable left, double right) { return Arithmetic(left, new Variable(right), "*"); }
+        public static Variable operator *(double left, Variable right) { return Arithmetic(new Variable(left), right, "*"); }
+        public static Variable operator /(Variable left, Variable right) { return Arithmetic(left, right, "/"); }
+        public static Variable operator /(Variable left, double right) { return Arithmetic(left, new Variable(right), "/"); }
+        public static Variable operator /(double left, Variable right) { return Arithmetic(new Variable(left), right, "/"); }
+        public static Variable operator %(Variable left, Variable right) { return Arithmetic(left, right, "%"); }
+        public static Variable operator %(Variable left, double right) { return Arithmetic(left, new Variable(right), "%"); }
+        public static Variable operator %(double left, Variable right) { return Arithmetic(new Variable(left), right, "%"); }
+
+        public static bool operator <(Variable left, Variable right) { return Compare(left, right, "<"); }
+        public static bool operator >(Variable left, Variable right) { return Compare(left, right, ">"); }
+        public static bool operator <(Variable left, double right) { return Compare(left, new Variable(right), "<"); }
+        public static bool operator >(Variable left, double right) { return Compare(left, new Variable(right), ">"); }
+        public static bool operator <(double left, Variable right) { return Compare(new Variable(left), right, "<"); }
+        public static bool operator >(double left, Variable right) { return Compare(new Variable(left), right, ">"); }
+        public static bool operator <=(Variable left, Variable right) { return Compare(left, right, "<="); }
+        public static bool operator >=(Variable left, Variable right) { return Compare(left, right, ">="); }
+        public static bool operator <=(Variable left, double right) { return Compare(left, new Variable(right), "<="); }
+        public static bool operator >=(Variable left, double right) { return Compare(left, new Variable(right), ">="); }
+        public static bool operator <=(double left, Variable right) { return Compare(new Variable(left), right, "<="); }
+        public static bool operator >=(double left, Variable right) { return Compare(new Variable(left), right, ">="); }
+        // Against a string too: a collection element compared with a literal -- "v > \"grape\""
+        // -- is the shape a script writes, and Compare already applies the interpreter's rule
+        // of ordering by string.Compare whenever either side is text.
+        public static bool operator <(Variable left, string right) { return Compare(left, new Variable(right), "<"); }
+        public static bool operator >(Variable left, string right) { return Compare(left, new Variable(right), ">"); }
+        public static bool operator <(string left, Variable right) { return Compare(new Variable(left), right, "<"); }
+        public static bool operator >(string left, Variable right) { return Compare(new Variable(left), right, ">"); }
+        public static bool operator <=(Variable left, string right) { return Compare(left, new Variable(right), "<="); }
+        public static bool operator >=(Variable left, string right) { return Compare(left, new Variable(right), ">="); }
+        public static bool operator <=(string left, Variable right) { return Compare(new Variable(left), right, "<="); }
+        public static bool operator >=(string left, Variable right) { return Compare(new Variable(left), right, ">="); }
+
+        /// <summary>
+        /// Whether a value equals a switch label, by the rule the interpreter uses: text is
+        /// compared as text and numbers as numbers. Written as a call rather than as an "=="
+        /// operator on Variable, which would change what every existing reference comparison
+        /// in the interpreter means.
+        /// </summary>
+        public static bool SameValue(object left, object label)
+        {
+            // Either side may arrive as a C# value: "a[0].Trim()" is already a string.
+            var value = left == null ? null : ConvertToVariable(left);
+            if (value == null)
+            {
+                return false;
+            }
+            var other = ConvertToVariable(label);
+            if (value.Type == VarType.STRING || other.Type == VarType.STRING)
+            {
+                return string.Compare(value.AsString(), other.AsString()) == 0;
+            }
+            return value.Value == other.Value;
+        }
+
+        /// <summary>
+        /// Calls a method on a class instance and returns its result, as a single expression.
+        /// Running one needs an argument list -- that is what tells the instance a method is
+        /// wanted rather than a property -- so precompiled code cannot simply read the member.
+        /// </summary>
+        public static Variable CallMethod(Variable instance, string name, params object[] args)
+        {
+            var target = instance == null ? null : instance.Object as CSCSClass.ClassInstance;
+            if (target == null)
+            {
+                throw new ArgumentException("Not a class instance: [" + name + "]");
+            }
+            var list = new List<Variable>();
+            foreach (var arg in args)
+            {
+                list.Add(ConvertToVariable(arg));
+            }
+            return target.GetProperty(name.ToLower(), list).Result;
+        }
+
+        /// <summary>
+        /// Builds a map from alternating keys and values, so that precompiled code can put a
+        /// map literal where an expression is required -- the right-hand side of "m[k] = {...}",
+        /// or an argument. Uses SetHashVariable, which is what the interpreter itself uses, so
+        /// key handling is identical.
+        /// </summary>
+        public static Variable NewMap(params Variable[] keysAndValues)
+        {
+            var result = new Variable(VarType.ARRAY);
+            for (int i = 0; i + 1 < keysAndValues.Length; i += 2)
+            {
+                result.SetHashVariable(keysAndValues[i].AsString(), keysAndValues[i + 1]);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Scripts spell these "Upper" and "Lower", and precompiled code copies the script's
+        /// spelling through, so the generated C# needs members of those names.
+        /// </summary>
+        public string Upper
+        {
+            get { return AsString().ToUpper(); }
+        }
+
+        public string Lower
+        {
+            get { return AsString().ToLower(); }
+        }
+
+        // The C# spellings as well: "Upper" is mapped to ToUpper() before it is known whether
+        // the receiver is a string or a Variable, and a Variable has to answer either way.
+        public string ToUpper()
+        {
+            return AsString().ToUpper();
+        }
+
+        public string ToLower()
+        {
+            return AsString().ToLower();
+        }
+
+        /// <summary>
+        /// String members on a value whose type is only known at run time -- an element read
+        /// out of a collection, typically. They delegate to CscsStringMembers so that a
+        /// collection element behaves exactly as a string variable does, including the
+        /// optional "no_case" argument and Substring's clamping.
+        /// </summary>
+        public bool StartsWith(string what, string mode = "case")
+        {
+            return AsString().StartsWithCscs(what, mode);
+        }
+
+        public bool EndsWith(string what, string mode = "case")
+        {
+            return AsString().EndsWithCscs(what, mode);
+        }
+
+        public int IndexOf(string what, int startFrom = 0, string mode = "case")
+        {
+            return AsString().IndexOfCscs(what, startFrom, mode);
+        }
+
+        public string Substring(int startFrom = 0, int length = int.MaxValue)
+        {
+            return AsString().SubstringCscs(startFrom, length);
+        }
+
+        public string Replace(string what, string with)
+        {
+            return AsString().Replace(what, with);
+        }
+
+        // The interpreter's Trim property is AsString().Trim(); a loop element needs it by
+        // that name, "for (p in parts) { r += p.Trim(); }" having nothing to call.
+        public string Trim()
+        {
+            return AsString().Trim();
+        }
+
+        /// <summary>
+        /// Scripts spell this "Length", and precompiled code copies the script's spelling
+        /// through, so the generated C# needs a member of that name. Same rule as the
+        /// interpreter's property: the element count of an array, otherwise the length of the
+        /// string form -- which is why it is not the same as Size, that being 0 for a string.
+        /// </summary>
+        public int Length
+        {
+            get { return GetLength(); }
+        }
+
+        /// <summary>
+        /// Scripts spell these "First" and "Last", and precompiled code copies the script's
+        /// spelling through, so the generated C# needs members of those names. Same rule the
+        /// interpreter's properties use: an element for an array, a character for a string.
+        /// </summary>
+        public Variable First
+        {
+            get
+            {
+                if (m_tuple != null && m_tuple.Count > 0)
+                {
+                    return m_tuple[0];
+                }
+                return AsString().Length > 0 ? new Variable("" + AsString()[0]) : EmptyInstance;
+            }
+        }
+
+        public Variable Last
+        {
+            get
+            {
+                if (m_tuple != null && m_tuple.Count > 0)
+                {
+                    return m_tuple[m_tuple.Count - 1];
+                }
+                return AsString().Length > 0 ?
+                    new Variable("" + AsString()[AsString().Length - 1]) : EmptyInstance;
+            }
+        }
+
+        /// <summary>
+        /// Scripts spell this "Contains", and precompiled code copies the script's spelling
+        /// through, so the generated C# needs a member of that name. The interpreter's
+        /// semantics are mirrored exactly -- case-insensitive, matching either a map key or
+        /// any element's string form -- so that compiling a call cannot change its answer.
+        /// </summary>
+        public bool Contains(Variable what)
+        {
+            return Contains(what == null ? "" : what.AsString());
+        }
+        public bool Contains(double what)
+        {
+            return Contains(new Variable(what).AsString());
+        }
+        public bool Contains(string what, string mode)
+        {
+            // The explicit-mode form. Only a string can be matched case-insensitively; a map
+            // key is stored lower-cased either way, which the single-argument form handles.
+            return Type == VarType.ARRAY ? Contains(what) : AsString().ContainsCscs(what, mode);
+        }
+
+        public bool Contains(string what)
+        {
+            var comp = StringComparison.CurrentCulture;
+            if (Type != VarType.ARRAY)
+            {
+                return what != "" && AsString().IndexOf(what, comp) >= 0;
+            }
+            // Map keys are stored lower-cased, so this lookup stays case-insensitive however
+            // the element scan below compares -- otherwise Contains would disagree with the
+            // indexing that put the entry there.
+            if (m_dictionary != null && m_dictionary.ContainsKey(what.ToLower()))
+            {
+                return true;
+            }
+            if (m_tuple != null)
+            {
+                foreach (var item in m_tuple)
+                {
+                    if (item.AsString().Equals(what, comp))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public int TotalElements()
@@ -1838,7 +2256,9 @@ namespace SplitAndMerge
 
                 string search = Utils.GetSafeString(args, 0);
                 int startFrom = Utils.GetSafeInt(args, 1, 0);
-                string param = Utils.GetSafeString(args, 2, "no_case");
+                // IndexOf matches case by default, like the standalone StrIndexOf function
+                // and like C#. Pass "no_case" as the third argument for the older behaviour.
+                string param = Utils.GetSafeString(args, 2, "case");
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
@@ -2045,7 +2465,11 @@ namespace SplitAndMerge
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
                 string val = Utils.GetSafeString(args, 0);
-                string param = Utils.GetSafeString(args, 1, "no_case");
+                // Matches case by default. Pass "no_case" as the second argument for the
+                // older behaviour. Map keys are the exception below: they are stored
+                // lower-cased, so m["K1"] and m["k1"] are the same entry and Contains has to
+                // agree with indexing.
+                string param = Utils.GetSafeString(args, 1, "case");
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
@@ -2077,7 +2501,7 @@ namespace SplitAndMerge
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
                 string val = Utils.GetSafeString(args, 0);
-                string param = Utils.GetSafeString(args, 1, "no_case");
+                string param = Utils.GetSafeString(args, 1, "case");   // matches case unless told "no_case"
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
@@ -2088,7 +2512,7 @@ namespace SplitAndMerge
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
                 string val = Utils.GetSafeString(args, 0);
-                string param = Utils.GetSafeString(args, 1, "no_case");
+                string param = Utils.GetSafeString(args, 1, "case");   // matches case unless told "no_case"
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
@@ -2099,7 +2523,7 @@ namespace SplitAndMerge
                 List<Variable> args = script.GetFunctionArgs();
                 Utils.CheckArgs(args.Count, 1, propName);
                 string val = Utils.GetSafeString(args, 0);
-                string param = Utils.GetSafeString(args, 1, "no_case");
+                string param = Utils.GetSafeString(args, 1, "case");   // matches case unless told "no_case"
                 StringComparison comp = param.Equals("case", StringComparison.OrdinalIgnoreCase) ?
                     StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase;
 
@@ -2230,6 +2654,25 @@ namespace SplitAndMerge
                 }
             }
             return match;
+        }
+
+        /// <summary>
+        /// What a script's Split(...) does, through the interpreter's own tokenizer and with
+        /// its defaults. The interpreter also folds an immediate "[i]" into the call; that is
+        /// left out because C# indexes the returned collection itself.
+        /// </summary>
+        public Variable Split(string sep = " ", string option = "", int max = int.MaxValue - 1)
+        {
+            return TokenizeFunction.Tokenize(AsString(), sep, option, max);
+        }
+
+        /// <summary>Reverses a collection in place, as a script's Reverse() does.</summary>
+        public void Reverse()
+        {
+            if (Tuple != null)
+            {
+                Tuple.Reverse();
+            }
         }
 
         public void Sort()
@@ -2418,7 +2861,13 @@ namespace SplitAndMerge
 
         public List<Variable> StackVariables { get; set; }
 
-        public static Variable EmptyInstance = new Variable();
+        /// <summary>
+        /// A new empty value each time. It used to be one shared instance, and a value is
+        /// mutable: "m[k] += 1" on a missing key could get it back and update it in place,
+        /// after which every "nothing here" in the whole process was the string "1" -- list
+        /// literals then ran on past their closing brace into the statements after them.
+        /// </summary>
+        public static Variable EmptyInstance => new Variable();
         public static Variable Undefined = new Variable(VarType.UNDEFINED);
 
         public virtual Variable Default()

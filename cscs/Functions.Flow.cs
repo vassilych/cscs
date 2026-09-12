@@ -498,7 +498,10 @@ namespace SplitAndMerge
             public ClassInstance(Interpreter interpreter, string instanceName, string className, List<Variable> args,
                                  ParsingScript script = null)
             {
-                InstanceName = instanceName.ToLower();
+                // An instance need not be named: "f(new Cls(5))" builds one that is never
+                // assigned to a variable, and the name is read from the assignment being
+                // parsed. A null name threw from here rather than producing an instance.
+                InstanceName = (instanceName ?? "").ToLower();
                 m_cscsClass = interpreter.GetClass(className);
                 if (m_cscsClass == null)
                 {
@@ -1034,8 +1037,15 @@ namespace SplitAndMerge
             }
         }
 
-        public void RegisterArguments(List<Variable> args,
-                                      List<KeyValuePair<string, Variable>> args2 = null)
+        /// <summary>
+        /// Adds the arguments as a new level of local variables and returns that level. Pop
+        /// it by the returned level's id: the level pushed is a copy of m_stackLevel with an
+        /// id of its own, and a recursive call replaces m_stackLevel before this call ends.
+        /// Popping by m_stackLevel.Id matched nothing, so every call left a level behind.
+        /// </summary>
+        public StackLevel RegisterArguments(List<Variable> args,
+                                      List<KeyValuePair<string, Variable>> args2 = null,
+                                      CSCSClass.ClassInstance instance = null)
         {
             if (args == null)
             {
@@ -1118,6 +1128,18 @@ namespace SplitAndMerge
                 }
             }
 
+            // "this" inside a method of a class. It was registered once, globally, as an empty
+            // array and never bound to anything, so "this.field" looked a property up on that
+            // array and threw "Sequence contains no elements" from the dictionary behind it.
+            // Bound here, for the duration of the call, it is the instance the method runs on,
+            // so "this.field" and "this.Method()" take the same path as any other instance.
+            if (instance != null)
+            {
+                var self = new GetVarFunction(new Variable(instance));
+                self.Name = Constants.THIS;
+                m_stackLevel.Variables[Constants.THIS] = self;
+            }
+
             int maxSize = Math.Min(args.Count, m_args.Length);
             for (int i = 0; i < maxSize; i++)
             {
@@ -1144,7 +1166,9 @@ namespace SplitAndMerge
                 }
             }
 
-            InterpreterInstance.AddLocalVariables(m_stackLevel.Clone());
+            var pushed = m_stackLevel.Clone();
+            InterpreterInstance.AddLocalVariables(pushed);
+            return pushed;
         }
 
         protected override Variable Evaluate(ParsingScript script)
@@ -1165,7 +1189,10 @@ namespace SplitAndMerge
             }
 
             Variable result = Run(args, script);
-            return result;
+            // A subscript straight after the call belongs to what it returned: "build()[1]"
+            // is the second element, not the whole collection. Split already does this for
+            // its own result; every other call ignored the "[" and handed back the collection.
+            return Interpreter.TryExtractArray(result, "", script);
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
@@ -1185,7 +1212,8 @@ namespace SplitAndMerge
             }
 
             Variable result = await RunAsync(args, script);
-            return result;
+            // See Evaluate: a subscript after the call indexes what it returned.
+            return Interpreter.TryExtractArray(result, "", script);
         }
 
         public Variable Run(List<Variable> args = null, ParsingScript script = null,
@@ -1193,7 +1221,7 @@ namespace SplitAndMerge
         {
             List<KeyValuePair<string, Variable>> args2 = instance == null ? null : instance.GetPropList();
             // 1. Add passed arguments as local variables to the Parser.
-            RegisterArguments(args, args2);
+            var level = RegisterArguments(args, args2, instance);
 
             // 2. Execute the body of the function.
             Variable result = null;
@@ -1219,7 +1247,7 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
 
-            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
+            InterpreterInstance.PopLocalVariables(level.Id);
 
             if (result == null)
             {
@@ -1237,7 +1265,7 @@ namespace SplitAndMerge
         {
             List<KeyValuePair<string, Variable>> args2 = instance == null ? null : instance.GetPropList();
             // 1. Add passed arguments as local variables to the Parser.
-            RegisterArguments(args, args2);
+            var level = RegisterArguments(args, args2, instance);
 
             // 2. Execute the body of the function.
             Variable result = null;
@@ -1259,7 +1287,7 @@ namespace SplitAndMerge
                 tempScript.GoToNextStatement();
             }
 
-            InterpreterInstance.PopLocalVariables(m_stackLevel.Id);
+            InterpreterInstance.PopLocalVariables(level.Id);
 
             if (result == null)
             {
@@ -1690,15 +1718,73 @@ namespace SplitAndMerge
             return new Variable(result);
         }
     }
+    /// <summary>A "{...}" literal met inside an expression. The "{" has already been read.</summary>
+    class ListLiteralFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Utils.ProcessList(script);
+        }
+    }
+
     class IdentityFunction : ParserFunction
     {
         protected override Variable Evaluate(ParsingScript script)
         {
-            return script.Execute(Constants.END_ARG_ARRAY);
+            int close = GroupEnd(script);
+            var result = script.Execute(Constants.END_ARG_ARRAY);
+            SkipGroupEnd(script, close);
+            return result;
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
-            return await script.ExecuteAsync(Constants.END_ARG_ARRAY);
+            int close = GroupEnd(script);
+            var result = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
+            SkipGroupEnd(script, close);
+            return result;
+        }
+
+        /// <summary>
+        /// Where the ")" closing this group is, or -1 if the group cannot be matched. The
+        /// "(" has already been read, so the scan starts at depth one.
+        /// </summary>
+        static int GroupEnd(ParsingScript script)
+        {
+            var text = script.String;
+            int depth = 1;
+            bool inQuotes = false;
+            for (int i = script.Pointer; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == Constants.QUOTE && (i == 0 || text[i - 1] != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (!inQuotes && ch == Constants.START_ARG)
+                {
+                    depth++;
+                }
+                else if (!inQuotes && ch == Constants.END_ARG && --depth == 0)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Steps over the group's ")" if evaluating it stopped short. A group holding a lone
+        /// non-number -- "(t)", "(f(x))" with a string result -- ends on the early return in
+        /// UpdateResult, which leaves the ")" unread, where a number goes on to consume it.
+        /// The ")" left behind then ended the expression around the group: "(t) + x" dropped
+        /// "+ x" inside a function and failed outright at the top level.
+        /// </summary>
+        static void SkipGroupEnd(ParsingScript script, int close)
+        {
+            if (close >= 0 && script.Pointer == close)
+            {
+                script.Forward();
+            }
         }
     }
 
@@ -2014,7 +2100,12 @@ namespace SplitAndMerge
                 }
 
                 script.Forward();
-                m_propName = Utils.GetToken(script, Constants.NEXT_OR_END_ARRAY);
+                // The same separators the synchronous path uses. NEXT_OR_END_ARRAY has no
+                // operators in it, so a property followed by one -- "a[i].Length>longest",
+                // with the whitespace already stripped -- was read as a single name
+                // "Length>longest". Only the debugger runs this path, which is why it showed
+                // up only while stepping.
+                m_propName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
                 Variable propValue = await result.GetPropertyAsync(m_propName, script); 
                 Utils.CheckNotNull(propValue, m_propName, script);
                 return propValue;
@@ -2325,8 +2416,25 @@ namespace SplitAndMerge
         public Variable Assign(ParsingScript script, string varName, bool localIfPossible = false)
         {
             m_name = Constants.GetRealName(varName);
-            script.CurrentAssign = m_name;
-            Variable varValue = Utils.GetItem(script);
+            // Only while the value is being read. It names the variable a "new" on the
+            // right-hand side is being assigned to, and left set it named every later one as
+            // well: after "zz = 5" an unrelated "new Corner(1,2).Total()" built an instance
+            // called "zz", whose method then looked for its fields on that number -- and where
+            // a class instance did happen to hold the name, quietly returned that one's
+            // values. Restored rather than cleared, since assignments nest.
+            var outerAssign = script.CurrentAssign;
+            Variable varValue;
+            try
+            {
+                script.CurrentAssign = m_name;
+                varValue = Utils.GetItem(script);
+            }
+            finally
+            {
+                // In a finally: a value that throws is caught by the script's own try/catch,
+                // and without this the name stayed behind for good.
+                script.CurrentAssign = outerAssign;
+            }
             script.MoveBackIfPrevious(Constants.END_ARG);
             varValue.TrySetAsMap();
 
@@ -2378,8 +2486,18 @@ namespace SplitAndMerge
         public async Task<Variable> AssignAsync(ParsingScript script, string varName, bool localIfPossible = false)
         {
             m_name = Constants.GetRealName(varName);
-            script.CurrentAssign = m_name;
-            Variable varValue = await Utils.GetItemAsync(script);
+            // See Assign: the name applies only while the value is being read.
+            var outerAssign = script.CurrentAssign;
+            Variable varValue;
+            try
+            {
+                script.CurrentAssign = m_name;
+                varValue = await Utils.GetItemAsync(script);
+            }
+            finally
+            {
+                script.CurrentAssign = outerAssign;
+            }
 
             script.MoveBackIfPrevious(Constants.END_ARG);
             varValue.TrySetAsMap();

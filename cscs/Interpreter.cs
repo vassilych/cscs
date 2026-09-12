@@ -318,14 +318,28 @@ namespace SplitAndMerge
 
             Variable result = null;
 
-            while (toParse.Pointer < data.Length)
+            // Functions leave their locals on the stack when an exception runs through them
+            // -- whoever catches it trims the stack back, as a CSCS "catch" does. An exception
+            // leaving here has no catcher left inside the interpreter, so this is where the
+            // dead levels go: kept, the next script ran on top of them, and its own top-level
+            // assignments went into a finished function's locals instead of the globals.
+            int stackLevel = GetCurrentStackLevel();
+            try
             {
-                result = toParse.Execute();
-                if (result.Type == Variable.VarType.QUIT)
+                while (toParse.Pointer < data.Length)
                 {
-                    return result;
+                    result = toParse.Execute();
+                    if (result.Type == Variable.VarType.QUIT)
+                    {
+                        return result;
+                    }
+                    toParse.GoToNextStatement();
                 }
-                toParse.GoToNextStatement();
+            }
+            catch
+            {
+                InvalidateStacksAfterLevel(stackLevel);
+                throw;
             }
 
             return result;
@@ -351,14 +365,24 @@ namespace SplitAndMerge
 
             Variable result = null;
 
-            while (toParse.Pointer < data.Length)
+            // As in Process: an exception leaving here takes the dead levels with it.
+            int stackLevel = GetCurrentStackLevel();
+            try
             {
-                result = await toParse.ExecuteAsync();
-                if (result.Type == Variable.VarType.QUIT)
+                while (toParse.Pointer < data.Length)
                 {
-                    return result;
+                    result = await toParse.ExecuteAsync();
+                    if (result.Type == Variable.VarType.QUIT)
+                    {
+                        return result;
+                    }
+                    toParse.GoToNextStatement();
                 }
-                toParse.GoToNextStatement();
+            }
+            catch
+            {
+                InvalidateStacksAfterLevel(stackLevel);
+                throw;
             }
 
             return result;
@@ -436,7 +460,11 @@ namespace SplitAndMerge
                     Variable current = new Variable(item);
 
                     script.Pointer = startForCondition;
-                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
+                    // With no script the binding has nowhere to go when a local of that name
+                    // already exists: "k = \"z\"; for (k in keys)" left k as "z" for every
+                    // pass, so the body read the value from before the loop. An assignment
+                    // passes the script for the same reason.
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
                     result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -458,7 +486,11 @@ namespace SplitAndMerge
                     Variable current = arrayValue.GetValue(i);
 
                     script.Pointer = startForCondition;
-                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
+                    // With no script the binding has nowhere to go when a local of that name
+                    // already exists: "k = \"z\"; for (k in keys)" left k as "z" for every
+                    // pass, so the body read the value from before the loop. An assignment
+                    // passes the script for the same reason.
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
                     result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -504,7 +536,11 @@ namespace SplitAndMerge
                     // and set the type in the Variable
                     Variable current = new Variable(item);
                     script.Pointer = startForCondition;
-                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
+                    // With no script the binding has nowhere to go when a local of that name
+                    // already exists: "k = \"z\"; for (k in keys)" left k as "z" for every
+                    // pass, so the body read the value from before the loop. An assignment
+                    // passes the script for the same reason.
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
                     result = ProcessBlock(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -526,7 +562,11 @@ namespace SplitAndMerge
                     Variable current = arrayValue.GetValue(i);
 
                     script.Pointer = startForCondition;
-                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current));
+                    // With no script the binding has nowhere to go when a local of that name
+                    // already exists: "k = \"z\"; for (k in keys)" left k as "z" for every
+                    // pass, so the body read the value from before the loop. An assignment
+                    // passes the script for the same reason.
+                    AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
                     result = await ProcessBlockAsync(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
@@ -735,23 +775,76 @@ namespace SplitAndMerge
             {
                 script.Pointer = startDoCondition;
 
-                result = ProcessBlock(script);
-                if (result.IsReturn || result.Type == Variable.VarType.BREAK)
+                var block = ProcessBlock(script);
+                if (block == null)
                 {
-                    script.Pointer = startDoCondition;
-                    break;
+                    // Nothing to run means this is not a do-loop body -- something handed the
+                    // statement a fragment. Saying so beats dereferencing null, and beats
+                    // treating it as an empty iteration and looping on a script that never
+                    // advances.
+                    throw new ArgumentException("Couldn't parse the body of a do-loop");
                 }
-                script.Forward(Constants.WHILE.Length + 1);
-                Variable condResult = script.Execute(Constants.END_ARG_ARRAY);
-                stillValid = Convert.ToBoolean(condResult.Value);
-                if (!stillValid)
+
+                result = block;
+                bool stop = result.IsReturn || result.Type == Variable.VarType.BREAK;
+                if (stop || result.Type == Variable.VarType.CONTINUE)
                 {
-                    break;
+                    // break, return and continue all make ProcessBlock stop part-way, leaving
+                    // the pointer inside the body, so rewind and skip the block to get past
+                    // it -- the same thing a while loop does. Without this a continue left
+                    // the rest of the body to be read as the loop condition, which then ran
+                    // it a second time.
+                    script.Pointer = BlockStartBefore(script, startDoCondition);
+                    SkipBlock(script);
                 }
+
+                // Always consume the trailing "while (...)", even on the way out: a do-loop
+                // has to test its condition after a continue, and leaving the keyword behind
+                // makes the interpreter run into it and execute it as a fresh while statement.
+                Variable condResult = ConsumeDoWhileCondition(script);
+                stillValid = !stop && Convert.ToBoolean(condResult.Value);
             }
 
-            SkipBlock(script);
+            // Unlike a while loop, whose block is still ahead of the pointer when the
+            // condition fails, both the body and the trailing "while (...)" have been
+            // consumed by now, so there is nothing left to skip. Calling SkipBlock here made
+            // every "do {...} while (...);" followed by another statement fail with
+            // "Couldn't skip block".
             return result.IsReturn ? result : Variable.EmptyInstance;
+        }
+
+        /// <summary>
+        /// The offset of the "{" that opens the do-loop body. The pointer the "do" token
+        /// leaves behind is already inside the block, and SkipBlock counts from the opening
+        /// brace -- started one character too late it stopped at the first nested "}" and
+        /// left the loop's own "}" for the parser to trip over.
+        /// </summary>
+        static int BlockStartBefore(ParsingScript script, int inside)
+        {
+            int i = inside - 1;
+            while (i >= 0 && char.IsWhiteSpace(script.At(i)))
+            {
+                i--;
+            }
+            return i >= 0 && script.At(i) == Constants.START_GROUP ? i : inside;
+        }
+
+        /// <summary>
+        /// Steps over the "while" that closes a do-loop and evaluates its condition. The
+        /// keyword is matched rather than skipped by a fixed character count: the layout
+        /// between "}" and "while" is up to whoever wrote the script.
+        /// </summary>
+        Variable ConsumeDoWhileCondition(ParsingScript script)
+        {
+            while (script.StillValid() && char.IsWhiteSpace(script.Current))
+            {
+                script.Forward();
+            }
+            if (script.Rest.StartsWith(Constants.WHILE, StringComparison.OrdinalIgnoreCase))
+            {
+                script.Forward(Constants.WHILE.Length);
+            }
+            return script.Execute(Constants.END_ARG_ARRAY);
         }
 
         internal Variable ProcessCase(ParsingScript script, string reason)
@@ -771,6 +864,7 @@ namespace SplitAndMerge
 
         internal Variable ProcessSwitch(ParsingScript script)
         {
+            int switchStart = script.Pointer;
             Variable switchValue = Utils.GetItem(script);
             script.Forward();
 
@@ -800,7 +894,7 @@ namespace SplitAndMerge
                     {
                         caseDone = true;
                         result = ProcessBlock(script);
-                        if (script.Prev == '}')
+                        if (LeavesSwitch(result) || script.Prev == '}')
                         {
                             break;
                         }
@@ -808,9 +902,49 @@ namespace SplitAndMerge
                     }
                 }
             }
-            script.MoveForwardIfNotPrevious('}');
-            script.GoToNextStatement();
-            return result;
+            return ExitSwitch(script, switchStart, result);
+        }
+
+        /// <summary>Whether the clause ended the switch rather than running to its end.</summary>
+        static bool LeavesSwitch(Variable result)
+        {
+            return result.IsReturn ||
+                   result.Type == Variable.VarType.BREAK ||
+                   result.Type == Variable.VarType.CONTINUE;
+        }
+
+        /// <summary>
+        /// Ends the switch, whichever clause ran and however it finished. A clause that
+        /// stopped in its middle -- or a "default", which the scan does not read to its end --
+        /// leaves the pointer nowhere near the closing brace, so it is moved past the whole
+        /// switch here, exactly as ProcessIf does. Without that the enclosing block carried on
+        /// parsing from inside the switch: a loop holding one ran a single pass.
+        ///
+        /// "break" ends the switch and nothing else, the way C# and JavaScript read it, so it
+        /// is not handed upwards. "return" and "continue" belong to the function and to the
+        /// enclosing loop, so those do travel outwards.
+        /// </summary>
+        Variable ExitSwitch(ParsingScript script, int switchStart, Variable result)
+        {
+            script.Pointer = switchStart;
+            SkipBlock(script);
+            // Only the separator after the switch is skipped: whitespace and an optional ";".
+            // Not GoToNextStatement, which also consumes a "}" -- in
+            // "for (...) { switch (...) { ... } }" that swallowed the loop's own closing brace
+            // and the loop ran a single pass. Leaving the pointer on the "}" lets the
+            // enclosing block end it, and leaving it before the next statement lets the block
+            // read that statement rather than merging it into the switch's own expression.
+            while (script.StillValid() &&
+                   (char.IsWhiteSpace(script.Current) || script.Current == Constants.END_STATEMENT))
+            {
+                script.Forward();
+            }
+            // Only control flow leaves the switch. A clause's own last value must not: a
+            // switch is a statement, and letting the value out merged it into whatever
+            // followed -- "case 0: t += 1; } t += 100;" tried to make one expression of 1 and
+            // 100. "break" is swallowed here as well, so it ends the switch and nothing else.
+            return result.IsReturn || result.Type == Variable.VarType.CONTINUE ?
+                   result : Variable.EmptyInstance;
         }
 
         internal Variable ProcessIf(ParsingScript script)
@@ -1005,9 +1139,12 @@ namespace SplitAndMerge
                 InvalidateStacksAfterLevel(currentStackLevel);
 
                 GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
-                AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+                // With no script the binding has nowhere to go when a local of that name
+                // already exists, so "e = \"pre\"; try { throw \"boom\"; } catch (e)" caught the
+                // exception and then read "pre". A "for (x in ...)" had the same fault.
+                AddGlobalOrLocalVariable(exceptionName, excMsgFunc, script);
                 GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
-                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
+                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc, script);
 
                 result = ProcessBlock(script);
                 PopLocalVariable(exceptionName);
@@ -1028,7 +1165,15 @@ namespace SplitAndMerge
             {
                 script.Pointer = pos;
             }
-            return result;
+            // Empty unless the block left with a return, a break or a continue, which is how
+            // ProcessIf and ProcessWhile end too: the value is what tells the parser the
+            // statement is over. Handing back the block's last value -- a number, for
+            // "try { x = 1; }" -- left the parser inside the same expression, so the next
+            // statement was merged into it and an assignment after a try/catch failed with
+            // "Can't process last token". A ";" right after the "}" hid it.
+            return result != null && (result.IsReturn ||
+                   result.Type == Variable.VarType.BREAK ||
+                   result.Type == Variable.VarType.CONTINUE) ? result : Variable.EmptyInstance;
         }
         internal async Task<Variable> ProcessTryAsync(ParsingScript script)
         {
@@ -1081,9 +1226,12 @@ namespace SplitAndMerge
                 InvalidateStacksAfterLevel(currentStackLevel);
 
                 GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
-                AddGlobalOrLocalVariable(exceptionName, excMsgFunc);
+                // With no script the binding has nowhere to go when a local of that name
+                // already exists, so "e = \"pre\"; try { throw \"boom\"; } catch (e)" caught the
+                // exception and then read "pre". A "for (x in ...)" had the same fault.
+                AddGlobalOrLocalVariable(exceptionName, excMsgFunc, script);
                 GetVarFunction excStackFunc = new GetVarFunction(new Variable(excStack));
-                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc);
+                AddGlobalOrLocalVariable(exceptionName + ".Stack", excStackFunc, script);
 
                 result = await ProcessBlockAsync(script);
                 PopLocalVariable(exceptionName);
@@ -1104,7 +1252,15 @@ namespace SplitAndMerge
             {
                 script.Pointer = pos;
             }
-            return result;
+            // Empty unless the block left with a return, a break or a continue, which is how
+            // ProcessIf and ProcessWhile end too: the value is what tells the parser the
+            // statement is over. Handing back the block's last value -- a number, for
+            // "try { x = 1; }" -- left the parser inside the same expression, so the next
+            // statement was merged into it and an assignment after a try/catch failed with
+            // "Can't process last token". A ";" right after the "}" hid it.
+            return result != null && (result.IsReturn ||
+                   result.Type == Variable.VarType.BREAK ||
+                   result.Type == Variable.VarType.CONTINUE) ? result : Variable.EmptyInstance;
         }
 
         private string CreateExceptionStack(string exceptionName, int lowestStackLevel)
@@ -1569,7 +1725,11 @@ namespace SplitAndMerge
             ParserFunction impl;
             StackLevel localStack = script?.StackLevel != null ? script.StackLevel : script != null && script.Compiled ?
                 s_lastExecutionLevel : null;
-            if (localStack == null && !string.IsNullOrWhiteSpace(script.Namespace) &&
+            // script may legitimately be null -- PointerReferenceFunction.GetRefValue passes
+            // null -- and the line above already allows for that. Without the same guard
+            // here, "5 & 3" (& is the reference operator in CSCS, not bitwise AND) died with
+            // a bare NullReferenceException carrying no script or line information.
+            if (localStack == null && script != null && !string.IsNullOrWhiteSpace(script.Namespace) &&
                 s_namespaces.TryGetValue(script.Namespace, out StackLevel level))
             {
                 localStack = level;
@@ -1594,7 +1754,7 @@ namespace SplitAndMerge
             {
                 return impl.NewInstance();
             }
-            if (!string.IsNullOrWhiteSpace(script.Namespace))
+            if (script != null && !string.IsNullOrWhiteSpace(script.Namespace))
             {
                 var cand = script.Namespace + "." + name;
                 if (s_variables.TryGetValue(cand, out impl))
@@ -1851,7 +2011,7 @@ namespace SplitAndMerge
         public Variable RegisterEnum(string varName, string enumName)
         {
             Variable enumVar = EnumFunction.UseExistingEnum(enumName);
-            if (enumVar == Variable.EmptyInstance)
+            if (enumVar.Type == Variable.VarType.NONE)
             {
                 return enumVar;
             }
@@ -2144,6 +2304,45 @@ namespace SplitAndMerge
             }
         }
 
+        /// <summary>
+        /// Writes back a local of a compiled function. An existing global of that name is what
+        /// the interpreter itself writes when a function assigns to one, so that still goes to
+        /// the global; anything else goes into the function's own level, where the callbacks
+        /// of the compiled body can see it and where it disappears when the call returns.
+        /// AddGlobalOrLocalVariable, called with no script as the generated code calls it,
+        /// treated every one of them as a global: a compiled function's locals were published
+        /// for good, and one sharing a name with a global overwrote it.
+        /// </summary>
+        public void AddCompiledLocalVariable(string name, GetVarFunction function)
+        {
+            name = Constants.ConvertName(name);
+            if (GlobalNameExists(name) || s_lastExecutionLevel == null ||
+                s_locals.Count <= ParserFunction.StackLevelDelta)
+            {
+                AddGlobal(name, function, false /* not native */);
+                return;
+            }
+            AddLocalVariable(function, null, name);
+        }
+
+        /// <summary>
+        /// The same, for a name the script never assigned: a loop or catch variable, published
+        /// only so that the callbacks of a compiled body can resolve it. It stays in the
+        /// function's own level even when a global of that name exists -- a counter written
+        /// there left the global holding the value the counter had inside the loop, not the
+        /// one the loop exited on.
+        /// </summary>
+        public void AddCompiledLocalOnlyVariable(string name, GetVarFunction function)
+        {
+            name = Constants.ConvertName(name);
+            if (s_lastExecutionLevel == null || s_locals.Count <= ParserFunction.StackLevelDelta)
+            {
+                AddGlobal(name, function, false /* not native */);
+                return;
+            }
+            AddLocalVariable(function, null, name);
+        }
+
         public bool RemoveVariable(string name)
         {
             name = Constants.ConvertName(name);
@@ -2238,7 +2437,14 @@ namespace SplitAndMerge
             if (script.ClassInstance != null &&
                (script.ClassInstance.PropertyExists(name) || script.ClassInstance.FunctionExists(name)))
             {
-                name = script.ClassInstance.InstanceName + "." + name;
+                // Through "this", which is bound to the instance the method runs on, rather
+                // than through the instance's name: that name is the one the script assigned
+                // the instance to, and an instance built inside a function is a local there,
+                // invisible from here -- so a method calling a sibling method of its own class
+                // failed with "Sequence contains no elements" whenever the instance had been
+                // created inside a function. A field read never went this way, which is why
+                // only the calls broke.
+                name = Constants.THIS + "." + name;
             }
             //int ind = name.LastIndexOf('.');
             int ind = name.IndexOf('.');
@@ -2271,7 +2477,7 @@ namespace SplitAndMerge
                 pf = GetFunction(baseName);
                 if (pf == null)
                 {
-                    pf = Utils.ExtractArrayElement(this, baseName);
+                    pf = Utils.ExtractArrayElement(this, baseName, script);
                 }
             }
 

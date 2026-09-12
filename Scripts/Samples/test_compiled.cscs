@@ -1,0 +1,3562 @@
+// Tests for cfunction (pre-compiled) functions, moved out of test.cscs.
+// Each case is written twice where it can be -- once compiled, once interpreted -- and the
+// two results are compared, which is the only definition of "correct" a cfunction has.
+
+now = now("yyyy/MM/dd HH:mm:ss.fff");
+Print("Starting compiled-function tests.", now);
+Import("CSCS.Math");
+Import("CSCS.Tests");
+start = pstime;
+include("functions.cscs");
+// Report every failing test rather than stopping at the first one, and count them.
+testsContinueOnFail = 1;
+
+// Classes the moved sections use. Their interpreted counterparts live in test.cscs, which
+// keeps the language tests; these copies keep this file self-contained.
+class ThisBox {
+  tv = 0;
+  ThisBox(v) { tv = v; }
+  function Plain() { return tv; }
+  function ViaThis() { return this.tv; }
+  function ViaThisCall() { return this.Plain() * 2; }
+  function Sum(k) { return this.tv + k; }
+}
+class SibCalc {
+  sv = 0;
+  SibCalc(v) { sv = v; }
+  function Base() { return sv; }
+  function Doubled() { return Base() * 2; }
+  function ViaThis() { return this.Base() * 3; }
+}
+
+
+print("Testing compiled: dictionaries and other values parameters");
+cfunction calculateCompiled(double n) {
+  returnValue = 0.0;
+  x=0.0; y=0.0;
+  for (i = 0; i < n; i++) {
+      x = Math.Sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
+      y = Math.Sin(20) + Math.Cos(0.8);
+      returnValue += x + y;
+  }
+  return Math.Round(returnValue, 2);
+}
+function calculateNormal(n) {
+  returnValue = 0;
+  x=0.0; y=0.0;
+  for (i = 0; i < n; i++) {
+      x = Math.Sqrt((32*8*4 - 10*(3+7) + 19*4) * 10) / 5;
+      y = Math.Sin(20) + Math.Cos(0.8);
+      returnValue += x + y;
+  }
+  return Math.Round(returnValue, 2);
+}
+
+startTest = pstime;
+total  = 0;
+for (count = 0; count < 10; count++) {
+  total += calculateNormal(50);
+}
+endTest = pstime;
+Print("Normal calculation: ", endTest - startTest, "ms. Total:", total);
+normalTotal = total;
+
+startTest = pstime;
+total  = 0;
+for (count = 0; count < 10; count++) {
+  total += calculateCompiled(50);
+}
+endTest = pstime;
+Print("Compiled calculation: ", endTest - startTest, "ms. Total:", total);
+Test(normalTotal, total);
+
+cfunction whileCompiled(int n) {
+  i = 0;
+  funcName = "whileCompiled ";
+  while(i < n) {
+    print(funcName, "i=", i, "<", n);
+    i++;
+  }
+}
+cfunction forCompiled(int n) {
+  for(i=0; i < n; i++) {
+    print("forCompiled i=" + i + "<" + n);
+  }
+}
+cfunction string subCompiled(Variable ct, Variable qt) {
+  Test(ct.NaMe, "myName");
+  ct.NaMe="Return Value from subCompiled...";
+  qt.Name = ct.Name;
+  //Test(qt.Color, "green");
+  return qt.Name;
+}
+cfunction doCompiled(int n, int m) {
+  ct = new CompiledTestAsync("myName", "green");
+  str = subCompiled(ct, ct);
+  print("doCompiled:", str);
+}
+
+doCompiled(10, 20);
+whileCompiled(3);
+forCompiled(3);
+
+cfunction cget(int n, double x, double y) {
+  z = x + y + pow(2,n);
+  return z;
+}
+cfunction ct(int n) {
+  return cget(n, 0.8, 0.9*2);
+}
+Test(ct(10), 1026.6);
+cget(10, 0.8, 0.9*2);
+
+Print("Testing advanced compiled functions...");
+
+// Every compiled function below is paired with an identical interpreted one, so these
+// tests assert the thing that actually matters: marking a function "cfunction" must not
+// change what it computes. is_precompiled() then asserts it really was translated to C#
+// rather than quietly falling back to the interpreter.
+
+// --- Comparison and logical operators, boolean variables ---
+cfunction int classifyCompiled(double n) {
+  inRange = n > 10 && n < 100;
+  isEdge  = n == 10 || n == 100;
+  if (isEdge) {
+    return 2;
+  }
+  if (inRange) {
+    return 1;
+  }
+  return 3;
+}
+function classifyNormal(n) {
+  inRange = n > 10 && n < 100;
+  isEdge  = n == 10 || n == 100;
+  if (isEdge) {
+    return 2;
+  }
+  if (inRange) {
+    return 1;
+  }
+  return 3;
+}
+Test(is_precompiled("classifyCompiled"), true);
+Test(classifyCompiled(50),  classifyNormal(50));
+Test(classifyCompiled(10),  classifyNormal(10));
+Test(classifyCompiled(500), classifyNormal(500));
+Test(classifyCompiled(50), 1);
+Test(classifyCompiled(10), 2);
+Test(classifyCompiled(500), 3);
+
+// --- Division stays real division, as everywhere else in CSCS ---
+cfunction double divCompiled(int a, int b) {
+  return a / b + 7 / 2;
+}
+function divNormal(a, b) {
+  return a / b + 7 / 2;
+}
+Test(is_precompiled("divCompiled"), true);
+Test(divCompiled(3, 2), divNormal(3, 2));
+Test(divCompiled(3, 2), 5);
+
+// --- Nested loops with break and continue ---
+cfunction int gridCompiled(int n) {
+  total = 0;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      if (j == 3) {
+        break;
+      }
+      if (i % 2 == 0) {
+        continue;
+      }
+      total += i * j;
+    }
+  }
+  return total;
+}
+function gridNormal(n) {
+  total = 0;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      if (j == 3) {
+        break;
+      }
+      if (i % 2 == 0) {
+        continue;
+      }
+      total += i * j;
+    }
+  }
+  return total;
+}
+Test(is_precompiled("gridCompiled"), true);
+Test(gridCompiled(6), gridNormal(6));
+Test(gridCompiled(6), 27);
+
+// --- Building an array inside compiled code ---
+cfunction int collectCompiled(int n) {
+  a = {};
+  for (i = 0; i < n; i++) {
+    if (i % 3 == 0) {
+      a.Add(i);
+    }
+  }
+  return a.Size;
+}
+function collectNormal(n) {
+  a = {};
+  for (i = 0; i < n; i++) {
+    if (i % 3 == 0) {
+      a.Add(i);
+    }
+  }
+  return a.Size;
+}
+Test(is_precompiled("collectCompiled"), true);
+Test(collectCompiled(10), collectNormal(10));
+Test(collectCompiled(10), 4);
+
+// --- String manipulation ---
+cfunction string tidyCompiled(string s) {
+  trimmed = s.Substring(1, 5);
+  cleaned = trimmed.Replace("b", "-");
+  return cleaned;
+}
+function tidyNormal(s) {
+  trimmed = s.Substring(1, 5);
+  cleaned = trimmed.Replace("b", "-");
+  return cleaned;
+}
+Test(is_precompiled("tidyCompiled"), true);
+Test(tidyCompiled("abcdefgh"), tidyNormal("abcdefgh"));
+Test(tidyCompiled("abcdefgh"), "-cdef");
+
+// --- Compound assignment and Math in a loop: the case precompilation exists for ---
+cfunction double seriesCompiled(int n) {
+  acc = 0.0;
+  for (i = 1; i <= n; i++) {
+    term = Math.Sqrt(i) / i;
+    acc += term;
+    acc *= 1.001;
+    acc -= 0.0005;
+  }
+  return Math.Round(acc, 6);
+}
+function seriesNormal(n) {
+  acc = 0.0;
+  for (i = 1; i <= n; i++) {
+    term = Math.Sqrt(i) / i;
+    acc += term;
+    acc *= 1.001;
+    acc -= 0.0005;
+  }
+  return Math.Round(acc, 6);
+}
+Test(is_precompiled("seriesCompiled"), true);
+Test(seriesCompiled(200), seriesNormal(200));
+
+// --- A compiled function calling another compiled function, three levels deep ---
+// Note: this compiles only while the call is the whole returned expression; arithmetic
+// around the call (return f(x) * 2) still falls back to the interpreter.
+cfunction double scaleCompiled(double x, double factor) {
+  return x * factor;
+}
+cfunction double offsetCompiled(double x) {
+  return scaleCompiled(x, 3);
+}
+cfunction double outerCompiled(double x) {
+  return offsetCompiled(x);
+}
+function scaleNormal(x, factor) {
+  return x * factor;
+}
+function offsetNormal(x) {
+  return scaleNormal(x, 3);
+}
+function outerNormal(x) {
+  return offsetNormal(x);
+}
+Test(is_precompiled("outerCompiled"), true);
+Test(outerCompiled(5), outerNormal(5));
+Test(outerCompiled(5), 15);
+
+// --- Constructs the translator does not cover yet ---
+// These fall back to the interpreter, which is exactly the point: a cfunction the
+// translator cannot handle still runs, and still agrees with its interpreted twin.
+cfunction int switchCompiled(int n) {
+  r = 0;
+  switch (n) {
+    case 1: r = 10; break;
+    case 2: r = 20; break;
+    default: r = 30;
+  }
+  return r;
+}
+function switchNormal(n) {
+  r = 0;
+  switch (n) {
+    case 1: r = 10; break;
+    case 2: r = 20; break;
+    default: r = 30;
+  }
+  return r;
+}
+Test(switchCompiled(2), switchNormal(2));
+Test(switchCompiled(9), switchNormal(9));
+Test(switchCompiled(2), 20);
+
+cfunction int guardedCompiled(double n) {
+  try {
+    if (n < 0) {
+      throw "negative";
+    }
+    return 1;
+  } catch (e) {
+    return 2;
+  }
+}
+function guardedNormal(n) {
+  try {
+    if (n < 0) {
+      throw "negative";
+    }
+    return 1;
+  } catch (e) {
+    return 2;
+  }
+}
+Test(guardedCompiled(5),  guardedNormal(5));
+Test(guardedCompiled(-5), guardedNormal(-5));
+Test(guardedCompiled(-5), 2);
+
+cfunction double factorialCompiled(int n) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * factorialCompiled(n - 1);
+}
+Test(factorialCompiled(6), factorial(6));
+Test(factorialCompiled(6), 720);
+
+cfunction double mapCompiled(string key) {
+  m = {"alpha" : 1, "beta" : 2};
+  m["gamma"] = 3;
+  return m[key];
+}
+function mapNormal(key) {
+  m = {"alpha" : 1, "beta" : 2};
+  m["gamma"] = 3;
+  return m[key];
+}
+Test(mapCompiled("beta"),  mapNormal("beta"));
+Test(mapCompiled("gamma"), mapNormal("gamma"));
+Test(mapCompiled("gamma"), 3);
+
+Print("Advanced compiled functions OK.");
+
+Print("Testing compiled collections...");
+// Each of these is paired with an interpreted twin: marking a function "cfunction"
+// must never change what it computes.
+cfunction double sumArrayCompiled(int n) {
+  a = {1, 2, 3, 4};
+  total = 0;
+  for (i = 0; i < a.Size; i++) {
+    total += a[i];
+  }
+  return total + n;
+}
+function sumArrayNormal(n) {
+  a = {1, 2, 3, 4};
+  total = 0;
+  for (i = 0; i < a.Size; i++) {
+    total += a[i];
+  }
+  return total + n;
+}
+Test(sumArrayCompiled(0), sumArrayNormal(0));
+Test(sumArrayCompiled(0), 10);
+
+cfunction double buildArrayCompiled(int n) {
+  a = {};
+  for (i = 0; i < n; i++) {
+    a.Add(i * 2);
+  }
+  return a.Size + a[2];
+}
+function buildArrayNormal(n) {
+  a = {};
+  for (i = 0; i < n; i++) {
+    a.Add(i * 2);
+  }
+  return a.Size + a[2];
+}
+Test(buildArrayCompiled(5), buildArrayNormal(5));
+Test(buildArrayCompiled(5), 9);
+
+// A brace literal handed straight to a function, including a literal made of literals,
+// then read back through a chained subscript. The statement tokenizer has to keep the
+// whole literal together instead of ending the statement at the first "{".
+cfunction double nestedLiteralCompiled(int n) {
+  a = {};
+  a.Add({1, 2});
+  a.Add({{3, 4}, {5, 6}});
+  return a[0][1] + a[1][0][1] + a[1][1][0] + n;
+}
+function nestedLiteralNormal(n) {
+  a = {};
+  a.Add({1, 2});
+  a.Add({{3, 4}, {5, 6}});
+  return a[0][1] + a[1][0][1] + a[1][1][0] + n;
+}
+Test(nestedLiteralCompiled(1), nestedLiteralNormal(1));
+Test(nestedLiteralCompiled(1), 12);
+
+// Bitwise | and ^ inside a compiled function, and an operand that starts with "(".
+cfunction int bitMixCompiled(int n) {
+  return (n | 4) ^ 1;
+}
+function bitMixNormal(n) {
+  return (n | 4) ^ 1;
+}
+Test(bitMixCompiled(3), bitMixNormal(3));
+Test(bitMixCompiled(3), 6);
+
+cfunction string parenArgCompiled(int a, string b, double c) {
+  return b + (a + c);
+}
+function parenArgNormal(a, b, c) {
+  return b + (a + c);
+}
+Test(parenArgCompiled(1, "x", 2.5), parenArgNormal(1, "x", 2.5));
+Test(parenArgCompiled(1, "x", 2.5), "x3.5");
+
+// String members inside a condition, which is the path where "s.Length" used to arrive as
+// one unresolvable token. Substring clamps rather than throwing, and the "no_case" form is
+// here because compiled code has to honour it the same way the interpreter does.
+cfunction int stringMemberCompiled(string s) {
+  if (s.Length > 2 && s.StartsWith("ab") && s.Contains("BC", "no_case")) {
+    return 1;
+  }
+  return 0;
+}
+function stringMemberNormal(s) {
+  if (s.Length > 2 && s.StartsWith("ab") && s.Contains("BC", "no_case")) {
+    return 1;
+  }
+  return 0;
+}
+Test(stringMemberCompiled("abcd"), stringMemberNormal("abcd"));
+Test(stringMemberCompiled("abcd"), 1);
+
+// Equals inside a compiled function. It maps onto EqualsCscs rather than the C# overload,
+// which compares ordinally and has nowhere to put the "no_case" argument.
+cfunction int equalsCompiled(string s) {
+  if (s.Equals("ABCD")) {
+    return 1;
+  }
+  if (s.Equals("ABCD", "no_case")) {
+    return 2;
+  }
+  return 0;
+}
+function equalsNormal(s) {
+  if (s.Equals("ABCD")) {
+    return 1;
+  }
+  if (s.Equals("ABCD", "no_case")) {
+    return 2;
+  }
+  return 0;
+}
+Test(equalsCompiled("abcd"), equalsNormal("abcd"));
+Test(equalsCompiled("abcd"), 2);
+Test(equalsCompiled("ABCD"), 1);
+
+// "+" is the one operator whose meaning depends on the operand types, and a call's type is
+// not known until it runs. Translating it to a fixed numeric or string conversion had to
+// guess, and guessing wrong did not fail to compile -- it quietly changed the answer.
+function addStrHelper(q) { return "s"; }
+function addNumHelper(q) { return q * 3; }
+cfunction string addAmbiguousCompiled(int n) {
+  return addStrHelper(n) + addStrHelper(n);
+}
+function addAmbiguousNormal(n) {
+  return addStrHelper(n) + addStrHelper(n);
+}
+Test(addAmbiguousCompiled(1), addAmbiguousNormal(1));
+Test(addAmbiguousCompiled(1), "ss");
+
+// Numbers on both sides still add rather than concatenate, even though the function is
+// declared to return a string.
+cfunction string addNumericCompiled(int n) {
+  return addNumHelper(n) + addNumHelper(n);
+}
+function addNumericNormal(n) {
+  return addNumHelper(n) + addNumHelper(n);
+}
+Test(addNumericCompiled(2), addNumericNormal(2));
+Test(addNumericCompiled(2), 12);
+
+// First and Last on a string and on a collection, whose results land in that same "+".
+cfunction string endsCompiled(string s) {
+  a = {"p", "q", "r"};
+  return s.First + s.Last + a.First + a.Last;
+}
+function endsNormal(s) {
+  a = {"p", "q", "r"};
+  return s.First + s.Last + a.First + a.Last;
+}
+Test(endsCompiled("abcd"), endsNormal("abcd"));
+Test(endsCompiled("abcd"), "adpr");
+
+// Compound assignment on a collection element. Forcing the current value to a number read
+// a string element as 0, so "a[0] += \"y\"" on {"x"} produced "0y" instead of "xy".
+cfunction string elementAppendCompiled(int n) {
+  a = {"x"};
+  a[0] += "y";
+  return a[0];
+}
+function elementAppendNormal(n) {
+  a = {"x"};
+  a[0] += "y";
+  return a[0];
+}
+Test(elementAppendCompiled(0), elementAppendNormal(0));
+Test(elementAppendCompiled(0), "xy");
+
+// A quote inside a subscript is a map key, not a string operand, so the surrounding
+// expression is still arithmetic.
+cfunction double mapArithCompiled(int n) {
+  m = {"a" : 1};
+  m["a"] += 5;
+  m["a"]++;
+  return m["a"] * 100 + n;
+}
+function mapArithNormal(n) {
+  m = {"a" : 1};
+  m["a"] += 5;
+  m["a"]++;
+  return m["a"] * 100 + n;
+}
+Test(mapArithCompiled(0), mapArithNormal(0));
+Test(mapArithCompiled(0), 700);
+
+// A collection literal as a ternary branch. Skipping the branch that is not taken means
+// skipping over whatever it holds, and a literal there contains commas -- and, for a map,
+// the very ":" the skip is looking for. Both used to end the skip inside the literal.
+cfunction double ternLiteralCompiled(int n) {
+  ternA = n > 0 ? {1, 2, 3} : {4};
+  ternB = n > 5 ? {7} : {8, 9};
+  return ternA.Size * 10 + ternB.Size + ternA[0] + n;
+}
+function ternLiteralNormal(n) {
+  ternA = n > 0 ? {1, 2, 3} : {4};
+  ternB = n > 5 ? {7} : {8, 9};
+  return ternA.Size * 10 + ternB.Size + ternA[0] + n;
+}
+Test(ternLiteralCompiled(1), ternLiteralNormal(1));
+Test(ternLiteralCompiled(1), 34);
+Test(ternLiteralCompiled(0), ternLiteralNormal(0));
+Test(ternLiteralCompiled(0), 16);   // {4} and {8,9}: 1*10 + 2 + 4
+
+// A map literal in a branch: its ":" must not be read as the ternary separator.
+ternMap = 0 > 1 ? {"a" : 1, "b" : 2} : {"c" : 3};
+Test(ternMap.Size, 1);
+Test(ternMap["c"], 3);
+ternMap = 1 > 0 ? {"a" : 1, "b" : 2} : {"c" : 3};
+Test(ternMap.Size, 2);
+
+Print("Testing the sophisticated compiled cases...");
+// These exist to pin down what the precompiler can carry end to end: Split and string
+// members on collection elements, chained subscripts into nested literals, a map literal in
+// a ternary branch, bitwise compound assignment, and a global mutated from compiled code.
+// Each is paired with an identical interpreted twin, so any divergence shows up as a
+// mismatch rather than as a silently different answer.
+cfunction double scanCompiled(string text, string prefix) {
+  words = text.Split(" ");
+  hits = 0; longest = 0; flags = 0;
+  for (i = 0; i < words.Size; i++) {
+    if (words[i].Length > longest) {
+      longest = words[i].Length;
+    }
+    if (words[i].StartsWith(prefix)) {
+      hits += 1;
+      flags |= 1;
+    }
+    if (words[i].Contains("z", "no_case")) {
+      flags |= 2;
+    }
+  }
+  if (hits > 2) {
+    flags |= 4;
+  }
+  return longest * 100 + hits * 10 + flags;
+}
+function scanNormal(text, prefix) {
+  words = text.Split(" ");
+  hits = 0; longest = 0; flags = 0;
+  for (i = 0; i < words.Size; i++) {
+    if (words[i].Length > longest) {
+      longest = words[i].Length;
+    }
+    if (words[i].StartsWith(prefix)) {
+      hits += 1;
+      flags |= 1;
+    }
+    if (words[i].Contains("z", "no_case")) {
+      flags |= 2;
+    }
+  }
+  if (hits > 2) {
+    flags |= 4;
+  }
+  return longest * 100 + hits * 10 + flags;
+}
+Test(scanCompiled("the quick brown zebra the theory", "the"),
+     scanNormal("the quick brown zebra the theory", "the"));
+Test(scanCompiled("the quick brown zebra the theory", "the"), 637);
+
+// "**" is not C#; it becomes Math.Pow, grouped to the right exactly as the interpreter groups
+// it -- 2**3**2 is 2**(3**2) = 512, not (2**3)**2 = 64. A nested call as a later argument is
+// here too: splitting the arguments naively used to tear it apart.
+cfunction double powerCompiled(double n) {
+  base2 = n ** 2;
+  cube  = n ** 3;
+  tower = 2 ** 3 ** 2;
+  span  = Math.Max(1, Math.Min(n, 5));
+  return base2 + cube + tower + span;
+}
+function powerNormal(n) {
+  base2 = n ** 2;
+  cube  = n ** 3;
+  tower = 2 ** 3 ** 2;
+  span  = Math.Max(1, Math.Min(n, 5));
+  return base2 + cube + tower + span;
+}
+Test(powerCompiled(3), powerNormal(3));
+Test(powerCompiled(3), 551);   // 9 + 27 + 512 + 3
+
+// Only the operands either side of "**" are taken, so the precedence around them survives.
+cfunction double powerMixedCompiled(double n) {
+  pmHead = 1 + n ** 2;
+  pmTail = n ** 3 + 1;
+  pmCall = Math.Abs(0 - n) ** 2;
+  return pmHead * 100 + pmTail * 10 + pmCall;
+}
+function powerMixedNormal(n) {
+  pmHead = 1 + n ** 2;
+  pmTail = n ** 3 + 1;
+  pmCall = Math.Abs(0 - n) ** 2;
+  return pmHead * 100 + pmTail * 10 + pmCall;
+}
+Test(powerMixedCompiled(3), powerMixedNormal(3));
+Test(powerMixedCompiled(3), 1289);   // 10*100 + 28*10 + 9
+
+// A parenthesised base, and an element as the base with an addition outside the call. The
+// operand scan has to stop at the "return" keyword, which the stripped whitespace leaves
+// glued to the "(", and the element still needs its numeric conversion inside the call.
+cfunction double powerScanCompiled(double n) {
+  psArr  = {2, 3};
+  psGrp  = (n + 1) ** 2;
+  psBoth = (n + 1) ** (n - 1);
+  psElem = psArr[1] ** 2 + n;
+  return psGrp * 1000 + psBoth * 100 + psElem;
+}
+function powerScanNormal(n) {
+  psArr  = {2, 3};
+  psGrp  = (n + 1) ** 2;
+  psBoth = (n + 1) ** (n - 1);
+  psElem = psArr[1] ** 2 + n;
+  return psGrp * 1000 + psBoth * 100 + psElem;
+}
+Test(powerScanCompiled(3), powerScanNormal(3));
+Test(powerScanCompiled(3), 17612);   // 16*1000 + 16*100 + 12
+Test(2 ** 3 ** 2, 512);        // right-grouped, not 64
+
+// A class instance is a Variable, which has no member named after the script's field, so a
+// field is read through the same property lookup the interpreter uses. "new" itself stays an
+// interpreter callback, and has to be told which variable it is being assigned to -- it names
+// the instance after it, and without that the constructor throws.
+class NamedM {
+  v = 0;
+  tag = "";
+  kid = 0;
+  NamedM(a, b) { v = a; tag = b; }
+  function Kid() { return kid; }
+}
+class PointM {
+  x = 0;
+  y = 0;
+  PointM(a, b) { x = a; y = b; }
+  function Sum() { return x + y; }
+  function Scale(f) { return x * f; }
+  function Tag(pre) { return pre + x; }
+}
+class PointC {
+  x = 0;
+  y = 0;
+  PointC(a, b) { x = a; y = b; }
+}
+cfunction double classFieldCompiled(int n) {
+  pt1 = new PointC(3, 4);
+  pt2 = new PointC(10, 20);
+  return pt1.x * 1000 + pt1.y * 100 + pt2.x * 10 + pt2.y + n;
+}
+function classFieldNormal(n) {
+  pt1 = new PointC(3, 4);
+  pt2 = new PointC(10, 20);
+  return pt1.x * 1000 + pt1.y * 100 + pt2.x * 10 + pt2.y + n;
+}
+Test(classFieldCompiled(0), classFieldNormal(0));
+Test(classFieldCompiled(0), 3520);   // 3*1000 + 4*100 + 10*10 + 20
+
+// A field concatenated into a string takes a different member path through the translator,
+// which had to learn the same lookup.
+cfunction string classStrCompiled(int n) {
+  ptS = new PointC(3, 4);
+  return "x=" + ptS.x + ",y=" + ptS.y;
+}
+function classStrNormal(n) {
+  ptS = new PointC(3, 4);
+  return "x=" + ptS.x + ",y=" + ptS.y;
+}
+Test(classStrCompiled(0), classStrNormal(0));
+Test(classStrCompiled(0), "x=3,y=4");
+
+// A method on an instance. Running one needs an argument list -- that is what tells the
+// instance a method is wanted rather than a property -- so it becomes a direct call rather
+// than a member read.
+cfunction string classMethodCompiled(int n) {
+  ptM = new PointM(3, 4);
+  return ptM.Sum() + "/" + ptM.Scale(2) + "/" + ptM.Tag("x=");
+}
+function classMethodNormal(n) {
+  ptM = new PointM(3, 4);
+  return ptM.Sum() + "/" + ptM.Scale(2) + "/" + ptM.Tag("x=");
+}
+Test(classMethodCompiled(0), classMethodNormal(0));
+Test(classMethodCompiled(0), "7/6/x=3");
+
+// Writing a field, "new" where a value is wanted rather than as a whole right-hand side,
+// and a field read off a collection element rather than a named local.
+cfunction double classMoreCompiled(int n) {
+  ptW = new PointM(3, 4);
+  ptW.x = 9;
+  bag = {};
+  bag.Add(new PointM(5, 6));
+  return ptW.x * 100 + bag[0].x * 10 + bag[0].y + n;
+}
+function classMoreNormal(n) {
+  ptW = new PointM(3, 4);
+  ptW.x = 9;
+  bag = {};
+  bag.Add(new PointM(5, 6));
+  return ptW.x * 100 + bag[0].x * 10 + bag[0].y + n;
+}
+Test(classMoreCompiled(0), classMoreNormal(0));
+Test(classMoreCompiled(0), 956);   // 9*100 + 5*10 + 6
+
+// A member on a field, and instances iterated straight out of a collection. The "Add" has to
+// build into the compiled collection: through a callback it would append to the
+// interpreter's own copy, and the loop below would see an empty one.
+cfunction string classIterCompiled(int n) {
+  bagN = {};
+  bagN.Add(new NamedM(1, "ab"));
+  bagN.Add(new NamedM(2, "cde"));
+  tot = 0;
+  for (item in bagN) {
+    tot += item.v + item.tag.Length;
+  }
+  return bagN[1].tag.Upper + ":" + (tot + n);
+}
+function classIterNormal(n) {
+  bagN = {};
+  bagN.Add(new NamedM(1, "ab"));
+  bagN.Add(new NamedM(2, "cde"));
+  tot = 0;
+  for (item in bagN) {
+    tot += item.v + item.tag.Length;
+  }
+  return bagN[1].tag.Upper + ":" + (tot + n);
+}
+Test(classIterCompiled(0), classIterNormal(0));
+Test(classIterCompiled(0), "CDE:8");   // (1+2) + (2+3)
+
+// A field holding another instance, and a local fed from a method that returns one. Both
+// hold Variables, and the pass that decides which locals do has to reach the second through
+// the first, so it repeats until it stops finding new ones.
+cfunction double classNestCompiled(int n) {
+  root = new NamedM(3, "a");
+  root.kid = new NamedM(6, "b");
+  fetched = root.Kid();
+  return root.kid.v * 100 + fetched.v * 10 + root.v + n;
+}
+function classNestNormal(n) {
+  root = new NamedM(3, "a");
+  root.kid = new NamedM(6, "b");
+  fetched = root.Kid();
+  return root.kid.v * 100 + fetched.v * 10 + root.v + n;
+}
+Test(classNestCompiled(0), classNestNormal(0));
+Test(classNestCompiled(0), 663);   // 6*100 + 6*10 + 3
+
+// A member on the result of a method call. The call yields a Variable, so the chain carries
+// on from it -- in an arithmetic expression and in a string one, which take different paths.
+cfunction string classChainCompiled(int n) {
+  head = new NamedM(3, "a");
+  head.kid = new NamedM(6, "b");
+  return (head.Kid().v + n) + ":" + head.Kid().tag.Upper;
+}
+function classChainNormal(n) {
+  head = new NamedM(3, "a");
+  head.kid = new NamedM(6, "b");
+  return (head.Kid().v + n) + ":" + head.Kid().tag.Upper;
+}
+Test(classChainCompiled(1), classChainNormal(1));
+Test(classChainCompiled(1), "7:B");
+
+// A switch on a field. The value holds a Variable, which cannot be compared to the labels
+// with "==", so the comparison is made explicitly -- text as text, numbers as numbers.
+cfunction string switchFieldCompiled(int n) {
+  sw = new NamedM(2, "b");
+  byTag = "";
+  byNum = 0;
+  switch (sw.tag) {
+    case "a": byTag = "A"; break;
+    case "b": byTag = "B"; break;
+    default:  byTag = "?";
+  }
+  switch (sw.v) {
+    case 1: byNum = 10; break;
+    case 2: byNum = 20; break;
+    default: byNum = 99;
+  }
+  return byTag + (byNum + n);
+}
+function switchFieldNormal(n) {
+  sw = new NamedM(2, "b");
+  byTag = "";
+  byNum = 0;
+  switch (sw.tag) {
+    case "a": byTag = "A"; break;
+    case "b": byTag = "B"; break;
+    default:  byTag = "?";
+  }
+  switch (sw.v) {
+    case 1: byNum = 10; break;
+    case 2: byNum = 20; break;
+    default: byNum = 99;
+  }
+  return byTag + (byNum + n);
+}
+Test(switchFieldCompiled(0), switchFieldNormal(0));
+Test(switchFieldCompiled(0), "B20");
+
+// "===" between numbers behaves as "==" does once the type check has passed, so the operator
+// is simply swapped. A mixed pair stays false and must not be folded to a constant.
+cfunction int strictNumCompiled(double n) {
+  if (n === 5) {
+    return 1;
+  }
+  if (n !== 5) {
+    return 2;
+  }
+  return 0;
+}
+function strictNumNormal(n) {
+  if (n === 5) {
+    return 1;
+  }
+  if (n !== 5) {
+    return 2;
+  }
+  return 0;
+}
+Test(strictNumCompiled(5), strictNumNormal(5));
+Test(strictNumCompiled(5), 1);
+Test(strictNumCompiled(9), 2);
+strictMix = "5";
+Test(strictMix === 5, false);   // different types
+Test(strictMix === "5", true);
+
+// The same grouping with a variable in the chain, which the compiled form has to match.
+cfunction double powerChainCompiled(double n) {
+  return 2 ** 3 ** n;
+}
+function powerChainNormal(n) {
+  return 2 ** 3 ** n;
+}
+Test(powerChainCompiled(2), powerChainNormal(2));
+Test(powerChainCompiled(2), 512);   // 2 ** (3 ** 2), not (2 ** 3) ** 2 = 64
+
+// A break inside a switch ends the switch and nothing else, as it does in C# and
+// JavaScript, so the loop around it runs every pass.
+cfunction string switchLoopCompiled(int n) {
+  r = "";
+  for (i = 0; i < n; i++) {
+    switch (i) {
+      case 0: r += "z;"; break;
+      default: r += "m;";
+    }
+  }
+  return r;
+}
+function switchLoopNormal(n) {
+  r = "";
+  for (i = 0; i < n; i++) {
+    switch (i) {
+      case 0: r += "z;"; break;
+      default: r += "m;";
+    }
+  }
+  return r;
+}
+Test(switchLoopCompiled(4), switchLoopNormal(4));
+Test(switchLoopCompiled(4), "z;m;m;m;");   // the break ends the switch, not the for loop
+
+// "return" and "continue" still belong to the function and to the loop, and a clause that
+// falls off its end without a break leaves nothing behind for the next statement.
+cfunction double switchReturnCompiled(int n) {
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    switch (i) { case 2: return t; }
+    t += 1;
+  }
+  return -1;
+}
+function switchReturnNormal(n) {
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    switch (i) { case 2: return t; }
+    t += 1;
+  }
+  return -1;
+}
+Test(switchReturnCompiled(0), switchReturnNormal(0));
+Test(switchReturnCompiled(0), 2);
+
+cfunction double switchFallCompiled(int n) {
+  t = 0;
+  for (i = 0; i < 3; i++) {
+    switch (i) { case 0: t += 1; }
+    t += 100;
+  }
+  return t;
+}
+function switchFallNormal(n) {
+  t = 0;
+  for (i = 0; i < 3; i++) {
+    switch (i) { case 0: t += 1; }
+    t += 100;
+  }
+  return t;
+}
+Test(switchFallCompiled(0), switchFallNormal(0));
+Test(switchFallCompiled(0), 301);
+
+cfunction double switchWhileCompiled(int n) {
+  t = 0;
+  i = 0;
+  while (i < 3) {
+    switch (i) { case 1: t += 10; break; default: t += 1; }
+    i++;
+  }
+  return t;
+}
+function switchWhileNormal(n) {
+  t = 0;
+  i = 0;
+  while (i < 3) {
+    switch (i) { case 1: t += 10; break; default: t += 1; }
+    i++;
+  }
+  return t;
+}
+Test(switchWhileCompiled(0), switchWhileNormal(0));
+Test(switchWhileCompiled(0), 12);
+
+cfunction string switchPlainCompiled(int n) {
+  r = "";
+  switch (n) {
+    case 1: r += "a;"; break;
+    default: r += "d;";
+  }
+  r += "after";
+  return r;
+}
+function switchPlainNormal(n) {
+  r = "";
+  switch (n) {
+    case 1: r += "a;"; break;
+    default: r += "d;";
+  }
+  r += "after";
+  return r;
+}
+Test(switchPlainCompiled(1), switchPlainNormal(1));
+Test(switchPlainCompiled(1), "a;after");
+Test(switchPlainCompiled(9), "d;after");
+
+// C# has the same loop, so only the trailing "while" needed recognising as the tail rather
+// than a new loop. Nested do-loops each find their own, and the body runs once even when the
+// condition is false to begin with -- which is what makes this not a while loop.
+cfunction double doLoopCompiled(int n) {
+  outer = 0;
+  total = 0;
+  do {
+    inner = 0;
+    do {
+      inner++;
+      total++;
+    } while (inner < 2);
+    outer++;
+    if (outer == 2) {
+      continue;
+    }
+    total += 10;
+  } while (outer < n);
+  return total;
+}
+function doLoopNormal(n) {
+  outer = 0;
+  total = 0;
+  do {
+    inner = 0;
+    do {
+      inner++;
+      total++;
+    } while (inner < 2);
+    outer++;
+    if (outer == 2) {
+      continue;
+    }
+    total += 10;
+  } while (outer < n);
+  return total;
+}
+Test(doLoopCompiled(3), doLoopNormal(3));
+Test(doLoopCompiled(3), 26);   // 3 x 2 inner, plus 10 on the passes that do not continue
+Test(doLoopCompiled(0), doLoopNormal(0));
+Test(doLoopCompiled(0), 12);   // the body still runs once
+
+// A call in a "while" condition has to run on every iteration, so the loop is turned inside
+// out rather than the call being hoisted above it. The call count is asserted, not just the
+// result: hoisting would still return the right answer while calling once.
+whileCalls = 0;
+function whileCounted(q) { whileCalls = whileCalls + 1; return q; }
+cfunction double whileCallCompiled(double n) {
+  i = 0;
+  t = 0;
+  while (whileCounted(i) < n) {
+    i++;
+    if (i == 2) {
+      continue;
+    }
+    t += i;
+  }
+  return t;
+}
+function whileCallNormal(n) {
+  i = 0;
+  t = 0;
+  while (whileCounted(i) < n) {
+    i++;
+    if (i == 2) {
+      continue;
+    }
+    t += i;
+  }
+  return t;
+}
+whileCalls = 0;
+Test(whileCallCompiled(4), 8);
+Test(whileCalls, 5);
+whileCalls = 0;
+Test(whileCallNormal(4), 8);
+Test(whileCalls, 5);
+
+// "for (v in a)" is one statement rather than three, so it never reached the three-part
+// handling and used to be copied through untranslated. The loop variable holds an element,
+// so it is a Variable -- and so is anything it feeds.
+cfunction string forEachCompiled(int n) {
+  nums  = {1, 2, 3};
+  names = {"x", "y"};
+  m     = {"a" : 10, "b" : 20};
+  total = 0;
+  joined = "";
+  for (v in nums) {
+    total += v;
+  }
+  for (w in names) {
+    joined = joined + w;
+  }
+  for (k in m.Keys) {
+    total += m[k];
+  }
+  return joined + ":" + (total + n);
+}
+function forEachNormal(n) {
+  nums  = {1, 2, 3};
+  names = {"x", "y"};
+  m     = {"a" : 10, "b" : 20};
+  total = 0;
+  joined = "";
+  for (v in nums) {
+    total += v;
+  }
+  for (w in names) {
+    joined = joined + w;
+  }
+  for (k in m.Keys) {
+    total += m[k];
+  }
+  return joined + ":" + (total + n);
+}
+Test(forEachCompiled(0), forEachNormal(0));
+Test(forEachCompiled(0), "xy:36");   // 1+2+3 + 10+20
+
+// A nested literal assigned straight to a local, rather than added to a collection. The
+// statement form had its own element loop, which emitted the inner braces verbatim.
+cfunction double nestedAssignCompiled(int n) {
+  grid = {{1, 2}, {3, 4}, {5, 6}};
+  t = 0;
+  for (i = 0; i < grid.Size; i++) {
+    t += grid[i].Size;
+  }
+  return t * 10 + grid[2][1] + n;
+}
+function nestedAssignNormal(n) {
+  grid = {{1, 2}, {3, 4}, {5, 6}};
+  t = 0;
+  for (i = 0; i < grid.Size; i++) {
+    t += grid[i].Size;
+  }
+  return t * 10 + grid[2][1] + n;
+}
+Test(nestedAssignCompiled(0), nestedAssignNormal(0));
+Test(nestedAssignCompiled(0), 66);   // 3 rows of 2, plus grid[2][1]
+
+// A compound assignment on a global has nowhere to read the old value from -- a global is
+// not a C# local -- so the read, the operation and the write-back are emitted directly. A
+// prefix step on an element becomes the postfix form, which as a statement means the same.
+gStep = 7;
+cfunction double stepCompiled(int n) {
+  gStep += 5;
+  gStep++;
+  a = {1, 5};
+  --a[1];
+  ++a[0];
+  return gStep * 100 + a[0] * 10 + a[1] + n;
+}
+function stepNormal(n) {
+  gStep += 5;
+  gStep++;
+  a = {1, 5};
+  --a[1];
+  ++a[0];
+  return gStep * 100 + a[0] * 10 + a[1] + n;
+}
+gStep = 7;
+Test(stepCompiled(0), 1324);   // 13 * 100 + 2 * 10 + 4
+Test(gStep, 13);               // the write-back has to reach the global
+gStep = 7;
+Test(stepNormal(0), 1324);
+Test(gStep, 13);
+
+// A local that holds a collection element keeps the script's spelling for its members,
+// compares against a string, and accumulates a value whose type is only known at run time.
+cfunction string csvPickCompiled(string csv) {
+  parts = csv.Split(",");
+  best  = "";
+  total = 0;
+  for (i = 0; i < parts.Size; i++) {
+    cell = parts[i];
+    if (cell > best) {
+      best = cell;
+    }
+    total = total + cell.Length;
+  }
+  return best.Upper + ":" + total;
+}
+function csvPickNormal(csv) {
+  parts = csv.Split(",");
+  best  = "";
+  total = 0;
+  for (i = 0; i < parts.Size; i++) {
+    cell = parts[i];
+    if (cell > best) {
+      best = cell;
+    }
+    total = total + cell.Length;
+  }
+  return best.Upper + ":" + total;
+}
+Test(csvPickCompiled("pear,fig,apple"), csvPickNormal("pear,fig,apple"));
+Test(csvPickCompiled("pear,fig,apple"), "PEAR:12");
+
+// Counting words into a map and reading one back out. "hits" is seeded with 0 and later
+// holds a map element, so the local is a Variable throughout rather than a double.
+cfunction string wordStatsCompiled(string text, string want) {
+  counts     = {};
+  words      = text.Split(" ");
+  longestIdx = 0;
+  longestLen = 0;
+  hits       = 0;
+  for (i = 0; i < words.Size; i++) {
+    if (words[i].Length > longestLen) {
+      longestLen = words[i].Length;
+      longestIdx = i;
+    }
+    if (counts.Contains(words[i])) {
+      counts[words[i]] = counts[words[i]] + 1;
+    }
+    else {
+      counts[words[i]] = 1;
+    }
+  }
+  if (counts.Contains(want)) {
+    hits = counts[want];
+  }
+  return words[longestIdx] + ":" + hits + ":" + counts.Size;
+}
+function wordStatsNormal(text, want) {
+  counts     = {};
+  words      = text.Split(" ");
+  longestIdx = 0;
+  longestLen = 0;
+  hits       = 0;
+  for (i = 0; i < words.Size; i++) {
+    if (words[i].Length > longestLen) {
+      longestLen = words[i].Length;
+      longestIdx = i;
+    }
+    if (counts.Contains(words[i])) {
+      counts[words[i]] = counts[words[i]] + 1;
+    }
+    else {
+      counts[words[i]] = 1;
+    }
+  }
+  if (counts.Contains(want)) {
+    hits = counts[want];
+  }
+  return words[longestIdx] + ":" + hits + ":" + counts.Size;
+}
+Test(wordStatsCompiled("the quick brown fox the lazy the", "the"),
+     wordStatsNormal("the quick brown fox the lazy the", "the"));
+Test(wordStatsCompiled("the quick brown fox the lazy the", "the"), "quick:3:5");
+Test(wordStatsCompiled("the quick brown fox the lazy the", "zzz"), "quick:0:5");
+
+cfunction double gridCompiled(int n) {
+  grid = {};
+  grid.Add({{1, 2, 3}, {4, 5, 6}});
+  grid.Add({{7, 8, 9}});
+  total = 0;
+  diag  = 0;
+  for (b = 0; b < grid.Size; b++) {
+    block = grid[b];
+    for (r = 0; r < block.Size; r++) {
+      for (c = 0; c < block[r].Size; c++) {
+        total += grid[b][r][c];
+        if (r == c) {
+          diag += grid[b][r][c];
+        }
+      }
+    }
+  }
+  meta = {};
+  meta["sum"] = {"total" : total, "diag" : diag};
+  scale = n > 1 ? {10, 100} : {1};
+  return meta["sum"]["total"] * scale[0] + meta["sum"]["diag"] + n;
+}
+function gridNormal(n) {
+  grid = {};
+  grid.Add({{1, 2, 3}, {4, 5, 6}});
+  grid.Add({{7, 8, 9}});
+  total = 0;
+  diag  = 0;
+  for (b = 0; b < grid.Size; b++) {
+    block = grid[b];
+    for (r = 0; r < block.Size; r++) {
+      for (c = 0; c < block[r].Size; c++) {
+        total += grid[b][r][c];
+        if (r == c) {
+          diag += grid[b][r][c];
+        }
+      }
+    }
+  }
+  meta = {};
+  meta["sum"] = {"total" : total, "diag" : diag};
+  scale = n > 1 ? {10, 100} : {1};
+  return meta["sum"]["total"] * scale[0] + meta["sum"]["diag"] + n;
+}
+Test(gridCompiled(2), gridNormal(2));
+Test(gridCompiled(2), 465);   // 45 * 10 + 13 + 2
+Test(gridCompiled(0), gridNormal(0));
+Test(gridCompiled(0), 58);    // 45 *  1 + 13
+
+Print("Testing mixed collections and truthiness...");
+// A collection can hold mixed types, so an element's type is not known until it runs.
+// Converting a subscript to a number in order to add it read a string element as 0.
+cfunction string mixedAddCompiled(int n) {
+  a = {1, "two", 3};
+  return a[1] + a[0];
+}
+function mixedAddNormal(n) {
+  a = {1, "two", 3};
+  return a[1] + a[0];
+}
+Test(mixedAddCompiled(0), mixedAddNormal(0));
+Test(mixedAddCompiled(0), "two1");
+
+// A condition that is a value rather than a comparison. CSCS counts a value as true only
+// when its number is not zero: even the string "true" is false.
+Test(true  ? 1 : 0, 1);
+cfunction double truthyCompiled(int n) {
+  a = {1, 0, "abc", ""};
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    if (a[i]) {
+      t += 1;
+    }
+  }
+  m = {"t" : true, "f" : false};
+  if (m["t"]) {
+    t += 10;
+  }
+  if (m["f"]) {
+    t += 100;
+  }
+  return t + n;
+}
+function truthyNormal(n) {
+  a = {1, 0, "abc", ""};
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    if (a[i]) {
+      t += 1;
+    }
+  }
+  m = {"t" : true, "f" : false};
+  if (m["t"]) {
+    t += 10;
+  }
+  if (m["f"]) {
+    t += 100;
+  }
+  return t + n;
+}
+Test(truthyCompiled(0), truthyNormal(0));
+Test(truthyCompiled(0), 11);
+
+Print("Testing loops from arguments and global collections...");
+// The loop initialiser is ordinary code: emitting it verbatim left the argument name in it
+// undeclared.
+cfunction double countDownCompiled(int n) {
+  t = 0;
+  for (i = n; i > 0; i--) {
+    t += i;
+  }
+  return t;
+}
+function countDownNormal(n) {
+  t = 0;
+  for (i = n; i > 0; i--) {
+    t += i;
+  }
+  return t;
+}
+Test(countDownCompiled(4), countDownNormal(4));
+Test(countDownCompiled(4), 10);
+
+// A global read back through the interpreter has to survive a comparison, a subscript and
+// a member, which is what Variable's operators and members are for.
+globalArr = {1, 2, 3};
+globalStr = "gs";
+globalNum = 7;
+cfunction string globalUseCompiled(int n) {
+  if (globalNum > 5) {
+    return globalStr + globalArr[1] + globalArr.Size;
+  }
+  return "no";
+}
+function globalUseNormal(n) {
+  if (globalNum > 5) {
+    return globalStr + globalArr[1] + globalArr.Size;
+  }
+  return "no";
+}
+Test(globalUseCompiled(0), globalUseNormal(0));
+Test(globalUseCompiled(0), "gs23");
+
+// A map inside a map, assigned through two subscripts.
+cfunction double mapInMapCompiled(int n) {
+  m = {};
+  m["a"] = {};
+  m["a"]["b"] = {"c" : 9};
+  return m["a"]["b"]["c"] + n;
+}
+function mapInMapNormal(n) {
+  m = {};
+  m["a"] = {};
+  m["a"]["b"] = {"c" : 9};
+  return m["a"]["b"]["c"] + n;
+}
+Test(mapInMapCompiled(0), mapInMapNormal(0));
+Test(mapInMapCompiled(0), 9);
+
+Print("Testing strict equality and globals...");
+// "===" also requires the types to match, so only a pair of strings is compiled; it
+// compares ordinally, which is what the interpreter does once its type check passes.
+strictS = "a";
+Test(strictS === "a", true);
+Test(strictS === "A", false);
+Test(strictS !== "b", true);
+
+cfunction int strictCompiled(string s) {
+  if (s === "a") {
+    return 1;
+  }
+  if (s !== "a") {
+    return 2;
+  }
+  return 0;
+}
+function strictNormal(s) {
+  if (s === "a") {
+    return 1;
+  }
+  if (s !== "a") {
+    return 2;
+  }
+  return 0;
+}
+Test(strictCompiled("a"), strictNormal("a"));
+Test(strictCompiled("a"), 1);
+Test(strictCompiled("A"), 2);
+
+// A global read through the interpreter, so the assignment is not a local referring to
+// itself. The write-back has to reach the global too, which is what the second check is.
+globalTally = 10;
+cfunction double globalCompiled(int n) {
+  globalTally = globalTally + 1;
+  return globalTally + n;
+}
+function globalNormal(n) {
+  globalTally = globalTally + 1;
+  return globalTally + n;
+}
+globalTally = 10;
+Test(globalCompiled(0), 11);
+Test(globalTally, 11);
+globalTally = 10;
+Test(globalNormal(0), 11);
+Test(globalTally, 11);
+
+Print("Testing calls in conditions...");
+// A call in an "if" condition is emitted ahead of the statement, which an "if" makes exact:
+// it evaluates its condition once either way. The hoist is suppressed for "&&" and "while",
+// where that would change how often the call runs.
+condCalls = 0;
+function condCounted(q) { condCalls = condCalls + 1; return q * 3; }
+function condFalsy() { return 0; }
+
+cfunction int callCondCompiled(double n) {
+  if (condCounted(n) > 5) {
+    return 1;
+  }
+  return 0;
+}
+function callCondNormal(n) {
+  if (condCounted(n) > 5) {
+    return 1;
+  }
+  return 0;
+}
+Test(callCondCompiled(2), callCondNormal(2));
+Test(callCondCompiled(2), 1);
+Test(callCondCompiled(1), 0);
+
+// The left side is false, so the call must not happen at all.
+cfunction int shortCircuitCompiled(double n) {
+  if (condFalsy() && condCounted(n) > 0) {
+    return 1;
+  }
+  return 0;
+}
+function shortCircuitNormal(n) {
+  if (condFalsy() && condCounted(n) > 0) {
+    return 1;
+  }
+  return 0;
+}
+condCalls = 0;
+Test(shortCircuitCompiled(5), 0);
+Test(condCalls, 0);
+condCalls = 0;
+Test(shortCircuitNormal(5), 0);
+Test(condCalls, 0);
+
+// A map holding an array: ".Size" needs the collection, not a number.
+cfunction double mapOfArrayCompiled(int n) {
+  m = {};
+  m["k"] = {1, 2, 3};
+  return m["k"][1] + m["k"].Size + n;
+}
+function mapOfArrayNormal(n) {
+  m = {};
+  m["k"] = {1, 2, 3};
+  return m["k"][1] + m["k"].Size + n;
+}
+Test(mapOfArrayCompiled(0), mapOfArrayNormal(0));
+Test(mapOfArrayCompiled(0), 5);
+
+Print("Testing mixed-type equality and nested try...");
+// Comparing a string with a number compares the two AsString() forms, so "05" is not 5
+// even though "5" is. C# has no operator for the pair at all.
+// The comparison yields a number rather than a bool, so the expected values are 1 and 0.
+Test("5" == 5,   1);
+Test("05" == 5,  0);
+Test(5 == "5",   1);
+Test(5 == "abc", 0);
+
+cfunction int mixedEqCompiled(string s) {
+  if (s == 5) {
+    return 1;
+  }
+  if (s != 5) {
+    return 2;
+  }
+  return 0;
+}
+function mixedEqNormal(s) {
+  if (s == 5) {
+    return 1;
+  }
+  if (s != 5) {
+    return 2;
+  }
+  return 0;
+}
+Test(mixedEqCompiled("5"), mixedEqNormal("5"));
+Test(mixedEqCompiled("5"), 1);
+Test(mixedEqCompiled("05"), 2);
+
+// A try nested inside a try, and the caught variable used somewhere other than a return:
+// it holds the thrown string, not the C# exception.
+cfunction string nestedTryCompiled(int n) {
+  try {
+    try {
+      throw "inner";
+    } catch(errInner) {
+      throw "outer:" + errInner;
+    }
+  } catch(errOuter) {
+    return errOuter;
+  }
+  return "no";
+}
+function nestedTryNormal(n) {
+  try {
+    try {
+      throw "inner";
+    } catch(errInner) {
+      throw "outer:" + errInner;
+    }
+  } catch(errOuter) {
+    return errOuter;
+  }
+  return "no";
+}
+Test(nestedTryCompiled(0), nestedTryNormal(0));
+Test(nestedTryCompiled(0), "outer:inner");
+
+Print("Testing compiled maps and bitwise assignment...");
+// Indexing a map with a key read out of another collection: the subscript is a Variable,
+// so its type is only known at run time.
+cfunction double mapByKeyCompiled(int n) {
+  m  = {"a" : 1, "b" : 2};
+  ks = m.Keys;
+  t  = 0;
+  for (i = 0; i < ks.Size; i++) {
+    t += m[ks[i]];
+  }
+  return t + n;
+}
+function mapByKeyNormal(n) {
+  m  = {"a" : 1, "b" : 2};
+  ks = m.Keys;
+  t  = 0;
+  for (i = 0; i < ks.Size; i++) {
+    t += m[ks[i]];
+  }
+  return t + n;
+}
+Test(mapByKeyCompiled(0), mapByKeyNormal(0));
+Test(mapByKeyCompiled(0), 3);
+
+// A map literal where an expression is expected, rather than as a whole statement.
+cfunction double mapLiteralCompiled(int n) {
+  m = {};
+  m["x"] = {"y" : 5};
+  return m["x"]["y"] + n;
+}
+function mapLiteralNormal(n) {
+  m = {};
+  m["x"] = {"y" : 5};
+  return m["x"]["y"] + n;
+}
+Test(mapLiteralCompiled(0), mapLiteralNormal(0));
+Test(mapLiteralCompiled(0), 5);
+
+// Bitwise compound assignment, and "!" applied to a bool local after "&&".
+cfunction double bitAssignCompiled(int n) {
+  y = 12; y &= 10;
+  z = 5;  z |= 2;
+  w = 6;  w ^= 3;
+  ok = true;
+  no = false;
+  if (ok && !no) {
+    return y * 100 + z * 10 + w + n;
+  }
+  return 0;
+}
+function bitAssignNormal(n) {
+  y = 12; y &= 10;
+  z = 5;  z |= 2;
+  w = 6;  w ^= 3;
+  ok = true;
+  no = false;
+  if (ok && !no) {
+    return y * 100 + z * 10 + w + n;
+  }
+  return 0;
+}
+Test(bitAssignCompiled(0), bitAssignNormal(0));
+Test(bitAssignCompiled(0), 875);
+
+Print("Testing string comparisons and Math.Ceiling...");
+// C# has no "<" or ">" on strings, so a compiled comparison becomes a CompareCscs call.
+cmpA = "abcd";
+Test(cmpA > "aa",   true);
+Test(cmpA > "zz",   false);
+Test("zz" > cmpA,   true);
+Test(cmpA <= "abcd", true);
+Test(cmpA >= "abcd", true);
+
+cfunction int compareCompiled(string s, string t) {
+  if (s > "aa" && s < t) {
+    return 1;
+  }
+  return 0;
+}
+function compareNormal(s, t) {
+  if (s > "aa" && s < t) {
+    return 1;
+  }
+  return 0;
+}
+Test(compareCompiled("abcd", "b"), compareNormal("abcd", "b"));
+Test(compareCompiled("abcd", "b"), 1);
+Test(compareCompiled("abcd", "a"), 0);
+
+// A numeric comparison sitting beside a string one has to stay numeric.
+cfunction int mixedCompareCompiled(string s, double n) {
+  if (n > 1 && s > "aa" && n < 9) {
+    return 1;
+  }
+  return 0;
+}
+function mixedCompareNormal(s, n) {
+  if (n > 1 && s > "aa" && n < 9) {
+    return 1;
+  }
+  return 0;
+}
+Test(mixedCompareCompiled("abcd", 5), mixedCompareNormal("abcd", 5));
+Test(mixedCompareCompiled("abcd", 5), 1);
+Test(mixedCompareCompiled("abcd", 50), 0);
+
+// Math.Ceiling is the .NET spelling of the CSCS Math.Ceil; both work and both compile.
+Test(Math.Ceiling(1.2), 2);
+Test(Math.Ceil(1.2), 2);
+Test(Math.Ceiling(-1.2), -1);
+cfunction double ceilCompiled(double x) {
+  return Math.Ceil(x) + Math.Ceiling(x) + Math.Ceiling(-x);
+}
+function ceilNormal(x) {
+  return Math.Ceil(x) + Math.Ceiling(x) + Math.Ceiling(-x);
+}
+Test(ceilCompiled(1.2), ceilNormal(1.2));
+Test(ceilCompiled(1.2), 3);
+
+cfunction string clampCompiled(string s) {
+  return s.Substring(2, 99);
+}
+function clampNormal(s) {
+  return s.Substring(2, 99);
+}
+Test(clampCompiled("abcd"), clampNormal("abcd"));
+Test(clampCompiled("abcd"), "cd");
+
+// Collection membership and map keys, and assignment through a chain of subscripts.
+cfunction double collectionMemberCompiled(int n) {
+  a = {1, 2, 3};
+  m = {"k1" : 1, "k2" : 2};
+  total = m.Keys.Size;
+  if (a.Contains(2) && m.Contains("k1")) {
+    total += 10;
+  }
+  return total + n;
+}
+function collectionMemberNormal(n) {
+  a = {1, 2, 3};
+  m = {"k1" : 1, "k2" : 2};
+  total = m.Keys.Size;
+  if (a.Contains(2) && m.Contains("k1")) {
+    total += 10;
+  }
+  return total + n;
+}
+Test(collectionMemberCompiled(1), collectionMemberNormal(1));
+Test(collectionMemberCompiled(1), 13);
+
+cfunction double nestedAssignCompiled(int n) {
+  a = {};
+  a.Add({1, 2});
+  a[0][1] = 9;
+  a[0][n] += 5;
+  return a[0][1];
+}
+function nestedAssignNormal(n) {
+  a = {};
+  a.Add({1, 2});
+  a[0][1] = 9;
+  a[0][n] += 5;
+  return a[0][1];
+}
+Test(nestedAssignCompiled(1), nestedAssignNormal(1));
+Test(nestedAssignCompiled(1), 14);
+
+cfunction double elementMathCompiled(int n) {
+  a = {10, 20, 30};
+  a[0] -= 3;
+  a[1] /= 2;
+  a[2]++;
+  return a[0] + a[1] + a[2] + n;
+}
+function elementMathNormal(n) {
+  a = {10, 20, 30};
+  a[0] -= 3;
+  a[1] /= 2;
+  a[2]++;
+  return a[0] + a[1] + a[2] + n;
+}
+Test(elementMathCompiled(1), elementMathNormal(1));
+Test(elementMathCompiled(1), 49);
+
+cfunction string mapCompiled(string key) {
+  m = {};
+  m["one"] = "1";
+  m["two"] = "2";
+  return m[key];
+}
+function mapNormal(key) {
+  m = {};
+  m["one"] = "1";
+  m["two"] = "2";
+  return m[key];
+}
+Test(mapCompiled("two"), mapNormal("two"));
+Test(mapCompiled("two"), "2");
+
+Print("Testing compiled strings and control flow...");
+cfunction double classifyCompiled(string s) {
+  if (s == "yes") {
+    return 1;
+  } elif (s != "no") {
+    return 2;
+  }
+  return 3;
+}
+function classifyNormal(s) {
+  if (s == "yes") {
+    return 1;
+  } elif (s != "no") {
+    return 2;
+  }
+  return 3;
+}
+Test(classifyCompiled("yes"), classifyNormal("yes"));
+Test(classifyCompiled("maybe"), classifyNormal("maybe"));
+Test(classifyCompiled("no"), classifyNormal("no"));
+Test(classifyCompiled("yes"), 1);
+Test(classifyCompiled("maybe"), 2);
+Test(classifyCompiled("no"), 3);
+
+cfunction string caseCompiled(string s) {
+  t = s;
+  return t.Upper + "|" + t.Lower;
+}
+function caseNormal(s) {
+  t = s;
+  return t.Upper + "|" + t.Lower;
+}
+Test(caseCompiled("AbC"), caseNormal("AbC"));
+Test(caseCompiled("AbC"), "ABC|abc");
+
+cfunction double guardedCompiled(double n) {
+  try {
+    if (n < 0) {
+      throw "negative";
+    }
+    return 1;
+  } catch (e) {
+    return 2;
+  }
+}
+function guardedNormal(n) {
+  try {
+    if (n < 0) {
+      throw "negative";
+    }
+    return 1;
+  } catch (e) {
+    return 2;
+  }
+}
+Test(guardedCompiled(5), guardedNormal(5));
+Test(guardedCompiled(0 - 5), guardedNormal(0 - 5));
+Test(guardedCompiled(0 - 5), 2);
+
+cfunction string caughtCompiled(double n) {
+  try {
+    throw "boom";
+  } catch (e) {
+    return e;
+  }
+  return "no";
+}
+function caughtNormal(n) {
+  try {
+    throw "boom";
+  } catch (e) {
+    return e;
+  }
+  return "no";
+}
+// The caught value is the thrown string, not the exception object.
+Test(caughtCompiled(1), caughtNormal(1));
+Test(caughtCompiled(1), "boom");
+
+// Writing an element of a global. Reading one already compiled; writing one was read as a
+// declaration of a local and came out as "double gTotals[0]=9".
+gTotals = {4, 1, 3};
+gPrices = {"fig": 1};
+gGrid = {{1, 2}, {3, 4}};
+cfunction double setGlobalCompiled(int n) {
+  gTotals[0] = 9;
+  return gTotals[0] + gTotals[1];
+}
+function setGlobalNormal(n) {
+  gTotals[0] = 9;
+  return gTotals[0] + gTotals[1];
+}
+Test(setGlobalCompiled(0), setGlobalNormal(0));
+Test(setGlobalCompiled(0), 10);
+Test(gTotals[0], 9);      // the change is visible to the interpreter afterwards
+
+cfunction double setGlobalKeyCompiled(int n) {
+  gPrices["fig"] = 7;
+  gPrices["pear"] = 5;
+  return gPrices["fig"] + gPrices["pear"];
+}
+Test(setGlobalKeyCompiled(0), 12);
+Test(gPrices["pear"], 5);
+
+cfunction double setGlobalGridCompiled(int n) {
+  gGrid[0][1] = 9;
+  return gGrid[0][1] + gGrid[1][0];
+}
+Test(setGlobalGridCompiled(0), 12);
+
+cfunction double fillGlobalCompiled(int n) {
+  for (i = 0; i < 3; i++) { gTotals[i] = i; }
+  return gTotals[0] + gTotals[1] + gTotals[2];
+}
+Test(fillGlobalCompiled(0), 3);
+
+// A local of the same name wins: it is a real C# variable and never touches the global.
+cfunction double shadowGlobalCompiled(int n) {
+  gTotals = {7, 8};
+  gTotals[0] = 1;
+  return gTotals[0] + gTotals[1];
+}
+Test(shadowGlobalCompiled(0), 9);
+Test(gTotals[2], 2);      // the global still holds what fillGlobal left
+
+// A value whose type is settled only when it runs, compared for equality. C# reads "==" on a
+// Variable as reference equality, so two equal elements used to answer false; the
+// interpreter's own rule is called instead -- as text if either side is a string, by value
+// otherwise, which is what a switch label already does.
+cfunction double samePairCompiled(int n) {
+  words = {"a", "a"};
+  if (words[0] == words[1]) { return 1; }
+  return 0;
+}
+function samePairNormal(n) {
+  words = {"a", "a"};
+  if (words[0] == words[1]) { return 1; }
+  return 0;
+}
+Test(samePairCompiled(0), samePairNormal(0));
+Test(samePairCompiled(0), 1);
+
+cfunction double findLetterCompiled(int n) {
+  letters = {"a", "b", "c"};
+  seen = 0;
+  for (ch in letters) { if (ch == "b") { seen = 1; } }
+  return seen;
+}
+function findLetterNormal(n) {
+  letters = {"a", "b", "c"};
+  seen = 0;
+  for (ch in letters) { if (ch == "b") { seen = 1; } }
+  return seen;
+}
+Test(findLetterCompiled(0), findLetterNormal(0));
+Test(findLetterCompiled(0), 1);
+
+// A CSCS call as the value stored into an element: it becomes several statements plus a
+// temporary, so it has to be run ahead of the store rather than emitted in its place.
+function tripleIt(q) { return q * 3; }
+function repeatIt(k) { if (k <= 0) { return ""; } return "x" + repeatIt(k - 1); }
+cfunction double storeCallCompiled(int n) {
+  slots = {1, 2};
+  slots[0] = tripleIt(n);
+  return slots[0] + slots[1];
+}
+function storeCallNormal(n) {
+  slots = {1, 2};
+  slots[0] = tripleIt(n);
+  return slots[0] + slots[1];
+}
+Test(storeCallCompiled(2), storeCallNormal(2));
+Test(storeCallCompiled(2), 8);
+
+cfunction double addCallCompiled(int n) {
+  slots = {1, 2};
+  slots[0] += tripleIt(n);
+  return slots[0];
+}
+Test(addCallCompiled(2), 7);
+
+cfunction double storeKeyCallCompiled(int n) {
+  prices = {"fig": 1};
+  prices["fig"] = tripleIt(n);
+  return prices["fig"];
+}
+Test(storeKeyCallCompiled(2), 6);
+
+cfunction double storeGridCallCompiled(int n) {
+  grid2 = {{1, 2}, {3, 4}};
+  grid2[0][1] = tripleIt(n);
+  return grid2[0][1];
+}
+Test(storeGridCallCompiled(2), 6);
+
+// The value keeps whatever the call returned, so a string stays a string rather than 0.
+cfunction string storeTextCompiled(int n) {
+  slots = {1, 2};
+  slots[0] = repeatIt(n);
+  return slots[0];
+}
+function storeTextNormal(n) {
+  slots = {1, 2};
+  slots[0] = repeatIt(n);
+  return slots[0];
+}
+Test(storeTextCompiled(3), storeTextNormal(3));
+Test(storeTextCompiled(3), "xxx");
+
+// A subscript straight after a call belongs to what the call returned: "build()[1]" is the
+// second element, not the whole collection. Split already did this for its own result; every
+// other call ignored the "[".
+function threeNumbers() { return {7, 8, 9}; }
+function pickSecondNormal(n) { return threeNumbers()[1]; }
+Test(pickSecondNormal(0), 8);
+function pickViaLocalNormal(n) { c = threeNumbers(); return c[1]; }
+Test(pickViaLocalNormal(0), 8);
+cfunction double pickSecondCompiled(int n) { return threeNumbers()[1] + n; }
+Test(pickSecondCompiled(0), pickSecondNormal(0));
+Test(pickSecondCompiled(0), 8);
+cfunction string pickSplitCompiled(string text) { return text.Split(",")[1]; }
+function pickSplitNormal(text) { return text.Split(",")[1]; }
+Test(pickSplitCompiled("a,b"), pickSplitNormal("a,b"));
+Test(pickSplitCompiled("a,b"), "b");
+
+// A property read followed by an operator, with no space between them once the whitespace
+// is stripped. The asynchronous path read the property name with a separator set that has no
+// operators in it, so "a[i].Length>longest" came through as one name, "Length>longest". Only
+// the debugger runs that path, so it showed up only while stepping.
+function propOperatorNormal(text) {
+  words3 = text.Split(" ");
+  longest2 = 0;
+  for (i = 0; i < words3.Size; i++) {
+    if (words3[i].Length > longest2) { longest2 = words3[i].Length; }
+  }
+  return longest2;
+}
+Test(propOperatorNormal("the quick brown"), 5);
+function propOperatorMathNormal(text) {
+  words4 = text.Split(" ");
+  return words4[0].Length * 2 + words4[1].Length;
+}
+Test(propOperatorMathNormal("ab cde"), 7);
+
+// Trim: the interpreter's is AsString().Trim(), which is C#'s own, so the call form maps
+// straight through. The property form "s.Trim" behaves differently there and falls back.
+cfunction string trimmedCompiled(string word) {
+  return "[" + word.Trim() + "]";
+}
+function trimmedNormal(word) {
+  return "[" + word.Trim() + "]";
+}
+Test(trimmedCompiled("  ab  "), trimmedNormal("  ab  "));
+Test(trimmedCompiled("  ab  "), "[ab]");
+Test(trimmedCompiled("ab"), "[ab]");
+Test(trimmedCompiled("   "), "[]");
+cfunction double trimmedMatchCompiled(string word) {
+  if (word.Trim() == "ab") { return 1; }
+  return 0;
+}
+function trimmedMatchNormal(word) {
+  if (word.Trim() == "ab") { return 1; }
+  return 0;
+}
+Test(trimmedMatchCompiled(" ab "), trimmedMatchNormal(" ab "));
+Test(trimmedMatchCompiled(" ab "), 1);
+cfunction double trimmedLenCompiled(string word) { return word.Trim().Length; }
+Test(trimmedLenCompiled(" abc "), 3);
+
+// Every construct that binds a name, checked against a local of that name already being
+// there. Two of these were wrong before -- the loop variable and the caught exception -- and
+// the rest are here so the family stays consistent.
+function bindEcho(z) { return z; }
+cfunction string bindShadowCompiled(int m) {
+  x = "outer";
+  i = 99;
+  t = 0;
+  for (i = 0; i < 3; i++) { t += i; }
+  q = "z";
+  c = {"a", "b"};
+  r = "";
+  for (q in c) { for (q in c) { r += q; } r += "-"; }
+  return bindEcho("inner") + "|" + x + "|" + string(t) + "|" + string(i) + "|" + r;
+}
+function bindShadowNormal(m) {
+  x = "outer";
+  i = 99;
+  t = 0;
+  for (i = 0; i < 3; i++) { t += i; }
+  q = "z";
+  c = {"a", "b"};
+  r = "";
+  for (q in c) { for (q in c) { r += q; } r += "-"; }
+  return bindEcho("inner") + "|" + x + "|" + string(t) + "|" + string(i) + "|" + r;
+}
+Test(bindShadowCompiled(0), bindShadowNormal(0));
+Test(bindShadowCompiled(0), "inner|outer|3|3|ab-ab-");
+cfunction string caughtInLoopCompiled(int m) {
+  e = "pre";
+  t = 0;
+  for (i = 0; i < 2; i++) { try { throw "x"; } catch (e) { t += 1; } }
+  return string(t) + "|" + e;
+}
+function caughtInLoopNormal(m) {
+  e = "pre";
+  t = 0;
+  for (i = 0; i < 2; i++) { try { throw "x"; } catch (e) { t += 1; } }
+  return string(t) + "|" + e;
+}
+Test(caughtInLoopCompiled(0), caughtInLoopNormal(0));
+Test(caughtInLoopCompiled(0), "2|x");
+
+// A catch whose variable already exists in the function, for the same reason: the binding
+// was handed nowhere to go, so the block caught the exception and then read the old value.
+function caughtShadowNormal(n) {
+  e = "pre";
+  try { throw "boom"; } catch (e) { return e; }
+  return "no";
+}
+Test(caughtShadowNormal(0), "boom");
+function caughtPlainNormal(n) {
+  try { throw "boom"; } catch (e) { return e; }
+  return "no";
+}
+Test(caughtPlainNormal(0), "boom");
+
+// A "for (x in ...)" whose variable already exists in the function. The loop's binding was
+// handed nowhere to go when a local of that name was already there, so every pass read the
+// value from before the loop -- silently, and as a wrong answer rather than an error.
+function shadowedLoopNormal(n) {
+  k = "z";
+  names = {"a", "b"};
+  r = "";
+  for (k in names) { r += k + ";"; }
+  return r;
+}
+Test(shadowedLoopNormal(0), "a;b;");
+function shadowedIndexNormal(n) {
+  k = "z";
+  counts7 = {"a": 1, "b": 2};
+  keys2 = counts7.Keys;
+  r = "";
+  for (k in keys2) { r += k + ":" + counts7[k] + ";"; }
+  return r;
+}
+Test(shadowedIndexNormal(0), "a:1;b:2;");
+// The same shape compiled, and the two agreeing.
+cfunction string groupByCompiled(string text) {
+  m2 = {};
+  for (w in text.Split(",")) {
+    k = w.Substring(0, 1);
+    if (m2.Contains(k)) { m2[k] += "," + w; } else { m2[k] = w; }
+  }
+  ks2 = m2.Keys;
+  ks2.Sort();
+  r = "";
+  for (k in ks2) { r += k + ":" + m2[k] + ";"; }
+  return r;
+}
+function groupByNormal(text) {
+  m2 = {};
+  for (w in text.Split(",")) {
+    k = w.Substring(0, 1);
+    if (m2.Contains(k)) { m2[k] += "," + w; } else { m2[k] = w; }
+  }
+  ks2 = m2.Keys;
+  ks2.Sort();
+  r = "";
+  for (k in ks2) { r += k + ":" + m2[k] + ";"; }
+  return r;
+}
+Test(groupByCompiled("ax,by,az"), groupByNormal("ax,by,az"));
+Test(groupByCompiled("ax,by,az"), "a:ax,az;b:by;");
+
+// A call inside a subscript: the index is worked out first, so the subscript is built from
+// a plain name. The resolver builds the index itself and cannot produce the statements a
+// call needs.
+cfunction double pickCompiled(int n) {
+  slots3 = {5, 6, 7};
+  return slots3[tripleIt(0)];
+}
+function pickNormal(n) {
+  slots3 = {5, 6, 7};
+  return slots3[tripleIt(0)];
+}
+Test(pickCompiled(0), pickNormal(0));
+Test(pickCompiled(0), 5);
+cfunction double setAtCompiled(int n) {
+  slots4 = {5, 6, 7};
+  slots4[tripleIt(0)] = 9;
+  return slots4[0] + slots4[1];
+}
+function setAtNormal(n) {
+  slots4 = {5, 6, 7};
+  slots4[tripleIt(0)] = 9;
+  return slots4[0] + slots4[1];
+}
+Test(setAtCompiled(0), setAtNormal(0));
+Test(setAtCompiled(0), 15);
+cfunction double convIndexCompiled(int n) {
+  slots5 = {5, 6, 7};
+  return slots5[int("1")];
+}
+Test(convIndexCompiled(0), 6);
+// A Math call in an index needs none of that: it is C# already.
+cfunction double mathIndexCompiled(int n) {
+  slots6 = {5, 6, 7};
+  return slots6[Math.Abs(n)];
+}
+Test(mathIndexCompiled(0), 5);
+
+// A "for (x in ...)" whose source calls something: the call is assigned to a temporary
+// first, so the whole pipeline builds it rather than the resolver alone, which emitted the
+// call's text verbatim with its argument names unresolved.
+function twoNumbers() { return {7, 8}; }
+cfunction string wordsCompiled(string text) {
+  r = "";
+  for (w in text.Split(" ")) { r += w + "|"; }
+  return r;
+}
+function wordsNormal(text) {
+  r = "";
+  for (w in text.Split(" ")) { r += w + "|"; }
+  return r;
+}
+Test(wordsCompiled("a b c"), wordsNormal("a b c"));
+Test(wordsCompiled("a b c"), "a|b|c|");
+cfunction double sumCallCompiled(int n) {
+  t = 0;
+  for (q in twoNumbers()) { t += q; }
+  return t;
+}
+function sumCallNormal(n) {
+  t = 0;
+  for (q in twoNumbers()) { t += q; }
+  return t;
+}
+Test(sumCallCompiled(0), sumCallNormal(0));
+Test(sumCallCompiled(0), 15);
+
+// "for (x in v)" where what v holds is only known when it runs: a collection walks its
+// elements, a string walks its characters, a scalar is walked once. Reading .Size straight
+// off the value went wrong for a string, whose Size is 0, so the inner loop ran no passes.
+cfunction string spellRowsCompiled(string text) {
+  r = "";
+  rows2 = text.Split(";");
+  for (row in rows2) {
+    for (ch in row) { r += ch; }
+    r += "|";
+  }
+  return r;
+}
+function spellRowsNormal(text) {
+  r = "";
+  rows2 = text.Split(";");
+  for (row in rows2) {
+    for (ch in row) { r += ch; }
+    r += "|";
+  }
+  return r;
+}
+Test(spellRowsCompiled("ab;cd"), spellRowsNormal("ab;cd"));
+Test(spellRowsCompiled("ab;cd"), "ab|cd|");
+cfunction string walkElemCompiled(int n) {
+  mixed2 = {"ab", 5};
+  r = "";
+  for (ch in mixed2[0]) { r += ch + "."; }
+  for (q in mixed2[1]) { r += string(q) + "."; }
+  return r;
+}
+function walkElemNormal(n) {
+  mixed2 = {"ab", 5};
+  r = "";
+  for (ch in mixed2[0]) { r += ch + "."; }
+  for (q in mixed2[1]) { r += string(q) + "."; }
+  return r;
+}
+Test(walkElemCompiled(0), walkElemNormal(0));
+Test(walkElemCompiled(0), "a.b.5.");
+
+// Add and Remove on a local that holds a Variable, for the same reason as Sort: they are a
+// collection's methods, not a class's, and sending them to CallMethod threw at run time.
+cfunction double addKeyCompiled(int n) {
+  counts5 = {"a": 1};
+  k4 = counts5.Keys;
+  k4.Add("z");
+  return k4.Size;
+}
+function addKeyNormal(n) {
+  counts5 = {"a": 1};
+  k4 = counts5.Keys;
+  k4.Add("z");
+  return k4.Size;
+}
+Test(addKeyCompiled(0), addKeyNormal(0));
+Test(addKeyCompiled(0), 2);
+cfunction double removeKeyCompiled(int n) {
+  counts6 = {"a": 1, "b": 2};
+  k5 = counts6.Keys;
+  k5.Remove("a");
+  return k5.Size;
+}
+function removeKeyNormal(n) {
+  counts6 = {"a": 1, "b": 2};
+  k5 = counts6.Keys;
+  k5.Remove("a");
+  return k5.Size;
+}
+Test(removeKeyCompiled(0), removeKeyNormal(0));
+Test(removeKeyCompiled(0), 1);
+
+// Split on a local that holds a Variable -- a row of a CSV, say. That went to CallMethod,
+// which threw at run time, where the interpreter splits the text.
+cfunction string firstColumnsCompiled(string text) {
+  rows = text.Split(";");
+  r = "";
+  for (row in rows) {
+    cols = row.Split(",");
+    r += cols[0] + "|";
+  }
+  return r;
+}
+function firstColumnsNormal(text) {
+  rows = text.Split(";");
+  r = "";
+  for (row in rows) {
+    cols = row.Split(",");
+    r += cols[0] + "|";
+  }
+  return r;
+}
+Test(firstColumnsCompiled("a,b;c,d"), firstColumnsNormal("a,b;c,d"));
+Test(firstColumnsCompiled("a,b;c,d"), "a|c|");
+
+// A conversion inside a compound value. The token loop consumes a call's arguments; the
+// resolver does not -- it asked for the call, got one complete with its arguments, and then
+// emitted those arguments a second time, so nothing compiled.
+cfunction string tallyCompiled(string word) {
+  seen = {};
+  for (ch in word) {
+    if (seen.Contains(ch)) { seen[ch] += 1; } else { seen[ch] = 1; }
+  }
+  letters = seen.Keys;
+  letters.Sort();
+  r = "";
+  for (q in letters) { r += q + string(seen[q]); }
+  return r;
+}
+function tallyNormal(word) {
+  seen = {};
+  for (ch in word) {
+    if (seen.Contains(ch)) { seen[ch] += 1; } else { seen[ch] = 1; }
+  }
+  letters = seen.Keys;
+  letters.Sort();
+  r = "";
+  for (q in letters) { r += q + string(seen[q]); }
+  return r;
+}
+Test(tallyCompiled("aab"), tallyNormal("aab"));
+Test(tallyCompiled("aab"), "a2b1");
+Test(tallyCompiled("zzz"), "z3");
+cfunction double sumTextCompiled(int n) {
+  digits = {"3", "4"};
+  t = 0;
+  for (q in digits) { t += int(q); }
+  return t;
+}
+function sumTextNormal(n) {
+  digits = {"3", "4"};
+  t = 0;
+  for (q in digits) { t += int(q); }
+  return t;
+}
+Test(sumTextCompiled(0), sumTextNormal(0));
+Test(sumTextCompiled(0), 7);
+
+// A collection method on a local that holds a Variable -- "k = m.Keys; k.Sort();". Reading
+// that as a method of a class sent it to CallMethod, which threw at run time.
+cfunction string sortKeysCompiled(int n) {
+  counts3 = {"b": 1, "a": 2};
+  k2 = counts3.Keys;
+  k2.Sort();
+  return k2[0] + k2[1];
+}
+function sortKeysNormal(n) {
+  counts3 = {"b": 1, "a": 2};
+  k2 = counts3.Keys;
+  k2.Sort();
+  return k2[0] + k2[1];
+}
+Test(sortKeysCompiled(0), sortKeysNormal(0));
+Test(sortKeysCompiled(0), "ab");
+cfunction string reverseKeysCompiled(int n) {
+  counts4 = {"b": 1, "a": 2};
+  k3 = counts4.Keys;
+  k3.Reverse();
+  return k3[0] + k3[1];
+}
+function reverseKeysNormal(n) {
+  counts4 = {"b": 1, "a": 2};
+  k3 = counts4.Keys;
+  k3.Reverse();
+  return k3[0] + k3[1];
+}
+Test(reverseKeysCompiled(0), reverseKeysNormal(0));
+
+// A local whose name happens to be a C# keyword. "out" is an ordinary name in a script, and
+// the generated code writes it with an "@" -- the interpreter is still told about "out".
+cfunction double keywordNameCompiled(int n) {
+  out = 5;
+  out += 2;
+  return out + n;
+}
+function keywordNameNormal(n) {
+  out = 5;
+  out += 2;
+  return out + n;
+}
+Test(keywordNameCompiled(1), keywordNameNormal(1));
+Test(keywordNameCompiled(1), 8);
+cfunction double keywordFilterCompiled(int n) {
+  src = {1, 2, 3, 4};
+  out = {};
+  for (q in src) { if (q % 2 == 0) { out.Add(q); } }
+  return out.Size + out[0];
+}
+function keywordFilterNormal(n) {
+  src = {1, 2, 3, 4};
+  out = {};
+  for (q in src) { if (q % 2 == 0) { out.Add(q); } }
+  return out.Size + out[0];
+}
+Test(keywordFilterCompiled(0), keywordFilterNormal(0));
+Test(keywordFilterCompiled(0), 4);
+cfunction string keywordTextCompiled(int n) {
+  event = "hi";
+  return event + "!";
+}
+Test(keywordTextCompiled(0), "hi!");
+
+// "*" on a string joins rather than multiplies, on the trimmed text -- C# has no "*" on
+// strings at all, so this never compiled.
+cfunction string joinStarCompiled(string word) {
+  return word * "!";
+}
+function joinStarNormal(word) {
+  return word * "!";
+}
+Test(joinStarCompiled("ab"), joinStarNormal("ab"));
+Test(joinStarCompiled("ab"), "ab!");
+cfunction string joinStarNumCompiled(string word) {
+  return word * 2;
+}
+function joinStarNumNormal(word) {
+  return word * 2;
+}
+Test(joinStarNumCompiled("ab"), joinStarNumNormal("ab"));
+Test(joinStarNumCompiled("ab"), "ab2");
+cfunction string joinStarTrimCompiled(int n) {
+  return "a " * " b";
+}
+Test(joinStarTrimCompiled(0), "ab");
+// Numbers still multiply.
+cfunction double timesCompiled(double x) { return x * 3; }
+Test(timesCompiled(4), 12);
+
+// Mixed-type operands. MergeCells takes the numeric path only when *both* sides are numbers,
+// so a number against a string concatenates and compares as text: "5" sorts before "abc".
+cfunction string mixedOpsCompiled(int n) {
+  pair = {5, "3"};
+  txt = {5, "abc"};
+  r = string(pair[0] * pair[1]);
+  r += "|" + string(txt[0] < txt[1]);
+  r += "|" + string(txt[0] > txt[1]);
+  return r;
+}
+function mixedOpsNormal(n) {
+  pair = {5, "3"};
+  txt = {5, "abc"};
+  r = string(pair[0] * pair[1]);
+  r += "|" + string(txt[0] < txt[1]);
+  r += "|" + string(txt[0] > txt[1]);
+  return r;
+}
+Test(mixedOpsCompiled(0), mixedOpsNormal(0));
+Test(mixedOpsCompiled(0), "53|1|0");
+
+// Every string is false, and "!x" is true only for a number that is zero -- so a string is
+// false both ways round.
+cfunction double truthyCompiled(int n) {
+  vals = {"5", 0, 1};
+  r = 0;
+  if (vals[0]) { r += 1; }
+  if (!vals[0]) { r += 10; }
+  if (!vals[1]) { r += 100; }
+  if (vals[2]) { r += 1000; }
+  return r;
+}
+function truthyNormal(n) {
+  vals = {"5", 0, 1};
+  r = 0;
+  if (vals[0]) { r += 1; }
+  if (!vals[0]) { r += 10; }
+  if (!vals[1]) { r += 100; }
+  if (vals[2]) { r += 1000; }
+  return r;
+}
+Test(truthyCompiled(0), truthyNormal(0));
+Test(truthyCompiled(0), 1100);
+
+// A compound assignment is not "x = x + v": it dispatches on the left type and takes the
+// right side's numeric field, so a string on the right contributes 0. A step is different
+// again: it steps the numeric field, so "5"++ is 1 while "5" += 1 concatenates to "51".
+cfunction string compoundCompiled(int n) {
+  src = {"3"};
+  acc = 5;
+  acc += src[0];
+  one = {5, "3"};
+  one[0] += one[1];
+  two = {"5", 3};
+  two[0] -= two[1];
+  three = {"5"};
+  three[0]++;
+  four = {"5"};
+  four[0] += 1;
+  return string(acc) + "|" + string(one[0]) + "|" + string(two[0]) + "|" +
+         string(three[0]) + "|" + string(four[0]);
+}
+function compoundNormal(n) {
+  src = {"3"};
+  acc = 5;
+  acc += src[0];
+  one = {5, "3"};
+  one[0] += one[1];
+  two = {"5", 3};
+  two[0] -= two[1];
+  three = {"5"};
+  three[0]++;
+  four = {"5"};
+  four[0] += 1;
+  return string(acc) + "|" + string(one[0]) + "|" + string(two[0]) + "|" +
+         string(three[0]) + "|" + string(four[0]);
+}
+Test(compoundCompiled(0), compoundNormal(0));
+Test(compoundCompiled(0), "5|5|5|1|51");
+
+// ".Size" is the element count of a collection and 0 for anything else.
+cfunction string sizeCompiled(int n) {
+  items2 = {1, 2, 3};
+  return string(items2.Size) + "|" + string(items2[0].Size);
+}
+function sizeNormal(n) {
+  items2 = {1, 2, 3};
+  return string(items2.Size) + "|" + string(items2[0].Size);
+}
+Test(sizeCompiled(0), sizeNormal(0));
+Test(sizeCompiled(0), "3|0");
+
+// A CSCS call in a "for" initialiser runs once, ahead of the loop.
+cfunction double forCallCompiled(int n) {
+  t3 = 0;
+  for (i = tripleIt(n); i < 10; i++) { t3++; }
+  return t3;
+}
+function forCallNormal(n) {
+  t3 = 0;
+  for (i = tripleIt(n); i < 10; i++) { t3++; }
+  return t3;
+}
+Test(forCallCompiled(2), forCallNormal(2));
+Test(forCallCompiled(2), 4);
+// The ordinary forms still work.
+cfunction double forPlainCompiled(int n) {
+  t4 = 0;
+  for (i = 0; i < n; i++) { t4++; }
+  return t4;
+}
+Test(forPlainCompiled(3), 3);
+cfunction double forDownCompiled(int n) {
+  t5 = 0;
+  for (i = n; i > 0; i--) { t5++; }
+  return t5;
+}
+Test(forDownCompiled(3), 3);
+
+// A CSCS call inside a literal: the call becomes statements of its own, which the literal
+// builder has to collect since it never reaches the token loop.
+cfunction double litCallCompiled(int n) {
+  slots2 = {tripleIt(n), 2};
+  return slots2[0] + slots2[1];
+}
+function litCallNormal(n) {
+  slots2 = {tripleIt(n), 2};
+  return slots2[0] + slots2[1];
+}
+Test(litCallCompiled(2), litCallNormal(2));
+Test(litCallCompiled(2), 8);
+cfunction double mapLitCallCompiled(int n) {
+  costs = {"a": tripleIt(n)};
+  return costs["a"];
+}
+function mapLitCallNormal(n) {
+  costs = {"a": tripleIt(n)};
+  return costs["a"];
+}
+Test(mapLitCallCompiled(2), mapLitCallNormal(2));
+Test(mapLitCallCompiled(2), 6);
+
+// "++" and "--" on a local holding a Variable step its numeric field, so the element "7"
+// becomes 1 rather than 8 -- the same rule unary minus follows.
+cfunction double stepVarCompiled(int n) {
+  counts2 = {5, "7"};
+  a3 = counts2[0];
+  a3++;
+  b3 = counts2[1];
+  b3++;
+  c4 = counts2[0];
+  c4--;
+  return a3 * 100 + b3 * 10 + c4;
+}
+function stepVarNormal(n) {
+  counts2 = {5, "7"};
+  a3 = counts2[0];
+  a3++;
+  b3 = counts2[1];
+  b3++;
+  c4 = counts2[0];
+  c4--;
+  return a3 * 100 + b3 * 10 + c4;
+}
+Test(stepVarCompiled(0), stepVarNormal(0));
+Test(stepVarCompiled(0), 614);
+cfunction double seedCallCompiled(int n) {
+  t2 = tripleIt(n);
+  while (t2 < 10) { t2++; }
+  return t2;
+}
+Test(seedCallCompiled(2), 10);
+
+// A bare read of a global element. The subscript is not part of the name, but it was handed
+// to the interpreter as one, so "return gReads[0];" answered the whole collection.
+gReads = {4, 1, 3};
+gLookup = {"k": 7};
+gPairs = {{1, 2}, {3, 4}};
+cfunction double firstReadCompiled(int n) { return gReads[0]; }
+function firstReadNormal(n) { return gReads[0]; }
+Test(firstReadCompiled(0), firstReadNormal(0));
+Test(firstReadCompiled(0), 4);
+cfunction double keyReadCompiled(int n) { return gLookup["k"]; }
+function keyReadNormal(n) { return gLookup["k"]; }
+Test(keyReadCompiled(0), keyReadNormal(0));
+Test(keyReadCompiled(0), 7);
+cfunction double gridReadCompiled(int n) { return gPairs[1][0]; }
+Test(gridReadCompiled(0), 3);
+
+// A CSCS call as the value stored into a global element, or added to a collection.
+cfunction double storeGlobalCallCompiled(int n) {
+  gReads[0] = tripleIt(n);
+  return gReads[0];
+}
+function storeGlobalCallNormal(n) {
+  gReads[0] = tripleIt(n);
+  return gReads[0];
+}
+Test(storeGlobalCallCompiled(2), storeGlobalCallNormal(2));
+Test(storeGlobalCallCompiled(2), 6);
+cfunction double addCallCompiled2(int n) {
+  bag2 = {};
+  bag2.Add(tripleIt(n));
+  return bag2[0];
+}
+Test(addCallCompiled2(2), 6);
+
+// A local holding a Variable has no truth value in C#, so it is read as a number -- both on
+// its own and negated.
+cfunction double missingCompiled(int n) {
+  letters = {"a", "b"};
+  found = letters[0] == "z";
+  if (!found) { return 1; }
+  return 0;
+}
+function missingNormal(n) {
+  letters = {"a", "b"};
+  found = letters[0] == "z";
+  if (!found) { return 1; }
+  return 0;
+}
+Test(missingCompiled(0), missingNormal(0));
+Test(missingCompiled(0), 1);
+cfunction double notEmptyCompiled(int n) {
+  counts = {0, 5};
+  if (!counts[0]) { return 1; }
+  return 0;
+}
+Test(notEmptyCompiled(0), 1);
+cfunction double walkWhileCompiled(int n) {
+  flags = {1, 1, 0};
+  i = 0;
+  seen = 0;
+  flag = flags[0];
+  while (flag) { seen++; i++; flag = flags[i]; }
+  return seen;
+}
+function walkWhileNormal(n) {
+  flags = {1, 1, 0};
+  i = 0;
+  seen = 0;
+  flag = flags[0];
+  while (flag) { seen++; i++; flag = flags[i]; }
+  return seen;
+}
+Test(walkWhileCompiled(0), walkWhileNormal(0));
+Test(walkWhileCompiled(0), 2);
+
+// "a = b = value" assigns right to left, so it stands for two statements.
+cfunction double chainCompiled(int n) {
+  first = second = 3;
+  return first + second;
+}
+function chainNormal(n) {
+  first = second = 3;
+  return first + second;
+}
+Test(chainCompiled(0), chainNormal(0));
+Test(chainCompiled(0), 6);
+cfunction string chainTextCompiled(int n) {
+  one = two = "hi";
+  return one + two;
+}
+Test(chainTextCompiled(0), "hihi");
+cfunction double chainThreeCompiled(double x) {
+  a2 = b2 = c3 = x * 2;
+  return a2 + b2 + c3;
+}
+Test(chainThreeCompiled(3), 18);
+
+// The same comparison in every position it can take: both sides of && and ||, a ternary's
+// condition, and assigned to a local that is then tested on its own.
+cfunction double bothLettersCompiled(int n) {
+  letters = {"a", "b"};
+  if (letters[0] == "a" && letters[1] == "b") { return 1; }
+  return 0;
+}
+function bothLettersNormal(n) {
+  letters = {"a", "b"};
+  if (letters[0] == "a" && letters[1] == "b") { return 1; }
+  return 0;
+}
+Test(bothLettersCompiled(0), bothLettersNormal(0));
+Test(bothLettersCompiled(0), 1);
+
+cfunction double eitherLetterCompiled(int n) {
+  letters = {"a", "b"};
+  if (n < 5 && letters[0] == "a") { return 10; }
+  if (letters[0] == "z" || letters[1] == "b") { return 20; }
+  return 0;
+}
+Test(eitherLetterCompiled(0), 10);
+Test(eitherLetterCompiled(9), 20);
+
+cfunction string firstIsACompiled(int n) {
+  letters = {"a", "b"};
+  return letters[0] == "a" ? "yes" : "no";
+}
+Test(firstIsACompiled(0), "yes");
+
+cfunction double storedCheckCompiled(int n) {
+  letters = {"a", "b"};
+  matched = letters[0] == "a";
+  if (matched) { return 1; }
+  return 0;
+}
+function storedCheckNormal(n) {
+  letters = {"a", "b"};
+  matched = letters[0] == "a";
+  if (matched) { return 1; }
+  return 0;
+}
+Test(storedCheckCompiled(0), storedCheckNormal(0));
+Test(storedCheckCompiled(0), 1);
+
+// A number and its text compare equal, both ways round; text against a number compares as
+// text, so "abc" is not 0.
+cfunction double looseEqCompiled(int n) {
+  mixed = {5, "5", "abc"};
+  r = 0;
+  if (mixed[0] == "5") { r += 1; }
+  if (mixed[1] == 5) { r += 10; }
+  if (mixed[2] == 0) { r += 100; }
+  if (mixed[0] != mixed[2]) { r += 1000; }
+  return r;
+}
+function looseEqNormal(n) {
+  mixed = {5, "5", "abc"};
+  r = 0;
+  if (mixed[0] == "5") { r += 1; }
+  if (mixed[1] == 5) { r += 10; }
+  if (mixed[2] == 0) { r += 100; }
+  if (mixed[0] != mixed[2]) { r += 1000; }
+  return r;
+}
+Test(looseEqCompiled(0), looseEqNormal(0));
+Test(looseEqCompiled(0), 1011);
+
+// The same global element, stepped rather than stored.
+gSteps = {4, 1, 3};
+gTally = {"k": 1};
+cfunction double stepGlobalCompiled(int n) {
+  gSteps[0] += 5;
+  gSteps[1] *= 3;
+  gSteps[2]--;
+  return gSteps[0] + gSteps[1] + gSteps[2];
+}
+function stepGlobalNormal(n) {
+  gSteps[0] += 5;
+  gSteps[1] *= 3;
+  gSteps[2]--;
+  return gSteps[0] + gSteps[1] + gSteps[2];
+}
+Test(stepGlobalCompiled(0), 14);
+Test(gSteps[0], 9);
+cfunction double stepGlobalKeyCompiled(int n) {
+  gTally["k"] += 4;
+  return gTally["k"];
+}
+Test(stepGlobalKeyCompiled(0), 5);
+Test(gTally["k"], 5);
+
+// Walking a string yields one character at a time, each a string of its own.
+cfunction string spellCompiled(string word) {
+  r = "";
+  for (ch in word) { r += ch + "|"; }
+  return r;
+}
+function spellNormal(word) {
+  r = "";
+  for (ch in word) { r += ch + "|"; }
+  return r;
+}
+Test(spellCompiled("abc"), spellNormal("abc"));
+Test(spellCompiled("abc"), "a|b|c|");
+cfunction double countCharsCompiled(string word) {
+  t = 0;
+  for (ch in word) { t++; }
+  return t;
+}
+Test(countCharsCompiled("abcd"), 4);
+cfunction string shoutCharsCompiled(string word) {
+  r = "";
+  for (ch in word) { r += ch.Upper; }
+  return r;
+}
+Test(shoutCharsCompiled("abc"), "ABC");
+// A collection is still walked as before.
+cfunction double sumItemsCompiled(int n) {
+  items = {5, 6, 7};
+  t = 0;
+  for (q in items) { t += q; }
+  return t;
+}
+Test(sumItemsCompiled(0), 18);
+
+// A "new" that is not assigned to anything takes its instance name from the assignment being
+// parsed, and that name used to outlive the assignment: after any earlier "zz = 5" an
+// unrelated "new PointM(1,2).Sum()" built an instance called "zz", whose method then looked
+// for its fields on that number -- or, where a class instance happened to hold the name,
+// quietly returned that instance's values instead.
+Test(new PointM(1, 2).Sum(), 3);
+Test(new PointM(1, 2).x, 1);
+namedSpot = new PointM(3, 4);
+Test(new PointM(1, 2).Sum() + namedSpot.Sum(), 10);
+Test(new PointM(new PointM(1, 2).Sum(), 5).Sum(), 8);
+function spotTotal(q) { return q.Sum(); }
+Test(spotTotal(new PointM(1, 2)) + spotTotal(new PointM(3, 4)), 10);
+// The name still reaches the instance it does belong to.
+assignedSpot = new PointM(5, 6);
+Test(assignedSpot.Sum(), 11);
+
+// A class instance built anywhere but as the whole right-hand side of an assignment to a
+// plain name: the interpreter builds it under the name being assigned, which is how a method
+// of the class later resolves its own fields, so the "new" is moved into a statement of its
+// own first.
+cfunction double cornersCompiled(int n) {
+  spots = {};
+  spots.Add(new PointM(1, 2));
+  spots.Add(new PointM(3, 4));
+  return spots[0].x + spots[1].y;
+}
+function cornersNormal(n) {
+  spots = {};
+  spots.Add(new PointM(1, 2));
+  spots.Add(new PointM(3, 4));
+  return spots[0].x + spots[1].y;
+}
+Test(cornersCompiled(0), cornersNormal(0));
+Test(cornersCompiled(0), 5);
+
+cfunction double nestedHolderCompiled(int n) {
+  outer = new NamedM(3, "a");
+  outer.kid = new NamedM(6, "b");
+  return outer.Kid().v + outer.v;
+}
+function nestedHolderNormal(n) {
+  outer = new NamedM(3, "a");
+  outer.kid = new NamedM(6, "b");
+  return outer.Kid().v + outer.v;
+}
+Test(nestedHolderCompiled(0), nestedHolderNormal(0));
+Test(nestedHolderCompiled(0), 9);
+
+// One "new" inside another one's arguments used to look for a function called "newPointM",
+// which throws rather than falling back.
+cfunction double innerNewCompiled(int n) {
+  held = new NamedM(new PointM(1, 2).Sum(), "z");
+  return held.v + n;
+}
+function innerNewNormal(n) {
+  held = new NamedM(new PointM(1, 2).Sum(), "z");
+  return held.v + n;
+}
+Test(innerNewCompiled(0), innerNewNormal(0));
+Test(innerNewCompiled(0), 3);
+
+// Iterating a collection of instances.
+cfunction double totalHeldCompiled(int n) {
+  bag = {};
+  bag.Add(new NamedM(1, "x"));
+  bag.Add(new NamedM(2, "y"));
+  t = 0;
+  for (h in bag) { t += h.v; }
+  return t;
+}
+function totalHeldNormal(n) {
+  bag = {};
+  bag.Add(new NamedM(1, "x"));
+  bag.Add(new NamedM(2, "y"));
+  t = 0;
+  for (h in bag) { t += h.v; }
+  return t;
+}
+Test(totalHeldCompiled(0), totalHeldNormal(0));
+Test(totalHeldCompiled(0), 3);
+
+// A branch of a ternary is not moved out: only one of the two runs, so it stays interpreted
+// and must still give the interpreter's answer.
+cfunction double pickCornerCompiled(int n) {
+  spot = n > 0 ? new PointM(1, 2) : new PointM(3, 4);
+  return spot.x;
+}
+function pickCornerNormal(n) {
+  spot = n > 0 ? new PointM(1, 2) : new PointM(3, 4);
+  return spot.x;
+}
+Test(pickCornerCompiled(1), pickCornerNormal(1));
+Test(pickCornerCompiled(1), 1);
+Test(pickCornerCompiled(0), 3);
+
+// Bit operations on elements: C# has none on double, and the interpreter truncates toward
+// zero, so 6.9 & 3 is 6 & 3.
+cfunction double maskCompiled(int n) {
+  flags = {6.9, 3};
+  return flags[0] & flags[1];
+}
+function maskNormal(n) {
+  flags = {6.9, 3};
+  return flags[0] & flags[1];
+}
+Test(maskCompiled(0), maskNormal(0));
+Test(maskCompiled(0), 2);
+cfunction double orCompiled(int n) {
+  flags = {6, 3};
+  return (flags[0] | flags[1]) + (flags[0] ^ flags[1]);
+}
+Test(orCompiled(0), 12);
+
+// A comparison whose receiver is a member of a string, and a chain of members after one.
+cfunction double loudEnoughCompiled(string word) {
+  if (word.Upper > "AA") { return 1; }
+  return 0;
+}
+function loudEnoughNormal(word) {
+  if (word.Upper > "AA") { return 1; }
+  return 0;
+}
+Test(loudEnoughCompiled("bb"), loudEnoughNormal("bb"));
+Test(loudEnoughCompiled("bb"), 1);
+Test(loudEnoughCompiled("AA"), 0);
+cfunction string shoutCompiled(string word) {
+  return word.Upper.Replace("A", "b");
+}
+function shoutNormal(word) {
+  return word.Upper.Replace("A", "b");
+}
+Test(shoutCompiled("ax"), shoutNormal("ax"));
+Test(shoutCompiled("ax"), "bX");
+
+// "continue" inside a switch belongs to the enclosing loop, which the translation cannot
+// express, so this one stays interpreted -- and must still give the interpreter's answer.
+cfunction double skipOneCompiled(int n) {
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    switch (i) { case 1: continue; default: t += 1; }
+    t += 100;
+  }
+  return t;
+}
+function skipOneNormal(n) {
+  t = 0;
+  for (i = 0; i < 4; i++) {
+    switch (i) { case 1: continue; default: t += 1; }
+    t += 100;
+  }
+  return t;
+}
+Test(skipOneCompiled(0), skipOneNormal(0));
+Test(skipOneCompiled(0), 303);
+
+// Accumulating elements into a string local: whether "+" joins or adds is only known once
+// it runs, and reading the elements as numbers first built "000" instead of "abc".
+cfunction string joinCompiled(int n) {
+  letters = {"a", "b", "c"};
+  joined = "";
+  for (i = 0; i < letters.Size; i++) { joined += letters[i]; }
+  return joined;
+}
+function joinNormal(n) {
+  letters = {"a", "b", "c"};
+  joined = "";
+  for (i = 0; i < letters.Size; i++) { joined += letters[i]; }
+  return joined;
+}
+Test(joinCompiled(0), joinNormal(0));
+Test(joinCompiled(0), "abc");
+// The numeric form of the same shape still adds.
+cfunction double sumCompiled(int n) {
+  amounts = {4, 1, 3};
+  total = 0;
+  for (i = 0; i < amounts.Size; i++) { total += amounts[i]; }
+  return total;
+}
+Test(sumCompiled(0), 8);
+
+// A string argument's Length is a number, whatever the argument itself is.
+cfunction double countCompiled(string word) {
+  i = 0;
+  seen = 0;
+  while (i < word.Length) { seen++; i++; }
+  return seen;
+}
+function countNormal(word) {
+  i = 0;
+  seen = 0;
+  while (i < word.Length) { seen++; i++; }
+  return seen;
+}
+Test(countCompiled("abcd"), countNormal("abcd"));
+Test(countCompiled("abcd"), 4);
+
+// Unary minus on an element: the interpreter negates the numeric field, so a string element
+// comes out as -0 rather than the number its text would parse to.
+cfunction double negCompiled(int n) {
+  amounts = {"xy", 5};
+  return -amounts[1];
+}
+function negNormal(n) {
+  amounts = {"xy", 5};
+  return -amounts[1];
+}
+Test(negCompiled(0), negNormal(0));
+Test(negCompiled(0), -5);
+
+// A "return" inside a switch case used to run the interpreter off the end of the script.
+function gradeNormal(mark) {
+  switch (mark) {
+    case 1: return "one";
+    case 2: return "two";
+    default: return "many";
+  }
+  return "unreached";
+}
+Test(gradeNormal(2), "two");
+Test(gradeNormal(1), "one");
+Test(gradeNormal(7), "many");
+
+// Two elements compared: a string element orders by text and a numeric one by value, and
+// which rule applies is only known once it runs.
+cfunction double firstBiggerCompiled(int n) {
+  fruit = {"pear", "fig"};
+  if (fruit[0] > fruit[1]) { return 1; }
+  return 0;
+}
+function firstBiggerNormal(n) {
+  fruit = {"pear", "fig"};
+  if (fruit[0] > fruit[1]) { return 1; }
+  return 0;
+}
+Test(firstBiggerCompiled(0), firstBiggerNormal(0));
+Test(firstBiggerCompiled(0), 1);
+
+cfunction double numsCompiled(int n) {
+  nums = {4, 1, 3};
+  if (nums[0] > nums[1]) { return 1; }
+  return 0;
+}
+Test(numsCompiled(0), 1);
+// An argument list still wants a number, whatever the comparison around it does.
+cfunction double absCompiled(int n) {
+  nums = {4, -9, 3};
+  if (Math.Abs(nums[1]) > 8) { return 1; }
+  return 0;
+}
+Test(absCompiled(0), 1);
+
+// A comparison in a ternary's condition, including one nested in a branch.
+cfunction string pickCompiled(string word) {
+  return word > "melon" ? (word > "plum" ? "late" : "mid") : "early";
+}
+function pickNormal(word) {
+  return word > "melon" ? (word > "plum" ? "late" : "mid") : "early";
+}
+Test(pickCompiled("zucchini"), pickNormal("zucchini"));
+Test(pickCompiled("zucchini"), "late");
+Test(pickCompiled("pear"), "mid");
+Test(pickCompiled("apple"), "early");
+
+// A comparison assigned rather than tested.
+cfunction double afterMelonCompiled(string word) {
+  verdict = word > "melon";
+  if (verdict) { return 1; }
+  return 0;
+}
+Test(afterMelonCompiled("pear"), 1);
+Test(afterMelonCompiled("apple"), 0);
+
+// A conversion whose argument is a map subscript: the key's quotes used to be mangled, and
+// Convert cannot take the Variable a subscript yields.
+cfunction string keyTextCompiled(int n) {
+  prices = {"fig": 3};
+  return string(prices["fig"]);
+}
+function keyTextNormal(n) {
+  prices = {"fig": 3};
+  return string(prices["fig"]);
+}
+Test(keyTextCompiled(0), keyTextNormal(0));
+Test(keyTextCompiled(0), "3");
+cfunction double keyNumCompiled(int n) {
+  prices = {"fig": 3};
+  return int(prices["fig"]) + 1;
+}
+Test(keyNumCompiled(0), 4);
+// int() still truncates toward zero and still parses a string.
+cfunction double truncCompiled(double x) { return int(x); }
+Test(truncCompiled(2.5), 2);
+Test(truncCompiled(-3.7), -3);
+cfunction double parseCompiled(string s) { return int(s) + 1; }
+Test(parseCompiled("5.7"), 6);
+
+// A local whose every assignment is a string compares as text, like the interpreter.
+cfunction double rankCompiled(string word) {
+  probe = word;
+  best = "melon";
+  if (probe > best) { return 1; }
+  if (probe == best) { return 0; }
+  return -1;
+}
+function rankNormal(word) {
+  probe = word;
+  best = "melon";
+  if (probe > best) { return 1; }
+  if (probe == best) { return 0; }
+  return -1;
+}
+Test(rankCompiled("pear"), rankNormal("pear"));
+Test(rankCompiled("pear"), 1);
+Test(rankCompiled("melon"), 0);
+Test(rankCompiled("apple"), -1);
+// "9" sorts after "20" as text, which is exactly what the interpreter does here.
+Test(rankCompiled("9"), rankNormal("9"));
+
+// The same shape over numbers must keep comparing by value, not by text.
+cfunction double overNineCompiled(double amount) {
+  probe = amount;
+  if (probe > 9) { return 1; }
+  return 0;
+}
+function overNineNormal(amount) {
+  probe = amount;
+  if (probe > 9) { return 1; }
+  return 0;
+}
+Test(overNineCompiled(20), overNineNormal(20));
+Test(overNineCompiled(20), 1);
+Test(overNineCompiled(3), 0);
+
+// Exponentiation is right-associative: 2**3**2 is 2**(3**2), not (2**3)**2.
+Test(2**3**2, 512);
+Test((2**3)**2, 64);
+Test(2**3*4, 32);
+
+Print("Testing recursion, At, groups and escapes...");
+
+// Every call used to leave its level of locals on the interpreter's stack, so a compiled
+// function calling itself twice read what the first call left behind: fib(10) was -80.
+cfunction int fibCompiled(int n) { if (n < 2) { return n; } return fibCompiled(n-1) + fibCompiled(n-2); }
+function fibNormal(n) { if (n < 2) { return n; } return fibNormal(n-1) + fibNormal(n-2); }
+Test(fibCompiled(10), 55);
+Test(fibCompiled(12), fibNormal(12));
+
+// Characters are read with At: a one-letter string, and an empty one past the end.
+cfunction int isPalindrome(string s) { i = 0; j = s.Length - 1; while (i < j) { if (s.At(i) != s.At(j)) { return 0; } i++; j--; } return 1; }
+Test(isPalindrome("racecar"), 1);
+Test(isPalindrome("racecars"), 0);
+cfunction string reversed(string s) { r = ""; for (i = s.Length - 1; i >= 0; i--) { r += s.At(i); } return r; }
+Test(reversed("hello"), "olleh");
+cfunction string capitalized(string s) { return s.At(0).Upper + s.Substring(1) + s.At(99); }
+Test(capitalized("hello"), "Hello");
+
+// An element compared with an argument.
+cfunction int indexOfValue(int n) { a = {4, 9, 2, 7}; for (i = 0; i < a.Size; i++) { if (a[i] == n) { return i; } } return -1; }
+Test(indexOfValue(2), 2);
+Test(indexOfValue(5), -1);
+
+// A minus in front of a group, and a group holding a lone string followed by more.
+groupNeg = -(2 + 1);
+Test(groupNeg, -3);
+Test(5 * -(2 + 1), -15);
+groupStr = ("s") + "a";
+Test(groupStr, "sa");
+cfunction int negatedGroup(int n) { return -(n + 1) * 2; }
+Test(negatedGroup(2), -6);
+cfunction int parenReturn(int n) { return (n); }
+Test(parenReturn(7), 7);
+
+// "\t" stays a backslash and a letter until it is printed, compiled or not.
+cfunction int tabLength(int n) { s = "a\tb"; return s.Length + n; }
+Test(tabLength(0), 4);
+
+Print("Testing short-circuit calls, constructors and nested literals...");
+
+// A call inside "&&", "||" or "?:" runs only when the operator reaches it. Compiled code
+// used to run it ahead of the whole statement, whatever the left side said.
+scCalls = 0;
+function scBump(x) { scCalls++; return x; }
+cfunction int scAndCompiled(int n) { if (n > 5 && scBump(n) > 1) { return 1; } return 0; }
+cfunction int scOrCompiled(int n) { if (n < 5 || scBump(n) > 1) { return 1; } return 0; }
+cfunction int scTernCompiled(int n) { return n > 5 ? scBump(1) : 0; }
+scCalls = 0; Test(scAndCompiled(1), 0); Test(scCalls, 0);
+scCalls = 0; Test(scOrCompiled(1), 1); Test(scCalls, 0);
+scCalls = 0; Test(scTernCompiled(1), 0); Test(scCalls, 0);
+scCalls = 0; Test(scAndCompiled(9), 1); Test(scCalls, 1);
+
+// A call's value keeps its type: a string result used to be read as 0.
+cfunction accumCompiled(int n) { r = ""; for (i = 0; i < n; i++) { r += scBump("s"); } return r; }
+Test(accumCompiled(3), "sss");
+cfunction callPlusCompiled(int n) { x = scBump(n) + 1; return x * 2; }
+Test(callPlusCompiled(2), 6);
+
+// Spaces after "new" were all kept, so an argument with an operator in it came apart and
+// no constructor matched: the fields silently stayed at their defaults.
+class TPair { a = 0; b = 0; TPair(x, y) { a = x; b = y; } }
+tp = new TPair(1, 2 + 3);
+Test(tp.a * 10 + tp.b, 15);
+
+// A brace literal as a map value, and a method on an element of a function's own local.
+nestedMap = {"x": {1, 2}, "y": {"k": 7}};
+Test(nestedMap["x"][1] + nestedMap["y"]["k"], 9);
+function elemSub() { parts = {" hello "}; return parts[0].Trim().Substring(1); }
+Test(elemSub(), "ello");
+
+Print("Testing list arguments, int widening and block scope...");
+
+// A list or map argument is the caller's own Variable: changes made by a compiled function
+// reach the caller, as they do when the function is interpreted.
+cfunction int addToList(list<int> a) { a.Add(5); a[0] = a[0] * 10; return a.Size; }
+listArg = {1, 2};
+Test(addToList(listArg), 3);
+Test(listArg[0] * 100 + listArg[2], 1005);
+cfunction countKeys(map<string,double> m) { m["added"] = 1; return m.Size; }
+mapArg = {"a": 1};
+Test(countKeys(mapArg), 2);
+Test(mapArg["added"], 1);
+
+// An int argument next to arithmetic is widened: C# int arithmetic wrapped around.
+cfunction cubeInt(int n) { return n * n * n; }
+Test(cubeInt(100000), 1000000000000000);
+// And one the body assigns to holds whatever the interpreter would: 13.5 is not an int.
+cfunction collatzSteps(int n) { c = 0; while (n > 1) { n = n % 2 == 0 ? n / 2 : 3 * n + 1; c++; } return c; }
+Test(collatzSteps(27), 111);
+
+// A local used outside the block it was first assigned in.
+cfunction pickLabel(int n) { if (n > 0) { s = "pos"; } else { s = "neg"; } if (n > 10) { s = s + "!"; } return s; }
+Test(pickLabel(20), "pos!");
+Test(pickLabel(-1), "neg");
+
+// Interpreter: a member after the second of two chained calls.
+chainSrc = "aabbcc";
+chainLen = chainSrc.Replace("a", "").Replace("b", "").Length;
+Test(chainLen, 2);
+
+Print("Testing defaults, dates and inheritance in compiled functions...");
+
+// An argument with a default value. The signature parser used to name the argument after the
+// default itself, so calling one was an illegal-name error.
+cfunction int twiceOrTen(int n = 5) {
+  // A line comment inside a compiled body.
+  return n * 2;
+}
+Test(twiceOrTen(), 10);
+Test(twiceOrTen(7), 14);
+cfunction string greet(string who = "world") { return "hi " + who; }
+Test(greet(), "hi world");
+Test(greet("you"), "hi you");
+cfunction int answer() { return 42; }
+Test(answer(), 42);
+
+// A format handed to string(): the literal used to be split on its separators, and the date
+// was then formatted through the name of a generated temporary.
+cfunction string dateText(int n) {
+  d = DateTime("9/11/2001 19:31:51", "M/d/yyyy HH:mm:ss");
+  return string(d, "yyyy/MM/dd") + " " + string(d, "HH:mm:ss");
+}
+function dateTextNormal(n) {
+  d = DateTime("9/11/2001 19:31:51", "M/d/yyyy HH:mm:ss");
+  return string(d, "yyyy/MM/dd") + " " + string(d, "HH:mm:ss");
+}
+Test(dateText(0), dateTextNormal(0));
+Test(dateText(0), "2001/09/11 19:31:51");
+// A numeric format reaches string() the same way; what it makes of one is the interpreter's
+// business, so this compares the two rather than naming a value.
+cfunction string amount(double x) { return string(x, "0.00"); }
+function amountNormal(x) { return string(x, "0.00"); }
+Test(amount(2.5), amountNormal(2.5));
+
+// A derived class, and a namespace's function, from a compiled function.
+cfunction int useDerived(int n) { d = new Derived2(4, 5); return d.addBase2(n) + d.dz2; }
+class Base2 { bx2 = 1; Base2(a) { bx2 = a; } function addBase2(n) { return n + bx2; } }
+class Derived2 : Base2 { dz2 = 2; Derived2(a, b) { bx2 = a; dz2 = b; } }
+Test(useDerived(1), 10);
+
+namespace nsTest { nlocal2 = 7; function nfunc2(x) { return x + nlocal2; } }
+cfunction int useNamespace(int n) { return nsTest.nfunc2(n); }
+Test(useNamespace(3), 10);
+
+// A local collection an interpreted function changes.
+function addToEndTest(q) { q.Add(99); }
+cfunction int passCollection(int n) { a = {1, 2}; addToEndTest(a); return a.Size * 10 + a[2] + n; }
+Test(passCollection(0), 129);
+
+Print("Testing finally, nested collections and unicode in compiled functions...");
+
+// A finally clause used to become a call to a function named "finally" and threw at run time.
+cfunction int withFinally(int n) {
+  r = 0;
+  try { r = 1; throw "x"; } catch (e) { r += 10; } finally { r += 100; }
+  return r;
+}
+function withFinallyNormal(n) {
+  r = 0;
+  try { r = 1; throw "x"; } catch (e) { r += 10; } finally { r += 100; }
+  return r;
+}
+Test(withFinally(0), withFinallyNormal(0));
+Test(withFinally(0), 111);
+
+// Collections inside collections: two subscripts on the left, and appending to an element.
+cfunction int nestedColl(int n) {
+  m = {"a": {1, 2}};
+  m["a"].Add(3);
+  g = {};
+  g["x"] = {};
+  g["x"]["y"] = 7;
+  return m["a"].Size * 10 + g["x"]["y"] + n;
+}
+function nestedCollNormal(n) {
+  m = {"a": {1, 2}};
+  m["a"].Add(3);
+  g = {};
+  g["x"] = {};
+  g["x"]["y"] = 7;
+  return m["a"].Size * 10 + g["x"]["y"] + n;
+}
+Test(nestedColl(0), nestedCollNormal(0));
+Test(nestedColl(0), 37);
+
+// A constructor's defaults, and the class's own ToString.
+class Boxed { ba = 0; bb = 0; Boxed(x = 1, y = 2) { ba = x; bb = y; } function ToString() { return "(" + ba + "," + bb + ")"; } }
+cfunction string boxedText(int n) { boxedOne = new Boxed(); boxedTwo = new Boxed(5); return "" + boxedOne + boxedTwo; }
+Test(boxedText(0), "(1,2)(5,2)");
+
+// A for header with a section left out, and text outside ASCII.
+cfunction int sumFrom(int n) { i = 1; t = 0; for (; i <= n; i++) { t += i; } return t; }
+Test(sumFrom(4), 10);
+cfunction string accented(string s) { return s.Upper + s.At(1) + s.Length; }
+function accentedNormal(s) { return s.Upper + s.At(1) + s.Length; }
+Test(accented("héllo"), accentedNormal("héllo"));
+Test(accented("héllo"), "HÉLLOé5");
+
+// Division by zero is an infinity in both, and prints the same way.
+cfunction divByZero(double x) { return x / 0; }
+function divByZeroNormal(x) { return x / 0; }
+Test(divByZero(5), divByZeroNormal(5));
+
+Print("Testing what a compiled function leaves behind...");
+
+// A compiled function's assignment to a name the interpreter already holds has to reach it,
+// exactly as it does when the same function is interpreted. It did not: the write-back is
+// only emitted once something else in the body needs the interpreter.
+sideNum = 10;
+sideText = "before";
+cfunction int setsGlobalNum(int n) { sideNum = n * 3; return sideNum; }
+function setsGlobalNumNormal(n) { sideNum = n * 3; return sideNum; }
+Test(setsGlobalNum(4), 12);
+Test(sideNum, 12);
+sideNum = 10;
+Test(setsGlobalNumNormal(4), 12);
+Test(sideNum, 12);
+cfunction string setsGlobalText(int n) { sideText = "after"; return sideText; }
+Test(setsGlobalText(0), "after");
+Test(sideText, "after");
+
+// Its own locals, though, must stay out of the interpreter's globals. They were published
+// there for good, which also overwrote any global of the same name.
+class SideP { sx = 0; SideP(v) { sx = v; } }
+cfunction int keepsLocals(int n) { onlyLocal = n * 2; madeInst = new SideP(n); return onlyLocal + madeInst.sx; }
+Test(keepsLocals(3), 9);
+Test(NameExists("onlyLocal"), 0);
+Test(NameExists("madeInst"), 0);
+
+// Which is what this needs: the leak used to turn the interpreted twin's locals into globals,
+// so its recursion overwrote its own values and answered 6 instead of 144.
+cfunction int fibComp(int n) { if (n < 2) { return n; } fibA = fibComp(n - 1); fibB = fibComp(n - 2); return fibA + fibB; }
+function fibInterp(n) { if (n < 2) { return n; } fibA = fibInterp(n - 1); fibB = fibInterp(n - 2); return fibA + fibB; }
+Test(fibComp(12), 144);
+Test(fibInterp(12), 144);
+
+// A global collection still changes through an element assignment.
+sideArr = {1, 2};
+cfunction int setsGlobalElem(int n) { sideArr[0] = n; return sideArr[0]; }
+Test(setsGlobalElem(9), 9);
+Test(sideArr[0] * 10 + sideArr[1], 92);
+
+Print("Testing named arguments and member spelling in compiled functions...");
+
+// Arguments given by name. The compiled path used to fill the defaults itself, before the
+// binder reordered the named ones, so the first argument got the second one's default.
+cfunction int pairValue(int first = 5, int second = 7) { return first * 10 + second; }
+function pairValueNormal(first = 5, second = 7) { return first * 10 + second; }
+Test(pairValue(second = 2), pairValueNormal(second = 2));
+Test(pairValue(second = 2), 52);
+Test(pairValue(first = 1, second = 2), 12);
+Test(pairValue(second = 2, first = 1), 12);
+Test(pairValue(), 57);
+Test(pairValue(1), 17);
+Test(pairValue(1, 2), 12);
+
+// CSCS names are case-insensitive; the generated C# used the script's spelling, so a member
+// written in lower case did not compile.
+cfunction int spellings(int n) {
+  arr = {3, 1, 2};
+  arr.sort();
+  mp = {"b": 1, "a": 2};
+  ky = mp.keys;
+  return arr[0] * 100 + ky.Size * 10 + mp.size + n;
+}
+function spellingsNormal(n) {
+  arr = {3, 1, 2};
+  arr.sort();
+  mp = {"b": 1, "a": 2};
+  ky = mp.keys;
+  return arr[0] * 100 + ky.Size * 10 + mp.size + n;
+}
+Test(spellings(0), spellingsNormal(0));
+Test(spellings(0), 122);
+cfunction string lowerMembers(string s) { return s.upper + s.at(1) + s.length + s.substring(1, 2); }
+function lowerMembersNormal(s) { return s.upper + s.at(1) + s.length + s.substring(1, 2); }
+Test(lowerMembers("hello"), lowerMembersNormal("hello"));
+Test(lowerMembers("hello"), "HELLOe5el");
+
+// JSON and marshalling from a compiled function.
+cfunction int jsonSum(int n) {
+  j = "{\"a\": 1, \"b\": 2}";
+  v = GetVariableFromJSON(j);
+  return v["a"] + v["b"] + n;
+}
+Test(jsonSum(0), 3);
+cfunction string roundTrip(string s) { m = Marshal(s); return Unmarshal(m) + "!"; }
+Test(roundTrip("ab"), "ab!");
+
+Print("Testing compiled and interpreted code calling each other...");
+
+// Two compiled functions calling each other, and a compiled one throwing into an interpreted
+// caller.
+cfunction int evenStep(int n) { if (n <= 0) { return 1; } return oddStep(n - 1); }
+cfunction int oddStep(int n) { if (n <= 0) { return 0; } return evenStep(n - 1); }
+Test(evenStep(10), 1);
+Test(oddStep(10), 0);
+cfunction int throwsFromCompiled(int n) { throw "from compiled " + n; return 0; }
+function catchesFromCompiled(n) { try { return throwsFromCompiled(n); } catch (e) { return "c:" + e; } }
+Test(catchesFromCompiled(3), "c:from compiled 3");
+function alwaysThrows(x) { throw "boom" + x; }
+cfunction string catchesInterpreted(int n) { try { alwaysThrows(n); } catch (e) { return "caught:" + e; } return "none"; }
+Test(catchesInterpreted(3), "caught:boom3");
+
+// A return inside try means something else when a finally is present: CSCS runs the finally
+// and carries on after it, so this answers 99 rather than 8. Such a function is left to the
+// interpreter, and the two must still agree.
+cfunction int returnsInTry(int n) { r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r; }
+function returnsInTryNormal(n) { r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r; }
+Test(returnsInTry(4), returnsInTryNormal(4));
+Test(returnsInTry(4), 99);
+
+// An argument declared "variable": a field on it, not only a method. The classes are declared
+// here -- test.cscs has no Point of its own.
+class VPoint { vx = 0; vy = 0; VPoint(a, b) { vx = a; vy = b; } function Total() { return vx + vy; } }
+class VTagged { vtag = ""; VTagged(t) { vtag = t; } }
+cfunction int readsFields(variable v) { return v.vx + v.vy; }
+cfunction string readsChain(variable v) { return v.vtag.Upper; }
+cfunction int readsMethod(variable v) { return v.Total(); }
+Test(readsFields(new VPoint(3, 4)), 7);
+Test(readsChain(new VTagged("q")), "Q");
+Test(readsMethod(new VPoint(3, 4)), 7);
+
+// Iterating a map itself walks its values; m.Keys is what walks the keys.
+cfunction string mapValuesJoined(int n) { mv = {"a": 1, "b": 2}; tv = ""; for (k in mv) { tv += k; } return tv; }
+function mapValuesJoinedNormal(n) { mv = {"a": 1, "b": 2}; tv = ""; for (k in mv) { tv += k; } return tv; }
+Test(mapValuesJoined(0), mapValuesJoinedNormal(0));
+Test(mapValuesJoined(0), "12");
+cfunction string mapKeysJoined(int n) { mk = {"a": 1, "b": 2}; tk = ""; for (k in mk.Keys) { tk += k; } return tk; }
+Test(mapKeysJoined(0), "ab");
+
+Print("Testing reference semantics and try inside loops...");
+
+// A collection assigned to another name is the same collection; so is one reached through a
+// map key or handed to a foreach variable. Compiled code holds the same Variables, so a
+// change through either name has to show through both.
+class AliasBox { bv = 0; AliasBox(v) { bv = v; } }
+cfunction int aliasAssign(int n) { aa = {1, 2}; bb = aa; bb.Add(3); return aa.Size * 10 + bb.Size + n; }
+function aliasAssignNormal(n) { aa = {1, 2}; bb = aa; bb.Add(3); return aa.Size * 10 + bb.Size + n; }
+Test(aliasAssign(0), aliasAssignNormal(0));
+Test(aliasAssign(0), 33);
+cfunction int aliasMapElem(int n) { mm = {"a": {1, 2}}; vv = mm["a"]; vv.Add(3); return mm["a"].Size + n; }
+Test(aliasMapElem(0), 3);
+cfunction int aliasForeach(int n) { gg = {}; gg.Add({1}); gg.Add({2}); for (row in gg) { row.Add(9); } return gg[0].Size * 10 + gg[1].Size + n; }
+Test(aliasForeach(0), 22);
+cfunction int aliasInstance(int n) { p1 = new AliasBox(1); p2 = p1; p2.bv = 9; return p1.bv + n; }
+Test(aliasInstance(0), 9);
+
+// A scalar and a string copy instead.
+cfunction int copiesScalar(int n) { xx = n; yy = xx; yy = yy + 1; return xx * 10 + yy; }
+Test(copiesScalar(5), 56);
+cfunction string copiesText(string s) { tt = s; tt += "!"; return s + tt; }
+Test(copiesText("a"), "aa!");
+
+// break, continue and return inside a try, and a throw from inside a loop caught outside it.
+cfunction int breakInTry(int n) { t = 0; for (i = 0; i < n; i++) { try { if (i == 2) { break; } t += i; } catch (e) { t = -1; } } return t; }
+function breakInTryNormal(n) { t = 0; for (i = 0; i < n; i++) { try { if (i == 2) { break; } t += i; } catch (e) { t = -1; } } return t; }
+Test(breakInTry(5), breakInTryNormal(5));
+Test(breakInTry(5), 1);
+cfunction int continueInCatch(int n) { t = 0; for (i = 0; i < n; i++) { try { if (i % 2 == 0) { throw "x"; } t += i; } catch (e) { continue; } } return t; }
+Test(continueInCatch(5), 4);
+cfunction int throwCaughtOutside(int n) { t = 0; try { for (i = 0; i < n; i++) { if (i == 2) { throw "stop"; } t += i; } } catch (e) { t += 100; } return t; }
+Test(throwCaughtOutside(5), 101);
+
+// Three hundred levels of recursion, each with its own locals.
+cfunction int countDown(int n) { if (n <= 0) { return 0; } return 1 + countDown(n - 1); }
+Test(countDown(300), 300);
+
+Print("Testing compiled: this inside class methods...");
+cfunction int usesThisFromCompiled(int n) { tb = new ThisBox(n); return tb.ViaThis() + tb.ViaThisCall(); }
+function usesThisFromInterp(n) { tb = new ThisBox(n); return tb.ViaThis() + tb.ViaThisCall(); }
+Test(usesThisFromCompiled(5), usesThisFromInterp(5));
+Test(usesThisFromCompiled(5), 15);
+
+Print("Testing compiled: a method calling a sibling method...");
+cfunction int sibFromCompiled(int n) { p = new SibCalc(n); return p.Doubled() + p.ViaThis(); }
+function sibFromInterp(n) { p = new SibCalc(n); return p.Doubled() + p.ViaThis(); }
+Test(sibFromCompiled(5), sibFromInterp(5));
+Test(sibFromCompiled(5), 25);
+
+
+testSummary("test_compiled.cscs");
+
+end = pstime;
+Print("Compiled tests done. Script execution: ", end - start, " ms.");
+now = now("yyyy/MM/dd HH:mm:ss.fff");
+print("Finished.", now);

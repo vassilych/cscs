@@ -35,6 +35,7 @@ namespace SplitAndMerge
         public const string AND = "&&";
         public const string OR = "||";
         public const string NOT = "!";
+        public const string BITWISE_NOT = "~";
         public const string INCREMENT = "++";
         public const string DECREMENT = "--";
         public const string POWER = "**";
@@ -120,7 +121,10 @@ namespace SplitAndMerge
         public const string OBJECT_PROPERTIES = "Properties";
         public const string OBJECT_TYPE = "Type";
         public const string POINTER = "->";
-        public const string POINTER_REF = "&";
+        // "&" is bitwise AND, as it is in C and in every language a CSCS user is likely
+        // to come from. The reference operator moved to "@" so the two stop colliding:
+        // "5 & 3" used to parse as "take a reference to 3".
+        public const string POINTER_REF = "@";
         public const string PRINT = "print";
         public const string PSTIME = "pstime";
         public const string REGEX = "Regex";
@@ -212,6 +216,7 @@ namespace SplitAndMerge
         public const string MATH_ATANH = "Math.Atanh";
         public const string MATH_CBRT = "Math.Cbrt";
         public const string MATH_CEIL = "Math.Ceil";
+        public const string MATH_CEILING = "Math.Ceiling";   // the .NET spelling of MATH_CEIL
         public const string MATH_COS = "Math.Cos";
         public const string MATH_COSH = "Math.Cosh";
         public const string MATH_E = "Math.E";
@@ -256,7 +261,7 @@ namespace SplitAndMerge
         public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", ":" };
         public static string[] MATH_ACTIONS = { "===", "!==",
                                                 "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
-                                                "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "="};
+                                                "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "=", "@"};
         // Actions: always decreasing by the number of characters.
         public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
 
@@ -287,20 +292,24 @@ namespace SplitAndMerge
         public static List<string> FUNCT_WITH_SPACE = new List<string>
         {
             APPENDLINE, CD, CLASS, CONNECTSRV, COPY, DELETE, DIR, EXISTS, FINDFILES, FINDSTR,
-            FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, HELP, MKDIR, MORE, MOVE, NAMESPACE, NEW, PRINT, READFILE, RUN, SHOW, STARTSRV,
+            FUNCTION, COMPILED_FUNCTION, CSHARP_FUNCTION, HELP, MKDIR, MORE, MOVE, NAMESPACE, PRINT, READFILE, RUN, SHOW, STARTSRV,
             TAIL, THREAD, TRANSLATE, WRITE, WRITELINE, WRITENL
         };
 #else
         public static List<string> FUNCT_WITH_SPACE = new List<string> {
-            CLASS, FUNCTION, COMPILED_FUNCTION, HELP, NEW, NAMESPACE, SHOW, THREAD
+            CLASS, FUNCTION, COMPILED_FUNCTION, HELP, NAMESPACE, SHOW, THREAD
         };
 #endif
         // Functions that allow a space separator after them, on top of parentheses but
         // only once, i.e. function arguments are not allowed to have spaces
         // between them e.g. return a*b;
+        // NEW is here rather than above: it needs the space before the class name, but
+        // keeping every space after it kept them inside the constructor's arguments too, and
+        // "new Point(1, 2 + 3)" then read "2 + 3" as more than one argument. No constructor
+        // matched, and the instance silently kept its default field values.
         public static List<string> FUNCT_WITH_SPACE_ONCE = new List<string>
         {
-            CASE, RETURN, THROW, TYPE_OF, VAR
+            CASE, NEW, RETURN, THROW, TYPE_OF, VAR
         };
 
         // The Control Flow Functions. It doesn't make sense to merge them or
@@ -323,7 +332,11 @@ namespace SplitAndMerge
 
         public static List<string> ARITHMETIC_EXPR = new List<string>
         {
-            "*", "*=" , "+", "+=" , "-", "-=", "/", "/=", "%", "%=", ">", "<", ">=", "<="
+            "*", "*=" , "+", "+=" , "-", "-=", "/", "/=", "%", "%=", ">", "<", ">=", "<=",
+            // Bitwise operators are arithmetic too. Leaving them out made the whole
+            // expression look "unknown" to the precompiler, which then stopped resolving
+            // argument names inside it: "(n | 4) ^ 1" emitted a bare "n".
+            "&", "&=", "|", "|=", "^", "^=", "<<", "<<=", ">>", ">>="
         };
 
         public static string STATEMENT_SEPARATOR = ";{}";

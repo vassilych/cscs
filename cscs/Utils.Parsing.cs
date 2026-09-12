@@ -396,6 +396,12 @@ namespace SplitAndMerge
         public static void SkipRestExpr(ParsingScript script, char toChar = Constants.END_STATEMENT)
         {
             int argRead = 0;
+            // Braces are counted as well as parentheses. Skipping the unused branch of a
+            // ternary means skipping over whatever it holds, and a collection literal there
+            // contains commas -- "n > 0 ? {1, 2, 3} : {4}" stopped at the first one and left
+            // the pointer inside the literal, so the rest of it was evaluated as an
+            // expression: "Couldn't find variable [,3]".
+            int braceRead = 0;
             bool inQuotes  = false;
             bool inQuotes1 = false;
             bool inQuotes2 = false;
@@ -410,8 +416,10 @@ namespace SplitAndMerge
                     script.Forward();
                     continue;
                 }
-                if (currentChar == toChar)
+                if (currentChar == toChar && braceRead <= 0)
                 {
+                    // Not inside a literal: a map literal in a ternary branch holds the very
+                    // ":" this is looking for -- "c ? {\"a\":1} : {\"b\":2}".
                     return;
                 }
 
@@ -441,9 +449,19 @@ namespace SplitAndMerge
                         break;
                     case Constants.END_STATEMENT:
                         return;
+                    case Constants.START_GROUP:
+                        braceRead++;
+                        break;
+                    case Constants.END_GROUP:
+                        braceRead--;
+                        if (braceRead < 0)
+                        {
+                            return;
+                        }
+                        break;
                     case Constants.TERNARY_OPERATOR:
                     case Constants.NEXT_ARG:
-                        if (argRead <= 0)
+                        if (argRead <= 0 && braceRead <= 0)
                         {
                             return;
                         }
@@ -766,12 +784,25 @@ namespace SplitAndMerge
             for (int i = 0; i < args.Count; i++)
             {
                 var arg1 = args[i].ToLower().Trim();
+                // A default value, as in "cfunction f(int n = 5)". Split it off first: the
+                // name was taken as the last space-separated word, which for "int n = 5" was
+                // "5" -- an argument called 5, rejected at the first call as an illegal name,
+                // and no default registered either. What follows the name is kept on the
+                // argument so that CustomFunction reads the default from it, as it does for
+                // an interpreted function.
+                string defValue = null;
+                int eq = arg1.IndexOf('=');
+                if (eq > 0)
+                {
+                    defValue = arg1.Substring(eq + 1).Trim();
+                    arg1 = arg1.Substring(0, eq).Trim();
+                }
                 string[] pair = arg1.Split(sep, StringSplitOptions.RemoveEmptyEntries);
                 var pair1 = pair[0];
                 var pair2 = pair[pair.Length - 1];
                 Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair1) : Variable.VarType.STRING;
                 dict.Add(pair2, new Variable(type));
-                args[i] = pair2;
+                args[i] = defValue == null ? pair2 : pair2 + " = " + defValue;
             }
 
             string[] result = args.Select(element => element.Trim()).ToArray();
@@ -1649,6 +1680,15 @@ namespace SplitAndMerge
             return data.StartsWith(Constants.NOT) && !data.StartsWith(Constants.NOT_EQUAL) ? Constants.NOT : null;
         }
 
+        /// <summary>
+        /// The bitwise NOT prefix, matched the same way as the logical one. Without this "~n"
+        /// was collected into the operand itself and looked up as a variable named "~n".
+        /// </summary>
+        public static string IsBitwiseNotSign(string data)
+        {
+            return data.StartsWith(Constants.BITWISE_NOT) ? Constants.BITWISE_NOT : null;
+        }
+
         public static string ValidAction(string rest)
         {
             string action = Utils.StartsWith(rest, Constants.ACTIONS);
@@ -1878,24 +1918,49 @@ namespace SplitAndMerge
             return argsStr;
         }
 
+        /// <summary>
+        /// Splits on "+", "-", "*" and "/", returning the pieces and the separators between
+        /// them in turn. Separators inside a string literal are not separators: a date format
+        /// such as "yyyy/MM/dd" came apart on the slashes, and its middle piece was then read
+        /// as the name of a variable.
+        /// </summary>
         public static List<string> SplitToken(string token)
         {
             List<string> tokens = new List<string>();
             char[] separators = { '+', '-', '*', '/' };
             var start = 0;
-            var end = token.IndexOfAny(separators, start + 1);
+            var end = NextSeparator(token, separators, start + 1);
             while(end > 0)
             {
                 tokens.Add(token.Substring(start, end - start));
                 tokens.Add(token.Substring(end, 1));
                 start = end + 1;
-                end = token.IndexOfAny(separators, start + 1);
+                end = NextSeparator(token, separators, start + 1);
             }
             if (start < token.Length)
             {
                 tokens.Add(token.Substring(start));
             }
             return tokens;
+        }
+
+        /// <summary>Index of the next separator outside any string literal, or -1.</summary>
+        static int NextSeparator(string token, char[] separators, int from)
+        {
+            bool inQuotes = false;
+            for (int i = 0; i < token.Length; i++)
+            {
+                if (token[i] == '"' && (i == 0 || token[i - 1] != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+                if (i >= from && !inQuotes && Array.IndexOf(separators, token[i]) >= 0)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         public static Variable Calculate(Interpreter interpreter, string functionName, string argsStr)

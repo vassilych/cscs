@@ -67,12 +67,13 @@ namespace SplitAndMerge
             int arrayIndexDepth = 0;
             bool inQuotes = false;
             int negated = 0;
+            int bitNegated = 0;
             char ch;
             string action;
 
             do
             { // Main processing cycle of the first part.
-                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
+                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, ref bitNegated, out ch, out action);
 
                 bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
@@ -89,7 +90,7 @@ namespace SplitAndMerge
                 ParserFunction func = new ParserFunction(script, token, ch, ref action);
                 Variable current = func.GetValue(script);
 
-                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref action))
+                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref bitNegated, ref action))
                 {
                     return listToMerge;
                 }
@@ -116,12 +117,13 @@ namespace SplitAndMerge
             int arrayIndexDepth = 0;
             bool inQuotes = false;
             int negated = 0;
+            int bitNegated = 0;
             char ch;
             string action;
 
             do
             { // Main processing cycle of the first part.
-                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out ch, out action);
+                string token = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, ref bitNegated, out ch, out action);
 
                 bool ternary = UpdateIfTernary(script, token, ch, listToMerge, (List<Variable> newList) => { listToMerge = newList; });
                 if (ternary)
@@ -135,7 +137,7 @@ namespace SplitAndMerge
                 ParserFunction func = new ParserFunction(script, token, ch, ref action);
                 Variable current = await func.GetValueAsync(script);
 
-                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref action))
+                if (UpdateResult(script, to, listToMerge, token, negSign, ref current, ref negated, ref bitNegated, ref action))
                 {
                     return listToMerge;
                 }
@@ -149,7 +151,8 @@ namespace SplitAndMerge
         }
 
         public static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes,
-            ref int arrayIndexDepth, ref int negated, out char ch, out string action, bool throwExc = true)
+            ref int arrayIndexDepth, ref int negated, ref int bitNegated, out char ch, out string action,
+            bool throwExc = true)
         {
             StringBuilder item = new StringBuilder();
             ch = Constants.EMPTY;
@@ -161,6 +164,14 @@ namespace SplitAndMerge
                 {
                     negated++;
                     script.Forward(negateSymbol.Length);
+                    continue;
+                }
+
+                string bitNegateSymbol = Utils.IsBitwiseNotSign(script.Rest);
+                if (bitNegateSymbol != null && !inQuotes)
+                {
+                    bitNegated++;
+                    script.Forward(bitNegateSymbol.Length);
                     continue;
                 }
 
@@ -218,7 +229,7 @@ namespace SplitAndMerge
         }
 
         public static bool UpdateResult(ParsingScript script, char[] to, List<Variable> listToMerge, string token, bool negSign,
-                                 ref Variable current, ref int negated, ref string action)
+                                 ref Variable current, ref int negated, ref int bitNegated, ref string action)
         {
             if (current == null)
             {
@@ -240,12 +251,29 @@ namespace SplitAndMerge
                 negated = 0;
             }
 
-            if (script.Current == '.')
+            if (bitNegated > 0 && current.Type == Variable.VarType.NUMBER)
+            {
+                // Bitwise NOT works on the integer value, the same truncation the other
+                // bitwise operators use -- (int), as in MergeNumbers, so that "~" and "&"
+                // agree and so that compiled code, where the value is an int, matches.
+                int bits = (int)current.Value;
+                for (int i = 0; i < bitNegated; i++)
+                {
+                    bits = ~bits;
+                }
+                current = new Variable((double)bits);
+                bitNegated = 0;
+            }
+
+            // A loop, not a single step: in "s.Replace(a, b).Replace(c, d).Length" the member
+            // after the second call was left behind, which failed as a variable called
+            // ".Length" at the top level and was silently dropped inside a function.
+            while (script.Current == '.')
             {
                 bool inQuotes = false;
                 int arrayIndexDepth = 0;
                 script.Forward();
-                string property = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, out _, out action);
+                string property = ExtractNextToken(script, to, ref inQuotes, ref arrayIndexDepth, ref negated, ref bitNegated, out _, out action);
 
                 Variable propValue = current.Type == Variable.VarType.ENUM ?
                      current.GetEnumProperty(property, script) :
@@ -360,6 +388,14 @@ namespace SplitAndMerge
 
         static bool CheckNegativeSign(ref string token)
         {
+            if (token == "-")
+            {
+                // A minus with nothing after it but a group: "-(n + 1)". The empty token then
+                // evaluates the group, as "(n + 1)" does, and the sign applies to the result.
+                // Left as it was, "-" was looked up as a function and the statement failed.
+                token = "";
+                return true;
+            }
             if (token.Length < 2 || token[0] != '-' || token[1] == Constants.QUOTE)
             {
                 return false;
