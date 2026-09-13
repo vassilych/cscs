@@ -802,6 +802,28 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             // Left interpreted: a call's value is a Variable, and Math.Max needs a number.
             new Construct("call_math_arg", "(int n)", "(n)", "return Math.Max(helper(n), 5);", "(2)"),
 
+            // A Math argument that is not a C# number: a script call resolves to
+            // CscsCalls.Call and a global read to GetVariableValue, both of which yield a
+            // Variable, so C# found no Math overload and named the first one it had --
+            // "byte", "short", "decimal". NumberMathArgs wraps those in
+            // CscsConvert.ToNumber over the finished code, the way CastRoundDigits works;
+            // ReplaceMathArgs, the one place that knows it is in a Math call, is never
+            // reached for a "return Math..." statement.
+            new Construct("math_arg_glob", "(int n)", "(n)", "return Math.Max(gcount, 5);", "(0)"),
+            new Construct("math_arg_two_calls", "(int n)", "(n)", "return Math.Max(helper(n), helper(1));", "(2)"),
+            new Construct("math_arg_min", "(int n)", "(n)", "return Math.Min(helper(n), 5);", "(2)"),
+            new Construct("math_arg_abs", "(int n)", "(n)", "return Math.Abs(helper(n));", "(2)"),
+            new Construct("math_arg_round", "(int n)", "(n)", "return Math.Round(helper(n));", "(2)"),
+            new Construct("math_arg_pow", "(int n)", "(n)", "return Math.Pow(helper(n), 2);", "(2)"),
+            new Construct("math_arg_sqrt", "(int n)", "(n)", "return Math.Sqrt(helper(n));", "(3)"),
+            new Construct("math_arg_expr", "(int n)", "(n)", "return Math.Max(helper(n) + 1, 5);", "(2)"),
+            new Construct("math_arg_mapglob", "(int n)", "(n)", "return Math.Max(gmap[\"k\"], 5);", "(0)"),
+            new Construct("math_arg_assign", "(int n)", "(n)", "v = Math.Max(helper(n), 5); return v;", "(2)"),
+            // A truth value reaches the argument as the bare name of a bool local, so the text
+            // alone cannot tell -- the declaration "var b=..>1;" is on an earlier line.
+            // NeedsNumericArgument asks IsBoolLocal, which reads the type CollectLocalTypes
+            // recorded; that is why the pass is an instance method rather than static.
+            new Construct("math_arg_bool", "(int n)", "(n)", "b = n > 1; return Math.Max(b, 5);", "(2)"),
             // List and map arguments. Each is the caller's own Variable, fetched at the start and
             // used as a collection local; the typed copy the runtime also passes became an opaque
             // object whenever it met the interpreter -- "return a" gave a C# type name, "a[1].Upper"
@@ -854,6 +876,24 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             // Left interpreted: one branch assigns text and the other a number, so no one C# type fits.
             new Construct("scope_mixed_types", "(int n)", "(n)", "if (n > 0) { v = \"text\"; } else { v = 5; } return v;", "(3)"),
 
+            // A crossing local whose assignments disagree on a type is declared a Variable.
+            // Only on a real disagreement: a local with no plain assignment at all
+            // ("double result = 0;" in a C#-form body) is left alone, as it always was.
+            new Construct("cross_mixed_num_str", "(int n)", "(n)", "if (n > 0) { v = 5; } else { v = \"text\"; } return v;", "(3)"),
+            new Construct("cross_mixed_else", "(int n)", "(n)", "if (n > 0) { v = \"text\"; } else { v = 5; } return v;", "(0)"),
+            new Construct("cross_mixed_elif", "(int n)", "(n)", "if (n > 2) { v = \"a\"; } elif (n > 0) { v = 5; } else { v = 1; } return v;", "(3)"),
+            new Construct("cross_mixed_coll", "(int n)", "(n)", "if (n > 0) { v = {1,2}; } else { v = 5; } return v.Size;", "(3)"),
+            new Construct("cross_mixed_concat", "(int n)", "(n)", "if (n > 0) { v = \"text\"; } else { v = 5; } return v + \"!\";", "(3)"),
+            new Construct("cross_mixed_cmp", "(int n)", "(n)", "if (n > 0) { v = \"text\"; } else { v = 5; } if (v == \"text\") { return 1; } return 0;", "(3)"),
+            // A local whose first assignment is outside any block, later given another type.
+            new Construct("cross_predeclared", "(int n)", "(n)", "v = 0; if (n > 0) { v = \"text\"; } return v;", "(3)"),
+            new Construct("redecl_str_then_num", "(int n)", "(n)", "v = \"z\"; if (n > 0) { v = 5; } return v;", "(3)"),
+            new Construct("redecl_top_num_str", "(int n)", "(n)", "v = 0; v = \"text\"; return v;", "(0)"),
+            new Construct("redecl_top_str_num", "(int n)", "(n)", "v = \"z\"; v = 5; return v;", "(0)"),
+            new Construct("redecl_loop", "(int n)", "(n)", "v = 0; for (i = 0; i < n; i++) { v = \"s\"; } return v;", "(2)"),
+            new Construct("redecl_coll", "(int n)", "(n)", "v = 0; if (n > 0) { v = {1,2}; } return v.Size;", "(3)"),
+            // A ternary assignment must not invent a disagreement: this compiled before too.
+            new Construct("redecl_ternary_keep", "(int n)", "(n)", "v = 0; v = n > 2 ? 1 : 2; return v;", "(3)"),
             // Left interpreted: the widened int is a double, and Math.Round's digits must be an int.
             new Construct("int_arg_round_expr", "(double x, int n)", "(x, n)", "return Math.Round(x, n + 1);", "(3.14159, 1)"),
 
@@ -929,11 +969,118 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("fn_iff", "(int n)", "(n)", "return iff(n > 2, \"big\", \"small\");", "(5)"),
 
             // Left interpreted: an enum's members are not names the generated C# knows.
-            new Construct("enum_read", "(int n)", "(n)", "return Colors.Green + n;", "(1)"),
+            new Construct("enum_read", "(int n)", "(n)", "return Colors.Green + n;", "(1)"),
+            // An enum member, or any Variable-valued expression, compared with a number.
+            new Construct("enum_eq_num", "(int n)", "(n)", "if (Colors.Green == 1) { return 1; } return 0;", "(0)"),
+            new Construct("enum_ne_num", "(int n)", "(n)", "if (Colors.Green != 0) { return 1; } return 0;", "(0)"),
+            new Construct("enum_eq_and", "(int n)", "(n)", "if (Colors.Green == 1 && n > 0) { return 1; } return 0;", "(1)"),
+            new Construct("enum_ret_eq", "(int n)", "(n)", "return Colors.Green == 1;", "(0)"),
+            new Construct("global_eq_num", "(int n)", "(n)", "if (gcount == 1) { return 1; } return 0;", "(0)"),
 
-            // Left interpreted: an assignment inside a condition is not an expression in C#.
+            // A global as the RIGHT operand of "==" / "!=". The tokenizer splits on the
+            // operator and leaves the condition's ")" glued to the global -- "gcount)" --
+            // which ProcessFunction took for a function name and emitted as a call, leaving
+            // the condition short a paren (CS1026). Relational operators never took that
+            // path, so "gcount > 5" always compiled while "1 == gcount" did not.
+            new Construct("glob_eq_lit_left", "(int n)", "(n)", "if (1 == gcount) { return 1; } return 0;", "(0)"),
+            new Construct("glob_ne_lit_left", "(int n)", "(n)", "if (99 != gcount) { return 1; } return 0;", "(0)"),
+            new Construct("glob_eq_glob", "(int n)", "(n)", "if (gcount == gcount) { return 1; } return 0;", "(0)"),
+            new Construct("glob_eq_arg", "(int n)", "(n)", "if (n == gcount) { return 1; } return 0;", "(10)"),
+            new Construct("glob_eq_local", "(int n)", "(n)", "v = 1; if (v == gcount) { return 1; } return 0;", "(0)"),
+            new Construct("glob_eq_2paren", "(int n)", "(n)", "if ((1 == gcount)) { return 1; } return 0;", "(0)"),
+            new Construct("glob_eq_while", "(int n)", "(n)", "t = 0; while (t == gcount) { t++; } return t;", "(0)"),
+            new Construct("glob_eq_return", "(int n)", "(n)", "return 1 == gcount;", "(0)"),
+            // A string against a global: emitted as Variable.SameValue, never an operator.
+            new Construct("glob_eq_str_lit", "(int n)", "(n)", "if (\"gs\" == gstr) { return 1; } return 0;", "(0)"),
+            new Construct("glob_str_right", "(int n)", "(n)", "if (gstr == \"gs\") { return 1; } return 0;", "(0)"),
+            new Construct("glob_str_ne", "(int n)", "(n)", "if (gstr != \"zz\") { return 1; } return 0;", "(0)"),
+            new Construct("glob_str_case", "(int n)", "(n)", "if (gstr == \"GS\") { return 1; } return 0;", "(0)"),
+            new Construct("glob_str_arg", "(string s)", "(s)", "if (s == gstr) { return 1; } return 0;", "(\"gs\")"),
+            new Construct("glob_str_ret", "(int n)", "(n)", "return gstr == \"gs\";", "(0)"),
+            new Construct("glob_str_tern", "(int n)", "(n)", "return gstr == \"gs\" ? \"y\" : \"n\";", "(0)"),
+            new Construct("glob_num_text", "(int n)", "(n)", "if (gcount == \"10\") { return 1; } return 0;", "(0)"),
+            // A string or bool condition in "elif" / "else if": the token loop dropped the space
+            // between "else" and "if" ("elseif"), and the string-comparison rewrite skipped elif.
+            new Construct("elif_str_arg", "(string s)", "(s)", "if (s == \"zz\") { return 2; } elif (s == \"ab\") { return 1; } return 0;", "(\"ab\")"),
+            new Construct("elif_str_lt", "(string s)", "(s)", "if (s == \"zz\") { return 2; } elif (s < \"b\") { return 1; } return 0;", "(\"ab\")"),
+            new Construct("elif_str_else", "(string s)", "(s)", "if (s == \"zz\") { return 2; } elif (s == \"ab\") { return 1; } else { return 9; } return 0;", "(\"xx\")"),
+            new Construct("elif_bool", "(int n)", "(n)", "b = n > 1; if (n > 5) { return 2; } elif (b) { return 1; } return 0;", "(3)"),
+            new Construct("elif_elem_str", "(int n)", "(n)", "c = {\"a\"}; if (n > 5) { return 2; } elif (c[0] == \"a\") { return 1; } return 0;", "(0)"),
+            new Construct("elif_glob_str", "(int n)", "(n)", "if (n > 5) { return 2; } elif (gstr == \"gs\") { return 1; } return 0;", "(0)"),
+            new Construct("else_if_str", "(string s)", "(s)", "if (s == \"zz\") { return 2; } else if (s == \"ab\") { return 1; } return 0;", "(\"ab\")"),
+            new Construct("elif_nested_str", "(string s)", "(s)", "if (s == \"a\") { return 1; } elif (s == \"b\") { if (s == \"b\") { return 2; } elif (s == \"c\") { return 3; } } return 0;", "(\"b\")"),
+            // An assignment inside a condition: the name is declared at the top with the type
+            // every assignment to it agrees on. A ternary, bool or disagreeing value falls back.
             new Construct("assign_in_cond", "(int n)", "(n)", "t = 0; while ((x = n - t) > 2) { t++; } return t;", "(6)"),
 
+            new Construct("cond_asg_if", "(int n)", "(n)", "if ((y = n * 2) > 5) { return y; } return 0;", "(3)"),
+            new Construct("cond_asg_ne", "(int n)", "(n)", "t = 0; while ((x = n - t) != 2) { t++; } return t;", "(6)"),
+            new Construct("cond_asg_after", "(int n)", "(n)", "t = 0; while ((x = n - t) > 2) { t++; } return x;", "(6)"),
+            new Construct("cond_asg_pair", "(int n)", "(n)", "if ((x = n + 1) > 2 && (z = x * 2) > 5) { return z; } return 0;", "(3)"),
+            new Construct("cond_asg_elif", "(int n)", "(n)", "if (n > 10) { return 1; } elif ((y = n * 3) > 5) { return y; } return 0;", "(3)"),
+            new Construct("cond_asg_str", "(string s)", "(s)", "if ((t = s + \"!\") == \"a!\") { return 1; } return 0;", "(\"a\")"),
+            // Still falls back: the condition assigns a number, the block a string.
+            new Construct("cond_asg_conflict", "(int n)", "(n)", "if ((v = n * 2) > 5) { v = \"big\"; } return v;", "(3)"),
+            // A truth value assigned inside a condition. Refused while the interpreter itself threw on
+            // "if ((b = n > 2))"; that crash is fixed, so it compiles as a bool local.
+            new Construct("cond_bool_if", "(int n)", "(n)", "if ((b = n > 2)) { return 1; } return 0;", "(3)"),
+            new Construct("cond_bool_false", "(int n)", "(n)", "if ((b = n > 2)) { return 1; } return 0;", "(1)"),
+            new Construct("cond_bool_read", "(int n)", "(n)", "if ((b = n > 2)) { return b + 10; } return 0;", "(3)"),
+            new Construct("cond_bool_while", "(int n)", "(n)", "t = 0; while ((b = t < n)) { t++; } return t;", "(3)"),
+            new Construct("cond_bool_elif", "(int n)", "(n)", "if (n > 9) { return 2; } elif ((b = n > 2)) { return 1; } return 0;", "(3)"),
+            new Construct("cond_bool_and", "(int n)", "(n)", "if ((b = n > 2 && n < 9)) { return 1; } return 0;", "(3)"),
+            // A number as a whole condition is "!= 0", which is what the interpreter's truth test is
+            // for a double; and an assignment in grouping parentheses outside a condition is declared
+            // too -- but never one inside a call's arguments.
+            new Construct("numcond_asg", "(int n)", "(n)", "if ((b = n + 2)) { return b; } return 0;", "(3)"),
+            new Construct("numcond_asg_zero", "(int n)", "(n)", "if ((b = n - 3)) { return 1; } return 0;", "(3)"),
+            new Construct("numcond_while", "(int n)", "(n)", "t = n; while ((t = t - 1)) { } return t;", "(3)"),
+            new Construct("numcond_local", "(int n)", "(n)", "b = n * 1.5; if (b) { return 1; } return 0;", "(2)"),
+            new Construct("numcond_local_zero", "(int n)", "(n)", "b = n * 0; if (b) { return 1; } return 0;", "(2)"),
+            new Construct("grpasg_nested", "(int n)", "(n)", "x = ((b = 7)); return x + b;", "(0)"),
+            new Construct("grpasg_expr", "(int n)", "(n)", "x = (b = n * 2) + 1; return x + b;", "(3)"),
+            new Construct("grpasg_single", "(int n)", "(n)", "x = (b = 7); return x + b;", "(0)"),
+            new Construct("grpasg_in_call_keep", "(int n)", "(n)", "return Math.Max((q = n * 2), 5) + q;", "(2)"),
+            new Construct("numcond_alias_keep", "(int n)", "(n)", "b = n > 1; c = b; if (c) { return 1; } return 0;", "(2)"),
+            // A number beside "!", "&&" or "||": each numeric clause is compared with zero.
+            new Construct("numlogic_not", "(int n)", "(n)", "b = n * 1.0; if (!b) { return 1; } return 0;", "(0)"),
+            new Construct("numlogic_not_true", "(int n)", "(n)", "b = n * 1.0; if (!b) { return 1; } return 0;", "(3)"),
+            new Construct("numlogic_and", "(int n)", "(n)", "b = n * 1.0; if (b && n < 5) { return 1; } return 0;", "(2)"),
+            new Construct("numlogic_or", "(int n)", "(n)", "b = n * 0.0; if (b || n > 1) { return 1; } return 0;", "(2)"),
+            new Construct("numlogic_two", "(int n)", "(n)", "b = n * 1.0; c = n - 2.0; if (b && c) { return 1; } return 0;", "(2)"),
+            new Construct("numlogic_while", "(int n)", "(n)", "t = n * 1.0; k = 0; while (t && k < 10) { t = t - 1; k++; } return k;", "(3)"),
+            new Construct("numlogic_arg_not", "(int n)", "(n)", "if (!n) { return 1; } return 0;", "(0)"),
+            new Construct("numlogic_bool_mix", "(int n)", "(n)", "f = n > 1; b = n * 1.0; if (f && b) { return 1; } return 0;", "(2)"),
+            new Construct("numlogic_elem_keep", "(int n)", "(n)", "a = {0, 3}; b = n * 1.0; if (b && a[1]) { return 1; } return 0;", "(2)"),
+            // A clause whose type is settled when it runs -- an element, a Variable local, a string --
+            // beside another clause: read through CscsConvert.IsTrue/IsFalse, the interpreter's pair.
+            // Not "!= 0": an element holding "5" is false there, though AsDouble() would say true.
+            new Construct("truthy_elem_and", "(int n)", "(n)", "a = {0, 3}; b = n * 1.0; if (a[1] && b) { return 1; } return 0;", "(2)"),
+            new Construct("truthy_elem_or", "(int n)", "(n)", "a = {0, 3}; if (a[0] || a[1]) { return 1; } return 0;", "(0)"),
+            new Construct("truthy_varlocal_and", "(int n)", "(n)", "v = helper(n); if (v && n > 1) { return 1; } return 0;", "(2)"),
+            new Construct("truthy_str_and", "(string s, int n)", "(s, n)", "if (s && n > 1) { return 1; } return 0;", "(\"x\", 2)"),
+            new Construct("truthy_elem_not_and", "(int n)", "(n)", "a = {0, 3}; if (!a[0] && n > 1) { return 1; } return 0;", "(2)"),
+            // A string is false as a whole condition too, not only beside another clause -- and "!s"
+            // is false as well, since "!x" asks for a number that is zero. CscsConvert takes an
+            // object, so a C# string argument reaches the same test a Variable does.
+            new Construct("strcond_alone", "(string s)", "(s)", "if (s) { return 1; } return 0;", "(\"ab\")"),
+            new Construct("strcond_num", "(string s)", "(s)", "if (s) { return 1; } return 0;", "(\"5\")"),
+            new Construct("strcond_empty", "(string s)", "(s)", "if (s) { return 1; } return 0;", "(\"\")"),
+            new Construct("strcond_local", "(int n)", "(n)", "t = \"x\"; if (t) { return 1; } return 0;", "(0)"),
+            new Construct("strcond_asg", "(string s)", "(s)", "if ((t = s + \"x\")) { return 1; } return 0;", "(\"ab\")"),
+            new Construct("strcond_not", "(string s)", "(s)", "if (!s) { return 1; } return 0;", "(\"5\")"),
+            new Construct("strcond_not_str", "(string s)", "(s)", "if (!s && 1 == 1) { return 1; } return 0;", "(\"5\")"),
+            new Construct("strcond_not_join", "(int n)", "(n)", "vals = {\"5\", 0}; r = 0; if (!vals[0] && n == 0) { r += 10; } if (!vals[1] && n == 0) { r += 100; } return r;", "(0)"),
+            // Kept on the interpreter: ".Length" is a number there, but a C# int in a condition.
+            new Construct("strcond_len_keep", "(string s)", "(s)", "if (s.Length) { return 1; } return 0;", "(\"ab\")"),
+            // "===" on an int argument or a numeric local: rewritten to "==", both sides being
+            // certainly numbers. An element, a mixed pair or a conflicting local still falls back.
+            new Construct("strict_int_eq", "(int n)", "(n)", "if (n === 5) { return 1; } return 0;", "(5)"),
+            new Construct("strict_int_ne", "(int n)", "(n)", "if (n !== 5) { return 1; } return 0;", "(5)"),
+            new Construct("strict_int_ret", "(int n)", "(n)", "return n === 5;", "(5)"),
+            new Construct("strict_num_local", "(int n)", "(n)", "v = n + 1; if (v === 6) { return 1; } return 0;", "(5)"),
+            new Construct("strict_two_ints", "(int n)", "(n)", "m = 5; if (n === m) { return 1; } return 0;", "(5)"),
+            new Construct("strict_elem_keep", "(int n)", "(n)", "a = {5}; if (a[0] === 5) { return 1; } return 0;", "(0)"),
             // Left interpreted: the plain-function Contains has no C# counterpart taking a collection.
             new Construct("fn_contains_arr", "(int n)", "(n)", "a = {1, 2}; if (Contains(a, 2)) { return 1; } return 0;", "(0)"),
 
@@ -986,21 +1133,96 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("str_split_two_seps", "(string s)", "(s)", "p = s.Split(\",;\"); return p.Size;", "(\"a,b;c\")"),
             new Construct("tokenize_option", "(string s)", "(s)", "t = Tokenize(s, \",\"); return t[2];", "(\"a,b,c\")"),
 
-            // Left interpreted: "null" is not mapped, so it goes out as a name and the C# does not
-            // compile -- which falls back cleanly. Comparing one needs the interpreter's own equality.
+            // "x == null": emitted as Variable.SameValue(x, ""), the interpreter's text comparison.
             new Construct("null_cmp", "(int n)", "(n)", "x = null; if (x == null) { return 1; } return 0;", "(0)"),
 
+            // Against the literal null: "==" is a text comparison unless both sides are numbers,
+            // and null renders as "" -- so null equals a null local and "", and not 0 or {}.
+            // Emitted as Variable.SameValue(v, ""). "null == x" used to be a C# reference test.
+            new Construct("nullcmp_left", "(int n)", "(n)", "x = null; if (null == x) { return 1; } return 0;", "(0)"),
+            new Construct("nullcmp_ne", "(int n)", "(n)", "x = null; y = 5; if (y != null) { return y + n; } return 0;", "(1)"),
+            new Construct("nullcmp_zero", "(int n)", "(n)", "z = 0; if (z == null) { return 1; } return 0;", "(0)"),
+            new Construct("nullcmp_empty_str", "(int n)", "(n)", "s = \"\"; if (s == null) { return 1; } return 0;", "(0)"),
+            new Construct("nullcmp_coll", "(int n)", "(n)", "a = {}; if (a == null) { return 1; } return 0;", "(0)"),
+            new Construct("nullcmp_map", "(int n)", "(n)", "m = {\"a\": null}; if (m[\"a\"] == null) { return 1; } return 0;", "(0)"),
+            new Construct("nullcmp_arg_empty", "(string s)", "(s)", "if (s == null) { return 1; } return 0;", "(\"\")"),
+            new Construct("nullcmp_ret", "(int n)", "(n)", "x = null; return x == null;", "(0)"),
+            new Construct("nullcmp_both_keep", "(int n)", "(n)", "if (null == null) { return 1; } return 0;", "(0)"),
+            // Computed arguments to a string member, and assigning such a call. "s.Substring(n - 1,
+            // n + 1)" tokenized with "1,n" between the operators, which IsKnownExpression could not
+            // place; and a known expression declared "t = s.Substring(n - 1)" a double.
+            new Construct("substr_two_expr", "(string s, int n)", "(s, n)", "return s.Substring(n - 1, n + 1);", "(\"hello\", 2)"),
+            new Construct("substr_two_mul", "(string s, int n)", "(s, n)", "return s.Substring(n * 0, n * 2);", "(\"hello\", 2)"),
+            new Construct("substr_three_ops", "(string s, int n)", "(s, n)", "return s.Substring(n - 2 + 1, n + 1 - 1);", "(\"hello\", 2)"),
+            new Construct("strasg_substr_one", "(string s, int n)", "(s, n)", "t = s.Substring(n - 1); return t;", "(\"hello\", 2)"),
+            new Construct("strasg_substr_two", "(string s, int n)", "(s, n)", "t = s.Substring(n - 1, n + 1); return t;", "(\"hello\", 2)"),
+            new Construct("strasg_at", "(string s, int n)", "(s, n)", "t = s.At(n - 1); return t;", "(\"hello\", 2)"),
+            new Construct("strasg_then_concat", "(string s, int n)", "(s, n)", "t = s.Substring(n - 1); t = t + n; return t;", "(\"hello\", 2)"),
+            new Construct("strasg_then_type", "(string s, int n)", "(s, n)", "t = s.Substring(n - 1); return t.Type;", "(\"hello\", 2)"),
+            // Beside a string literal: the token loop now emits "1,n" as expression text, not a call.
+            new Construct("substr_two_expr_cmp", "(string s, int n)", "(s, n)", "if (s.Substring(n - 1, n + 1) == \"ell\") { return 1; } return 0;", "(\"hello\", 2)"),
+            new Construct("substrlit_ne", "(string s, int n)", "(s, n)", "if (s.Substring(n - 1, n + 1) != \"x\") { return 1; } return 0;", "(\"hello\", 2)"),
+            new Construct("substrlit_concat", "(string s, int n)", "(s, n)", "return s.Substring(n - 1, n + 1) + \"!\";", "(\"hello\", 2)"),
+            new Construct("substrlit_asg", "(string s, int n)", "(s, n)", "t = \"<\" + s.Substring(n - 1, n + 1); return t;", "(\"hello\", 2)"),
+            new Construct("substrlit_local_args", "(string s, int n)", "(s, n)", "k = 1; if (s.Substring(n - k, n + k) == \"ell\") { return 1; } return 0;", "(\"hello\", 2)"),
+            new Construct("substrlit_math_keep", "(int n)", "(n)", "return \"m\" + Math.Max(n - 1, n + 1);", "(2)"),
+            new Construct("substrlit_calls_keep", "(int n)", "(n)", "return helper(n - 1) + \",\" + helper(n + 1);", "(2)"),
             // Left interpreted: an instance assigned through two members deep. Only "p.kid = new X()"
             // is built; a longer path has to be set through the interpreter.
             new Construct("deep_member_write", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); return p.kid.kid.v + n;", "(0)"),
 
+            // A field written through a chain: the owner is the GetProperty chain a read builds, and
+            // the write reaches the live nested instance, not a copy.
+            new Construct("fwrite_two_deep", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.v = 9; return p.kid.v + n;", "(0)"),
+            new Construct("fwrite_two_deep_str", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.tag = \"z\"; return p.kid.tag;", "(0)"),
+            new Construct("fwrite_via_alias", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.v = 9; q = p.kid; return q.v + n;", "(0)"),
+            new Construct("fwrite_parent_intact", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.v = 9; return p.v * 100 + p.kid.v;", "(0)"),
+            new Construct("fwrite_loop", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(0, \"b\"); for (i = 0; i < n; i++) { p.kid.v = p.kid.v + i; } return p.kid.v;", "(4)"),
+            new Construct("fwrite_three_deep", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); p.kid.kid.tag = \"zz\"; return p.kid.kid.tag;", "(0)"),
+            // A method called on what another method returned: each further call wraps the chain
+            // so far in Variable.CallMethod, in both the statement and the expression builders.
+            new Construct("methchain_read", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); return p.Kid().Kid().v + n;", "(0)"),
+            new Construct("methchain_tag", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); return p.Kid().Kid().tag;", "(0)"),
+            new Construct("methchain_cond", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); if (p.Kid().Kid().v == 3) { return 1; } return 0;", "(0)"),
+            new Construct("methchain_assign", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); q = p.Kid().Kid(); return q.v;", "(0)"),
+            new Construct("methchain_while", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); t = 0; while (t < p.Kid().Kid().v) { t++; } return t;", "(0)"),
+            new Construct("methchain_field_mid", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"b\"); p.kid.kid = new Named(3, \"c\"); return p.Kid().kid.v + n;", "(0)"),
             // Left interpreted: a header with every section empty.
             new Construct("for_empty_sections", "(int n)", "(n)", "i = 0; for (;;) { i++; if (i >= n) { break; } } return i;", "(4)"),
+            // A truth value is the number 1 or 0 in CSCS, so it takes part in arithmetic.
+            new Construct("bool_arith_add", "(int n)", "(n)", "b = n > 1; return b + 1;", "(2)"),
+            new Construct("bool_arith_mul", "(int n)", "(n)", "b = n > 1; return b * 2;", "(2)"),
+            new Construct("bool_arith_neg", "(int n)", "(n)", "b = n > 1; return -b;", "(2)"),
+            new Construct("bool_arith_chain", "(int n)", "(n)", "b = n > 1; c = n > 0; return b + c * 2;", "(2)"),
+            new Construct("bool_arith_false", "(int n)", "(n)", "b = n < 1; return b + 5;", "(2)"),
+            new Construct("bool_arith_index", "(int n)", "(n)", "b = n > 1; a = {10, 20}; return a[b + 0];", "(2)"),
+            // ".Type" inside a statement that also holds a string literal: that statement
+            // is not a "known expression", so it reaches C# through ProcessToken.
+            new Construct("type_concat_after", "(int n)", "(n)", "x = n + 1; return \"t=\" + x.Type;", "(1)"),
+            new Construct("type_concat_before", "(int n)", "(n)", "x = n + 1; return x.Type + \"!\";", "(1)"),
+            new Construct("type_concat_str", "(string s)", "(s)", "t = s + \"!\"; return \"t=\" + t.Type;", "(\"a\")"),
+            new Construct("type_concat_two", "(int n)", "(n)", "x = n + 1; s = \"a\"; return x.Type + \"/\" + s.Type;", "(1)"),
+            // A truth value beside a compound operator or compared with a number: CSCS has
+            // no boolean type, so both are ordinary arithmetic there.
+            new Construct("bool_compound_add", "(int n)", "(n)", "t = 0; b = n > 1; t += b; return t;", "(2)"),
+            new Construct("bool_compound_sub", "(int n)", "(n)", "t = 5; b = n > 1; t -= b; return t;", "(2)"),
+            new Construct("bool_compound_loop", "(int n)", "(n)", "t = 0; i = 0; while (i < n) { b = i > 0; t += b; i++; } return t;", "(3)"),
+            new Construct("bool_eq_one", "(int n)", "(n)", "b = n > 1; if (b == 1) { return 1; } return 0;", "(2)"),
+            new Construct("bool_eq_zero", "(int n)", "(n)", "b = n > 1; if (b == 0) { return 1; } return 0;", "(2)"),
+            new Construct("bool_ne_zero", "(int n)", "(n)", "b = n > 1; if (b != 0) { return 1; } return 0;", "(2)"),
 
             // Left interpreted: a ternary inside a literal. The statement tokenizer treats "?" and ":"
             // as separators, so the literal is already in pieces before the builder sees it.
             new Construct("arr_lit_ternary", "(int n)", "(n)", "a = {n > 2 ? 10 : 20, 5}; return a[0] + a[1];", "(3)"),
 
+            // A ternary inside a literal. Its ":" is not a map key separator (IsMapEntry);
+            // two of the three literal builders tested a bare split on ":" and built
+            // "{n > 2 ? 10 : 20}" as the map entry "n > 2 ? 10" -> 20.
+            new Construct("litt_second", "(int n)", "(n)", "a = {5, n > 2 ? 10 : 20}; return a[0] + a[1];", "(3)"),
+            new Construct("litt_only", "(int n)", "(n)", "a = {n > 2 ? 10 : 20}; return a[0] + n;", "(3)"),
+            new Construct("litt_str", "(int n)", "(n)", "a = {n > 2 ? \"a\" : \"b\", \"c\"}; return a[0] + a[1];", "(3)"),
+            new Construct("litt_nested", "(int n)", "(n)", "a = {{n > 2 ? 1 : 2}, {3}}; return a[0][0] + a[1][0];", "(3)"),
+            new Construct("litt_reassign", "(int n)", "(n)", "a = {}; a = {n > 2 ? 10 : 20, 5}; return a[0] + a[1];", "(3)"),
             // Left interpreted: NameExists asks the interpreter what it holds.
             new Construct("name_exists_fn", "(int n)", "(n)", "x = 5; if (NameExists(\"x\")) { return 1; } return 0;", "(0)"),
 
@@ -1065,9 +1287,18 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("str_equal_fn", "(string s)", "(s)", "if (StrEqual(s, \"AB\")) { return 1; } return 0;", "(\"ab\")"),
             new Construct("str_contains_nocase", "(string s)", "(s)", "if (StrContains(s, \"B\", \"no_case\")) { return 1; } return 0;", "(\"ab\")"),
 
-            // Left interpreted: an enum declared inside the function.
+            // An enum declared in the function: built as EnumFunction builds it; only declared
+            // members compile, so Local.Type (NONE interpreted) stays with the interpreter.
             new Construct("enum_in_cf_local", "(int n)", "(n)", "var Local = Enum {X, Y}; return Local.Y + n;", "(1)"),
 
+            new Construct("lenum_plain", "(int n)", "(n)", "Local = Enum {X, Y}; return Local.Y + n;", "(1)"),
+            new Construct("lenum_first_last", "(int n)", "(n)", "var Local = Enum {X, Y, Z}; return Local.X * 10 + Local.Z;", "(0)"),
+            new Construct("lenum_cmp", "(int n)", "(n)", "var Local = Enum {X, Y}; if (Local.Y == 1) { return 1; } return 0;", "(0)"),
+            new Construct("lenum_loop", "(int n)", "(n)", "var Local = Enum {X, Y, Z}; t = 0; for (i = 0; i < n; i++) { t += Local.Z; } return t;", "(3)"),
+            new Construct("lenum_concat", "(int n)", "(n)", "var Local = Enum {X, Y}; return \"v=\" + Local.Y;", "(0)"),
+            new Construct("lenum_two", "(int n)", "(n)", "var A = Enum {P, Q}; var B = Enum {R, S, T}; return A.Q * 10 + B.T;", "(0)"),
+            new Construct("lenum_neg", "(int n)", "(n)", "var Local = Enum {X, Y}; return -Local.Y;", "(0)"),
+            new Construct("lenum_type_keep", "(int n)", "(n)", "var Local = Enum {X, Y}; return Local.Type;", "(0)"),
             // An exception crossing between compiled and interpreted code, each way, and an instance
             // handed to an interpreted function.
             new Construct("catch_interp_throw", "(int n)", "(n)", "try { throwsAlways(n); } catch (e) { return \"caught:\" + e; } return \"none\";", "(3)"),
@@ -1168,6 +1399,54 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             "regex_size", "regex_contains",
             "catch_interp_throw", "instance_to_interp", "return_in_try", "return_in_finally", "return_in_catch_finally", "throw_in_catch", "var_param_field", "var_param_field_str", "var_param_chain", "var_param_method", "instance_compare", "instance_iter_field", "tern_collections", "for_over_map", "deep_nesting", "bit_not_negative", "bitwise_neg_and", "tiny_number", "huge_number", "assign_in_tern", "neg_index_read", "local_shadows_fn", "many_locals",
             "alias_assign", "alias_map_elem", "alias_foreach", "alias_param", "alias_nested_write", "alias_instance", "alias_instance_in_arr", "copy_scalar", "copy_string", "break_in_try", "continue_in_try", "continue_in_catch", "break_in_catch", "return_in_foreach_try", "throw_in_loop_caught_outside", "this_field", "big_literal", "deep_recursion", "print_in_cf",
+            "for_empty_sections", "lower_type", "type_of_num",
+            "bool_arith_add", "bool_arith_mul", "bool_arith_neg", "bool_arith_chain",
+            "bool_arith_false", "bool_arith_index",
+            "type_concat_after", "type_concat_before", "type_concat_str", "type_concat_two",
+            "int_arg_round_expr",
+            "str_equal_fn", "str_contains_nocase", "fn_contains_arr", "name_exists_fn",
+            "enum_read", "arr_plus_arr",
+            "glob_eq_lit_left", "glob_ne_lit_left", "glob_eq_glob", "glob_eq_arg",
+            "glob_eq_local", "glob_eq_2paren", "glob_eq_while", "glob_eq_return",
+            "call_math_arg", "math_arg_glob", "math_arg_two_calls", "math_arg_min",
+            "math_arg_abs", "math_arg_round", "math_arg_pow", "math_arg_sqrt",
+            "math_arg_expr", "math_arg_mapglob", "math_arg_assign", "math_arg_bool",
+            "scope_mixed_types", "cross_mixed_num_str", "cross_mixed_else", "cross_mixed_elif",
+            "cross_mixed_coll", "cross_mixed_concat", "cross_mixed_cmp",
+            "cross_predeclared", "loc_mixed_cmp", "redecl_str_then_num", "redecl_top_num_str",
+            "redecl_top_str_num", "redecl_loop", "redecl_coll", "redecl_ternary_keep",
+            "arr_lit_ternary", "litt_second", "litt_only", "litt_str", "litt_nested", "litt_reassign",
+            "glob_eq_str_lit", "glob_str_right", "glob_str_ne", "glob_str_case", "glob_str_arg",
+            "glob_str_ret", "glob_str_tern", "glob_num_text",
+            "elif_str_arg", "elif_str_lt", "elif_str_else", "elif_bool", "elif_elem_str",
+            "elif_glob_str", "else_if_str", "elif_nested_str",
+            "assign_in_cond", "cond_asg_if", "cond_asg_ne", "cond_asg_after", "cond_asg_pair",
+            "cond_asg_elif", "cond_asg_str",
+            "strict_int_eq", "strict_int_ne", "strict_int_ret", "strict_num_local", "strict_two_ints",
+            "deep_member_write", "fwrite_two_deep", "fwrite_two_deep_str", "fwrite_via_alias",
+            "fwrite_parent_intact", "fwrite_loop", "fwrite_three_deep",
+            "methchain_read", "methchain_tag", "methchain_cond", "methchain_assign", "methchain_while",
+            "methchain_field_mid",
+            "null_cmp", "nullcmp_left", "nullcmp_ne", "nullcmp_zero", "nullcmp_empty_str", "nullcmp_coll",
+            "nullcmp_map", "nullcmp_arg_empty", "nullcmp_ret",
+            "substr_two_expr", "substr_two_mul", "substr_three_ops", "strasg_substr_one", "strasg_substr_two",
+            "strasg_at", "strasg_then_concat", "strasg_then_type",
+            "substr_two_expr_cmp", "substrlit_ne", "substrlit_concat", "substrlit_asg", "substrlit_local_args",
+            "substrlit_math_keep", "substrlit_calls_keep",
+            "enum_in_cf_local", "lenum_plain", "lenum_first_last", "lenum_cmp", "lenum_loop", "lenum_concat",
+            "lenum_two", "lenum_neg",
+            "cond_bool_if", "cond_bool_false", "cond_bool_read", "cond_bool_while", "cond_bool_elif", "cond_bool_and",
+            "numcond_asg", "numcond_asg_zero", "numcond_while", "numcond_local", "numcond_local_zero",
+            "grpasg_nested", "grpasg_expr", "grpasg_single", "numcond_alias_keep",
+            "numlogic_not", "numlogic_not_true", "numlogic_and", "numlogic_or", "numlogic_two", "numlogic_while",
+            "numlogic_arg_not", "numlogic_bool_mix",
+            "numlogic_elem_keep", "truthy_elem_and", "truthy_elem_or", "truthy_varlocal_and",
+            "truthy_str_and", "truthy_elem_not_and",
+            "strcond_alone", "strcond_num", "strcond_empty", "strcond_local", "strcond_asg",
+            "strcond_not", "strcond_not_str", "strcond_not_join",
+            "enum_eq_num", "enum_ne_num", "enum_eq_and", "enum_ret_eq", "global_eq_num",
+            "bool_compound_add", "bool_compound_sub", "bool_compound_loop",
+            "bool_eq_one", "bool_eq_zero", "bool_ne_zero",
         };
 
         class Outcome

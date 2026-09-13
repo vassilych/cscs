@@ -1943,6 +1943,26 @@ function timer_timeout(Sender, Arg) {
 }
 ScheduleRun(timeout, "timer_timeout", MySender, 'Arg with "double quotes"');
 
+// An assignment that is the whole of a parenthesised group -- "if ((b = n > 2))". Reading the
+// value ate both closing parentheses and gave only one back, so the if's condition read on through
+// its block and the interpreter threw a NullReferenceException (or "Sequence contains no elements").
+function asgInGroupIf(n) { if ((b = n > 2)) { return 1; } return 0; }
+Test(asgInGroupIf(3), 1);
+Test(asgInGroupIf(1), 0);
+function asgInGroupValue(n) { if ((b = n + 2)) { return b; } return 0; }
+Test(asgInGroupValue(3), 5);
+function asgInGroupWhile(n) { t = 0; while ((b = t < n)) { t++; } return t; }
+Test(asgInGroupWhile(3), 3);
+function asgInGroupElse(n) { if ((b = n > 2)) { return "yes"; } else { return "no"; } }
+Test(asgInGroupElse(1), "no");
+function asgInGroupArg(n) { return asgInGroupIf((q = n * 2)) + q; }
+Test(asgInGroupArg(2), 5);
+function asgInGroupNested(n) { x = ((b = 7)); return x + b; }
+Test(asgInGroupNested(0), 14);
+// Followed by an operator it always worked, and still does.
+function asgInGroupCompared(n) { if ((b = n > 2) == 1) { return 1; } return 0; }
+Test(asgInGroupCompared(3), 1);
+
 // The three tests above include("functions.cscs") run in the interpreters that
 // NewInterpreter() created, so they are counted there and not here.
 testSummary("test.cscs");

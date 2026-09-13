@@ -2427,7 +2427,12 @@ namespace SplitAndMerge
             try
             {
                 script.CurrentAssign = m_name;
-                varValue = Utils.GetItem(script);
+                // Not eating a closing parenthesis after the value: Split already consumed the one
+                // that ended it, and MoveBackIfPrevious below gives exactly one back. With eatLast a
+                // second ")" went too -- in "if ((b = 5))" both closed parentheses were consumed and
+                // only one returned, so the group ended on the if's own ")", the condition read on
+                // through the block, and ProcessIf dereferenced a null block result.
+                varValue = Utils.GetItem(script, false);
             }
             finally
             {
@@ -2492,7 +2497,8 @@ namespace SplitAndMerge
             try
             {
                 script.CurrentAssign = m_name;
-                varValue = await Utils.GetItemAsync(script);
+                // See Assign: the value's closing parenthesis is given back exactly once.
+                varValue = await Utils.GetItemAsync(script, false);
             }
             finally
             {

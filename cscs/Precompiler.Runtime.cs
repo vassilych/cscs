@@ -157,6 +157,37 @@ namespace SplitAndMerge
         }
     }
 
+    public static class CscsEnums
+    {
+        /// <summary>
+        /// Reads a member of an enum the interpreter holds -- "Colors.Green" -- which no
+        /// generated C# name can stand for. The interpreter resolves such a member through
+        /// Variable.GetEnumProperty, which needs a ParsingScript only to spot the call form
+        /// "Colors(x)": it tests script.Prev, and a freshly built script answers
+        /// Constants.EMPTY there, so the plain member read falls through to the name lookup.
+        /// Verified against the interpreter: Red is 0, Green 1, Blue 2.
+        /// </summary>
+        /// <summary>
+        /// The same read on an enum the function declared itself, held in a local.
+        /// </summary>
+        public static Variable Member(Interpreter interpreter, Variable holder, string member)
+        {
+            return holder.GetEnumProperty(member, new ParsingScript(interpreter, ""));
+        }
+
+        public static Variable Member(Interpreter interpreter, string enumName, string member)
+        {
+            var holder = interpreter.GetVariableValue(enumName);
+            if (holder == null)
+            {
+                throw new ArgumentException("Enum [" + enumName + "] is not defined.");
+            }
+            var script = new ParsingScript(interpreter, "");
+            return holder.Type == Variable.VarType.ENUM ?
+                holder.GetEnumProperty(member, script) : holder.GetProperty(member, script);
+        }
+    }
+
     public static class CscsConvert
     {
         public static double ToNumber(object value)
@@ -264,6 +295,30 @@ namespace SplitAndMerge
         public static bool IsFalse(Variable value)
         {
             return value != null && value.Type == Variable.VarType.NUMBER && value.Value == 0;
+        }
+        /// <summary>
+        /// The same two tests for a term whose C# type is not Variable -- a string local, an
+        /// argument. Text is a number in neither direction, so it is false both ways round;
+        /// taking "!IsTrue" instead would call "!x" true for "5" and diverge.
+        /// </summary>
+        public static bool IsTrue(object value)
+        {
+            var variable = value as Variable;
+            if (variable != null)
+            {
+                return IsTrue(variable);
+            }
+            return !(value is string) && value != null && Convert.ToDouble(value) != 0;
+        }
+
+        public static bool IsFalse(object value)
+        {
+            var variable = value as Variable;
+            if (variable != null)
+            {
+                return IsFalse(variable);
+            }
+            return !(value is string) && value != null && Convert.ToDouble(value) == 0;
         }
 
         /// <summary>

@@ -2483,6 +2483,39 @@ function truthyNormal(n) {
 Test(truthyCompiled(0), truthyNormal(0));
 Test(truthyCompiled(0), 1100);
 
+// A string is false as a whole condition, not only beside another clause -- and "!s" is false
+// as well, because "!x" is true only for a number that is zero. The two tests are a pair, not
+// one negated. The assignment in "if ((t = s + \"y\"))" still runs; only the condition is false.
+cfunction string strCondCompiled(string s) {
+  r = 0;
+  if (s) { r += 1; }
+  if (!s) { r += 10; }
+  t = "x";
+  if (t) { r += 100; }
+  if ((t = s + "y")) { r += 1000; }
+  vals = {"5", 0};
+  if (!vals[0] && 1 == 1) { r += 10000; }
+  if (!vals[1] && 1 == 1) { r += 100000; }
+  return r + "|" + t;
+}
+function strCondNormal(s) {
+  r = 0;
+  if (s) { r += 1; }
+  if (!s) { r += 10; }
+  t = "x";
+  if (t) { r += 100; }
+  if ((t = s + "y")) { r += 1000; }
+  vals = {"5", 0};
+  if (!vals[0] && 1 == 1) { r += 10000; }
+  if (!vals[1] && 1 == 1) { r += 100000; }
+  return r + "|" + t;
+}
+Test(strCondCompiled("5"), strCondNormal("5"));
+Test(strCondCompiled("5"), "100000|5y");
+Test(strCondCompiled(""), strCondNormal(""));
+Test(strCondCompiled(""), "100000|y");
+Test(strCondCompiled("ab"), strCondNormal("ab"));
+
 // A compound assignment is not "x = x + v": it dispatches on the left type and takes the
 // right side's numeric field, so a string on the right contributes 0. A step is different
 // again: it steps the numeric field, so "5"++ is 1 while "5" += 1 concatenates to "51".
@@ -3553,6 +3586,1143 @@ function sibFromInterp(n) { p = new SibCalc(n); return p.Doubled() + p.ViaThis()
 Test(sibFromCompiled(5), sibFromInterp(5));
 Test(sibFromCompiled(5), 25);
 
+Print("Testing compiled: a for header with sections left out...");
+// "for (;;)" used to fall back: the tokenizer drops the empty text between the two
+// semicolons, so the header is a statement shorter than a full one.
+cfunction int forInfCompiled(int n) { t = 0; i = 0; for (;;) { i++; t += i; if (i >= n) { break; } } return t; }
+function forInfInterp(n) { t = 0; i = 0; for (;;) { i++; t += i; if (i >= n) { break; } } return t; }
+Test(forInfCompiled(3), forInfInterp(3));
+Test(forInfCompiled(3), 6);
+
+cfunction int forInfContCompiled(int n) { t = 0; c = 0; for (;;) { c++; if (c % 2 == 0) { continue; } t += c; if (c >= n) { break; } } return t; }
+function forInfContInterp(n) { t = 0; c = 0; for (;;) { c++; if (c % 2 == 0) { continue; } t += c; if (c >= n) { break; } } return t; }
+Test(forInfContCompiled(5), forInfContInterp(5));
+Test(forInfContCompiled(5), 9);
+
+cfunction int forInfRetCompiled(int n) { r = 0; for (;;) { r++; if (r >= n) { return r * 10; } } return -1; }
+function forInfRetInterp(n) { r = 0; for (;;) { r++; if (r >= n) { return r * 10; } } return -1; }
+Test(forInfRetCompiled(3), forInfRetInterp(3));
+Test(forInfRetCompiled(3), 30);
+
+// The initialiser present, the condition and step left out.
+cfunction int forInitOnlyCompiled(int n) { t = 0; for (k = 0;;) { t += k; k++; if (k >= n) { break; } } return t; }
+function forInitOnlyInterp(n) { t = 0; for (k = 0;;) { t += k; k++; if (k >= n) { break; } } return t; }
+Test(forInitOnlyCompiled(3), forInitOnlyInterp(3));
+Test(forInitOnlyCompiled(3), 3);
+
+// A nested pair, and text accumulated in one.
+cfunction int forInfNestedCompiled(int n) { t = 0; o = 0; for (;;) { o++; inner = 0; for (;;) { inner++; if (inner >= 2) { break; } } t += inner; if (o >= n) { break; } } return t; }
+function forInfNestedInterp(n) { t = 0; o = 0; for (;;) { o++; inner = 0; for (;;) { inner++; if (inner >= 2) { break; } } t += inner; if (o >= n) { break; } } return t; }
+Test(forInfNestedCompiled(2), forInfNestedInterp(2));
+Test(forInfNestedCompiled(2), 4);
+
+cfunction string forInfStrCompiled(string s) { r = ""; i = 0; for (;;) { r += s; i++; if (i >= 2) { break; } } return r; }
+function forInfStrInterp(s) { r = ""; i = 0; for (;;) { r += s; i++; if (i >= 2) { break; } } return r; }
+Test(forInfStrCompiled("ab"), forInfStrInterp("ab"));
+Test(forInfStrCompiled("ab"), "abab");
+
+Print("Testing compiled: .Type on a local, in either case...");
+// A C# double, string or bool has no member named Type, so these used to fall back. The
+// answer is the name of the CSCS type, which is what the interpreter gives.
+cfunction string typeOfNumCompiled(int n) { x = n + 1; return x.Type; }
+function typeOfNumInterp(n) { x = n + 1; return x.Type; }
+Test(typeOfNumCompiled(1), typeOfNumInterp(1));
+Test(typeOfNumCompiled(1), "NUMBER");
+
+cfunction string typeLowerCompiled(int n) { x = n + 1; return x.type; }
+function typeLowerInterp(n) { x = n + 1; return x.type; }
+Test(typeLowerCompiled(1), typeLowerInterp(1));
+Test(typeLowerCompiled(1), "NUMBER");
+
+cfunction string typeOfStrCompiled(string s) { t = s + "!"; return t.Type; }
+function typeOfStrInterp(s) { t = s + "!"; return t.Type; }
+Test(typeOfStrCompiled("a"), typeOfStrInterp("a"));
+Test(typeOfStrCompiled("a"), "STRING");
+
+// A truth value is a NUMBER to the interpreter, not a type of its own.
+cfunction string typeOfBoolCompiled(int n) { b = n > 0; return b.Type; }
+function typeOfBoolInterp(n) { b = n > 0; return b.Type; }
+Test(typeOfBoolCompiled(1), typeOfBoolInterp(1));
+Test(typeOfBoolCompiled(1), "NUMBER");
+
+// A collection answers ARRAY, a map included, and lower case reaches it too.
+cfunction string typeOfCollCompiled(int n) { a = {1}; return a.type; }
+function typeOfCollInterp(n) { a = {1}; return a.type; }
+Test(typeOfCollCompiled(0), typeOfCollInterp(0));
+Test(typeOfCollCompiled(0), "ARRAY");
+
+cfunction string typeOfMapCompiled(int n) { m = {"k": 1}; return m.Type; }
+function typeOfMapInterp(n) { m = {"k": 1}; return m.Type; }
+Test(typeOfMapCompiled(0), typeOfMapInterp(0));
+Test(typeOfMapCompiled(0), "ARRAY");
+
+// In a condition, and on an argument.
+cfunction int typeInCondCompiled(int n) { x = n + 1; if (x.Type == "NUMBER") { return 1; } return 0; }
+function typeInCondInterp(n) { x = n + 1; if (x.Type == "NUMBER") { return 1; } return 0; }
+Test(typeInCondCompiled(1), typeInCondInterp(1));
+Test(typeInCondCompiled(1), 1);
+
+cfunction string typeOfArgCompiled(string s) { return s.Type; }
+function typeOfArgInterp(s) { return s.Type; }
+Test(typeOfArgCompiled("a"), typeOfArgInterp("a"));
+Test(typeOfArgCompiled("a"), "STRING");
+
+// A local whose assignments disagree has no known type, so it falls back rather than
+// being given a guessed answer -- the interpreter is still the reference.
+cfunction string typeMixedCompiled(int n) { x = n; if (n > 100) { x = "big"; } return x.Type; }
+function typeMixedInterp(n) { x = n; if (n > 100) { x = "big"; } return x.Type; }
+Test(typeMixedCompiled(1), typeMixedInterp(1));
+Test(typeMixedCompiled(1), "NUMBER");
+
+Print("Testing compiled: a truth value in arithmetic...");
+// CSCS has no boolean type: a comparison yields the number 1 or 0, so it adds and multiplies.
+cfunction int boolAddCompiled(int n) { b = n > 1; return b + 1; }
+function boolAddInterp(n) { b = n > 1; return b + 1; }
+Test(boolAddCompiled(2), boolAddInterp(2));
+Test(boolAddCompiled(2), 2);
+
+cfunction int boolMulCompiled(int n) { b = n > 1; return b * 2; }
+function boolMulInterp(n) { b = n > 1; return b * 2; }
+Test(boolMulCompiled(2), boolMulInterp(2));
+Test(boolMulCompiled(2), 2);
+
+cfunction int boolSubCompiled(int n) { b = n > 1; return b - 1; }
+function boolSubInterp(n) { b = n > 1; return b - 1; }
+Test(boolSubCompiled(2), boolSubInterp(2));
+Test(boolSubCompiled(2), 0);
+
+cfunction int boolModCompiled(int n) { b = n > 1; return b % 2; }
+function boolModInterp(n) { b = n > 1; return b % 2; }
+Test(boolModCompiled(2), boolModInterp(2));
+Test(boolModCompiled(2), 1);
+
+cfunction int boolNegCompiled(int n) { b = n > 1; return -b; }
+function boolNegInterp(n) { b = n > 1; return -b; }
+Test(boolNegCompiled(2), boolNegInterp(2));
+Test(boolNegCompiled(2), -1);
+
+// A false comparison is 0, and two of them add.
+cfunction int boolFalseCompiled(int n) { b = n < 1; return b + 5; }
+function boolFalseInterp(n) { b = n < 1; return b + 5; }
+Test(boolFalseCompiled(2), boolFalseInterp(2));
+Test(boolFalseCompiled(2), 5);
+
+cfunction int boolChainCompiled(int n) { b = n > 1; c = n > 0; return b + c * 2; }
+function boolChainInterp(n) { b = n > 1; c = n > 0; return b + c * 2; }
+Test(boolChainCompiled(2), boolChainInterp(2));
+Test(boolChainCompiled(2), 3);
+
+// As a subscript, and inside a group.
+cfunction int boolIndexCompiled(int n) { b = n > 1; a = {10, 20}; return a[b + 0]; }
+function boolIndexInterp(n) { b = n > 1; a = {10, 20}; return a[b + 0]; }
+Test(boolIndexCompiled(2), boolIndexInterp(2));
+Test(boolIndexCompiled(2), 20);
+
+cfunction int boolParenCompiled(int n) { b = n > 1; return (b + 1) * 2; }
+function boolParenInterp(n) { b = n > 1; return (b + 1) * 2; }
+Test(boolParenCompiled(2), boolParenInterp(2));
+Test(boolParenCompiled(2), 4);
+
+// A ternary holds what its branches hold, not a truth value -- the mislabelling that made
+// this whole rewrite cost constructs until it was fixed.
+cfunction int ternNumCompiled(int n) { y = n > 2 ? 10 : 20; return y + 1; }
+function ternNumInterp(n) { y = n > 2 ? 10 : 20; return y + 1; }
+Test(ternNumCompiled(3), ternNumInterp(3));
+Test(ternNumCompiled(3), 11);
+
+cfunction int collatzCompiled(int n) { c = 0; while (n > 1) { n = n % 2 == 0 ? n / 2 : 3 * n + 1; c++; } return c; }
+function collatzInterp(n) { c = 0; while (n > 1) { n = n % 2 == 0 ? n / 2 : 3 * n + 1; c++; } return c; }
+Test(collatzCompiled(27), collatzInterp(27));
+Test(collatzCompiled(27), 111);
+
+Print("Testing compiled: .Type beside a string literal...");
+// A statement holding a string literal is not a "known expression", so it reaches C#
+// through a different path than "return x.Type;" does -- and used to fall back there.
+cfunction string typeCatAfterCompiled(int n) { x = n + 1; return "t=" + x.Type; }
+function typeCatAfterInterp(n) { x = n + 1; return "t=" + x.Type; }
+Test(typeCatAfterCompiled(1), typeCatAfterInterp(1));
+Test(typeCatAfterCompiled(1), "t=NUMBER");
+
+cfunction string typeCatBeforeCompiled(int n) { x = n + 1; return x.Type + "!"; }
+function typeCatBeforeInterp(n) { x = n + 1; return x.Type + "!"; }
+Test(typeCatBeforeCompiled(1), typeCatBeforeInterp(1));
+Test(typeCatBeforeCompiled(1), "NUMBER!");
+
+cfunction string typeCatStrCompiled(string s) { t = s + "!"; return "t=" + t.Type; }
+function typeCatStrInterp(s) { t = s + "!"; return "t=" + t.Type; }
+Test(typeCatStrCompiled("a"), typeCatStrInterp("a"));
+Test(typeCatStrCompiled("a"), "t=STRING");
+
+cfunction string typeCatTwoCompiled(int n) { x = n + 1; s = "a"; return x.Type + "/" + s.Type; }
+function typeCatTwoInterp(n) { x = n + 1; s = "a"; return x.Type + "/" + s.Type; }
+Test(typeCatTwoCompiled(1), typeCatTwoInterp(1));
+Test(typeCatTwoCompiled(1), "NUMBER/STRING");
+
+// An argument, an element and a map, all beside a literal.
+cfunction string typeCatArgCompiled(string s) { return "t=" + s.Type; }
+function typeCatArgInterp(s) { return "t=" + s.Type; }
+Test(typeCatArgCompiled("a"), typeCatArgInterp("a"));
+Test(typeCatArgCompiled("a"), "t=STRING");
+
+cfunction string typeCatElemCompiled(int n) { a = {1, 2}; return "t=" + a[0].Type; }
+function typeCatElemInterp(n) { a = {1, 2}; return "t=" + a[0].Type; }
+Test(typeCatElemCompiled(0), typeCatElemInterp(0));
+Test(typeCatElemCompiled(0), "t=NUMBER");
+
+// Lower case reaches it too, and a mixed-type local still falls back rather than guessing.
+cfunction string typeCatLowerCompiled(int n) { x = n + 1; return "t=" + x.type; }
+function typeCatLowerInterp(n) { x = n + 1; return "t=" + x.type; }
+Test(typeCatLowerCompiled(1), typeCatLowerInterp(1));
+Test(typeCatLowerCompiled(1), "t=NUMBER");
+
+Print("Testing compiled: a truth value with a compound operator or compared to a number...");
+// CSCS has no boolean type, so "t += b" is arithmetic and "b == 1" is a numeric comparison.
+cfunction int boolCompAddCompiled(int n) { t = 0; b = n > 1; t += b; return t; }
+function boolCompAddInterp(n) { t = 0; b = n > 1; t += b; return t; }
+Test(boolCompAddCompiled(2), boolCompAddInterp(2));
+Test(boolCompAddCompiled(2), 1);
+
+cfunction int boolCompSubCompiled(int n) { t = 5; b = n > 1; t -= b; return t; }
+function boolCompSubInterp(n) { t = 5; b = n > 1; t -= b; return t; }
+Test(boolCompSubCompiled(2), boolCompSubInterp(2));
+Test(boolCompSubCompiled(2), 4);
+
+cfunction int boolCompLoopCompiled(int n) { t = 0; i = 0; while (i < n) { b = i > 0; t += b; i++; } return t; }
+function boolCompLoopInterp(n) { t = 0; i = 0; while (i < n) { b = i > 0; t += b; i++; } return t; }
+Test(boolCompLoopCompiled(3), boolCompLoopInterp(3));
+Test(boolCompLoopCompiled(3), 2);
+
+cfunction int boolEqOneCompiled(int n) { b = n > 1; if (b == 1) { return 1; } return 0; }
+function boolEqOneInterp(n) { b = n > 1; if (b == 1) { return 1; } return 0; }
+Test(boolEqOneCompiled(2), boolEqOneInterp(2));
+Test(boolEqOneCompiled(2), 1);
+
+// A true comparison is 1, so "b == 0" is false -- the interpreter's answer, not C#'s.
+cfunction int boolEqZeroCompiled(int n) { b = n > 1; if (b == 0) { return 1; } return 0; }
+function boolEqZeroInterp(n) { b = n > 1; if (b == 0) { return 1; } return 0; }
+Test(boolEqZeroCompiled(2), boolEqZeroInterp(2));
+Test(boolEqZeroCompiled(2), 0);
+
+cfunction int boolNeZeroCompiled(int n) { b = n > 1; if (b != 0) { return 1; } return 0; }
+function boolNeZeroInterp(n) { b = n > 1; if (b != 0) { return 1; } return 0; }
+Test(boolNeZeroCompiled(2), boolNeZeroInterp(2));
+Test(boolNeZeroCompiled(2), 1);
+
+// Two truth values compared with each other keep working: C# agrees with the interpreter.
+cfunction int boolEqBoolCompiled(int n) { b = n > 1; c = n > 5; if (b == c) { return 1; } return 0; }
+function boolEqBoolInterp(n) { b = n > 1; c = n > 5; if (b == c) { return 1; } return 0; }
+Test(boolEqBoolCompiled(2), boolEqBoolInterp(2));
+Test(boolEqBoolCompiled(2), 0);
+
+Print("Testing compiled: Math.Round with a computed digit count...");
+// Every CSCS number is a double, and C# has no Round(double, double): a literal picks the
+// int overload by itself, but anything computed used to send the function back to the
+// interpreter.
+cfunction double roundLocalCompiled(double x) { d = 2; return Math.Round(x, d); }
+function roundLocalInterp(x) { d = 2; return Math.Round(x, d); }
+Test(roundLocalCompiled(3.14159), roundLocalInterp(3.14159));
+Test(roundLocalCompiled(3.14159), 3.14);
+
+cfunction double roundExprCompiled(double x, int k) { return Math.Round(x, k + 1); }
+function roundExprInterp(x, k) { return Math.Round(x, k + 1); }
+Test(roundExprCompiled(3.14159, 1), roundExprInterp(3.14159, 1));
+Test(roundExprCompiled(3.14159, 1), 3.14);
+
+// Zero digits rounds to a whole number, and four keeps four.
+cfunction double roundZeroCompiled(double x) { d = 0; return Math.Round(x, d); }
+function roundZeroInterp(x) { d = 0; return Math.Round(x, d); }
+Test(roundZeroCompiled(3.7), roundZeroInterp(3.7));
+Test(roundZeroCompiled(3.7), 4);
+
+cfunction double roundFourCompiled(double x) { d = 4; return Math.Round(x, d); }
+function roundFourInterp(x) { d = 4; return Math.Round(x, d); }
+Test(roundFourCompiled(3.14159265), roundFourInterp(3.14159265));
+Test(roundFourCompiled(3.14159265), 3.1416);
+
+// A nested call as the first argument, an expression as the first argument, two Rounds in
+// one expression, and a Round inside a concatenation -- the shapes a whole-code pass could
+// have mangled.
+cfunction double roundNestedCompiled(double x) { d = 3; return Math.Round(Math.Sqrt(x), d); }
+function roundNestedInterp(x) { d = 3; return Math.Round(Math.Sqrt(x), d); }
+Test(roundNestedCompiled(2), roundNestedInterp(2));
+Test(roundNestedCompiled(2), 1.414);
+
+cfunction double roundExprFirstCompiled(double x) { d = 2; return Math.Round(x * 2, d); }
+function roundExprFirstInterp(x) { d = 2; return Math.Round(x * 2, d); }
+Test(roundExprFirstCompiled(1.23456), roundExprFirstInterp(1.23456));
+Test(roundExprFirstCompiled(1.23456), 2.47);
+
+cfunction double roundTwiceCompiled(double x) { d = 2; return Math.Round(x, d) + Math.Round(x, d); }
+function roundTwiceInterp(x) { d = 2; return Math.Round(x, d) + Math.Round(x, d); }
+Test(roundTwiceCompiled(1.005), roundTwiceInterp(1.005));
+Test(roundTwiceCompiled(1.005), 2);
+
+cfunction string roundInTextCompiled(double x) { d = 2; return "r=" + Math.Round(x, d); }
+function roundInTextInterp(x) { d = 2; return "r=" + Math.Round(x, d); }
+Test(roundInTextCompiled(3.14159), roundInTextInterp(3.14159));
+Test(roundInTextCompiled(3.14159), "r=3.14");
+
+// A literal digit count, one argument, and the other two-argument Math calls are untouched.
+cfunction double roundLitCompiled(double x) { return Math.Round(x, 2); }
+function roundLitInterp(x) { return Math.Round(x, 2); }
+Test(roundLitCompiled(3.14159), roundLitInterp(3.14159));
+Test(roundLitCompiled(3.14159), 3.14);
+
+cfunction double powLocalCompiled(double x) { e = 2; return Math.Pow(x, e); }
+function powLocalInterp(x) { e = 2; return Math.Pow(x, e); }
+Test(powLocalCompiled(3), powLocalInterp(3));
+Test(powLocalCompiled(3), 9);
+
+Print("Testing compiled: a built-in call as the whole condition...");
+// A call cannot sit inside a C# condition, so it is emitted ahead of the statement and the
+// temporary is tested for truth. StrEqual and StrContains are case-sensitive, so both of
+// these are false -- the interpreter's answer, which is the only definition of correct.
+cfunction int strEqualCondCompiled(string s) { if (StrEqual(s, "AB")) { return 1; } return 0; }
+function strEqualCondInterp(s) { if (StrEqual(s, "AB")) { return 1; } return 0; }
+Test(strEqualCondCompiled("ab"), strEqualCondInterp("ab"));
+Test(strEqualCondCompiled("ab"), 0);
+
+cfunction int strEqualSameCompiled(string s) { if (StrEqual(s, "ab")) { return 1; } return 0; }
+function strEqualSameInterp(s) { if (StrEqual(s, "ab")) { return 1; } return 0; }
+Test(strEqualSameCompiled("ab"), strEqualSameInterp("ab"));
+Test(strEqualSameCompiled("ab"), 1);
+
+cfunction int strContainsCondCompiled(string s) { if (StrContains(s, "ELL")) { return 1; } return 0; }
+function strContainsCondInterp(s) { if (StrContains(s, "ELL")) { return 1; } return 0; }
+Test(strContainsCondCompiled("Hello"), strContainsCondInterp("Hello"));
+Test(strContainsCondCompiled("Hello"), 0);
+
+// The free function and the member disagree in the interpreter: Contains(a, 2) is 0 while
+// a.Contains(2) is 1. Hoisting the free form to the interpreter keeps its own answer.
+cfunction int containsFreeCompiled(int n) { a = {1, 2}; if (Contains(a, 2)) { return 1; } return 0; }
+function containsFreeInterp(n) { a = {1, 2}; if (Contains(a, 2)) { return 1; } return 0; }
+Test(containsFreeCompiled(0), containsFreeInterp(0));
+Test(containsFreeCompiled(0), 0);
+
+cfunction int containsMemberCompiled(int n) { a = {1, 2}; if (a.Contains(2)) { return 1; } return 0; }
+function containsMemberInterp(n) { a = {1, 2}; if (a.Contains(2)) { return 1; } return 0; }
+Test(containsMemberCompiled(0), containsMemberInterp(0));
+Test(containsMemberCompiled(0), 1);
+
+cfunction int nameExistsCondCompiled(int n) { x = n; if (NameExists("x")) { return 1; } return 0; }
+function nameExistsCondInterp(n) { x = n; if (NameExists("x")) { return 1; } return 0; }
+Test(nameExistsCondCompiled(5), nameExistsCondInterp(5));
+Test(nameExistsCondCompiled(5), 1);
+
+// A script function as the whole condition, and one still compared with a number. These
+// helpers are declared here: the ones of the same name in the probe harness are not part of
+// this file.
+function condHelper(n) { return n + 2; }
+function condStrHelper(n) { return "s"; }
+
+cfunction int bareCallCondCompiled(int n) { if (condHelper(n)) { return 1; } return 0; }
+function bareCallCondInterp(n) { if (condHelper(n)) { return 1; } return 0; }
+Test(bareCallCondCompiled(5), bareCallCondInterp(5));
+Test(bareCallCondCompiled(5), 1);
+
+cfunction int callCmpCondCompiled(int n) { if (condHelper(n) > 5) { return 1; } return 0; }
+function callCmpCondInterp(n) { if (condHelper(n) > 5) { return 1; } return 0; }
+Test(callCmpCondCompiled(5), callCmpCondInterp(5));
+Test(callCmpCondCompiled(5), 1);
+
+// A call result compared with text keeps the comparison rather than a truth test.
+cfunction int callStrLtCompiled(int n) { if (condStrHelper(n) < "t") { return 1; } return 0; }
+function callStrLtInterp(n) { if (condStrHelper(n) < "t") { return 1; } return 0; }
+Test(callStrLtCompiled(1), callStrLtInterp(1));
+Test(callStrLtCompiled(1), 1);
+
+Print("Testing compiled: members of an enum...");
+// An enum is a Variable whose member names live in its own map, so no generated C# name can
+// stand for "Shades.Mid" -- it is read through the interpreter. Declared here: the "Colors"
+// enum of the probe harness is not part of this file.
+var Shades = Enum {Dark, Mid, Light};
+
+cfunction int enumReadCompiled(int n) { return Shades.Mid + n; }
+function enumReadInterp(n) { return Shades.Mid + n; }
+Test(enumReadCompiled(1), enumReadInterp(1));
+Test(enumReadCompiled(1), 2);
+
+cfunction int enumBareCompiled(int n) { return Shades.Light; }
+function enumBareInterp(n) { return Shades.Light; }
+Test(enumBareCompiled(0), enumBareInterp(0));
+Test(enumBareCompiled(0), 2);
+
+cfunction int enumCmpCompiled(int n) { if (Shades.Light > Shades.Dark) { return 1; } return n; }
+function enumCmpInterp(n) { if (Shades.Light > Shades.Dark) { return 1; } return n; }
+Test(enumCmpCompiled(0), enumCmpInterp(0));
+Test(enumCmpCompiled(0), 1);
+
+cfunction int enumAssignCompiled(int n) { c = Shades.Mid; return c + n; }
+function enumAssignInterp(n) { c = Shades.Mid; return c + n; }
+Test(enumAssignCompiled(1), enumAssignInterp(1));
+Test(enumAssignCompiled(1), 2);
+
+cfunction int enumArithCompiled(int n) { return Shades.Light * 2 + n; }
+function enumArithInterp(n) { return Shades.Light * 2 + n; }
+Test(enumArithCompiled(0), enumArithInterp(0));
+Test(enumArithCompiled(0), 4);
+
+cfunction int enumTwoReadsCompiled(int n) { return Shades.Mid + Shades.Light + n; }
+function enumTwoReadsInterp(n) { return Shades.Mid + Shades.Light + n; }
+Test(enumTwoReadsCompiled(0), enumTwoReadsInterp(0));
+Test(enumTwoReadsCompiled(0), 3);
+
+cfunction string enumInTextCompiled(int n) { return "c=" + Shades.Light; }
+function enumInTextInterp(n) { return "c=" + Shades.Light; }
+Test(enumInTextCompiled(0), enumInTextInterp(0));
+Test(enumInTextCompiled(0), "c=2");
+
+// The type of an enum member is the member's own name, not NUMBER.
+cfunction string enumTypeCompiled(int n) { return Shades.Mid.Type; }
+function enumTypeInterp(n) { return Shades.Mid.Type; }
+Test(enumTypeCompiled(0), enumTypeInterp(0));
+Test(enumTypeCompiled(0), "Mid");
+
+Print("Testing compiled: a Variable-valued expression compared with a number...");
+// Variable had comparison operators against a number but no equality ones at all, so
+// "Shades.Mid == 1" did not compile. Only against a number: two Variables keep reference
+// equality, which is what the 200-odd "== null" checks in the interpreter rely on.
+shadeCount = 3;
+
+cfunction int enumEqNumCompiled(int n) { if (Shades.Mid == 1) { return 1; } return 0; }
+function enumEqNumInterp(n) { if (Shades.Mid == 1) { return 1; } return 0; }
+Test(enumEqNumCompiled(0), enumEqNumInterp(0));
+Test(enumEqNumCompiled(0), 1);
+
+cfunction int enumNeNumCompiled(int n) { if (Shades.Mid != 0) { return 1; } return 0; }
+function enumNeNumInterp(n) { if (Shades.Mid != 0) { return 1; } return 0; }
+Test(enumNeNumCompiled(0), enumNeNumInterp(0));
+Test(enumNeNumCompiled(0), 1);
+
+cfunction int enumEqAndCompiled(int n) { if (Shades.Mid == 1 && n > 0) { return 1; } return 0; }
+function enumEqAndInterp(n) { if (Shades.Mid == 1 && n > 0) { return 1; } return 0; }
+Test(enumEqAndCompiled(1), enumEqAndInterp(1));
+Test(enumEqAndCompiled(1), 1);
+
+cfunction int enumRetEqCompiled(int n) { return Shades.Mid == 1; }
+function enumRetEqInterp(n) { return Shades.Mid == 1; }
+Test(enumRetEqCompiled(0), enumRetEqInterp(0));
+Test(enumRetEqCompiled(0), 1);
+
+// A global read, which is a Variable in compiled code too.
+cfunction int globalEqNumCompiled(int n) { if (shadeCount == 3) { return 1; } return 0; }
+function globalEqNumInterp(n) { if (shadeCount == 3) { return 1; } return 0; }
+Test(globalEqNumCompiled(0), globalEqNumInterp(0));
+Test(globalEqNumCompiled(0), 1);
+
+// An enum member still orders correctly against a number, as it did before.
+cfunction int enumLtNumCompiled(int n) { if (Shades.Mid < 2) { return 1; } return 0; }
+function enumLtNumInterp(n) { if (Shades.Mid < 2) { return 1; } return 0; }
+Test(enumLtNumCompiled(0), enumLtNumInterp(0));
+Test(enumLtNumCompiled(0), 1);
+
+
+// Joining two collections with "+" yields their *text*, not a merged collection: the
+// interpreter answers "[1, 2][3]", whose Type is STRING, Length 9 and Size 0. Assigning
+// that to a local used to fall back (the local was declared double); it compiles now.
+cfunction int collJoinSizeCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c.Size + n; }
+function collJoinSizeInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c.Size + n; }
+Test(collJoinSizeCompiled(0), collJoinSizeInterp(0));
+Test(collJoinSizeCompiled(0), 0);
+
+cfunction int collJoinLenCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c.Length + n; }
+function collJoinLenInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c.Length + n; }
+Test(collJoinLenCompiled(0), collJoinLenInterp(0));
+Test(collJoinLenCompiled(0), 9);
+
+cfunction string collJoinTypeCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c.Type; }
+function collJoinTypeInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c.Type; }
+Test(collJoinTypeCompiled(0), collJoinTypeInterp(0));
+Test(collJoinTypeCompiled(0), "STRING");
+
+cfunction string collJoinValueCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c; }
+function collJoinValueInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c; }
+Test(collJoinValueCompiled(0), collJoinValueInterp(0));
+Test(collJoinValueCompiled(0), "[1, 2][3]");
+
+// Two maps join the same way, and their text keeps the keys.
+cfunction string collJoinMapTypeCompiled(int n) { m = {"k": 1}; m2 = {"j": 2}; c = m + m2; return c.Type; }
+function collJoinMapTypeInterp(n) { m = {"k": 1}; m2 = {"j": 2}; c = m + m2; return c.Type; }
+Test(collJoinMapTypeCompiled(0), collJoinMapTypeInterp(0));
+Test(collJoinMapTypeCompiled(0), "STRING");
+
+cfunction string collJoinMapValueCompiled(int n) { m = {"k": 1}; m2 = {"j": 2}; c = m + m2; return c; }
+function collJoinMapValueInterp(n) { m = {"k": 1}; m2 = {"j": 2}; c = m + m2; return c; }
+Test(collJoinMapValueCompiled(0), collJoinMapValueInterp(0));
+
+// Three of them, and a collection beside a string on either side.
+cfunction int collJoinThreeCompiled(int n) { a = {1}; b = {2}; d = {3}; c = a + b + d; return c.Length + n; }
+function collJoinThreeInterp(n) { a = {1}; b = {2}; d = {3}; c = a + b + d; return c.Length + n; }
+Test(collJoinThreeCompiled(0), collJoinThreeInterp(0));
+Test(collJoinThreeCompiled(0), 9);
+
+cfunction int collJoinStrLeftCompiled(int n) { a = {1, 2}; c = "v=" + a; return c.Length + n; }
+function collJoinStrLeftInterp(n) { a = {1, 2}; c = "v=" + a; return c.Length + n; }
+Test(collJoinStrLeftCompiled(0), collJoinStrLeftInterp(0));
+Test(collJoinStrLeftCompiled(0), 8);
+
+cfunction int collJoinStrRightCompiled(int n) { a = {1, 2}; c = a + "!"; return c.Length + n; }
+function collJoinStrRightInterp(n) { a = {1, 2}; c = a + "!"; return c.Length + n; }
+Test(collJoinStrRightCompiled(0), collJoinStrRightInterp(0));
+Test(collJoinStrRightCompiled(0), 7);
+
+// The join must not string everything that adds: a sum of numbers stays a NUMBER, and so
+// does a sum of two collection *elements*. A bare literal is still an ARRAY.
+cfunction string numPlusTypeCompiled(int n) { v = 1; w = 2; c = v + w; return c.Type; }
+function numPlusTypeInterp(n) { v = 1; w = 2; c = v + w; return c.Type; }
+Test(numPlusTypeCompiled(0), numPlusTypeInterp(0));
+Test(numPlusTypeCompiled(0), "NUMBER");
+
+cfunction string elemPlusTypeCompiled(int n) { a = {1, 2}; c = a[0] + a[1]; return c.Type; }
+function elemPlusTypeInterp(n) { a = {1, 2}; c = a[0] + a[1]; return c.Type; }
+Test(elemPlusTypeCompiled(0), elemPlusTypeInterp(0));
+Test(elemPlusTypeCompiled(0), "NUMBER");
+
+cfunction int elemPlusValueCompiled(int n) { a = {1, 2}; c = a[0] + a[1]; return c + n; }
+function elemPlusValueInterp(n) { a = {1, 2}; c = a[0] + a[1]; return c + n; }
+Test(elemPlusValueCompiled(0), elemPlusValueInterp(0));
+Test(elemPlusValueCompiled(0), 3);
+
+cfunction string collLitTypeCompiled(int n) { a = {1, 2}; return a.Type; }
+function collLitTypeInterp(n) { a = {1, 2}; return a.Type; }
+Test(collLitTypeCompiled(0), collLitTypeInterp(0));
+Test(collLitTypeCompiled(0), "ARRAY");
+
+// A global as the right-hand operand of "==" / "!=". The tokenizer leaves the condition's
+// closing paren attached to the global, and that token used to be emitted as a call to a
+// function named "gcount)" -- the condition then lost its paren and would not compile.
+// Relational operators were never affected, which is why "shadeCount > 2" always worked.
+cfunction int globEqLitLeftCompiled(int n) { if (3 == shadeCount) { return 1; } return 0; }
+function globEqLitLeftInterp(n) { if (3 == shadeCount) { return 1; } return 0; }
+Test(globEqLitLeftCompiled(0), globEqLitLeftInterp(0));
+Test(globEqLitLeftCompiled(0), 1);
+
+cfunction int globNeLitLeftCompiled(int n) { if (99 != shadeCount) { return 1; } return 0; }
+function globNeLitLeftInterp(n) { if (99 != shadeCount) { return 1; } return 0; }
+Test(globNeLitLeftCompiled(0), globNeLitLeftInterp(0));
+Test(globNeLitLeftCompiled(0), 1);
+
+cfunction int globEqGlobCompiled(int n) { if (shadeCount == shadeCount) { return 1; } return 0; }
+function globEqGlobInterp(n) { if (shadeCount == shadeCount) { return 1; } return 0; }
+Test(globEqGlobCompiled(0), globEqGlobInterp(0));
+Test(globEqGlobCompiled(0), 1);
+
+cfunction int globEqArgCompiled(int n) { if (n == shadeCount) { return 1; } return 0; }
+function globEqArgInterp(n) { if (n == shadeCount) { return 1; } return 0; }
+Test(globEqArgCompiled(3), globEqArgInterp(3));
+Test(globEqArgCompiled(3), 1);
+Test(globEqArgCompiled(1), 0);
+
+cfunction int globEqLocalCompiled(int n) { v = 3; if (v == shadeCount) { return 1; } return 0; }
+function globEqLocalInterp(n) { v = 3; if (v == shadeCount) { return 1; } return 0; }
+Test(globEqLocalCompiled(0), globEqLocalInterp(0));
+Test(globEqLocalCompiled(0), 1);
+
+// Two closing parens: SplitClosingParens strips only the unbalanced ones.
+cfunction int globEq2ParenCompiled(int n) { if ((3 == shadeCount)) { return 1; } return 0; }
+function globEq2ParenInterp(n) { if ((3 == shadeCount)) { return 1; } return 0; }
+Test(globEq2ParenCompiled(0), globEq2ParenInterp(0));
+Test(globEq2ParenCompiled(0), 1);
+
+// A "while" condition takes the same path as an "if" here.
+cfunction int globEqWhileCompiled(int n) { t = 0; while (t == shadeCount) { t++; } return t; }
+function globEqWhileInterp(n) { t = 0; while (t == shadeCount) { t++; } return t; }
+Test(globEqWhileCompiled(0), globEqWhileInterp(0));
+Test(globEqWhileCompiled(0), 0);
+
+cfunction int globEqReturnCompiled(int n) { return 3 == shadeCount; }
+function globEqReturnInterp(n) { return 3 == shadeCount; }
+Test(globEqReturnCompiled(0), globEqReturnInterp(0));
+Test(globEqReturnCompiled(0), 1);
+
+// A Math argument that is not a C# number. A call to a script function and a read of a global
+// both yield a Variable in compiled code, so C# found no Math overload at all and reported the
+// first one it had -- "cannot convert Variable to byte". They are wrapped in
+// CscsConvert.ToNumber over the finished code now.
+// Declared here, not borrowed: helper() lives only in the probe harness and the coverage
+// fixture, and using a name this file does not define aborts the whole run.
+function mathHelper(q) { return q * 3; }
+
+cfunction int mathArgCallCompiled(int n) { return Math.Max(mathHelper(n), 5); }
+function mathArgCallInterp(n) { return Math.Max(mathHelper(n), 5); }
+Test(mathArgCallCompiled(2), mathArgCallInterp(2));
+Test(mathArgCallCompiled(2), 6);
+
+cfunction int mathArgGlobCompiled(int n) { return Math.Max(shadeCount, 5); }
+function mathArgGlobInterp(n) { return Math.Max(shadeCount, 5); }
+Test(mathArgGlobCompiled(0), mathArgGlobInterp(0));
+Test(mathArgGlobCompiled(0), 5);
+
+cfunction int mathArgTwoCompiled(int n) { return Math.Max(mathHelper(n), mathHelper(1)); }
+function mathArgTwoInterp(n) { return Math.Max(mathHelper(n), mathHelper(1)); }
+Test(mathArgTwoCompiled(2), mathArgTwoInterp(2));
+Test(mathArgTwoCompiled(2), 6);
+
+cfunction int mathArgMinCompiled(int n) { return Math.Min(mathHelper(n), 5); }
+function mathArgMinInterp(n) { return Math.Min(mathHelper(n), 5); }
+Test(mathArgMinCompiled(2), mathArgMinInterp(2));
+Test(mathArgMinCompiled(2), 5);
+
+cfunction int mathArgAbsCompiled(int n) { return Math.Abs(mathHelper(n)); }
+function mathArgAbsInterp(n) { return Math.Abs(mathHelper(n)); }
+Test(mathArgAbsCompiled(2), mathArgAbsInterp(2));
+Test(mathArgAbsCompiled(2), 6);
+
+cfunction int mathArgPowCompiled(int n) { return Math.Pow(mathHelper(n), 2); }
+function mathArgPowInterp(n) { return Math.Pow(mathHelper(n), 2); }
+Test(mathArgPowCompiled(2), mathArgPowInterp(2));
+Test(mathArgPowCompiled(2), 36);
+
+cfunction int mathArgSqrtCompiled(int n) { return Math.Sqrt(mathHelper(n)); }
+function mathArgSqrtInterp(n) { return Math.Sqrt(mathHelper(n)); }
+Test(mathArgSqrtCompiled(3), mathArgSqrtInterp(3));
+Test(mathArgSqrtCompiled(3), 3);
+
+cfunction int mathArgExprCompiled(int n) { return Math.Max(mathHelper(n) + 1, 5); }
+function mathArgExprInterp(n) { return Math.Max(mathHelper(n) + 1, 5); }
+Test(mathArgExprCompiled(2), mathArgExprInterp(2));
+Test(mathArgExprCompiled(2), 7);
+
+cfunction int mathArgAssignCompiled(int n) { v = Math.Max(mathHelper(n), 5); return v; }
+function mathArgAssignInterp(n) { v = Math.Max(mathHelper(n), 5); return v; }
+Test(mathArgAssignCompiled(2), mathArgAssignInterp(2));
+Test(mathArgAssignCompiled(2), 6);
+
+// The shapes that always compiled must keep working: an element is read as a number, and a
+// plain argument, a literal and a nested Math call were never affected.
+cfunction int mathArgElemCompiled(int n) { a = {4, 9}; return Math.Max(a[0], 5); }
+function mathArgElemInterp(n) { a = {4, 9}; return Math.Max(a[0], 5); }
+Test(mathArgElemCompiled(0), mathArgElemInterp(0));
+Test(mathArgElemCompiled(0), 5);
+
+cfunction int mathArgNestedCompiled(int n) { return Math.Max(Math.Abs(n - 10), 5); }
+function mathArgNestedInterp(n) { return Math.Max(Math.Abs(n - 10), 5); }
+Test(mathArgNestedCompiled(2), mathArgNestedInterp(2));
+Test(mathArgNestedCompiled(2), 8);
+
+// Math.Round's digit count must stay an int: NumberMathArgs leaves it to CastRoundDigits.
+cfunction double mathRoundDigitsCompiled(double x, int d) { return Math.Round(x, d + 1); }
+function mathRoundDigitsInterp(x, d) { return Math.Round(x, d + 1); }
+Test(mathRoundDigitsCompiled(3.14159, 1), mathRoundDigitsInterp(3.14159, 1));
+Test(mathRoundDigitsCompiled(3.14159, 1), 3.14);
+
+// A truth value as a Math argument. CSCS renders one as the number 1 or 0, but compiled code
+// holds a C# bool, so "Math.Max(b, 5)" was "cannot convert from 'bool' to 'byte'". The argument
+// is the bare name of a bool local, so the late pass asks IsBoolLocal for its recorded type.
+cfunction int mathArgBoolCompiled(int n) { b = n > 1; return Math.Max(b, 5); }
+function mathArgBoolInterp(n) { b = n > 1; return Math.Max(b, 5); }
+Test(mathArgBoolCompiled(2), mathArgBoolInterp(2));
+Test(mathArgBoolCompiled(2), 5);
+
+// A false one is the number 0, so the maximum is the other operand.
+cfunction int mathArgBoolZeroCompiled(int n) { b = n > 100; return Math.Max(b, 0); }
+function mathArgBoolZeroInterp(n) { b = n > 100; return Math.Max(b, 0); }
+Test(mathArgBoolZeroCompiled(2), mathArgBoolZeroInterp(2));
+Test(mathArgBoolZeroCompiled(2), 0);
+
+// And a true one is 1, which Math.Max picks over 0.
+cfunction int mathArgBoolOneCompiled(int n) { b = n > 1; return Math.Max(b, 0); }
+function mathArgBoolOneInterp(n) { b = n > 1; return Math.Max(b, 0); }
+Test(mathArgBoolOneCompiled(2), mathArgBoolOneInterp(2));
+Test(mathArgBoolOneCompiled(2), 1);
+
+// A local assigned a string in one branch and a number in the other. C# scopes a local to its
+// block, so it has to be declared above both -- and no single C# type fits, so it is declared a
+// Variable. Before, it was left undeclared and every use was "the name 'v' does not exist".
+cfunction crossMixedCompiled(int n) { if (n > 0) { v = "text"; } else { v = 5; } return v; }
+function crossMixedInterp(n) { if (n > 0) { v = "text"; } else { v = 5; } return v; }
+Test(crossMixedCompiled(3), crossMixedInterp(3));
+Test(crossMixedCompiled(3), "text");
+Test(crossMixedCompiled(0), crossMixedInterp(0));
+Test(crossMixedCompiled(0), 5);
+
+cfunction crossMixedElifCompiled(int n) { if (n > 2) { v = "a"; } elif (n > 0) { v = 5; } else { v = 1; } return v; }
+function crossMixedElifInterp(n) { if (n > 2) { v = "a"; } elif (n > 0) { v = 5; } else { v = 1; } return v; }
+Test(crossMixedElifCompiled(3), crossMixedElifInterp(3));
+Test(crossMixedElifCompiled(1), crossMixedElifInterp(1));
+
+// Read back through Variable's own members, "+" and value comparison.
+cfunction crossMixedCollCompiled(int n) { if (n > 0) { v = {1,2}; } else { v = 5; } return v.Size; }
+function crossMixedCollInterp(n) { if (n > 0) { v = {1,2}; } else { v = 5; } return v.Size; }
+Test(crossMixedCollCompiled(3), crossMixedCollInterp(3));
+Test(crossMixedCollCompiled(3), 2);
+
+cfunction crossMixedConcatCompiled(int n) { if (n > 0) { v = "text"; } else { v = 5; } return v + "!"; }
+function crossMixedConcatInterp(n) { if (n > 0) { v = "text"; } else { v = 5; } return v + "!"; }
+Test(crossMixedConcatCompiled(3), crossMixedConcatInterp(3));
+Test(crossMixedConcatCompiled(3), "text!");
+
+cfunction crossMixedCmpCompiled(int n) { if (n > 0) { v = "text"; } else { v = 5; } if (v == "text") { return 1; } return 0; }
+function crossMixedCmpInterp(n) { if (n > 0) { v = "text"; } else { v = 5; } if (v == "text") { return 1; } return 0; }
+Test(crossMixedCmpCompiled(3), crossMixedCmpInterp(3));
+Test(crossMixedCmpCompiled(3), 1);
+Test(crossMixedCmpCompiled(0), 0);
+
+// A local whose first assignment fixes one type and a later one gives it another. It used to
+// be declared at the first assignment -- a double -- and the string could not be stored in it.
+// Assignments that really disagree now declare it a Variable at the top of the function.
+cfunction redeclNumStrCompiled(int n) { v = 0; if (n > 0) { v = "text"; } return v; }
+function redeclNumStrInterp(n) { v = 0; if (n > 0) { v = "text"; } return v; }
+Test(redeclNumStrCompiled(3), redeclNumStrInterp(3));
+Test(redeclNumStrCompiled(3), "text");
+Test(redeclNumStrCompiled(0), redeclNumStrInterp(0));
+Test(redeclNumStrCompiled(0), 0);
+
+cfunction redeclStrNumCompiled(int n) { v = "z"; if (n > 0) { v = 5; } return v; }
+function redeclStrNumInterp(n) { v = "z"; if (n > 0) { v = 5; } return v; }
+Test(redeclStrNumCompiled(3), redeclStrNumInterp(3));
+Test(redeclStrNumCompiled(3), 5);
+Test(redeclStrNumCompiled(0), "z");
+
+cfunction redeclTopCompiled(int n) { v = 0; v = "text"; return v; }
+function redeclTopInterp(n) { v = 0; v = "text"; return v; }
+Test(redeclTopCompiled(0), redeclTopInterp(0));
+Test(redeclTopCompiled(0), "text");
+
+cfunction redeclLoopCompiled(int n) { v = 0; for (i = 0; i < n; i++) { v = "s"; } return v; }
+function redeclLoopInterp(n) { v = 0; for (i = 0; i < n; i++) { v = "s"; } return v; }
+Test(redeclLoopCompiled(2), redeclLoopInterp(2));
+Test(redeclLoopCompiled(2), "s");
+
+cfunction redeclCollCompiled(int n) { v = 0; if (n > 0) { v = {1,2}; } return v.Size; }
+function redeclCollInterp(n) { v = 0; if (n > 0) { v = {1,2}; } return v.Size; }
+Test(redeclCollCompiled(3), redeclCollInterp(3));
+Test(redeclCollCompiled(3), 2);
+
+// A ternary is not a disagreement: the local stays a number.
+cfunction redeclTernCompiled(int n) { v = 0; v = n > 2 ? 1 : 2; return v + 10; }
+function redeclTernInterp(n) { v = 0; v = n > 2 ? 1 : 2; return v + 10; }
+Test(redeclTernCompiled(3), redeclTernInterp(3));
+Test(redeclTernCompiled(3), 11);
+
+// A ternary as an element of a collection literal. Its ":" was read as a map key separator, so
+// "{n > 2 ? 10 : 20}" became the map entry "n > 2 ? 10" -> 20, and with a second element the
+// literal was never built at all.
+cfunction littFirstCompiled(int n) { a = {n > 2 ? 10 : 20, 5}; return a[0] + a[1]; }
+function littFirstInterp(n) { a = {n > 2 ? 10 : 20, 5}; return a[0] + a[1]; }
+Test(littFirstCompiled(3), littFirstInterp(3));
+Test(littFirstCompiled(3), 15);
+Test(littFirstCompiled(1), 25);
+
+cfunction littOnlyCompiled(int n) { a = {n > 2 ? 10 : 20}; return a[0] + a.Size; }
+function littOnlyInterp(n) { a = {n > 2 ? 10 : 20}; return a[0] + a.Size; }
+Test(littOnlyCompiled(3), littOnlyInterp(3));
+Test(littOnlyCompiled(3), 11);
+
+cfunction littStrCompiled(int n) { a = {n > 2 ? "a" : "b", "c"}; return a[0] + a[1]; }
+function littStrInterp(n) { a = {n > 2 ? "a" : "b", "c"}; return a[0] + a[1]; }
+Test(littStrCompiled(3), littStrInterp(3));
+Test(littStrCompiled(3), "ac");
+Test(littStrCompiled(0), "bc");
+
+cfunction littNestedCompiled(int n) { a = {{n > 2 ? 1 : 2}, {3}}; return a[0][0] + a[1][0]; }
+function littNestedInterp(n) { a = {{n > 2 ? 1 : 2}, {3}}; return a[0][0] + a[1][0]; }
+Test(littNestedCompiled(3), littNestedInterp(3));
+Test(littNestedCompiled(3), 4);
+
+// A real map literal still builds as a map.
+cfunction littMapKeepCompiled(int n) { m = {"k": n + 1}; return m["k"]; }
+function littMapKeepInterp(n) { m = {"k": n + 1}; return m["k"]; }
+Test(littMapKeepCompiled(3), littMapKeepInterp(3));
+Test(littMapKeepCompiled(3), 4);
+
+// A global compared with text. The global is read as a Variable, and a Variable cannot be given
+// an "==" taking a string (it captures every "!= null" in the interpreter and recursed into a
+// stack overflow), so the comparison goes through Variable.SameValue: text if either side is.
+shadeName = "mid";
+cfunction globStrCompiled(int n) { if (shadeName == "mid") { return 1; } return 0; }
+function globStrInterp(n) { if (shadeName == "mid") { return 1; } return 0; }
+Test(globStrCompiled(0), globStrInterp(0));
+Test(globStrCompiled(0), 1);
+
+cfunction globStrLeftCompiled(int n) { if ("mid" == shadeName) { return 1; } return 0; }
+function globStrLeftInterp(n) { if ("mid" == shadeName) { return 1; } return 0; }
+Test(globStrLeftCompiled(0), globStrLeftInterp(0));
+Test(globStrLeftCompiled(0), 1);
+
+// Case still matters, as it does interpreted.
+cfunction globStrCaseCompiled(int n) { if (shadeName == "MID") { return 1; } return 0; }
+function globStrCaseInterp(n) { if (shadeName == "MID") { return 1; } return 0; }
+Test(globStrCaseCompiled(0), globStrCaseInterp(0));
+Test(globStrCaseCompiled(0), 0);
+
+cfunction globStrNeCompiled(int n) { if (shadeName != "mid") { return 1; } return 0; }
+function globStrNeInterp(n) { if (shadeName != "mid") { return 1; } return 0; }
+Test(globStrNeCompiled(0), globStrNeInterp(0));
+Test(globStrNeCompiled(0), 0);
+
+cfunction globStrArgCompiled(string s) { if (s == shadeName) { return 1; } return 0; }
+function globStrArgInterp(s) { if (s == shadeName) { return 1; } return 0; }
+Test(globStrArgCompiled("mid"), globStrArgInterp("mid"));
+Test(globStrArgCompiled("low"), 0);
+
+cfunction globStrTernCompiled(int n) { return shadeName == "mid" ? "y" : "n"; }
+function globStrTernInterp(n) { return shadeName == "mid" ? "y" : "n"; }
+Test(globStrTernCompiled(0), globStrTernInterp(0));
+Test(globStrTernCompiled(0), "y");
+
+// A string or bool condition in "elif" / "else if". The generated code read "elseif(...)":
+// "else if" tokenizes as "else", " ", "if(" and the lone space was dropped as whitespace.
+cfunction elifStrCompiled(string s) { if (s == "zz") { return 2; } elif (s == "ab") { return 1; } return 0; }
+function elifStrInterp(s) { if (s == "zz") { return 2; } elif (s == "ab") { return 1; } return 0; }
+Test(elifStrCompiled("ab"), elifStrInterp("ab"));
+Test(elifStrCompiled("ab"), 1);
+Test(elifStrCompiled("qq"), 0);
+Test(elifStrCompiled("zz"), 2);
+
+cfunction elifStrLtCompiled(string s) { if (s == "zz") { return 2; } elif (s < "b") { return 1; } else { return 3; } return 0; }
+function elifStrLtInterp(s) { if (s == "zz") { return 2; } elif (s < "b") { return 1; } else { return 3; } return 0; }
+Test(elifStrLtCompiled("ab"), elifStrLtInterp("ab"));
+Test(elifStrLtCompiled("ab"), 1);
+Test(elifStrLtCompiled("c"), 3);
+
+cfunction elseIfStrCompiled(string s) { if (s == "zz") { return 2; } else if (s != "ab") { return 1; } return 0; }
+function elseIfStrInterp(s) { if (s == "zz") { return 2; } else if (s != "ab") { return 1; } return 0; }
+Test(elseIfStrCompiled("qq"), elseIfStrInterp("qq"));
+Test(elseIfStrCompiled("ab"), 0);
+
+cfunction elifBoolCompiled(int n) { b = n > 1; if (n > 5) { return 2; } elif (b) { return 1; } return 0; }
+function elifBoolInterp(n) { b = n > 1; if (n > 5) { return 2; } elif (b) { return 1; } return 0; }
+Test(elifBoolCompiled(3), elifBoolInterp(3));
+Test(elifBoolCompiled(3), 1);
+Test(elifBoolCompiled(0), 0);
+
+cfunction elifGlobStrCompiled(int n) { if (n > 5) { return 2; } elif (shadeName == "mid") { return 1; } return 0; }
+function elifGlobStrInterp(n) { if (n > 5) { return 2; } elif (shadeName == "mid") { return 1; } return 0; }
+Test(elifGlobStrCompiled(0), elifGlobStrInterp(0));
+Test(elifGlobStrCompiled(0), 1);
+
+// An assignment inside a condition. Nothing declared the name, since it is not a statement of its
+// own; it is now declared at the top with the type every assignment to it agrees on.
+cfunction condAsgWhileCompiled(int n) { t = 0; while ((x = n - t) > 2) { t++; } return t; }
+function condAsgWhileInterp(n) { t = 0; while ((x = n - t) > 2) { t++; } return t; }
+Test(condAsgWhileCompiled(6), condAsgWhileInterp(6));
+Test(condAsgWhileCompiled(6), 4);
+
+cfunction condAsgIfCompiled(int n) { if ((y = n * 2) > 5) { return y; } return 0; }
+function condAsgIfInterp(n) { if ((y = n * 2) > 5) { return y; } return 0; }
+Test(condAsgIfCompiled(3), condAsgIfInterp(3));
+Test(condAsgIfCompiled(3), 6);
+Test(condAsgIfCompiled(1), 0);
+
+// The value outlives the loop, as it does interpreted.
+cfunction condAsgAfterCompiled(int n) { t = 0; while ((x = n - t) > 2) { t++; } return x; }
+function condAsgAfterInterp(n) { t = 0; while ((x = n - t) > 2) { t++; } return x; }
+Test(condAsgAfterCompiled(6), condAsgAfterInterp(6));
+Test(condAsgAfterCompiled(6), 2);
+
+cfunction condAsgPairCompiled(int n) { if ((x = n + 1) > 2 && (z = x * 2) > 5) { return z; } return 0; }
+function condAsgPairInterp(n) { if ((x = n + 1) > 2 && (z = x * 2) > 5) { return z; } return 0; }
+Test(condAsgPairCompiled(3), condAsgPairInterp(3));
+Test(condAsgPairCompiled(3), 8);
+
+cfunction condAsgElifCompiled(int n) { if (n > 10) { return 1; } elif ((y = n * 3) > 5) { return y; } return 0; }
+function condAsgElifInterp(n) { if (n > 10) { return 1; } elif ((y = n * 3) > 5) { return y; } return 0; }
+Test(condAsgElifCompiled(3), condAsgElifInterp(3));
+Test(condAsgElifCompiled(3), 9);
+
+cfunction condAsgStrCompiled(string s) { if ((t = s + "!") == "a!") { return 1; } return 0; }
+function condAsgStrInterp(s) { if ((t = s + "!") == "a!") { return 1; } return 0; }
+Test(condAsgStrCompiled("a"), condAsgStrInterp("a"));
+Test(condAsgStrCompiled("a"), 1);
+Test(condAsgStrCompiled("b"), 0);
+
+// Strict equality on an int argument or a numeric local. "===" is not C#; it is rewritten to "=="
+// when both sides are certainly numbers, which only a double argument qualified for before.
+cfunction strictIntCompiled(int n) { if (n === 5) { return 1; } return 0; }
+function strictIntInterp(n) { if (n === 5) { return 1; } return 0; }
+Test(strictIntCompiled(5), strictIntInterp(5));
+Test(strictIntCompiled(5), 1);
+Test(strictIntCompiled(4), 0);
+
+cfunction strictIntNeCompiled(int n) { if (n !== 5) { return 1; } return 0; }
+function strictIntNeInterp(n) { if (n !== 5) { return 1; } return 0; }
+Test(strictIntNeCompiled(4), strictIntNeInterp(4));
+Test(strictIntNeCompiled(5), 0);
+
+cfunction strictLocalCompiled(int n) { v = n + 1; if (v === 6) { return 1; } return 0; }
+function strictLocalInterp(n) { v = n + 1; if (v === 6) { return 1; } return 0; }
+Test(strictLocalCompiled(5), strictLocalInterp(5));
+Test(strictLocalCompiled(5), 1);
+
+// A string against a number is never strictly equal, compiled or interpreted.
+cfunction strictMixedCompiled(string s) { if (s === 5) { return 1; } return 0; }
+function strictMixedInterp(s) { if (s === 5) { return 1; } return 0; }
+Test(strictMixedCompiled("5"), strictMixedInterp("5"));
+Test(strictMixedCompiled("5"), 0);
+
+// A field written through a chain of instances. "p.kid.v = 9" went to the ordinary assignment
+// path, which declared "double p.kid.v"; it is now a SetProperty on the chain's GetProperty reads,
+// and the write lands on the live nested instance.
+class LinkNode { val = 0; tag = ""; next = 0; LinkNode(a, b) { val = a; tag = b; } }
+cfunction linkWriteCompiled(int n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.val = 9; return p.next.val + n; }
+function linkWriteInterp(n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.val = 9; return p.next.val + n; }
+Test(linkWriteCompiled(0), linkWriteInterp(0));
+Test(linkWriteCompiled(0), 9);
+
+cfunction linkAliasCompiled(int n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.val = 9; q = p.next; return q.val * 10 + p.val; }
+function linkAliasInterp(n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.val = 9; q = p.next; return q.val * 10 + p.val; }
+Test(linkAliasCompiled(0), linkAliasInterp(0));
+Test(linkAliasCompiled(0), 91);
+
+cfunction linkLoopCompiled(int n) { p = new LinkNode(1, "a"); p.next = new LinkNode(0, "b"); for (i = 0; i < n; i++) { p.next.val = p.next.val + i; } return p.next.val; }
+function linkLoopInterp(n) { p = new LinkNode(1, "a"); p.next = new LinkNode(0, "b"); for (i = 0; i < n; i++) { p.next.val = p.next.val + i; } return p.next.val; }
+Test(linkLoopCompiled(4), linkLoopInterp(4));
+Test(linkLoopCompiled(4), 6);
+
+cfunction linkDeepCompiled(int n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.next = new LinkNode(3, "c"); p.next.next.tag = "zz"; return p.next.next.tag; }
+function linkDeepInterp(n) { p = new LinkNode(1, "a"); p.next = new LinkNode(2, "b"); p.next.next = new LinkNode(3, "c"); p.next.next.tag = "zz"; return p.next.next.tag; }
+Test(linkDeepCompiled(0), linkDeepInterp(0));
+Test(linkDeepCompiled(0), "zz");
+
+// A method called on the result of another method. Only the first call was built; the second went
+// out as ".Next()" on a Variable. Each further call now wraps the chain so far.
+class ChainNode { val = 0; next = 0; ChainNode(a) { val = a; } function Next() { return next; } function Plus(k) { return val + k; } }
+cfunction chainReadCompiled(int n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); return p.Next().Next().val + n; }
+function chainReadInterp(n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); return p.Next().Next().val + n; }
+Test(chainReadCompiled(0), chainReadInterp(0));
+Test(chainReadCompiled(0), 3);
+
+cfunction chainCondCompiled(int n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); if (p.Next().Next().val == 3) { return 1; } return 0; }
+function chainCondInterp(n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); if (p.Next().Next().val == 3) { return 1; } return 0; }
+Test(chainCondCompiled(0), chainCondInterp(0));
+Test(chainCondCompiled(0), 1);
+
+cfunction chainAssignCompiled(int n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); q = p.Next().Next(); return q.val * 10 + p.val; }
+function chainAssignInterp(n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); q = p.Next().Next(); return q.val * 10 + p.val; }
+Test(chainAssignCompiled(0), chainAssignInterp(0));
+Test(chainAssignCompiled(0), 31);
+
+// With an argument on the last call.
+cfunction chainArgCompiled(int n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); return p.Next().Next().Plus(n); }
+function chainArgInterp(n) { p = new ChainNode(1); p.next = new ChainNode(2); p.next.next = new ChainNode(3); return p.Next().Next().Plus(n); }
+Test(chainArgCompiled(4), chainArgInterp(4));
+Test(chainArgCompiled(4), 7);
+
+// Comparison with null. The interpreter compares "==" as text unless both sides are numbers, and
+// null renders as "" -- so null equals a null local and the empty string, but not 0 or {}.
+// "null == x" used to compile to a C# reference test and answer 0 where the interpreter says 1.
+cfunction nullLeftCompiled(int n) { x = null; if (null == x) { return 1; } return 0; }
+function nullLeftInterp(n) { x = null; if (null == x) { return 1; } return 0; }
+Test(nullLeftCompiled(0), nullLeftInterp(0));
+Test(nullLeftCompiled(0), 1);
+
+cfunction nullRightCompiled(int n) { x = null; if (x == null) { return 1; } return 0; }
+function nullRightInterp(n) { x = null; if (x == null) { return 1; } return 0; }
+Test(nullRightCompiled(0), nullRightInterp(0));
+Test(nullRightCompiled(0), 1);
+
+// Zero is not null; the empty string is.
+cfunction nullZeroCompiled(int n) { z = 0; if (z == null) { return 1; } return 0; }
+function nullZeroInterp(n) { z = 0; if (z == null) { return 1; } return 0; }
+Test(nullZeroCompiled(0), nullZeroInterp(0));
+Test(nullZeroCompiled(0), 0);
+
+cfunction nullEmptyCompiled(string s) { if (s == null) { return 1; } return 0; }
+function nullEmptyInterp(s) { if (s == null) { return 1; } return 0; }
+Test(nullEmptyCompiled(""), nullEmptyInterp(""));
+Test(nullEmptyCompiled(""), 1);
+Test(nullEmptyCompiled("a"), 0);
+
+cfunction nullMapCompiled(int n) { m = {"a": null, "b": 0}; return (m["a"] == null) * 10 + (m["b"] == null); }
+function nullMapInterp(n) { m = {"a": null, "b": 0}; return (m["a"] == null) * 10 + (m["b"] == null); }
+Test(nullMapCompiled(0), nullMapInterp(0));
+
+cfunction nullNeCompiled(int n) { y = 5; if (y != null) { return y + n; } return 0; }
+function nullNeInterp(n) { y = 5; if (y != null) { return y + n; } return 0; }
+Test(nullNeCompiled(1), nullNeInterp(1));
+Test(nullNeCompiled(1), 6);
+
+// Computed arguments to Substring. "s.Substring(n - 1, n + 1)" tokenized with "1,n" between the
+// two operators; that middle token was read as the name of a call, and both arguments collapsed
+// into one. Each side of the comma is now judged on its own.
+cfunction substrTwoCompiled(string s, int n) { return s.Substring(n - 1, n + 1); }
+function substrTwoInterp(s, n) { return s.Substring(n - 1, n + 1); }
+Test(substrTwoCompiled("hello", 2), substrTwoInterp("hello", 2));
+Test(substrTwoCompiled("hello", 2), "ell");
+
+cfunction substrMulCompiled(string s, int n) { return s.Substring(n * 0, n * 2); }
+function substrMulInterp(s, n) { return s.Substring(n * 0, n * 2); }
+Test(substrMulCompiled("hello", 2), substrMulInterp("hello", 2));
+Test(substrMulCompiled("hello", 2), "hell");
+
+// And assigning such a call: a known expression used to declare the local a double.
+cfunction strAsgSubCompiled(string s, int n) { t = s.Substring(n - 1); return t; }
+function strAsgSubInterp(s, n) { t = s.Substring(n - 1); return t; }
+Test(strAsgSubCompiled("hello", 2), strAsgSubInterp("hello", 2));
+Test(strAsgSubCompiled("hello", 2), "ello");
+
+cfunction strAsgAtCompiled(string s, int n) { t = s.At(n - 1); return t; }
+function strAsgAtInterp(s, n) { t = s.At(n - 1); return t; }
+Test(strAsgAtCompiled("hello", 2), strAsgAtInterp("hello", 2));
+Test(strAsgAtCompiled("hello", 2), "e");
+
+cfunction strAsgConcatCompiled(string s, int n) { t = s.Substring(n - 1); t = t + n; return t; }
+function strAsgConcatInterp(s, n) { t = s.Substring(n - 1); t = t + n; return t; }
+Test(strAsgConcatCompiled("hello", 2), strAsgConcatInterp("hello", 2));
+Test(strAsgConcatCompiled("hello", 2), "ello2");
+
+// The same computed Substring beside a string literal. A quote sends the statement to the token
+// loop, which met "1,n" as a token of its own and built it as an interpreter call.
+cfunction substrLitCmpCompiled(string s, int n) { if (s.Substring(n - 1, n + 1) == "ell") { return 1; } return 0; }
+function substrLitCmpInterp(s, n) { if (s.Substring(n - 1, n + 1) == "ell") { return 1; } return 0; }
+Test(substrLitCmpCompiled("hello", 2), substrLitCmpInterp("hello", 2));
+Test(substrLitCmpCompiled("hello", 2), 1);
+Test(substrLitCmpCompiled("world", 2), 0);
+
+cfunction substrLitConcatCompiled(string s, int n) { return s.Substring(n - 1, n + 1) + "!"; }
+function substrLitConcatInterp(s, n) { return s.Substring(n - 1, n + 1) + "!"; }
+Test(substrLitConcatCompiled("hello", 2), substrLitConcatInterp("hello", 2));
+Test(substrLitConcatCompiled("hello", 2), "ell!");
+
+cfunction substrLitLocalCompiled(string s, int n) { k = 1; t = "<" + s.Substring(n - k, n + k); return t; }
+function substrLitLocalInterp(s, n) { k = 1; t = "<" + s.Substring(n - k, n + k); return t; }
+Test(substrLitLocalCompiled("hello", 2), substrLitLocalInterp("hello", 2));
+Test(substrLitLocalCompiled("hello", 2), "<ell");
+
+// Other comma-separated arguments beside a literal were never affected.
+cfunction substrLitMathCompiled(int n) { return "m" + Math.Max(n - 1, n + 1); }
+function substrLitMathInterp(n) { return "m" + Math.Max(n - 1, n + 1); }
+Test(substrLitMathCompiled(2), substrLitMathInterp(2));
+Test(substrLitMathCompiled(2), "m3");
+
+// An enum declared inside the function. The three names in "var Tier = Enum {Low, Mid, High}"
+// each became an interpreter call; the enum is now built as the interpreter builds it, members
+// numbered from 0, and only its declared members are read in compiled code.
+cfunction tierReadCompiled(int n) { var Tier = Enum {Low, Mid, High}; return Tier.High * 10 + Tier.Mid + n; }
+function tierReadInterp(n) { var Tier = Enum {Low, Mid, High}; return Tier.High * 10 + Tier.Mid + n; }
+Test(tierReadCompiled(0), tierReadInterp(0));
+Test(tierReadCompiled(0), 21);
+
+cfunction tierCmpCompiled(int n) { var Tier = Enum {Low, Mid, High}; if (n == Tier.Mid) { return "mid"; } return "other"; }
+function tierCmpInterp(n) { var Tier = Enum {Low, Mid, High}; if (n == Tier.Mid) { return "mid"; } return "other"; }
+Test(tierCmpCompiled(1), tierCmpInterp(1));
+Test(tierCmpCompiled(1), "mid");
+Test(tierCmpCompiled(2), "other");
+
+cfunction tierLoopCompiled(int n) { var Tier = Enum {Low, Mid, High}; t = 0; for (i = 0; i < n; i++) { t += Tier.High; } return t; }
+function tierLoopInterp(n) { var Tier = Enum {Low, Mid, High}; t = 0; for (i = 0; i < n; i++) { t += Tier.High; } return t; }
+Test(tierLoopCompiled(3), tierLoopInterp(3));
+Test(tierLoopCompiled(3), 6);
+
+// Anything but a declared member stays with the interpreter: the enum's own .Type answers NONE.
+cfunction tierTypeCompiled(int n) { var Tier = Enum {Low, Mid, High}; return Tier.Type; }
+function tierTypeInterp(n) { var Tier = Enum {Low, Mid, High}; return Tier.Type; }
+Test(tierTypeCompiled(0), tierTypeInterp(0));
+Test(tierTypeCompiled(0), "NONE");
+
+// A truth value assigned inside a condition. The interpreter used to throw on "if ((b = n > 2))",
+// so the precompiler left it alone; with that fixed it compiles as a bool local, read as 1 or 0.
+cfunction condBoolCompiled(int n) { if ((b = n > 2)) { return 1; } return 0; }
+function condBoolInterp(n) { if ((b = n > 2)) { return 1; } return 0; }
+Test(condBoolCompiled(3), condBoolInterp(3));
+Test(condBoolCompiled(3), 1);
+Test(condBoolCompiled(1), 0);
+
+cfunction condBoolReadCompiled(int n) { if ((b = n > 2)) { return b + 10; } return 0; }
+function condBoolReadInterp(n) { if ((b = n > 2)) { return b + 10; } return 0; }
+Test(condBoolReadCompiled(3), condBoolReadInterp(3));
+Test(condBoolReadCompiled(3), 11);
+
+cfunction condBoolWhileCompiled(int n) { t = 0; while ((b = t < n)) { t++; } return t; }
+function condBoolWhileInterp(n) { t = 0; while ((b = t < n)) { t++; } return t; }
+Test(condBoolWhileCompiled(3), condBoolWhileInterp(3));
+Test(condBoolWhileCompiled(3), 3);
+
+cfunction condBoolElseCompiled(int n) { if ((b = n > 2)) { return "yes"; } else { return "no"; } }
+function condBoolElseInterp(n) { if ((b = n > 2)) { return "yes"; } else { return "no"; } }
+Test(condBoolElseCompiled(1), condBoolElseInterp(1));
+Test(condBoolElseCompiled(1), "no");
+
+// A number as the whole condition. The interpreter's truth test is "the numeric field is not zero",
+// and C# has no truth value for a double at all, so the condition becomes "(x) != 0".
+cfunction numCondAsgCompiled(int n) { if ((b = n + 2)) { return b; } return 0; }
+function numCondAsgInterp(n) { if ((b = n + 2)) { return b; } return 0; }
+Test(numCondAsgCompiled(3), numCondAsgInterp(3));
+Test(numCondAsgCompiled(3), 5);
+Test(numCondAsgCompiled(-2), 0);
+
+cfunction numCondWhileCompiled(int n) { t = n; while ((t = t - 1)) { } return t; }
+function numCondWhileInterp(n) { t = n; while ((t = t - 1)) { } return t; }
+Test(numCondWhileCompiled(3), numCondWhileInterp(3));
+Test(numCondWhileCompiled(3), 0);
+
+cfunction numCondLocalCompiled(int n) { b = n * 1.5; if (b) { return 1; } return 0; }
+function numCondLocalInterp(n) { b = n * 1.5; if (b) { return 1; } return 0; }
+Test(numCondLocalCompiled(2), numCondLocalInterp(2));
+Test(numCondLocalCompiled(0), 0);
+
+// An assignment in grouping parentheses, outside any condition.
+cfunction grpAsgCompiled(int n) { x = (b = n * 2) + 1; return x + b; }
+function grpAsgInterp(n) { x = (b = n * 2) + 1; return x + b; }
+Test(grpAsgCompiled(3), grpAsgInterp(3));
+Test(grpAsgCompiled(3), 13);
+
+// Inside a call's arguments it stays with the interpreter, whose answer is 9.
+cfunction grpAsgCallCompiled(int n) { return Math.Max((q = n * 2), 5) + q; }
+function grpAsgCallInterp(n) { return Math.Max((q = n * 2), 5) + q; }
+Test(grpAsgCallCompiled(2), grpAsgCallInterp(2));
+Test(grpAsgCallCompiled(2), 9);
+
+// A number beside "!", "&&" or "||" in a condition. Each numeric clause becomes a comparison with
+// zero -- the interpreter's rule, "!x" being true only for a number that is zero.
+cfunction numNotCompiled(int n) { b = n * 1.0; if (!b) { return 1; } return 0; }
+function numNotInterp(n) { b = n * 1.0; if (!b) { return 1; } return 0; }
+Test(numNotCompiled(0), numNotInterp(0));
+Test(numNotCompiled(0), 1);
+Test(numNotCompiled(3), 0);
+
+cfunction numAndCompiled(int n) { b = n * 1.0; if (b && n < 5) { return 1; } return 0; }
+function numAndInterp(n) { b = n * 1.0; if (b && n < 5) { return 1; } return 0; }
+Test(numAndCompiled(2), numAndInterp(2));
+Test(numAndCompiled(2), 1);
+Test(numAndCompiled(0), 0);
+
+cfunction numOrCompiled(int n) { b = n * 0.0; if (b || n > 1) { return 1; } return 0; }
+function numOrInterp(n) { b = n * 0.0; if (b || n > 1) { return 1; } return 0; }
+Test(numOrCompiled(2), numOrInterp(2));
+Test(numOrCompiled(0), 0);
+
+cfunction numWhileAndCompiled(int n) { t = n * 1.0; k = 0; while (t && k < 10) { t = t - 1; k++; } return k; }
+function numWhileAndInterp(n) { t = n * 1.0; k = 0; while (t && k < 10) { t = t - 1; k++; } return k; }
+Test(numWhileAndCompiled(3), numWhileAndInterp(3));
+Test(numWhileAndCompiled(3), 3);
+
+cfunction numArgNotCompiled(int n) { if (!n) { return 1; } return 0; }
+function numArgNotInterp(n) { if (!n) { return 1; } return 0; }
+Test(numArgNotCompiled(0), numArgNotInterp(0));
+Test(numArgNotCompiled(4), 0);
+
+// A clause whose type is only known when it runs -- a collection element, a local holding a
+// Variable, a string -- beside another clause. Read through the interpreter's own truth test:
+// the numeric field, so text is false there even when it looks like a number.
+cfunction truthyElemCompiled(int n) { a = {0, 3}; b = n * 1.0; if (a[1] && b) { return 1; } return 0; }
+function truthyElemInterp(n) { a = {0, 3}; b = n * 1.0; if (a[1] && b) { return 1; } return 0; }
+Test(truthyElemCompiled(2), truthyElemInterp(2));
+Test(truthyElemCompiled(2), 1);
+Test(truthyElemCompiled(0), 0);
+
+cfunction truthyElemOrCompiled(int n) { a = {0, 3}; if (a[0] || a[1]) { return 1; } return 0; }
+function truthyElemOrInterp(n) { a = {0, 3}; if (a[0] || a[1]) { return 1; } return 0; }
+Test(truthyElemOrCompiled(0), truthyElemOrInterp(0));
+Test(truthyElemOrCompiled(0), 1);
+
+cfunction truthyNotElemCompiled(int n) { a = {0, 3}; if (!a[0] && n > 1) { return 1; } return 0; }
+function truthyNotElemInterp(n) { a = {0, 3}; if (!a[0] && n > 1) { return 1; } return 0; }
+Test(truthyNotElemCompiled(2), truthyNotElemInterp(2));
+Test(truthyNotElemCompiled(2), 1);
+
+// Text is false in a condition, "5" included.
+cfunction truthyStrCompiled(string s, int n) { if (s && n > 1) { return 1; } return 0; }
+function truthyStrInterp(s, n) { if (s && n > 1) { return 1; } return 0; }
+Test(truthyStrCompiled("x", 2), truthyStrInterp("x", 2));
+Test(truthyStrCompiled("5", 2), truthyStrInterp("5", 2));
+Test(truthyStrCompiled("x", 2), 0);
+
+cfunction truthyVarCompiled(int n) { v = mathHelper(n); if (v && n > 1) { return 1; } return 0; }
+function truthyVarInterp(n) { v = mathHelper(n); if (v && n > 1) { return 1; } return 0; }
+Test(truthyVarCompiled(2), truthyVarInterp(2));
+Test(truthyVarCompiled(2), 1);
 
 testSummary("test_compiled.cscs");
 

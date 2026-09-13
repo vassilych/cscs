@@ -1292,6 +1292,11 @@ namespace SplitAndMerge
                 case "<": return order < 0;
                 case ">": return order > 0;
                 case "<=": return order <= 0;
+                // Equality orders by the same rule as the rest: by value when both sides are
+                // numbers, by text otherwise. Without these two the default below answered
+                // ">=" for them, so "==" would have been true for anything.
+                case "==": return order == 0;
+                case "!=": return order != 0;
                 default: return order >= 0;
             }
         }
@@ -1347,7 +1352,19 @@ namespace SplitAndMerge
         public static bool operator <=(Variable left, string right) { return Compare(left, new Variable(right), "<="); }
         public static bool operator >=(Variable left, string right) { return Compare(left, new Variable(right), ">="); }
         public static bool operator <=(string left, Variable right) { return Compare(new Variable(left), right, "<="); }
-        public static bool operator >=(string left, Variable right) { return Compare(new Variable(left), right, ">="); }
+        public static bool operator >=(string left, Variable right) { return Compare(new Variable(left), right, ">="); }        // Equality against a number, which "Colors.Green == 1" and "gcount == 1" need: a
+        // Variable-valued expression had no "==" at all, so those did not compile.
+        //
+        // Deliberately not (Variable, Variable): Compare tests "left == null" itself, and the
+        // codebase has some 207 "== null" checks on Variable-typed names. An overload for two
+        // Variables would reroute every one of them from a reference test into this method --
+        // recursively, in Compare's own case. Two Variables keep reference equality, as they
+        // do today; the interpreter compares their values through its own path.
+        public static bool operator ==(Variable left, double right) { return Compare(left, new Variable(right), "=="); }
+        public static bool operator !=(Variable left, double right) { return Compare(left, new Variable(right), "!="); }
+        public static bool operator ==(double left, Variable right) { return Compare(new Variable(left), right, "=="); }
+        public static bool operator !=(double left, Variable right) { return Compare(new Variable(left), right, "!="); }
+
 
         /// <summary>
         /// Whether a value equals a switch label, by the rule the interpreter uses: text is

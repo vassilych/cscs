@@ -90,7 +90,7 @@ a plain interpreted function with an identical body -- and compares the results.
 interpreter is the reference implementation, which is the only definition of correct a
 cfunction has.
 
-Of 614 constructs covered: **587 compile to C#, 27 fall back to the interpreter, 0 behave
+Of 784 constructs covered: **769 compile to C#, 15 fall back to the interpreter, 0 behave
 differently from the interpreter.**
 
 Compiled today: arithmetic and compound assignment, `if`/`else`, `while`, `for`, `break`,
@@ -1043,7 +1043,7 @@ backend works at all, that compiled and interpreted results agree, that compile 
 reported with detail, and that the AOT registry short-circuits code generation.
 
 `Scripts/Samples/test_compiled.cscs` and `Scripts/Samples/test.cscs` are the broader
-regression, 534 assertions each. Run them with a
+regression: 946 assertions in test_compiled.cscs and 542 in test.cscs. Run them with a
 second argument so the debugger server stays off:
 
 ```bash
@@ -1054,7 +1054,8 @@ dotnet run --project CscsScript/CscsScript.csproj -- Scripts/Samples/test.cscs n
 The two together are the script-level regression suite. `test_compiled.cscs` holds every
 `cfunction` case -- each written twice where it can be, once compiled and once interpreted,
 with the two results compared -- and `test.cscs` keeps the tests of the language itself and
-declares no `cfunction` at all. A clean run is 534 assertions in each file, 1068 together, with no
+declares no `cfunction` at all. A clean run is 946 assertions in test_compiled.cscs and 542 in
+test.cscs, 1488 together, with no
 "ERROR. Test failed" and a "Finished." at the end of each.
 
 Each file ends by printing its own totals, so the count no longer has to be grepped:
@@ -1279,6 +1280,581 @@ so the trigger is spelt out here:
   caller's token set has to list every declaration keyword it cares about. Leaving out
   `cfunction` means the scanner walks into `cfunction` bodies and pulls statements out of
   them; including `return` in the token set makes that worse.
+- A truth value takes part in arithmetic, and that compiles. CSCS has no boolean type: a
+  comparison yields the number 1 or 0, while a comparison-valued local is C# declared `bool`,
+  so `b + 1`, `b * 2`, `b % 2`, `-b` and `a[b + 0]` did not compile. The operand is now
+  converted to `(b ? 1 : 0)` where it sits next to arithmetic, inside
+  `ReplaceArgsInString`'s funnel beside `AsDoubleNextToDivision`, which already sees the
+  adjacent separators. Conditions, `&&`, `!` and `?:` want the bool itself and are left alone.
+
+  **The two earlier attempts failed for a reason worth keeping.** They cost
+  `int_arg_collatz` (`n = n % 2 == 0 ? n / 2 : 3 * n + 1`), `int_asg_while` and
+  `assign_in_tern` (`y = n > 2 ? (x = 5) : (x = 7)`) -- and the cause was not the hook site
+  but the *type record*: `AssignedValueType` asks `YieldsBool`, which merely looks for a
+  comparison character anywhere in the value, so both of those ternaries were recorded as
+  holding a bool when they hold numbers. A trace of `m_localTypes` showed it outright:
+  `[c:double, n:bool]` and `[x:double, y:bool]`. `CollectLocalTypes` now records nothing for
+  a value containing a top-level `?` (nor for widened int and collection arguments), and with
+  that the coercion keeps every one of those constructs compiling.
+
+  Still open, with their emitters identified: `t += b` gives `double += bool` and comes out of
+  the plain assignment path (`lhs + tokens[1] + rhs`), not the `CscsConvert.Compound`
+  builders; `b == 1` comes from the condition path; and `"v=" + b` still answers `v=True`
+  against the interpreter's `v=1` -- a divergence -- because a statement holding a quote is
+  rejected by `IsKnownExpression` and reaches neither funnel. `"t=" + x.Type` falls back for
+  the same reason.
+- **`c = a + b` on two collections compiles** (2026-09-12), and the two-part shape of the fix is
+  the point. Joining two collections yields their *text* -- the interpreter answers `[1, 2][3]`,
+  whose `.Type` is STRING, `.Length` 9 and `.Size` 0, and a pair of maps gives
+  `["k" : 1]["j" : 2]`. Returning `a + b` directly always compiled, as did `"v=" + a` and
+  `a + "!"`; it was the **assignment** that failed, with `CS0029: cannot convert Variable to
+  double`, because the local was declared `double`.
+
+  Two halves were needed, and **either one alone is worse than the fallback**:
+
+  1. *The declaration.* At the assignment site,
+     `result += YieldsBool(rhs) || rhs.Contains("__interpreter.GetVariableValue") || JoinsCollections(rhs) ? "var " : "double "`.
+     `JoinsCollections` splits on a top-level `+` and asks whether any operand is a collection
+     this function holds (`m_collectionLocals` or `m_collectionArgs`).
+  2. *The recorded type.* `.Type` is answered at **translation** time out of `m_localTypes` (see
+     `TryMapTypeMember`), so with only half 1 the compiled code returned the literal `NUMBER`
+     where the interpreter says `STRING` -- four silent divergences, which is why the first
+     attempt was reverted the same day. `CollectLocalTypes` now overrides the type to `string`
+     when the value joins with a top-level `+` and an operand is already recorded `Variable`.
+
+  **Why the override lives in `CollectLocalTypes` and not in `AssignedValueType`** (that was
+  tried twice and was inert both times): `m_collectionLocals` is filled by
+  `TryBuildLiteralAssignment`/`TryBuildTernaryLiteral` *while statements are processed*, which is
+  after the collecting passes -- `CollectVariableLocals`, `DeclareBlockCrossingLocals`,
+  `CollectLocalTypes` -- have all run. So no collection test can work inside that pass. What does
+  work is the pass's **own** `agreed` dictionary: a `{...}` literal reaches it as the statement
+  `a =` with an empty value, which `AssignedValueType`'s first branch types `"Variable"`, and the
+  literals are always assigned before the join that reads them.
+
+  It discriminates rather than stringing everything that adds: `v + w` and `a[0] + a[1]` stay
+  NUMBER, a bare literal stays ARRAY, and the joins -- collection, map, three-way, and a
+  collection beside a string on either side -- are all STRING, matching the interpreter in all
+  eleven measured shapes. Fixture 617 -> 618 (`arr_plus_arr`), probes 627 -> 628.
+- **A Variable or a bool as a `Math.*` argument compiles** (2026-09-12). `Math.Max(helper(n), 5)`
+  emitted `Math.Max(CscsCalls.Call(__interpreter, "helper", __varInt[0]), 5)`, and a global read
+  emitted `GetVariableValue(...)` -- both `Variable`. C# then finds no `Math` overload at all and
+  reports the *first* one it has, which is why the diagnostics named `byte`, `short` and
+  `decimal` rather than `double`: the target type in the message is noise, the cause is the
+  argument type.
+
+  **`ReplaceMathArgs` is the wrong place to fix it, and an edit there is inert.** It has a single
+  call site -- the `m_knownExpression && tokens.Count == 1` branch -- and
+  `ProcessReturnStatement` returns before that, so for `return Math.Max(..)` it is never entered
+  at all. A trace printed nothing for a failing *or* a working shape. Wrapping arguments there
+  changed not one row.
+
+  The fix is `NumberMathArgs`, a late pass over the finished code beside `CastRoundDigits` and
+  `MapChainedStringMembers` -- the same reason those exist: the operand path has no idea it sits
+  inside a `Math` call. For each `Math.<Name>(` outside quotes it splits the arguments at the top
+  level and wraps one in `CscsConvert.ToNumber` only when the generated text carries
+  `CscsCalls.Call(`, `__interpreter.GetVariableValue(` or the shared Variable temp. `ToNumber`
+  unwraps a `Variable` through `AsDouble` and converts anything else, so it is safe on every
+  operand type.
+
+  **Ordering matters.** It runs *before* `CastRoundDigits` and skips an argument that already
+  carries `.AsDouble()`, `CscsConvert.ToNumber(` or a leading `(int)`, and for a two-argument
+  `Math.Round` it wraps only the value -- never the digit count, which has to stay an `int`.
+  Converting that to a double is precisely the `Round(decimal, int)` failure `CastRoundDigits`
+  exists to prevent. All 17 fixture constructs calling `Math.*` still compile, `int_arg_round_expr`
+  and `big_precision` among them.
+
+  Ten shapes gained, each value-checked: `Math.Max(helper(n),5)` 6, `Math.Max(gcount,5)` 10,
+  `Math.Max(helper(n),helper(1))` 6, `Math.Min` 5, `Math.Abs` 6, `Math.Round(helper(n))` 6,
+  `Math.Pow(helper(n),2)` 36, `Math.Sqrt` 3, `Math.Max(helper(n)+1,5)` 7,
+  `Math.Max(gmap["k"],5)` 5, plus the assignment form. Untouched and still compiling: an element
+  (`Math.Max(a[0],5)` -- already read as a number), a scalar argument, a literal, an arithmetic
+  expression, a mapped string member (`Math.Max(s.Length,5)`) and a nested `Math` call.
+
+  **A truth value as the argument compiles too.** `b = n > 1; Math.Max(b, 5)` failed as
+  `cannot convert from 'bool' to 'byte'`: the argument text is the bare name `b` -- the
+  declaration `var b=__varInt[0]>1;` sits on an earlier line -- so the text alone cannot tell,
+  and `YieldsBool("b")` is correctly false. `NeedsNumericArgument` asks `IsBoolLocal`, which
+  reads the type `CollectLocalTypes` recorded for the name; that is the one reason this pass is
+  an instance method rather than static, as `CastRoundDigits` is. Answers 5, as interpreted, and
+  none of the fifteen bool constructs (`bool_arith_*`, `bool_compound_*`, `bool_eq_*`) moved.
+
+- **`Substring` with computed arguments compiles, and so does assigning a string-returning call**
+  (2026-09-13). `s.Substring(n - 1, n + 1)` was declined earlier because the generated code showed
+  both arguments collapsed into one -- `new ParserFunction(..., "1,n", ...)` then
+  `SubstringCscs(__varInt[0]-__varTempVar1+1)`. The statement tokenizer splits on operators but not
+  on `,`, so the tokens were `s.Substring(n`, `-`, `1,n`, `+`, `1)`. `IsKnownExpression` could not
+  place `1,n`, the statement went to the token loop, and that read `1,n` as a call name. A single
+  computed argument, or a computed one beside a literal, always worked: `1,2` passed only because
+  `Double.TryParse` reads `,` as a thousands separator.
+
+  `IsKnownExpression` now judges each side of a top-level comma as its own token. The first version
+  of that was inert -- each piece was judged alone, and the method answers "known *and* numeric",
+  so an int argument by itself came back false. A trace of the token verdicts showed it; each piece
+  is now judged beside an operator.
+
+  That exposed a pre-existing gap one step further: a known expression declared `t = s.Substring(n
+  - 1)`, `t = s.At(n - 1)` a `double` (CS0029). The declaration site now picks `var` when the value
+  contains one of `s_stringResults`, the generated calls certain to return a string. Sixteen shapes
+  value-checked, including a later `t = t + n` (`ello2`) and `t.Type` (`STRING`); the hazard forms
+  -- `Math.Max(n - 1, n + 1)`, `helper(n - 1) + helper(n + 1)`, a literal `{n - 1, n + 1}`, a map
+  argument -- still compile.
+
+  **Beside a string literal too.** A quote makes the statement unknown, so
+  `if (s.Substring(n - 1, n + 1) == "ell")` goes to the token loop, which met `1,n` as a token of its
+  own; with no `(` of its own `ProcessFunction` built it as an interpreter call and the arguments
+  collapsed again. `ProcessToken` now emits a token made only of plain operands either side of a
+  top-level comma -- numbers, arguments, declared locals -- through `ReplaceArgsInString`. A quote,
+  brace, bracket or call in it keeps the old path. Thirteen shapes value-checked: `==`, `!=`,
+  concatenation, assignment, `Replace` beside it, arguments built from a local, and the keepers
+  (`"m" + Math.Max(n - 1, n + 1)`, a mixed array, a map argument, two script calls).
+
+- **A crossing local whose assignments disagree on a type compiles** (2026-09-12).
+  `if (n > 0) { v = "text"; } else { v = 5; } return v;` fell back with
+  `CS0103: The name 'v' does not exist`: `v` is block-crossing, but `DeclareBlockCrossingLocals`
+  only declared a name when every plain assignment agreed on one C# type. Now a real
+  disagreement declares it `Variable` and registers it in `m_variableLocals`. No assignment
+  rewriting is needed -- the existing Variable-local machinery converts the stores, `v.Size` uses
+  `Variable`'s members, `v + "!"` uses `operator +(Variable, string)`, and `v == "text"` goes
+  through `TryRewriteStringComparison` -> `Variable.SameValue` (never an `==` operator, which
+  recurses -- see above). Seven shapes, value-checked: both orders (`text`, `5`), the else path
+  (5), `elif` (`a`), a collection branch (`.Size` 2), the concatenated read (`text!`), the `==`
+  read (1). `scope_mixed_types` and six `cross_mixed_*` constructs now compile.
+
+  **The first attempt aborted test.cscs and was reverted; the precise flaw is worth keeping.**
+  It declared a `Variable` whenever `type == null` -- but `type == null` has two meanings. It
+  means the assignments disagreed, *and* it means no plain assignment was found at all:
+  `AssignedName("double result = 0")` is null because `"double result"` is not a plain name,
+  and `result += x` is skipped as compound. `dllfunction RunCycle` in test.cscs is a C#-form body
+  with exactly that shape, so the pass emitted `Variable result = null;` beside the body's own
+  `double result=0;` inside `DoWork1` -- `CS0128: ... 'result' is already defined in this scope`,
+  before the suite's first assertion. The kept version sets a `disagreed` flag in the one branch
+  where two types really differ, and also requires `!m_scriptInCSharp`, since a C#-form body
+  declares its own locals. Names with no plain assignment keep the old behaviour exactly.
+
+  **Why no other gauge saw it:** the coverage fixture and the probe harness only compile CSCS-form
+  bodies, one at a time. test.cscs is the only gate exercising `dllfunction`, so run it *first*.
+
+- **A local re-assigned a different type after its first assignment compiles** (2026-09-12).
+  `v = 0; if (n > 0) { v = "text"; } return v;` failed as
+  `CS0029: Cannot implicitly convert type 'string' to 'double'`: the first assignment declared the
+  local, and the later store could not convert. Two of the shapes never cross a block
+  (`v = 0; v = "text"; return v;`), so the crossing fix above could not reach them.
+
+  `DeclareBlockCrossingLocals` now makes a second pass over every plain-assigned local that is
+  still undeclared: if its plain assignments really disagree on a type, it is declared
+  `Variable ... = null;` at the top and registered in `m_newVariables` and `m_variableLocals` --
+  the same treatment a disagreeing crossing local gets, and again with no assignment rewriting.
+  Same exclusions (parameters, loop variables, collection and widened arguments, globals) and
+  `!m_scriptInCSharp`. **Any name with a ternary assignment is skipped**: `AssignedValueType`
+  reads `n > 2 ? 1 : 2` as a bool because `YieldsBool` only looks for a comparison character, so
+  `v = 0; v = n > 2 ? 1 : 2` would otherwise count as a disagreement, become a Variable, and fail
+  on the int store -- a regression of a shape that compiles today (`redecl_ternary_keep` pins it).
+
+  Value-checked: number then text (`text`, or 0 when the branch is not taken), text then number
+  (5, or `z`), the top-level pairs (`text`, 5), the loop (`s`), a collection (`.Size` 2).
+  `cross_predeclared` and `loc_mixed_cmp` began compiling, plus `.Type` on a mixed local in two probe
+  sets (`type_mixed_local`, `qt_mixed_type` -- both NUMBER, as interpreted). test.cscs, run first, stayed 534/534.
+
+- **A ternary inside a collection literal compiles** (2026-09-12). `a = {n > 2 ? 10 : 20, 5}`,
+  the ternary as the second or only element, string branches, a nested literal and a reassignment
+  of the literal all compile, value-checked (15, 15, 13, `ac`, 4, 15). Two different failures had
+  one cause: the ternary's `:` was read as a map key separator. With a second element the literal
+  was never built (`CS0103: 'a' does not exist`); alone, it was built as the map entry
+  `n > 2 ? 10` -> 20, which only failed to compile because `?10` is not a whole expression -- a
+  ternary that happened to parse would have silently produced a map.
+
+  `IsMapEntry` already existed for exactly this -- its comment quotes `{n > 2 ? 10 : 20, 5}` -- but
+  only the `{`-token path in `ProcessFunction` called it. `TryBuildLiteralAssignment` and
+  `TryBuildArrayLiteral` still tested `SplitTopLevel(element, ':').Count > 1`; both use
+  `IsMapEntry` now. A real map literal still builds as a map. When a fix lands through a helper,
+  grep for every other site doing the same test by hand. `m = {"k": n > 2 ? 1 : 2}` is not a
+  construct: the interpreter itself throws "Unknown index [k] for tuple of size 1" on it.
+
+- **A string or bool condition in `elif` / `else if` compiles** (2026-09-13). Every such `elif`
+  fell back with `The name 'elseif' does not exist` -- a string argument, `<` on text, an
+  element, a global, a bool local, and the `else if` spelling alike -- while a numeric `elif`
+  compiled. Two small defects:
+
+  1. `else if (...)` tokenizes as `else`, ` `, `if(...` and `ProcessToken` drops the lone space
+     as whitespace, so the reserved-word branch wrote `else` and `if(` back to back. A numeric
+     condition is a known expression and takes the branch that writes the statement whole, which
+     is why only non-numeric conditions broke. The branch now writes `else ` with its space.
+  2. `TryRewriteStatementComparison` handled `if`, `while` and `return` only, so an `elif`
+     condition was never rewritten into `CompareCscs` / `SameValue`. It now takes `elif` and
+     `else if` too, keeping the keyword as written so the later `elif` -> `else if` step applies.
+
+  Found while testing the global-vs-text fix, whose `elif` form failed differently from its `if`
+  form -- a trace of the token list (`else| |if(s|==|"ab")`) located it in one run. Twenty-two
+  shapes checked, including nested `elif`, an `else` after it, `!=`, a call in the condition, and
+  the branch not taken; the nine `elif` forms that compiled before still do.
+
+- **Strict equality on an int argument or a numeric local compiles** (2026-09-13). `===` and
+  `!==` are not C#; `TryRewriteStringComparison` rewrote them to `==` / `!=` only when both sides
+  passed `IsNumericOperand`, which accepts an argument declared `double` but not `int`, and no
+  local at all -- so `n === 5` over `int n`, `return n === 5`, `v === 6` over a numeric local and
+  `n === m` reached C# verbatim (`CS1525: Invalid expression term '='`). `IsStrictNumeric` adds an
+  `int` argument and a local `CollectLocalTypes` agreed is `double` (not a Variable or collection
+  local). Still falling back, deliberately: an element (`a[0] === 5`), a string against a number
+  (interpreted 0 -- the existing comment declines to fold that to a constant), and a local whose
+  assignments conflict. An earlier note of mine recording `strict_eq` as compiled was a misread;
+  it had been a fallback throughout.
+
+- **A field written through a chain of instances compiles** (2026-09-13). `p.kid.v = 9` and the
+  three-deep `p.kid.kid = new Named(..)` failed with two unrelated-looking error clusters
+  (`CS1003`/`CS0128`, and `CS0131`) that were one cause. `TryBuildFieldAssignment` required a plain
+  owner and a plain field, so a dotted target fell to the ordinary assignment path, which declared
+  `double p.kid.v=9;`. The `new` form goes the same way, since `TryHoistNewInstance` rewrites it to
+  `p.kid.kid = __newInstN` first. Now the middle segments build the owner as the same
+  `GetProperty` chain a read of `p.kid.v` already used, and the last one is the `SetProperty`.
+
+  The write reaches the live nested instance, not a copy -- measured, not assumed: read back
+  directly (9), through an alias `q = p.kid` (9), with the parent untouched (109), accumulated in a
+  loop (6), three deep (`zz`), and with a literal value. A Variable member in the middle
+  (`p.tag.Size = 5`) still falls back.
+
+- **A method called on what another method returned compiles** (2026-09-13). `p.Kid().Kid().v`
+  failed with `CS1061: 'Variable' does not contain a definition for 'Kid'`: both builders of an
+  instance call built only the first one. `ProcessFunction` appended the rest verbatim, and
+  `ReplaceArgsInString` called `AppendMemberChainAfter`, which stops at a call, so `.Kid()` went out
+  as ordinary text. Each builder now loops: member reads, then a further `.Method(args)` wraps
+  everything since the chain began in `Variable.CallMethod(...)`; a Variable, string or
+  collection member ends the chain as before.
+
+  It took both. The statement-path loop alone was partly inert -- a control run on the previous
+  build showed it had fixed the string and bare-return forms, while every chain inside arithmetic,
+  a comparison or an assignment is a known expression and goes through the other builder. Twelve
+  shapes value-checked: plain read (3), string field (`c`), arithmetic (32), condition (1),
+  assignment (3), three deep (4), `while` (3), a field between calls (3), arguments, a string
+  member at the end (2). A construct family with one builder per path needs the fix in each.
+
+- **An enum declared inside a cfunction compiles** (2026-09-13). `var Local = Enum {X, Y};` arrives
+  as four statements (`var Local = Enum`, `{`, `X, Y`, `}`), and each of `var`, `Local` and `Enum`
+  became an interpreter call of its own, their temporaries glued into
+  `__varTempVar1__varTempVar2`. `TryBuildLocalEnum` now recognises the four-statement shape -- only
+  for the statement the loop is on, since the names come from the statements after it -- and builds
+  the enum exactly as `EnumFunction` does: `new Variable(VarType.ENUM)` with `SetEnumProperty(name,
+  new Variable(i))`. A member read goes through a `CscsEnums.Member` overload taking the local.
+
+  **Only declared members compile, and the first version proved why that must be enforced on
+  every path.** The interpreter's own answers are idiosyncratic: `Local.Type` is `NONE` (looked
+  up as a member that does not exist) and `Local.Y.Type` is `Y`. The member rule was in place in
+  `ResolveToken`, but a single-token `return Local.Type` goes through `ProcessToken`, where the
+  local counted as a Variable and `.Type` became C#'s `Variable.Type` -- `ENUM`, a silent wrong
+  answer the probe caught. `ProcessToken` now sends any token whose owner is a local enum through
+  `ReplaceArgsInString`, so the one rule governs both paths. Value-checked: read 2, first/last 2,
+  comparison 1, loop 6, assignment 2, concatenation `v=1`, two enums 12, negation -1, a
+  parenthesised read, an `if` returning text; `.Type` and `.Y.Type` fall back.
+
+- **A number as a whole condition, and an assignment in grouping parentheses, compile** (2026-09-13).
+  `if (b)` over a double local, `if ((b = n + 2))` and `while ((t = t - 1))` failed with
+  `CS0029: double -> bool`. The interpreter tests `Convert.ToBoolean(Value)`, which for a double is
+  exactly `Value != 0` (NaN included), so `TryRewriteStatementComparison` rewrites such an `if` /
+  `elif` / `while` to `(x!=0)` -- but only when the term is certainly a number (`IsNumericConditionTerm`):
+  a numeric argument, a double local, or `(name = ...)` to a name typed double. A bool, a Variable
+  or an element keeps its own handling; a string (always false there) keeps falling back.
+
+  **A copy of another name is excluded, found by a regression.** `b = n > 1; c = b; if (c)` compiled
+  before; the type record calls `c` a double because `c = b` copies a name, but C# holds a bool, and
+  `c != 0` did not compile. A local assigned a bare name is skipped now, so `if (c)` goes back to the
+  handling that already worked. (`r27` caught it; the fixture and suites did not track it.)
+
+  The condition-assignment declaration pass also scans statements that are not conditions --
+  `x = ((b = 7))`, `x = (b = n * 2) + 1` -- but **never inside a call's arguments**, and that rule
+  came from a silent wrong answer: `Math.Max((q = n * 2), 5) + q` declared `q`, the math path did not
+  carry the assignment out, and compiled code answered 5 where the interpreter says 9. Only grouping
+  parentheses outside every call count now (a keyword's own condition parenthesis is not a call),
+  and that form falls back again. `f(a = 1)` named arguments are never read as assignments. Still
+  open: `return (b = n * 2) + b` and an assignment inside a call's arguments.
+
+  **Beside `!`, `&&` and `||` too.** `if (!b)`, `if (b && n < 5)`, `b || n > 1`, two numbers joined by
+  `&&`, `while (t && k < 10)` and `!n` on an int argument failed with `CS0023` / `CS0019`.
+  `TryRewriteNumericTerms` splits the condition at the top level on `||`, then `&&`, and rewrites only
+  the clauses `IsNumericConditionTerm` certifies -- `(x!=0)`, or `(x==0)` under `!`, which is the
+  interpreter's rule ("`!x` is true only for a number that is zero"). Every other clause and the
+  connectives stay as written, and when no clause qualifies nothing changes.
+
+  **A clause whose type is settled when it runs joins in too**: an element, a local holding a
+  Variable, a string -- `a[1] && b`, `a[0] || a[1]`, `v && n > 1`, `s && n > 1`, `!a[0] && n > 1`.
+  Those must not become `!= 0`: the interpreter tests the numeric field, so an element holding
+  `"5"` is false where `AsDouble()` would call it true. They are read through
+  `CscsConvert.IsTrue` / `IsFalse`, and both names join the generated markers the token loop
+  passes through.
+
+- **A string as a whole condition compiles** (2026-09-13). `if (s)`, `if (t)` on a string local,
+  `if ((t = s + "x"))` -- where the assignment still runs and only the test is false -- and the
+  negated forms `if (!s)` and `!s && 1 == 1`. All are false in the interpreter, `"5"` included.
+  Two things made this work. `AsCondition` already emitted `CscsConvert.IsTrue`, but that helper
+  took a `Variable` while a compiled string term is a C# `string` (`CS1503`); **object overloads**
+  of `IsTrue`/`IsFalse` fix that without changing what either means. And the clause rewriter now
+  accepts a lone string term rather than only a joined one.
+
+  **`IsTrue` and `IsFalse` are a pair, not one negated** -- the trap this change walked into.
+  `!x` is true only for a *number* that is zero, so a string is false **both ways round**:
+  `"5"` is false and `!"5"` is false too. Emitting `!IsTruthy(term)` for the negated case made
+  `truthyCompiled` in test_compiled.cscs return 1110 where the interpreter says 1100. Keep the
+  two helpers; a single truth test plus `!` is wrong for CSCS. A `Variable.IsTruthy` that invited
+  exactly that mistake was removed again.
+
+  Kept on the interpreter: `if (s.Length)` -- a number in CSCS, but a C# `int` in a condition.
+
+- **Known limit: chained comparisons** (`1 < n < 10`). Seven shapes, all clean value-matching
+  fallbacks, and the semantics reward care rather than a quick rewrite: with `n = 5`, `1<n<10`
+  is 1, `20<n<10` is **1**, `1<n<0` is **0**, `1>n>10` is 0, `n<10<20` is 1, `1<n==1` is 1 and
+  the four-way chain is 1 -- left-to-right, each comparison collapsing to 1 or 0 before the
+  next. C# rejects the shape outright (`bool < int`), so today it falls back cleanly; a
+  mistaken rewrite would answer differently instead, which is worse.
+- **An assignment inside a condition compiles** (2026-09-13). `while ((x = n - t) > 2)`,
+  `if ((y = n * 2) > 5)`, the `!=` form, a string (`(t = s + "!") == "a!"`), both used-after forms,
+  a nested pair, and the `elif` form -- the seven shapes the half-fix left waiting, plus `&&`.
+  After the earlier `keywordStatement` guard these failed only with `CS0103`, because nothing
+  declared the name: it is not a statement of its own, so `AssignedName` never saw it, and the
+  form declared beforehand always compiled.
+
+  A third pass in `DeclareBlockCrossingLocals` scans `if` / `while` / `elif` statements (outside
+  quotes) for `(name =` where the `=` is not part of `==`, takes the value up to that
+  parenthesis's matching `)`, and declares the name at the top with the type every assignment to
+  it agrees on -- the condition's and any plain ones. It refuses, and so leaves a clean fallback
+  for: a ternary value (`YieldsBool` misreads it), a `Variable`-typed value, a disagreement
+  (`if ((v = n * 2) > 5) { v = "big"; }`, tracked as `cond_asg_conflict`), and a **truth value**.
+
+  The bool refusal is deliberate parity: `if ((b = n > 2))` throws a NullReferenceException in the
+  interpreter itself. Declared as a bool, compiled code answered 1 -- a better answer, but a
+  different one from the reference, so it stays on the interpreter's path.
+
+  **That interpreter crash is fixed (2026-09-13), and the refusal is lifted**: a bool condition
+  assignment compiles as a bool local, and its declared type is recorded in `m_localTypes` so a later
+  `b + 10` gets the bool-to-number conversion (11, as interpreted). `if`, `while`, `elif`, `else`,
+  `==` and `&&` values, and the branch not taken, all match. The cause of the crash was not `if` at all: `AssignFunction.Assign` read its value with
+  `Utils.GetItem(script)`, whose default `eatLast` consumed a second `)` after the one `Split`
+  already took, and `MoveBackIfPrevious` gave back only one. Whenever an assignment was the whole of
+  a group followed by another `)` -- `if ((b = 5))`, `while ((b = t < n))`, `f((q = n * 2))` -- the
+  group closed on the outer parenthesis and the condition swallowed the rest of the function;
+  `ProcessIf` then dereferenced a null block. Any other character after the group (`== 1`, `;`)
+  left nothing for `eatLast`, which is why those forms worked. Fixed by reading the value with
+  `eatLast: false` in `Assign` and `AssignAsync`.
+
+- **A global as the right-hand operand of `==`/`!=` compiles** (2026-09-12). The tokenizer
+  splits the statement on the operator and leaves the condition's closing parenthesis glued to
+  the operand, so `if (1 == gcount)` handed `ProcessFunction` the token `gcount)`. With no `(`
+  of its own (`paramStart < 0`) the whole token was taken as a function name and emitted as a
+  call -- the generated code contained
+  `new ParserFunction(__scriptTempVar, "gcount)", '(', ref __actionTempVar)` plus a hoisted
+  `Variable __varTempVar1`, and the condition went out as `if(1==__varTempVar1` without its
+  `)`: `CS1026: ) expected`. Relational operators reach a different path, which is why
+  `5 > gcount` and `gcount == 1` always compiled while `1 == gcount` did not.
+
+  The fix is a guard at the top of `ProcessFunction`, before `argsStr` is built: when
+  `paramStart < 0` and the name ends in `)`, strip the unbalanced parens with
+  `SplitClosingParens` and, if what remains is a plain name that the interpreter knows as a
+  *variable* and not as a function, emit `__interpreter.GetVariableValue("<name>")` followed by
+  those parens. A genuine call can never enter it -- every call has a `(` of its own -- and a
+  name the interpreter holds as a function is left to the call path, so `15 == helper(n)` and
+  `build().Size` are untouched.
+
+  Eight shapes gained, each value-checked against the interpreter: `1 == gcount` 0,
+  `99 != gcount` 1, `gcount == gcount` 1, `n == gcount` 1, `v == gcount` 0,
+  `((1 == gcount))` 0 (two unbalanced parens -- `SplitClosingParens` strips only those),
+  `while (t == gcount)` 0, `return 1 == gcount` 0. They were **untracked** by the fixture and
+  the probe collection -- the only global-equality construct was `global_eq_num`
+  (`gcount == 1`), which already compiled -- so the gauges did not move when this landed; the
+  eight are now in both, plus 17 assertions in test_compiled.cscs.
+
+  Diagnosis notes, so nobody repeats the wrong turns: `GetCSCSVariable` is not the emitter (its
+  only caller is the indexed-assignment path); `HoistConditionCalls` is not either (it requires
+  a `(` after the name, and a trace proved `gcount)` never reaches it); and `ResolveToken`'s
+  bare-global branch never sees the token at all (traced -- the only names it saw were `if` and
+  the preamble's own functions), so patching that branch would have been inert.
+
+  **`null` as an operand compiles too, and the divergence is gone** (2026-09-13). The interpreter
+  compares `==` as text whenever the sides are not both numbers (`Parser.MergeCells`), and `null`
+  is `Variable.EmptyInstance`, whose text is `""`. So `v == null` means "renders as the empty
+  string": true for a null local, `""`, a map value of `""` and an empty argument; false for `0`,
+  `{}`, `"gs"`, `10`. `TryRewriteStringComparison` now emits `Variable.SameValue(v,"")` when exactly
+  one side is the literal `null` -- the same comparison, step for step. Mapping `null` to `0.0`, the
+  hazard noted here before, would have got every `0` row wrong. This removed `null == x`
+  (interpreted 1, compiled 0 as a C# reference test) -- **the last BROKEN row in the probe set** --
+  and compiled `x == null`, `m["a"] == null`, `y != null` and 19 further shapes. `null == null`
+  stays on the interpreter: `SameValue` answers false for a C# null.
+
+  **Known limit, and an operator is NOT the way to fix it:** `"gs" == gstr` no longer loses its
+  paren but fails as `CS0019: Operator '==' cannot be applied to operands of type 'string' and
+  'Variable'`. Eight shapes ride on it, all answering 1 interpreted: `"gs" == gstr`,
+  `gstr == "gs"`, `gstr != "zz"`, `s == gstr`, `gstr == s`, the `&&` form, the `return` form and
+  the ternary. Tracked as `glob_eq_str_lit`.
+
+  Adding `==`/`!=` for `(Variable, string)` and `(string, Variable)` -- mirroring the `<`, `>`,
+  `<=`, `>=` pairs that already take a string -- **crashes the interpreter with a stack
+  overflow** (tried and reverted, 2026-09-12):
+
+  ```
+  op_Inequality(Variable, String) -> Compare -> BothNumbers -> op_Inequality(Variable, String)
+  ```
+
+  repeated 22,713 times. The mechanism is `null` itself: `BothNumbers` is
+
+  ```csharp
+  return left != null && right != null && left.Type == VarType.NUMBER && ...
+  ```
+
+  and `null` converts to `string`, so with a `(Variable, string)` operator in scope
+  `right != null` stops being a reference test and resolves to the new operator, which calls
+  `Compare`, which calls `BothNumbers` again. Every gauge died: all fifteen string nets, the
+  whole probe collection, and **both regression suites failed to finish** -- the only change all
+  session that broke the interpreter rather than a compile.
+
+  So this is not merely similar to the `(Variable, Variable)` prohibition documented beside those
+  operators, it is the **same** hazard: any overload whose second parameter accepts `null`
+  captures every `Variable != null` in the codebase -- 270 `!= null` sites and 229 `== null`
+  ones, 72 and 45 of them inside Variable.cs itself. Only
+  `(Variable, double)` / `(double, Variable)` are safe, because `null` does not convert to
+  `double`. The ordering operators (`<`, `>`, `<=`, `>=`) take a string safely for the same
+  reason in reverse: nothing writes `variable < null`.
+
+  The only safe route for these eight shapes is to make the **translator** emit
+  `Variable.SameValue(left, right)` -- which already exists, already applies the interpreter's
+  rule, and is already what a switch label uses -- rather than giving `Variable` another
+  operator.
+
+  **Landed that way (2026-09-13).** `TryRewriteStringComparison`'s `==`/`!=` branch now has one
+  more case: a plain-name global on one side (`IsInterpreterVariable`) and `IsStringOperand` on
+  the other -- a literal, a string argument or a string local -- becomes
+  `Variable.SameValue(left,right)`. Restricted to a string on the other side, so a global beside a
+  number keeps the numeric operator it already compiled through. All eight shapes compile and
+  match; case still matters (`gstr == "GS"` is 0, `!=` is 1), `gcount == "10"` is 1 as
+  interpreted, and a `while` with `&&` works. `glob_eq_str_lit` and seven `glob_str_*` constructs
+  compile, plus six probes in unrelated sets.
+- A Variable-valued expression compared with a number compiles: `Colors.Green == 1`,
+  `Colors.Green != 0`, the same inside `&&`, `return Colors.Green == 1`, and `gcount == 1` on a
+  global. `Variable` had `<`, `>`, `<=`, `>=` against a `double` and a `string` but **no
+  equality operators at all**, and `Compare`'s switch had no `==`/`!=` cases -- its `default`
+  answered `>=`, so routing equality through it would have made `==` true for anything. Both
+  were added together (`cscs/Variable.cs`).
+
+  **Only against a number, never `(Variable, Variable)`.** `Compare` itself tests
+  `left == null`, and the codebase has some 207 `== null` checks on Variable-typed names: an
+  overload for two Variables would reroute every one of them from a reference test into value
+  comparison, recursively in `Compare`'s own case. Two Variables therefore keep reference
+  equality, exactly as before. The build produces no CS0660/CS0661, so no `Equals`/`GetHashCode`
+  work is implied.
+
+  Not fixed by this, and a separate defect: `1 == Colors.Green` and `Colors.Green ==
+  Colors.Green` still fail with `CS1026: ) expected`. That is a **paren-loss at emission**, not
+  an operator problem -- `1 == gcount`, `gcount == gcount` and the whole `null_*` family share
+  the signature, while `1 == helper(n)` and `1 == n` compile. One fix there would likely cover
+  four tracked shapes.
+- A member of an enum the interpreter holds compiles: `Colors.Green + n`, `Colors.Blue`,
+  `Colors.Blue > Colors.Red`, `c = Colors.Green`, `Colors.Blue * 2`, and two reads in one
+  expression. An enum is a `Variable` of type `ENUM` whose member names live in its own map, so
+  no generated C# name can stand for `Colors.Green` -- it used to reach C# verbatim as
+  "The name 'Colors' does not exist". The member-on-global branch could not help: it fires only
+  for a member `Variable` itself has, and `Green` is not one. `CscsEnums.Member` now reads it
+  through the interpreter, and the translator routes a member of an **enum-typed global** there
+  (`IsEnumGlobal`).
+
+  The helper builds a throwaway `ParsingScript`, which is safe for a reason worth writing down:
+  `Variable.GetEnumProperty` dereferences the script only to spot the call form `Colors(x)` --
+  it tests `script.Prev`, and a freshly built script answers `Constants.EMPTY` there, so a plain
+  member read falls through to the name lookup. Checked against the interpreter before the edit:
+  `Red` 0, `Green` 1, `Blue` 2.
+
+  Two shapes still fall back, and the reason changed with this work: `Colors.Green == 1` and the
+  same inside `&&` now fail as `Variable == int` rather than an unknown name, because the helper
+  returns a `Variable` and a comparison with a number needs `.AsDouble()`. Also still falling
+  back: `enum_in_cf_local` -- an enum *declared inside* a compiled function mangles the
+  temporaries (`__varTempVar1__varTempVar2`), which is a separate defect. Note `Colors.Green.Type`
+  answers `Green`, not `NUMBER`, so an enum member must never be routed through the `.Type`
+  mapping.
+- A built-in call as the whole condition compiles: `if (StrEqual(s, "AB"))`,
+  `if (StrContains(s, "ELL"))`, `if (Contains(a, 2))`, `if (NameExists("x"))`, and
+  `if (helper(n))` with no comparison after it. `HoistConditionCalls` used to hoist only a
+  function a *script* defined, so a built-in registered in C# stayed a bare name and did not
+  compile. It now hoists any name the interpreter knows, with two guards that are the whole
+  difference between this working and the earlier attempt that cost fourteen constructs:
+  - **A member call is never hoisted.** `s.Contains("BC")` and `a.Contains(2)` compile as
+    members already, and the interpreter answers the two forms *differently* --
+    `Contains(a, 2)` is 0 where `a.Contains(2)` is 1 -- so the distinction is semantic.
+    Hoisting the free form to an interpreter callback is what keeps its own answer.
+  - **The hoisted temporary is tested with `CscsConvert.IsTrue` only when the call is the
+    whole condition**, and never when the statement holds a comparison. The tokenizer splits
+    on the comparison, so `if (f(n) < "t")` arrives as `"(f(n)"` with the `< "t"` nowhere in
+    the text -- measuring what this method receives cannot see it, and wrapping the value then
+    put a `bool` where a string comparison wanted the string (it cost `callres_str_lt`).
+    `m_statementRelational`, computed for the whole statement before it is torn up, is what
+    makes the difference visible.
+
+  Still falling back in this family, all of them fallbacks before this change as well:
+  `!helper(n)` and `!StrEqual(...)` (`!` on a double or a Variable), `StrEqual(...) == 1`, and
+  a hoisted built-in inside `&&`.
+- A truth value beside a compound operator or compared with a number compiles, and
+  `Math.Round` accepts a computed digit count. Three shapes that each needed the operator's
+  own context:
+  - `t += b` was `double += bool`, and `b == 1` / `b != 0` were `bool == int`. The right-hand
+    side reaches the operand funnel as a bare token with **no** adjacent separator, so the
+    conversion there cannot see the context; the assignment emission site is the only place
+    `lhs`, the operator and `rhs` are visible together, and `AsCscsNumberBeside` converts
+    whichever side is a bool there. Not when **both** sides are bools (`b == c` compiles and
+    already agrees with the interpreter), and only for the arithmetic compound operators --
+    `OPER_ACTIONS` also holds `->` and `:`.
+  - `Math.Round(x, d)` and `Math.Round(x, k + 1)` reached C# with a `double` digit count, so
+    the compiler chose `Round(decimal, int)` and refused both arguments. The argument is
+    emitted by the general operand path, which has no idea it sits inside a Round, so
+    `CastRoundDigits` fixes it over the finished code the way `MapChainedStringMembers` does.
+    Round only and two arguments only: `Pow`, `Max`, `Min` and `Atan2` take two doubles and
+    `Round(x)` has no count to cast. Verified against a nested first argument, an expression
+    first argument, two Rounds in one expression and a Round inside a concatenation.
+
+  Still falling back, all untracked by the fixture and the probe collection: `return b == 1`
+  (a return never reaches the assignment site), `1 == b` and `1 != b` (a number on the left),
+  and `b += c` / `b += 1` where the target itself is a bool.
+- `.Type` beside a string literal compiles too, which is a different path from the plain
+  `return x.Type;`. A statement holding a quote is rejected by `IsKnownExpression`, so it
+  never reaches `ReplaceArgsInString`; it is emitted token by token by `ProcessToken`, whose
+  last branch copies a local through verbatim. `"t=" + x.Type` therefore reached C# unchanged
+  and did not compile, while `"t=" + m.Type` did -- a collection is a `Variable`, which has
+  that member. The same branch now answers `.Type` through `TryMapTypeMember`, covering a
+  number, a string, a truth value, an argument, an element, a map and lower-case `type`.
+
+  **That branch serves every bare local in a quoted statement, so it is a careful place to
+  touch.** Coercing bools there as well -- for the `"v=" + b` divergence below -- was tried in
+  the same edit and cost four constructs (`scope_bool_later`, `bool_flag`, `bool_and_chain`,
+  `bool_assign_bool`): each *assigns* or *tests* a truth value (`ok = n > 2`, `found = true`,
+  `c = b`, `return a && b && c`) where C# needs the bool itself, and the conversion was applied
+  with a faked arithmetic context. Bisecting the two halves showed the `.Type` half is clean on
+  its own. A bool conversion here has to require a real `+` among the neighbouring tokens.
+- `.Type` on a local compiles, in either case. The interpreter answers with the name of the
+  CSCS type, and a C# `double`, `string` or `bool` has no such member -- so `x = n + 1;
+  return x.Type;` used to fall back, as did `a.type` in lower case on a collection. The
+  translator now records, for every local, the C# type all of its assignments agree on
+  (`CollectLocalTypes`, reusing `AssignedValueType`) and writes the answer out: `"NUMBER"`
+  for a number or a truth value -- a bool is a NUMBER to the interpreter -- `"STRING"` for
+  text, and `Variable.Type` for a collection, which answers `ARRAY` for a map as well. A
+  local whose assignments **disagree** is left out of that record, so it keeps falling back
+  rather than being given a guessed answer: `x = n; if (n > 100) { x = "big"; } x.Type` is
+  still interpreted. Arguments answer from their declared type.
+- **Known divergence: `.Type` and `.ToString()` on a class instance.** Both predate the
+  work above (verified by reverting it) and neither is reached by the coverage fixture, the
+  probe collection or either script suite. For an instance the interpreter answers
+  `SplitAndMerge.CSCSClass+ClassInstance: Point` for `.Type`, while compiled code answers
+  `OBJECT`; `p.ToString()` gives `point.p[x=2,y=2]` interpreted and an empty string compiled.
+  `string(p)` and `"v=" + p` are correct in both. A guard was attempted and abandoned: the
+  read is not emitted by `TryMapTypeMember`, nor by the `IsVariableMember` mapping on the
+  expression path, nor by the one on the token path, nor through `ConvertTokenIfNeeded` /
+  `CreateReturnStatement` -- a trace shows those never see it. It comes out of
+  `ProcessReturnStatement`'s three-token branch, which calls `ProcessToken` directly and
+  bypasses all of them; that is where a fix belongs. Guarding `.Type` must stay
+  member-specific: every other member of `Variable` answers the same on an instance as
+  elsewhere (`p.Size` is 0 either way), so excluding instances wholesale would cost
+  constructs that compile correctly today.
+- A `for` header with sections left out compiles, including `for (;;)`. It used to fall back,
+  and the cause was in the statement walk rather than in the emitted text: the tokenizer drops
+  the empty text between the two semicolons, so `for (;;)` arrives as
+  `"for ("` `";"` `";"` `")"` `"{"` -- one slot shorter than a full header. Advancing two
+  statements along then read the block's `{` as the step and skipped the `)`, emitting
+  `for(;;{ {`. The condition slot holds `";"` itself (not an empty string, which is why
+  testing for blankness changed nothing), so an absent condition emits its own semicolon and
+  the walk advances by one instead of two. Every shape now compiles and matches the
+  interpreter: `for (;;)` with `break`, with `continue`, with a `return` out of the loop,
+  nested in another, accumulating text, and `for (init;;)`.
 - Text times a number falls back inside a compound assignment. `"ab" * 2` joins rather than
   multiplies, and it compiles on its own -- `s = "ab" * 2` gives `ab2`, `2 * "ab"` gives
   `2ab`, `"ab" * n` gives `ab3` -- but `acc += "ab" * 2` reaches C# as `string * int` and

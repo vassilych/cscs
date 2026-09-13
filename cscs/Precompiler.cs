@@ -56,6 +56,13 @@ namespace SplitAndMerge
         // rewritten string comparison: a local that is ever given a number has to keep the
         // numeric comparison, which orders by value rather than by text.
         HashSet<string> m_stringLocals = new HashSet<string>();
+        // The C# type every assignment to a local agrees on -- "double", "string", "bool" or
+        // "Variable" -- for the locals where they do agree. Only used to answer ".Type", which
+        // the interpreter answers with the name of the CSCS type: a C# double, string or bool
+        // has no such member, so without this the function fell back. A local whose
+        // assignments disagree is absent here and keeps falling back, rather than being given
+        // a guessed answer.
+        Dictionary<string, string> m_localTypes = new Dictionary<string, string>();
         // Whether the statement being translated compares with "<" or ">". A condition is
         // tokenized on its operator, so each side reaches the resolver on its own and cannot
         // see the comparison it belongs to -- the flag carries that across.
@@ -103,6 +110,8 @@ namespace SplitAndMerge
         // middle of one. They are collected here, emitted before the statement, and the
         // expression keeps a reference to the value they produced.
         string m_statementPrelude = "";
+        // Enums declared inside the function, with the member names each one was given.
+        Dictionary<string, List<string>> m_enumLocals = new Dictionary<string, List<string>>();
         string m_lastPrelude = "";
         int m_tempVarId;
         bool m_usesInterpreter;
@@ -632,6 +641,7 @@ namespace SplitAndMerge
             m_paramMap.Clear();
             m_collectionArgs.Clear();
             m_widenedIntArgs.Clear();
+            m_localTypes.Clear();
             m_argsMap = new Dictionary<string, Variable>(m_declaredArgsMap);
             // An int argument the body assigns to holds whatever the interpreter would put
             // there, which need not be an int: "n = n / 2" is 13.5 for 27, and "n = 3 * n + 1"
@@ -655,6 +665,7 @@ namespace SplitAndMerge
             m_lastStatementReturn = false;
             m_knownExpression = false;
             m_statementPrelude = "";
+            m_enumLocals.Clear();
             m_lastPrelude = "";
             m_tempVarId = 0;
 
@@ -804,6 +815,7 @@ namespace SplitAndMerge
             CollectVariableLocals(m_statements);
             RefuseReturnInTryWithFinally(m_statements);
             DeclareBlockCrossingLocals(m_statements);
+            CollectLocalTypes(m_statements);
             m_statementId = 0;
             while (m_statementId < m_statements.Count)
             {
@@ -829,8 +841,188 @@ namespace SplitAndMerge
             {
                 m_converted.AppendLine("}}");
             }
-            return KeepInterpreterEscapes(MapChainedStringMembers(
-                EscapeKeywordNames(m_converted.ToString())));
+            return KeepInterpreterEscapes(CastRoundDigits(NumberMathArgs(MapChainedStringMembers(
+                EscapeKeywordNames(m_converted.ToString())))));
+        }
+
+        /// <summary>
+        /// Wraps a Math argument that is not a C# number in CscsConvert.ToNumber.
+        ///
+        /// A script call resolves to CscsCalls.Call and a global read to GetVariableValue, both
+        /// of which yield a Variable; a comparison yields a C# bool. C# then finds no Math
+        /// overload at all and reports the first one it has, which is why the diagnostics named
+        /// "byte", "short" and "decimal" for Max, Abs and Round. ToNumber unwraps a Variable
+        /// through AsDouble and converts anything else.
+        ///
+        /// Done over the finished code, like CastRoundDigits and MapChainedStringMembers: the
+        /// argument is emitted by the general operand path, which has no idea it is inside a
+        /// Math call -- and ReplaceMathArgs, the one place that does know, is never reached for
+        /// a "return Math.Max(..)" statement (ProcessReturnStatement returns first; traced).
+        ///
+        /// Only arguments carrying one of those markers are touched, so the shapes that already
+        /// compile -- an element, which is read as a number, a scalar argument, a literal, an
+        /// arithmetic expression, a mapped string member and a nested Math call -- are left
+        /// exactly as they were. Runs before CastRoundDigits and skips an argument already cast
+        /// or converted, so the two passes cannot fight; and for a two-argument Math.Round only
+        /// the value is wrapped, never the digit count, which has to stay an int.
+        /// </summary>
+        string NumberMathArgs(string code)
+        {
+            const string prefix = "Math.";
+            if (code == null || code.IndexOf(prefix, StringComparison.Ordinal) < 0)
+            {
+                return code;
+            }
+            var sb = new StringBuilder(code.Length + 32);
+            bool inQuotes = false;
+            int i = 0;
+            while (i < code.Length)
+            {
+                char ch = code[i];
+                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                }
+                if (inQuotes || string.CompareOrdinal(code, i, prefix, 0, prefix.Length) != 0)
+                {
+                    sb.Append(ch);
+                    i++;
+                    continue;
+                }
+                // The call's name, then its opening parenthesis. "Math.PI" has none.
+                int nameEnd = i + prefix.Length;
+                while (nameEnd < code.Length &&
+                       (char.IsLetterOrDigit(code[nameEnd]) || code[nameEnd] == '_'))
+                {
+                    nameEnd++;
+                }
+                if (nameEnd >= code.Length || code[nameEnd] != '(')
+                {
+                    sb.Append(code, i, nameEnd - i);
+                    i = nameEnd;
+                    continue;
+                }
+                int close = FindCallEnd(code, nameEnd);
+                if (close < 0)
+                {
+                    sb.Append(ch);
+                    i++;
+                    continue;
+                }
+                var name = code.Substring(i, nameEnd - i);
+                var args = SplitTopLevel(code.Substring(nameEnd + 1, close - nameEnd - 1), ',');
+                bool isRound = name == "Math.Round";
+                bool any = false;
+                for (int a = 0; a < args.Count; a++)
+                {
+                    // Round's digit count stays an int: CastRoundDigits casts it, and a double
+                    // there is the very overload failure that pass exists to prevent.
+                    if (isRound && args.Count == 2 && a == 1)
+                    {
+                        continue;
+                    }
+                    if (!NeedsNumericArgument(args[a]))
+                    {
+                        continue;
+                    }
+                    args[a] = "CscsConvert.ToNumber(" + args[a].Trim() + ")";
+                    any = true;
+                }
+                if (!any)
+                {
+                    // Nothing to change: copy the call through untouched, but keep scanning
+                    // inside it -- a nested call may still have an argument that needs it.
+                    sb.Append(code, i, nameEnd + 1 - i);
+                    i = nameEnd + 1;
+                    continue;
+                }
+                sb.Append(name).Append('(').Append(string.Join(",", args)).Append(')');
+                i = close + 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Whether this already-generated argument yields something a C# Math parameter cannot
+        /// take: a Variable, from an interpreter callback or a global read, or a bool, from a
+        /// comparison. An argument that is already a number, cast or converted is left alone.
+        /// </summary>
+        bool NeedsNumericArgument(string argument)
+        {
+            var text = (argument ?? "").Trim();
+            if (text.Length == 0 || text.Contains(".AsDouble()") ||
+                text.Contains("CscsConvert.ToNumber(") ||
+                text.StartsWith("(int)", StringComparison.Ordinal))
+            {
+                return false;
+            }
+            return text.Contains("CscsCalls.Call(") ||
+                   text.Contains("__interpreter.GetVariableValue(") ||
+                   text.Contains(VARIABLE_TEMP_VAR) ||
+                   YieldsBool(text) ||
+                   // A truth value reaches the argument as the bare name of a bool local --
+                   // "Math.Max(b, 5)" with "var b=__varInt[0]>1;" above it -- so the text alone
+                   // cannot tell. m_localTypes recorded "bool" for it, which is what IsBoolLocal
+                   // reads; that is why this pass is an instance method rather than static.
+                   IsBoolLocal(text);
+        }
+
+        /// <summary>
+        /// Casts the digit count of a two-argument Math.Round to int.
+        ///
+        /// CSCS numbers are all doubles, and C# has no Round(double, double): a literal picks
+        /// Round(double, int) by itself, but anything computed -- "Math.Round(x, d)" or
+        /// "Math.Round(x, k + 1)" -- arrives as a double, and the compiler then reaches for
+        /// Round(decimal, int) and refuses both arguments. Done over the finished code, like
+        /// MapChainedStringMembers: the argument is emitted by the general operand path, which
+        /// has no idea it is inside a Round.
+        ///
+        /// Round only, and only with two arguments: Pow, Max, Min and Atan2 take two doubles
+        /// and casting theirs would break them, and Round(x) has no digit count to cast.
+        /// </summary>
+        static string CastRoundDigits(string code)
+        {
+            const string call = "Math.Round(";
+            if (code == null || code.IndexOf(call, StringComparison.Ordinal) < 0)
+            {
+                return code;
+            }
+            var sb = new StringBuilder(code.Length + 16);
+            bool inQuotes = false;
+            int i = 0;
+            while (i < code.Length)
+            {
+                char ch = code[i];
+                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                }
+                if (inQuotes || string.CompareOrdinal(code, i, call, 0, call.Length) != 0)
+                {
+                    sb.Append(ch);
+                    i++;
+                    continue;
+                }
+                int open = i + call.Length - 1;
+                int close = FindCallEnd(code, open);
+                if (close < 0)
+                {
+                    sb.Append(ch);
+                    i++;
+                    continue;
+                }
+                var args = SplitTopLevel(code.Substring(open + 1, close - open - 1), ',');
+                if (args.Count != 2 || IsIntegerLiteral(args[1].Trim()) ||
+                    args[1].Trim().StartsWith("(int)", StringComparison.Ordinal))
+                {
+                    sb.Append(code, i, close + 1 - i);
+                    i = close + 1;
+                    continue;
+                }
+                sb.Append(call).Append(args[0]).Append(",(int)(").Append(args[1]).Append("))");
+                i = close + 1;
+            }
+            return sb.ToString();
         }
 
         // Generated calls that are certain to return a C# string, so whatever member follows
@@ -1073,6 +1265,17 @@ namespace SplitAndMerge
             // A name that is a C# keyword takes an "@": a script may call a variable "out",
             // and the generated code has to spell it in a way C# accepts.
             string result = token;
+            // ".Type" on a local reaches C# through here on the return path -- "return
+            // x.Type;" -- where nothing else resolves a member, so it used to be emitted
+            // verbatim and failed to compile on a double, a string or a bool. It only looked
+            // as though members worked here: "m.Type" on a collection compiled because that
+            // spelling is already valid C# on a Variable.
+            int typeDot = token.IndexOf('.');
+            if (typeDot > 0 && !token.Contains("(") && !token.Contains("[") &&
+                TryMapTypeMember(token.Substring(0, typeDot), token.Substring(typeDot + 1), out var typeText))
+            {
+                return typeText;
+            }
             string functionName = GetFunctionName(token, out string suffix, out bool isArray).ToLower();
             if (!suffix.Contains('.') && m_argsMap.TryGetValue(functionName, out _))
             {
@@ -1278,6 +1481,12 @@ namespace SplitAndMerge
                 m_depth += "  ";
                 m_statementId++;
                 return Constants.FINALLY + " {\n";
+            }
+
+            var localEnum = TryBuildLocalEnum(statement, addNewVars);
+            if (localEnum != null)
+            {
+                return localEnum;
             }
 
             // Before ProcessSpecialCases, which would swallow "x = {}" and defer the
@@ -1530,7 +1739,21 @@ namespace SplitAndMerge
                 result = m_statementPrelude + m_depth;
                 m_statementPrelude = preludeBefore;
 
-                if (tokens[1] == "=" && !m_newVariables.Contains(tokens[0]) && !lhsIsArgument)
+                // Not a declaration when the statement is a keyword carrying an assignment
+                // inside its condition: "while ((x = n - t) > 2)" arrives as one token, so
+                // tokens[0] is the whole "while (...)" text and tokens[1] is the "=" of the
+                // inner assignment. The prefix was glued to the keyword -- "var while((x=..)>2)"
+                // -- which is "CS1002: ; expected" and "The name 'var' does not exist". The
+                // condition's own assignment declares nothing here; the variable is registered
+                // by the statement that follows.
+                bool keywordStatement = StartsWithKeyword(tokens[0], Constants.IF) ||
+                                        StartsWithKeyword(tokens[0], Constants.WHILE) ||
+                                        StartsWithKeyword(tokens[0], Constants.FOR) ||
+                                        StartsWithKeyword(tokens[0], Constants.ELSE_IF) ||
+                                        StartsWithKeyword(tokens[0], Constants.SWITCH) ||
+                                        StartsWithKeyword(tokens[0], Constants.RETURN);
+                if (tokens[1] == "=" && !m_newVariables.Contains(tokens[0]) && !lhsIsArgument &&
+                    !keywordStatement)
                 {
                     // Declared double rather than var: CSCS has no integer type, so a
                     // variable seeded from a literal like 0 must not turn a later "/" into an
@@ -1538,13 +1761,29 @@ namespace SplitAndMerge
                     // though, so those keep var.
                     // "var" too when the value comes from the interpreter: that yields a
                     // Variable, which does not fit a double.
-                    result += YieldsBool(rhs) || rhs.Contains("__interpreter.GetVariableValue") ?
+                    // "var" too when the value joins collections: that yields their text --
+                    // "[1, 2][3]", whose Type is STRING and Size 0 -- which a double cannot
+                    // hold. The recorded type is corrected to match in CollectLocalTypes;
+                    // declaring var alone left ".Type" answering NUMBER at translation time.
+                    // "var" too when the value is a generated call certain to return a string --
+                    // "t = s.Substring(n - 1)", "t = s.At(n - 1)". An operator in the argument makes
+                    // the statement a known expression, which declared the local a double, and the
+                    // string could not be stored in it (CS0029).
+                    result += YieldsBool(rhs) || rhs.Contains("__interpreter.GetVariableValue") ||
+                        JoinsCollections(rhs) || s_stringResults.Any(marker => rhs.Contains(marker)) ?
                         "var " : "double ";
                     m_newVariables.Add(tokens[0]);
                 }
                 if (!rhs.Contains(";"))
                 {
-                    result += lhs + tokens[1] + rhs;
+                    // CSCS has no boolean type: a truth value is the number 1 or 0. A local C#
+                    // declared "bool" therefore cannot take part in "t += b" (double += bool)
+                    // or "b == 1" (bool == int), and this is the only place the operator and
+                    // both sides are visible together -- the right-hand side reaches the
+                    // operand funnel as a bare token with no neighbouring separator, so the
+                    // conversion there cannot see the context.
+                    result += AsCscsNumberBeside(lhs, tokens[1], rhs, out var convertedRhs) +
+                              tokens[1] + convertedRhs;
                 }
                 else
                 {
@@ -2084,9 +2323,25 @@ namespace SplitAndMerge
             m_forceInlineCalls = true;
             try
             {
-                converted += ProcessStatement(m_statements[m_statementId], m_statements[m_statementId + 1], false).Trim();
+                // "for (;;)" leaves the condition out. The tokenizer drops the empty text
+                // between the two semicolons, so the condition slot holds ";" itself -- and
+                // ProcessSpecialCases answers that with "", while the line below then sees
+                // "for(;" already ending in a semicolon and adds none. The step's ")" and the
+                // "{" landed straight after it: "for(;) {", which is "Invalid expression
+                // term '{'". An absent condition needs its own semicolon emitted here. An
+                // absent *step* always worked, being last, and an absent initialiser too.
+                var forCondition = m_statements[m_statementId];
+                bool noCondition = string.IsNullOrWhiteSpace(forCondition) ||
+                                   forCondition.Trim() == ";";
+                converted += noCondition ? ";" :
+                    ProcessStatement(forCondition, m_statements[m_statementId + 1], false).Trim();
                 converted += converted.EndsWith(";") ? "" : ";";
-                m_statementId += 2;
+                // One statement along, not two, when the condition was left out: the
+                // tokenizer drops the empty text between the two semicolons, so "for (;;)"
+                // arrives as "for (" ";" ";" ")" "{" -- a slot shorter than a full header.
+                // Advancing by two then read the block's "{" as the step and skipped the
+                // ")" altogether, emitting "for(;;{ {": "CS1026: ) expected".
+                m_statementId += noCondition ? 1 : 2;
                 converted += ProcessStatement(m_statements[m_statementId], m_statements[m_statementId + 1], false).Trim() + " {\n";
             }
             finally
@@ -2404,6 +2659,37 @@ namespace SplitAndMerge
                 // which is what stopped a ternary with string branches from compiling.
                 result += token;
                 return;
+            }
+            // A member of an enum declared in this function, reached through the token loop --
+            // "return Local.Type", "\"v=\" + Local.Y". Sent through ReplaceArgsInString so
+            // ResolveToken's rule applies: a declared member, or nothing. Left to the branches
+            // below, the local counted as a Variable and ".Type" became C#'s Variable.Type, which
+            // answers ENUM where the interpreter answers NONE.
+            int enumDot = token.IndexOf('.');
+            if (enumDot > 0 && IsPlainName(token.Substring(0, enumDot)) &&
+                m_enumLocals.ContainsKey(token.Substring(0, enumDot)))
+            {
+                result += ReplaceArgsInString(token);
+                return;
+            }
+
+            // "s.Substring(n - 1, n + 1)" beside a string literal comes through the token loop as
+            // "if(s.Substring(n", "-", "1,n", "+", "1)": the statement tokenizer splits on operators
+            // but not on ','. The middle token has no "(" of its own, so ProcessFunction built it
+            // as an interpreter call named "1,n" and the two arguments collapsed into one. A
+            // token made only of plain operands either side of a top-level comma is ordinary
+            // expression text, and ReplaceArgsInString emits it as such. A quote, a brace or a
+            // call in it keeps the old path.
+            if (IndexOfTopLevelChar(token, ',') >= 0 && token.IndexOfAny(new[] { '"', '{', '}', '[' }) < 0 &&
+                SplitTopLevel(token, ',').All(part =>
+                {
+                    var piece = part.Trim().Trim('(', ')').Trim();
+                    return IsNumber(piece) ||
+                           (IsPlainName(piece) && (m_paramMap.ContainsKey(piece) || m_newVariables.Contains(piece)));
+                }))
+            {
+                result += ReplaceArgsInString(token);
+                return;
             }
 
             string functionName = GetFunctionName(token, out string suffix, out bool isArray);
@@ -2495,7 +2781,11 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    result += token;
+                    // "else if (...)" tokenizes as "else", " ", "if(..." and the lone space is
+                    // dropped as whitespace, so the two keywords came out glued: "elseif(...)",
+                    // "The name 'elseif' does not exist". Every elif whose condition is not a
+                    // known expression -- a string, a bool local -- took this path and fell back.
+                    result += token == "else" ? token + " " : token;
                 }
                 return;
             }
@@ -2564,6 +2854,44 @@ namespace SplitAndMerge
                 // An index expression is ordinary code and needs resolving. Emitting the
                 // whole token verbatim left argument names undeclared, so "a[n]" referred to
                 // an "n" that does not exist in the generated method.
+                // A local in a statement holding a string literal reaches C# through here,
+                // and two kinds of local cannot go out verbatim.
+                //
+                // ".Type" on a primitive: the interpreter answers with the CSCS type's name,
+                // and a C# double, string or bool has no such member -- "\"t=\" + x.Type"
+                // did not compile. A collection local is a Variable and already worked.
+                //
+                // A truth value: CSCS renders it 1 or 0, C# renders a bool "True"/"False", so
+                // "\"v=\" + b" quietly produced "v=True" where the interpreter says "v=1" --
+                // a wrong answer rather than a failure to compile. Only these two: every other
+                // local ("v", "t", an element, a field) is correct as it stands, and this line
+                // serves all of them.
+                if (!isArray)
+                {
+                    if (suffix.StartsWith(".") &&
+                        TryMapTypeMember(functionName, suffix.Substring(1), out var typeInText))
+                    {
+                        result += typeInText;
+                        return;
+                    }
+                    // A truth value joined to text: CSCS renders it 1 or 0 while C# renders a
+                    // bool "True"/"False", so "\"v=\" + b" answered "v=True" where the
+                    // interpreter says "v=1" -- a wrong answer, not a failure to compile.
+                    //
+                    // Only with a "+" actually beside it. Forcing the conversion for every
+                    // bool local here was tried and cost four constructs that assign or test
+                    // one instead of joining it -- "ok = n > 2", "found = true", "c = b",
+                    // "return a && b && c" -- where C# needs the bool itself.
+                    if (string.IsNullOrEmpty(suffix) && m_statementHasString &&
+                        m_localTypes.TryGetValue(functionName, out var boolType) &&
+                        boolType == "bool" &&
+                        ((id > 0 && tokens[id - 1].Trim() == "+") ||
+                         (id + 1 < tokens.Count && tokens[id + 1].Trim() == "+")))
+                    {
+                        result += "(" + functionName + "?1:0)";
+                        return;
+                    }
+                }
                 result += isArray && !string.IsNullOrEmpty(suffix) ?
                     functionName + ReplaceArgsInString(suffix) : token;
                 return;
@@ -2725,12 +3053,44 @@ namespace SplitAndMerge
                     }
                 }
 
+                // A member of an enum the interpreter holds -- "Colors.Green". The member is
+                // not one of Variable's, so the branch below does not fire and the name went
+                // out verbatim ("The name 'Colors' does not exist"). Checked first, and only
+                // for a global that really holds an enum: the runtime helper answers exactly
+                // what the interpreter does.
+                // A member of an enum declared in this function. Only the names it was declared
+                // with: anything else -- ".Type" answers NONE in the interpreter, a member's own
+                // ".Type" answers its name -- stays with the interpreter rather than reaching a
+                // C# property that would answer differently.
+                if (m_enumLocals.TryGetValue(owner, out var enumMembers))
+                {
+                    if (!IsPlainName(member) || !enumMembers.Contains(member))
+                    {
+                        throw new ArgumentException("Not a declared member of the local enum: " + token);
+                    }
+                    return "CscsEnums.Member(__interpreter, " + owner + ", \"" + member + "\")";
+                }
+
+                if (IsEnumGlobal(owner) && IsPlainName(member))
+                {
+                    m_usesInterpreter = true;
+                    return "CscsEnums.Member(__interpreter, \"" + owner + "\", \"" + member + "\")";
+                }
+
                 // A member on a global: the read yields a Variable, which has the members
                 // the interpreter exposes under those names.
                 if (IsVariableMember(member) && IsInterpreterVariable(owner))
                 {
                     m_usesInterpreter = true;
                     return "__interpreter.GetVariableValue(\"" + owner + "\")." + member;
+                }
+
+                // ".Type" where the owner is a primitive: the interpreter names the CSCS
+                // type, and C# has no such member on a double, a string or a bool. This is
+                // the expression path -- "\"t=\" + x.Type" and "if (x.Type == \"NUMBER\")".
+                if (TryMapTypeMember(owner, member, out var typeMapped))
+                {
+                    return typeMapped;
                 }
 
                 if (IsCompareMarker(member))
@@ -3282,6 +3642,7 @@ namespace SplitAndMerge
                             resolved.Add(ReplaceArgsInString(callArg));
                         }
                     }
+                    int chainStart = sb.Length;
                     sb.Append("Variable.CallMethod(").Append(token.Substring(0, dot).Trim())
                       .Append(",\"").Append(token.Substring(dot + 1).Trim()).Append("\"");
                     foreach (var callArg in resolved)
@@ -3291,8 +3652,47 @@ namespace SplitAndMerge
                     sb.Append(")");
                     i = close;
                     // A member may follow the call -- "p.Kid().v" -- and the result is a
-                    // Variable, so the chain simply continues from it.
-                    i = AppendMemberChainAfter(sb, argStr, i);
+                    // Variable, so the chain simply continues from it. So may another call --
+                    // "p.Kid().Kid().v" -- which went out verbatim as ".Kid()" on a Variable
+                    // (CS1061): it wraps everything built since the chain began, the same way
+                    // the first call was built. A Variable, string or collection member is not a
+                    // class method, so it ends the chain as before.
+                    while (true)
+                    {
+                        i = AppendMemberChainAfter(sb, argStr, i);
+                        if (i + 1 >= argStr.Length || argStr[i + 1] != '.')
+                        {
+                            break;
+                        }
+                        int nameEnd = i + 2;
+                        while (nameEnd < argStr.Length &&
+                               (char.IsLetterOrDigit(argStr[nameEnd]) || argStr[nameEnd] == '_'))
+                        {
+                            nameEnd++;
+                        }
+                        if (nameEnd == i + 2 || nameEnd >= argStr.Length || argStr[nameEnd] != '(')
+                        {
+                            break;
+                        }
+                        var nextMethod = argStr.Substring(i + 2, nameEnd - i - 2);
+                        int nextClose = FindMatchingParen(argStr, nameEnd);
+                        if (nextClose < 0 || IsVariableMember(nextMethod) ||
+                            IsMappedStringMember(nextMethod) || IsCollectionMethod(nextMethod))
+                        {
+                            break;
+                        }
+                        sb.Insert(chainStart, "Variable.CallMethod(");
+                        sb.Append(",\"").Append(nextMethod).Append("\"");
+                        foreach (var nextArg in SplitTopLevel(argStr.Substring(nameEnd + 1, nextClose - nameEnd - 1), ','))
+                        {
+                            if (!string.IsNullOrWhiteSpace(nextArg))
+                            {
+                                sb.Append(",").Append(ReplaceArgsInString(nextArg));
+                            }
+                        }
+                        sb.Append(")");
+                        i = nextClose;
+                    }
                     prevSeparator = ')';
                     token = "";
                 }
@@ -3310,9 +3710,9 @@ namespace SplitAndMerge
                         if (parenIsCall.Count > 0) { parenIsCall.Pop(); }
                     }
                     string arguments = i + 1 < argStr.Length ? argStr.Substring(i + 1) : "";
-                    sb.Append(AsDoubleNextToDivision(
+                    sb.Append(AsCscsNumberIfBool(AsDoubleNextToDivision(
                         ResolveToken(token, out _, arguments, ch == '(', parenIsCall.Contains(true)),
-                        token, prevSeparator, ch));
+                        token, prevSeparator, ch), token, prevSeparator, ch));
                     sb.Append(ch);
                     prevSeparator = ch;
                     token = "";
@@ -3323,7 +3723,9 @@ namespace SplitAndMerge
                 }
             }
 
-            sb.Append(AsDoubleNextToDivision(ResolveToken(token, out _), token, prevSeparator, '\0'));
+            sb.Append(AsCscsNumberIfBool(
+                AsDoubleNextToDivision(ResolveToken(token, out _), token, prevSeparator, '\0'),
+                token, prevSeparator, '\0'));
             return sb.ToString();
         }
 
@@ -3337,6 +3739,101 @@ namespace SplitAndMerge
         /// an int) that a double would no longer match.
         /// </summary>
         static readonly HashSet<string> s_widening = new HashSet<string> { "*", "+", "-", "/" };
+
+        /// <summary>
+        /// Whether a separator puts this operand next to arithmetic. CSCS has no boolean type
+        /// -- a truth value is the number 1 or 0 -- so a local C# declared "bool" has to be
+        /// converted there: "b + 1" does not compile at all. Conditions, "&amp;&amp;", "!" and
+        /// "?:" want the bool itself, and all of those compile already.
+        /// </summary>
+        static bool IsArithmeticPosition(char separator)
+        {
+            return separator == '+' || separator == '-' || separator == '*' ||
+                   separator == '/' || separator == '%';
+        }
+
+        /// <summary>
+        /// Converts a bool-typed local to the number CSCS treats it as. Only a name whose
+        /// every assignment agreed on "bool" (see CollectLocalTypes, which records nothing for
+        /// a ternary) and only next to arithmetic -- widening either of those cost constructs
+        /// that already compiled.
+        /// </summary>
+        /// <summary>
+        /// Whether this text is a bare local whose every assignment agreed on "bool".
+        /// </summary>
+        bool IsBoolLocal(string text)
+        {
+            var name = (text ?? "").Trim();
+            return IsPlainName(name) && m_localTypes.TryGetValue(name, out var t) && t == "bool";
+        }
+
+        /// <summary>
+        /// Converts either side of an assignment or comparison from a C# bool to the number
+        /// CSCS treats it as. Two shapes need it:
+        ///
+        ///   "t += b"  -- double += bool does not compile
+        ///   "b == 1"  -- bool == int does not compile
+        ///
+        /// Only where the other side is *not* also a bool: "b == c" compiles as it stands and
+        /// means the same thing. Only arithmetic compound operators: OPER_ACTIONS also holds
+        /// "->" and ":", which are nothing of the kind. The left side is returned and the
+        /// right side handed back through <paramref name="convertedRhs"/>.
+        /// </summary>
+        string AsCscsNumberBeside(string lhs, string op, string rhs, out string convertedRhs)
+        {
+            convertedRhs = rhs;
+            var trimmedOp = (op ?? "").Trim();
+            bool compound = trimmedOp.Length == 2 && trimmedOp[1] == '=' &&
+                            "+-*/%".IndexOf(trimmedOp[0]) >= 0;
+            bool comparison = trimmedOp == "==" || trimmedOp == "!=";
+            if (!compound && !comparison)
+            {
+                return lhs;
+            }
+            // The sides arrive carrying the statement's punctuation -- "if(b" and "1)" -- so
+            // the name is taken out of it and put back afterwards.
+            var lhsName = (lhs ?? "").Trim().TrimStart('i', 'f', 'w', 'h', 'l', 'e', '(', ' ');
+            var lhsPrefix = (lhs ?? "").Substring(0, (lhs ?? "").Length - lhsName.Length);
+            var rhsName = (rhs ?? "").Trim().TrimEnd(')', ' ');
+            var rhsSuffix = (rhs ?? "").Substring(rhsName.Length == 0 ? 0 :
+                                (rhs ?? "").IndexOf(rhsName, StringComparison.Ordinal) + rhsName.Length);
+            bool lhsBool = IsBoolLocal(lhsName);
+            bool rhsBool = IsBoolLocal(rhsName);
+            if (lhsBool && rhsBool)
+            {
+                return lhs;     // "b == c": both bools, and C# agrees with the interpreter
+            }
+            if (compound && rhsBool)
+            {
+                convertedRhs = "(" + rhsName + "?1:0)" + rhsSuffix;
+                return lhs;
+            }
+            if (comparison && rhsBool && IsNumber(lhsName))
+            {
+                convertedRhs = "(" + rhsName + "?1:0)" + rhsSuffix;
+                return lhs;
+            }
+            if (comparison && lhsBool && IsNumber(rhsName))
+            {
+                return lhsPrefix + "(" + lhsName + "?1:0)";
+            }
+            return lhs;
+        }
+
+        string AsCscsNumberIfBool(string resolved, string original, char before, char after)
+        {
+            var name = (original ?? "").Trim();
+            if (name.Length == 0 || resolved != name || !IsPlainName(name) ||
+                !m_localTypes.TryGetValue(name, out var localType) || localType != "bool")
+            {
+                return resolved;
+            }
+            if (!IsArithmeticPosition(before) && !IsArithmeticPosition(after))
+            {
+                return resolved;
+            }
+            return "(" + name + "?1:0)";
+        }
 
         static string AsDoubleNextToDivision(string resolved, string original, char before, char after)
         {
@@ -3367,6 +3864,30 @@ namespace SplitAndMerge
         /// rather than a number. Quoted text is skipped so a '&gt;' inside a string literal
         /// does not count.
         /// </summary>
+        /// <summary>
+        /// Whether the operand is a collection this function holds -- a local assigned a
+        /// literal, or an argument declared list/map. Only usable once statements are being
+        /// processed: m_collectionLocals is filled by TryBuildLiteralAssignment, which runs
+        /// after the collecting passes.
+        /// </summary>
+        bool IsCollectionOperand(string operand)
+        {
+            var name = (operand ?? "").Trim();
+            return IsPlainName(name) &&
+                   (m_collectionLocals.Contains(name) || m_collectionArgs.Contains(name));
+        }
+
+        /// <summary>
+        /// Whether the expression joins a collection with "+". CSCS concatenates the two
+        /// collections' text there rather than merging them, so the value is text and the
+        /// local receiving it cannot be a double.
+        /// </summary>
+        bool JoinsCollections(string expression)
+        {
+            var parts = SplitTopLevelOn(expression ?? "", "+");
+            return parts.Count > 1 && parts.Any(part => IsCollectionOperand(part));
+        }
+
         static bool YieldsBool(string expression)
         {
             bool inQuotes = false;
@@ -3503,6 +4024,29 @@ namespace SplitAndMerge
             }
 
             string functionName = paramStart < 0 ? restStr : restStr.Substring(0, paramStart);
+
+            // A global carrying the parenthesis that closes the condition around it --
+            // "gcount)" is the last token of "if (1 == gcount)", because the tokenizer splits
+            // on "==" and leaves the ")" attached to the right-hand operand. With no "(" of
+            // its own the whole token was taken as a function name and emitted as a call:
+            // new ParserFunction(..., "gcount)", '(') plus a hoisted temp, which left the
+            // condition missing its ")" -- CS1026. Only this shape: a real call always has a
+            // "(" of its own (paramStart >= 0), and a name the interpreter knows as a function
+            // is left to the call path. Relational operators never get here, which is why
+            // "1 > gcount" always compiled while "1 == gcount" did not.
+            if (paramStart < 0 && functionName.TrimEnd().EndsWith(")"))
+            {
+                var globalName = SplitClosingParens(functionName.Trim(), out string globalClosing);
+                if (globalClosing.Length > 0 && IsPlainName(globalName) &&
+                    m_parentScript.InterpreterInstance.GetFunction(globalName) == null &&
+                    IsInterpreterVariable(globalName))
+                {
+                    m_usesInterpreter = true;
+                    result += "__interpreter.GetVariableValue(\"" + globalName + "\")" +
+                              globalClosing;
+                    return;
+                }
+            }
             string argsStr = "";
             string trailing = "";
             if (paramStart >= 0)
@@ -3539,7 +4083,47 @@ namespace SplitAndMerge
                 }
                 built += ")";
                 // "p.Kid().v": the member that follows reads from the call's result.
-                var afterCall = (trailing ?? "").Trim();
+                var afterCall = (trailing ?? "").Trim();
+                // "p.Kid().Kid().v": a further method call runs on what the previous one returned.
+                // It was appended verbatim, and C# looked for a "Kid" on Variable (CS1061). Each
+                // one wraps the result so far the same way the first call was built. A Variable,
+                // string or collection member is not a class method, so it ends the loop.
+                while (afterCall.StartsWith("."))
+                {
+                    int nameEnd = 1;
+                    while (nameEnd < afterCall.Length &&
+                           (char.IsLetterOrDigit(afterCall[nameEnd]) || afterCall[nameEnd] == '_'))
+                    {
+                        nameEnd++;
+                    }
+                    if (nameEnd == 1 || nameEnd >= afterCall.Length || afterCall[nameEnd] != '(')
+                    {
+                        break;
+                    }
+                    var nextMethod = afterCall.Substring(1, nameEnd - 1);
+                    if (IsVariableMember(nextMethod) || IsMappedStringMember(nextMethod) ||
+                        IsCollectionMethod(nextMethod))
+                    {
+                        break;
+                    }
+                    int nextClose = FindMatchingParen(afterCall, nameEnd);
+                    if (nextClose < 0)
+                    {
+                        break;
+                    }
+                    var nextInner = afterCall.Substring(nameEnd + 1, nextClose - nameEnd - 1);
+                    built = "Variable.CallMethod(" + built + ",\"" + nextMethod + "\"";
+                    foreach (var nextArg in SplitTopLevel(nextInner, ','))
+                    {
+                        if (!string.IsNullOrWhiteSpace(nextArg))
+                        {
+                            built += "," + ReplaceArgsInString(nextArg);
+                        }
+                    }
+                    built += ")";
+                    afterCall = afterCall.Substring(nextClose + 1).Trim();
+                    trailing = afterCall;
+                }
                 if (afterCall.StartsWith(".") && IsPlainName(afterCall.Substring(1)))
                 {
                     var chained = BuildMemberChain(built, afterCall.Substring(1));
@@ -3608,6 +4192,14 @@ namespace SplitAndMerge
                 if (IsVariableMember(member) && m_variableLocals.Contains(owner))
                 {
                     result += owner + "." + CanonicalVariableMember(member);
+                    return;
+                }
+
+                // ".Type" on a primitive owner, as on the expression path above: the answer is
+                // the CSCS type's name, which a C# double, string or bool cannot supply.
+                if (TryMapTypeMember(owner, member, out var typeToken))
+                {
+                    result += typeToken + closingParens;
                     return;
                 }
 
@@ -3844,7 +4436,9 @@ namespace SplitAndMerge
             {
                 return null;
             }
-            if (!term.EndsWith("]") && !(IsPlainName(term) && m_variableLocals.Contains(term)))
+            if (!term.EndsWith("]") && !(IsPlainName(term) &&
+                (m_variableLocals.Contains(term) || IsStringOperand(term) ||
+                 (m_localTypes.TryGetValue(term, out var termType) && termType == "string"))))
             {
                 return null;
             }
@@ -3855,6 +4449,7 @@ namespace SplitAndMerge
             // false there -- "5" included -- while AsDouble() would parse it to 5 and call it
             // true. And "!x" is not the opposite: it is true only for a number that is zero,
             // so a string is false both ways round. Hence two helpers rather than a negation.
+            // The object overloads accept a string term as well as a Variable.
             return "CscsConvert." + (negated ? "IsFalse(" : "IsTrue(") + term + ")";
         }
 
@@ -3922,13 +4517,18 @@ namespace SplitAndMerge
                 if (close < 0 || m_paramMap.ContainsKey(name) || m_newVariables.Contains(name) ||
                     Constants.RESERVED.Contains(name) || IsMathFunction(name, out _) ||
                     !string.IsNullOrEmpty(GetCSharpFunction(name, "0")) ||
-                    // Only a function a script defined. Hoisting every name the interpreter
-                    // knows was tried, to compile "if (StrEqual(s, \"AB\"))": it cost fourteen
-                    // constructs, because a *member* call whose name is also a built-in --
-                    // "s.Contains(\"BC\")" -- was then hoisted as though it were a bare call,
-                    // and the hoisted temporary is a Variable where the condition wants a
-                    // bool. Both would have to be handled first.
-                    !(interpreter.GetFunction(name) is CustomFunction))
+                    // A member call is never hoisted: "s.Contains(\"BC\")" and "a.Contains(2)"
+                    // compile as members already, and hoisting them as though they were bare
+                    // calls is what cost fourteen constructs when this was widened before.
+                    // The interpreter also answers the two differently -- "Contains(a, 2)" is
+                    // 0 where "a.Contains(2)" is 1 -- so the distinction is semantic, not just
+                    // a matter of spelling.
+                    (start > 0 && condition[start - 1] == '.') ||
+                    // A function the interpreter knows: one a script defined, or a built-in
+                    // registered in C#. A built-in's value is read as a truth value below,
+                    // since "if (StrEqual(s, \"AB\"))" wants one where ".AsDouble()" gives a
+                    // number that C# will not accept as a condition.
+                    interpreter.GetFunction(name) == null)
                 {
                     sb.Append(name);
                     continue;
@@ -3946,7 +4546,34 @@ namespace SplitAndMerge
                 // "a[0] = f(n)" stores whatever f returned rather than a number.
                 // Compared with a string, or handed to SameValue, it has to stay a Variable too:
                 // read as a number, a string result was 0 against "s".
-                if (asVariable || m_statementHasString || wholeStatement.Contains("\"") ||
+                // The call is the whole condition -- "if (StrEqual(s, \"AB\"))",
+                // "if (helper(n))" -- so its value is the test itself. C# has no truth value
+                // for a Variable or for the double ".AsDouble()" gives, and the interpreter
+                // counts a non-zero number as true, which is what IsTrue answers.
+                var afterCall = close + 1 < condition.Length ?
+                    condition.Substring(close + 1).Trim() : "";
+                var beforeCall = condition.Substring(0, start).Trim();
+                // The call is the whole test when nothing but grouping surrounds it. The
+                // condition arrives already inside its own parenthesis -- "(StrEqual(s,\"AB\"))"
+                // with the name at index 1 -- so testing for index 0 matched nothing. A
+                // condition that continues past the call ("if(helper(n)" with ">5" still to
+                // come in the whole statement) keeps reading the value as a number.
+                // Nothing but grouping around the call, and no comparison anywhere in the
+                // statement. The tokenizer splits on a comparison, so "if (f(n) < \"t\")"
+                // arrives here as "(f(n)" with the "< \"t\"" nowhere in sight -- measuring
+                // this text cannot see it, and wrapping the value as a truth value then put a
+                // bool where a string comparison wanted the string. m_statementRelational is
+                // computed for the whole statement before it is torn up, which is what makes
+                // the difference visible here. "==" and "!=" never reach this method.
+                bool wholeCondition =
+                    beforeCall.Trim('(').Length == 0 &&
+                    afterCall.Trim(')').Length == 0 &&
+                    !m_statementRelational;
+                if (wholeCondition && !asVariable)
+                {
+                    sb.Append("CscsConvert.IsTrue(").Append(tempName).Append(")");
+                }
+                else if (asVariable || m_statementHasString || wholeStatement.Contains("\"") ||
                     wholeStatement.Contains(SAME_VALUE_CALL))
                 {
                     m_newVariables.Add(tempName);
@@ -4579,6 +5206,33 @@ namespace SplitAndMerge
                     continue;
                 }
 
+                // "s.Substring(n - 1, n + 1)" tokenizes as "s.Substring(n", "-", "1,n", "+", "1)":
+                // the statement tokenizer splits on operators but not on ','. The middle token
+                // resolved to nothing, the statement went to the token loop, and that read
+                // "1,n" as the name of a call -- both arguments collapsed into one. Each side
+                // of a top-level comma is judged as the token it really is. ("1,2" only ever
+                // passed because Double.TryParse reads ',' as a thousands separator.) A piece is
+                // judged beside an operator: this method answers "known and numeric", and an int
+                // argument alone is known without ever marking the expression numeric -- judged
+                // bare, "n" came back false and the check changed nothing.
+                if (IndexOfTopLevelChar(token, ',') >= 0 && !token.Contains("{"))
+                {
+                    foreach (var part in SplitTopLevel(token, ','))
+                    {
+                        var piece = part.Trim();
+                        if (piece.Length == 0 || IsNumber(piece.Trim('(', ')')))
+                        {
+                            continue;
+                        }
+                        if (!IsKnownExpression(new List<string> { piece, "+" }))
+                        {
+                            return false;
+                        }
+                    }
+                    numericCandidate = true;
+                    continue;
+                }
+
                 string paramName = GetFunctionName(token, out string suffix, out bool isArray);
 
                 // Strip grouping punctuation the surrounding expression left on the token.
@@ -4772,6 +5426,55 @@ namespace SplitAndMerge
             return addNewVars ? code + RegisterVariableString(name, name) : code;
         }
 
+        /// <summary>
+        /// Translates "var Local = Enum {X, Y}" declared inside the function, or null when the
+        /// statement is not one. It arrives as four statements -- "var Local = Enum", "{", "X, Y",
+        /// "}" -- and each of the three names used to become an interpreter call of its own, their
+        /// temporaries glued into "__varTempVar1__varTempVar2". The enum is built the way
+        /// EnumFunction builds it: an ENUM Variable whose members are numbered from 0. Only the
+        /// statement the loop is on can be one, since the names come from the statements after it.
+        /// </summary>
+        string TryBuildLocalEnum(string statement, bool addNewVars)
+        {
+            var trimmed = statement.Trim().TrimEnd(';').Trim();
+            if (m_statements == null || m_statementId + 3 >= m_statements.Count ||
+                (m_statements[m_statementId] ?? "").Trim() != statement.Trim())
+            {
+                return null;
+            }
+            if (trimmed.StartsWith("var ", StringComparison.Ordinal))
+            {
+                trimmed = trimmed.Substring(4).Trim();
+            }
+            var sides = trimmed.Split('=');
+            if (sides.Length != 2 || sides[1].Trim() != "Enum")
+            {
+                return null;
+            }
+            var name = sides[0].Trim();
+            if (!IsPlainName(name) || m_newVariables.Contains(name) || m_paramMap.ContainsKey(name) ||
+                m_statements[m_statementId + 1].Trim() != "{" || m_statements[m_statementId + 3].Trim() != "}")
+            {
+                return null;
+            }
+            var members = m_statements[m_statementId + 2].Split(',').Select(member => member.Trim()).ToList();
+            if (members.Count == 0 || members.Any(member => !IsPlainName(member)) ||
+                members.Distinct(StringComparer.OrdinalIgnoreCase).Count() != members.Count)
+            {
+                return null;
+            }
+
+            var code = m_depth + "var " + name + " = new Variable(Variable.VarType.ENUM);\n";
+            for (int i = 0; i < members.Count; i++)
+            {
+                code += m_depth + name + ".SetEnumProperty(\"" + members[i] + "\", new Variable(" + i + "));\n";
+            }
+            m_newVariables.Add(name);
+            m_enumLocals[name] = members;
+            m_statementId += 3;
+            return addNewVars ? code + RegisterVariableString(name, name) : code;
+        }
+
         string TryBuildLiteralAssignment(string statement, bool addNewVars)
         {
             statement = statement.TrimEnd().TrimEnd(';').TrimEnd();
@@ -4802,7 +5505,9 @@ namespace SplitAndMerge
             bool isMap = false;
             foreach (var element in elements)
             {
-                if (SplitTopLevel(element, ':').Count > 1)
+                // IsMapEntry, not a bare split on ':' -- a ternary carries a ':' of its own, and
+                // "{n > 2 ? 10 : 20}" was built as the map entry "n > 2 ? 10" -> 20.
+                if (IsMapEntry(element))
                 {
                     isMap = true;
                     break;
@@ -5078,7 +5783,8 @@ namespace SplitAndMerge
                     continue;
                 }
                 var entry = SplitTopLevel(element, ':');
-                if (entry.Count > 1)
+                // A ternary's ':' is not a key separator -- see IsMapEntry.
+                if (entry.Count > 1 && IsMapEntry(element))
                 {
                     // A "key : value" entry. Both halves become arguments to Variable.NewMap,
                     // which builds the map with SetHashVariable exactly as the interpreter
@@ -5805,6 +6511,25 @@ namespace SplitAndMerge
             }
             var owner = target.Substring(0, dot);
             var field = target.Substring(dot + 1);
+            // "p.kid.v = 9": the field written is the last one, on whatever the chain before it
+            // reads -- the same GetProperty chain a read of "p.kid.v" builds. Only a plain field
+            // at every step: a Variable member or a call in the middle is not a field. Before,
+            // this returned null and the ordinary path declared "double p.kid.v=9", and a
+            // three-deep "p.kid.kid = new Named(..)" failed the same way after its hoisting.
+            var ownerExpression = owner;
+            int lastDot = target.LastIndexOf('.');
+            if (lastDot > dot)
+            {
+                foreach (var segment in target.Substring(dot + 1, lastDot - dot - 1).Split('.'))
+                {
+                    if (!IsPlainName(segment) || IsVariableMember(segment))
+                    {
+                        return null;
+                    }
+                    ownerExpression += ".GetProperty(\"" + segment + "\")";
+                }
+                field = target.Substring(lastDot + 1);
+            }
             if (!IsPlainName(owner) || !IsPlainName(field) ||
                 !m_variableLocals.Contains(owner) || IsVariableMember(field) ||
                 string.IsNullOrWhiteSpace(sides[1]))
@@ -5815,7 +6540,7 @@ namespace SplitAndMerge
             string built;
             var value = TryBuildArrayLiteral(sides[1].Trim(), out built) ? built :
                 "Variable.ConvertToVariable(" + ReplaceArgsInString(sides[1]) + ")";
-            return m_depth + owner + ".SetProperty(\"" + field + "\", " + value + ", null);\n";
+            return m_depth + ownerExpression + ".SetProperty(\"" + field + "\", " + value + ", null);\n";
         }
 
         /// <summary>
@@ -6196,6 +6921,7 @@ namespace SplitAndMerge
                 // The C# type every plain assignment to it agrees on. Where they do not, the
                 // local is left as it was: the function then falls back, as it did before.
                 string type = null;
+                bool disagreed = false;
                 foreach (var statement in statements)
                 {
                     var line = (statement ?? "").Trim().TrimEnd(';').Trim();
@@ -6208,9 +6934,26 @@ namespace SplitAndMerge
                     if (type != null && type != valueType)
                     {
                         type = null;
+                        disagreed = true;
                         break;
                     }
                     type = valueType;
+                }
+                // Assignments that really disagree -- "v = \"text\"" in one branch, "v = 5" in the
+                // other -- still agree on one thing the interpreter can hold: a Variable. Declared
+                // as one, and registered as Variable-valued so its members, comparisons and
+                // arithmetic take Variable's own operators. Before this the local went undeclared
+                // and every use of it was CS0103.
+                //
+                // Only on a real disagreement. "type == null" also means no plain assignment was
+                // found at all -- "double result = 0;" is invisible to AssignedName, and
+                // "result += x" is compound -- and declaring those put a second "result" into the
+                // same method (CS0128), which aborted test.cscs's dllfunction before its first
+                // assertion. And never for a C#-form body, which declares its own locals.
+                if (disagreed && !m_scriptInCSharp)
+                {
+                    type = "Variable";
+                    m_variableLocals.Add(name);
                 }
                 if (type == null)
                 {
@@ -6224,6 +6967,351 @@ namespace SplitAndMerge
                     m_collectionLocals.Add(name);
                 }
             }
+
+            // The same holds for a local that never crosses a block: "v = 0; v = \"text\";" and
+            // "v = 0; if (n > 0) { v = \"text\"; }" declared v a double at its first assignment,
+            // and the later one could not convert (CS0029). A real disagreement among its plain
+            // assignments declares it a Variable up here instead, exactly as a crossing local
+            // gets. Skipped for any name with a ternary assignment -- AssignedValueType reads
+            // "n > 2 ? 1 : 2" as a bool because YieldsBool only looks for a comparison
+            // character, which would invent a disagreement for a local that compiles today --
+            // and never for a C#-form body, which declares its own locals.
+            if (!m_scriptInCSharp)
+            {
+                var assignedOrder = new List<string>();
+                foreach (var statement in statements)
+                {
+                    var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                    int eq = line.IndexOf('=');
+                    var assigned = AssignedName(line);
+                    if (assigned == null || eq <= 0 || "+-*/%&|^".IndexOf(line[eq - 1]) >= 0 ||
+                        assignedOrder.Contains(assigned))
+                    {
+                        continue;
+                    }
+                    assignedOrder.Add(assigned);
+                }
+                foreach (var name in assignedOrder)
+                {
+                    if (loopVars.Contains(name) || m_newVariables.Contains(name) || m_paramMap.ContainsKey(name) ||
+                        m_collectionArgs.Contains(name) || m_widenedIntArgs.Contains(name) ||
+                        IsInterpreterVariable(name))
+                    {
+                        continue;
+                    }
+                    string first = null;
+                    bool mixed = false, ternary = false;
+                    foreach (var statement in statements)
+                    {
+                        var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                        int eq = line.IndexOf('=');
+                        if (AssignedName(line) != name || eq <= 0 || "+-*/%&|^".IndexOf(line[eq - 1]) >= 0)
+                        {
+                            continue;
+                        }
+                        var value = line.Substring(eq + 1).Trim();
+                        if (IndexOfTopLevelChar(value, '?') >= 0)
+                        {
+                            ternary = true;
+                            break;
+                        }
+                        var valueType = AssignedValueType(name, value);
+                        if (first != null && first != valueType)
+                        {
+                            mixed = true;
+                        }
+                        first = first ?? valueType;
+                    }
+                    if (!mixed || ternary)
+                    {
+                        continue;
+                    }
+                    m_converted.AppendLine("     Variable " + name + " = null;");
+                    m_newVariables.Add(name);
+                    m_variableLocals.Add(name);
+                }
+            }
+
+            // An assignment inside a condition -- "while ((x = n - t) > 2)" -- is not a plain
+            // statement, so AssignedName never saw it and nothing declared x (CS0103). The same
+            // loop declared beforehand ("x = 0; while ((x = ...") always compiled. Declared up
+            // here with the type every assignment to the name agrees on, the condition's and any
+            // plain ones alike. A ternary or a Variable-typed value, or any disagreement, is left
+            // alone: those fall back rather than getting a guessed type.
+            if (!m_scriptInCSharp)
+            {
+                var conditionTypes = new Dictionary<string, string>();
+                var refused = new HashSet<string>();
+                foreach (var raw in statements)
+                {
+                    var statement = (raw ?? "").Trim();
+                    bool keywordCondition = StartsWithKeyword(statement, Constants.IF) ||
+                        StartsWithKeyword(statement, Constants.WHILE) || StartsWithKeyword(statement, Constants.ELSE_IF);
+                    // Elsewhere too -- "x = ((b = 7))", "return (b = n * 2) + b" -- but never a "for"
+                    // header, whose own assignments are the counter's.
+                    if (StartsWithKeyword(statement, Constants.FOR))
+                    {
+                        continue;
+                    }
+                    bool inQuotes = false;
+                    for (int i = 0; i < statement.Length; i++)
+                    {
+                        char ch = statement[i];
+                        if (ch == '"' && (i == 0 || statement[i - 1] != '\\'))
+                        {
+                            inQuotes = !inQuotes;
+                            continue;
+                        }
+                        if (inQuotes || ch != '(')
+                        {
+                            continue;
+                        }
+                        // Never inside a call's argument list. "f(a = 1)" names an argument, and in
+                        // "Math.Max((q = n * 2), 5) + q" the math path does not carry the assignment out
+                        // -- declaring q made compiled code answer 5 where the interpreter says 9. Only
+                        // grouping parentheses outside every call count; a keyword's own condition
+                        // parenthesis ("if(") is not a call.
+                        int keywordParen = keywordCondition ? statement.IndexOf('(') : -1;
+                        bool insideCall = false;
+                        for (int o = 0; o <= i && !insideCall; o++)
+                        {
+                            if (statement[o] != '(' || o == keywordParen || o == 0 ||
+                                !(char.IsLetterOrDigit(statement[o - 1]) || statement[o - 1] == '_'))
+                            {
+                                continue;
+                            }
+                            int callClose = FindMatchingParen(statement, o);
+                            insideCall = o == i || callClose < 0 || callClose > i;
+                        }
+                        if (insideCall)
+                        {
+                            continue;
+                        }
+                        int j = i + 1;
+                        while (j < statement.Length && char.IsWhiteSpace(statement[j])) { j++; }
+                        int nameStart = j;
+                        while (j < statement.Length && (char.IsLetterOrDigit(statement[j]) || statement[j] == '_')) { j++; }
+                        if (j == nameStart || char.IsDigit(statement[nameStart]))
+                        {
+                            continue;
+                        }
+                        var condName = statement.Substring(nameStart, j - nameStart);
+                        while (j < statement.Length && char.IsWhiteSpace(statement[j])) { j++; }
+                        if (j >= statement.Length || statement[j] != '=' ||
+                            (j + 1 < statement.Length && statement[j + 1] == '='))
+                        {
+                            continue;
+                        }
+                        int close = FindMatchingParen(statement, i);
+                        if (close < 0)
+                        {
+                            continue;
+                        }
+                        var value = statement.Substring(j + 1, close - j - 1).Trim();
+                        var valueType = IndexOfTopLevelChar(value, '?') >= 0 ? null : AssignedValueType(condName, value);
+                        // A truth value is fine now. It was refused while "if ((b = n > 2))" threw a
+                        // NullReferenceException in the interpreter itself -- AssignFunction ate a
+                        // second ")" -- and compiled code answering 1 would have differed from it.
+                        if (valueType == null || valueType == "Variable" ||
+                            (conditionTypes.TryGetValue(condName, out var seen) && seen != valueType))
+                        {
+                            refused.Add(condName);
+                            continue;
+                        }
+                        conditionTypes[condName] = valueType;
+                    }
+                }
+                foreach (var entry in conditionTypes)
+                {
+                    var name = entry.Key;
+                    if (refused.Contains(name) || loopVars.Contains(name) || m_newVariables.Contains(name) ||
+                        m_paramMap.ContainsKey(name) || m_collectionArgs.Contains(name) ||
+                        m_widenedIntArgs.Contains(name) || IsInterpreterVariable(name))
+                    {
+                        continue;
+                    }
+                    bool agrees = true;
+                    foreach (var statement in statements)
+                    {
+                        var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                        int eq = line.IndexOf('=');
+                        if (AssignedName(line) != name || eq <= 0 || "+-*/%&|^".IndexOf(line[eq - 1]) >= 0)
+                        {
+                            continue;
+                        }
+                        var plain = line.Substring(eq + 1).Trim();
+                        if (IndexOfTopLevelChar(plain, '?') >= 0 || AssignedValueType(name, plain) != entry.Value)
+                        {
+                            agrees = false;
+                            break;
+                        }
+                    }
+                    if (!agrees)
+                    {
+                        continue;
+                    }
+                    m_converted.AppendLine("     " + entry.Value + " " + name + " = " +
+                        (entry.Value == "string" ? "\"\"" : entry.Value == "bool" ? "false" : "0") + ";");
+                    m_newVariables.Add(name);                    // Recorded too, so a later read of a bool one -- "b + 10" -- gets the conversion
+                    // to the number CSCS uses; the plain-assignment record never sees this name.
+                    if (!m_localTypes.ContainsKey(name))
+                    {
+                        m_localTypes[name] = entry.Value;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Records, for every local a plain assignment names, the C# type all of its
+        /// assignments agree on. DeclareBlockCrossingLocals works this out too, but only for
+        /// the locals it has to declare at the top -- those used outside the block they first
+        /// appear in -- and ".Type" is asked about ordinary locals as well: "x = n + 1;
+        /// return x.Type;" never crosses a block. Where the assignments disagree the name is
+        /// left out, so TryMapTypeMember declines and the function falls back.
+        /// </summary>
+        void CollectLocalTypes(List<string> statements)
+        {
+            var agreed = new Dictionary<string, string>();
+            var conflicting = new HashSet<string>();
+            foreach (var statement in statements)
+            {
+                var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                int eq = line.IndexOf('=');
+                var name = AssignedName(line);
+                // Only plain assignments: a compound one ("t += x") keeps its operator in
+                // front of the "=" and says nothing certain about the type on its own.
+                if (name == null || eq <= 0 || "+-*/%&|^<>!".IndexOf(line[eq - 1]) >= 0 ||
+                    !IsPlainName(name) || m_paramMap.ContainsKey(name))
+                {
+                    continue;
+                }
+                var value = line.Substring(eq + 1).Trim();
+                // A ternary holds whatever its branches hold. AssignedValueType asks
+                // YieldsBool, which only looks for a comparison character anywhere in the
+                // value -- so "n = n % 2 == 0 ? n / 2 : 3 * n + 1" and
+                // "y = n > 2 ? (x = 5) : (x = 7)" were both recorded as holding a bool, where
+                // they hold numbers. Recorded as conflicting instead, which leaves the name
+                // with no known type: nothing here may guess one.
+                if (IndexOfTopLevelChar(value, '?') >= 0)
+                {
+                    conflicting.Add(name);
+                    continue;
+                }
+                // An argument widened into a local, or a collection argument, is not a bool.
+                if (m_widenedIntArgs.Contains(name) || m_collectionArgs.Contains(name))
+                {
+                    continue;
+                }
+                var valueType = AssignedValueType(name, value);
+                // Joining collections yields their text, and ".Type" is answered from this
+                // record at translation time -- leaving it "double" made "c = a + b; c.Type"
+                // compile to the literal "NUMBER" against the interpreter's "STRING".
+                // m_collectionLocals cannot be consulted here: it is filled while statements
+                // are processed, which is after this pass. The operands are recognised instead
+                // from this loop's own record -- a "{...}" literal arrives as "a =" with an
+                // empty value, which AssignedValueType calls "Variable" -- and the literals
+                // are always assigned before the join that reads them.
+                if (valueType != "string" && SplitTopLevelOn(value, "+").Count > 1 &&
+                    SplitTopLevelOn(value, "+").Any(part =>
+                        agreed.TryGetValue(part.Trim(), out var partType) && partType == "Variable"))
+                {
+                    valueType = "string";
+                }
+                if (agreed.TryGetValue(name, out var already) && already != valueType)
+                {
+                    conflicting.Add(name);
+                    continue;
+                }
+                agreed[name] = valueType;
+            }
+            foreach (var pair in agreed)
+            {
+                if (!conflicting.Contains(pair.Key))
+                {
+                    m_localTypes[pair.Key] = pair.Value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Translates ".Type" -- in any case, as CSCS names are case-insensitive -- into the
+        /// name of the CSCS type, which is what the interpreter answers with. A Variable has
+        /// the member itself and only needs its canonical spelling; a C# double, string or
+        /// bool has nothing of the kind, so the answer is written out as the literal the
+        /// interpreter would give. Returns false unless the owner's type is known: a guessed
+        /// literal would be a silent divergence, where a fallback is merely slower.
+        /// </summary>
+        bool TryMapTypeMember(string owner, string member, out string result)
+        {
+            result = null;
+            var name = (member ?? "").Trim();
+            // Only the bare property: "Type()" is not how the interpreter spells it, and
+            // anything following it ("Type.Length") is a chain this does not handle.
+            if (!name.Equals("type", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrEmpty(owner) || !IsPlainName(owner.Trim()))
+            {
+                return false;
+            }
+            owner = owner.Trim();
+            // A collection or a Variable local: Variable.Type answers the CSCS type already.
+            if (m_collectionLocals.Contains(owner) || m_variableLocals.Contains(owner))
+            {
+                result = owner + ".Type";
+                return true;
+            }
+            // An argument, whose type is declared. A collection argument is a Variable too.
+            if (m_collectionArgs.Contains(owner))
+            {
+                result = owner + ".Type";
+                return true;
+            }
+            if (m_argsMap.TryGetValue(owner, out var arg) && m_paramMap.TryGetValue(owner, out var slot))
+            {
+                if (arg.Type == Variable.VarType.STRING)
+                {
+                    result = "\"STRING\"";
+                    return true;
+                }
+                if (arg.Type == Variable.VarType.NUMBER || arg.Type == Variable.VarType.INT)
+                {
+                    result = "\"NUMBER\"";
+                    return true;
+                }
+                if (arg.Type == Variable.VarType.VARIABLE)
+                {
+                    result = slot + ".Type";
+                    return true;
+                }
+                return false;
+            }
+            // An int argument widened into a double local is a number either way.
+            if (m_widenedIntArgs.Contains(owner))
+            {
+                result = "\"NUMBER\"";
+                return true;
+            }
+            // A local, if every assignment to it agreed on a type. A bool is a NUMBER to the
+            // interpreter, which is what "b = n > 0; b.Type" answers there.
+            if (m_localTypes.TryGetValue(owner, out var localType))
+            {
+                if (localType == "string")
+                {
+                    result = "\"STRING\"";
+                    return true;
+                }
+                if (localType == "double" || localType == "bool")
+                {
+                    result = "\"NUMBER\"";
+                    return true;
+                }
+                if (localType == "Variable")
+                {
+                    result = owner + ".Type";
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>The C# type a local takes from this value, as DeclareBlockCrossingLocals uses it.</summary>
@@ -6460,7 +7548,11 @@ namespace SplitAndMerge
             var trimmed = statement.TrimStart();
             var indent = statement.Substring(0, statement.Length - trimmed.Length);
 
-            foreach (var keyword in new[] { Constants.IF, Constants.WHILE, Constants.RETURN })
+            // "elif" and "else if" too: their conditions compare exactly as an "if" does, and
+            // without them "elif (s < \"b\")" reached C# as a string ordered with "<". The keyword
+            // is kept as written, so the "elif" -> "else if" step that follows still applies.
+            foreach (var keyword in new[] { Constants.IF, Constants.WHILE, Constants.RETURN,
+                                            Constants.ELSE_IF, "else if" })
             {
                 if (!trimmed.StartsWith(keyword, StringComparison.OrdinalIgnoreCase) ||
                     (trimmed.Length > keyword.Length && char.IsLetterOrDigit(trimmed[keyword.Length])))
@@ -6500,6 +7592,18 @@ namespace SplitAndMerge
                 if (TryRewriteStringComparison(rest, out var rewritten))
                 {
                     return indent + keyword + " " + rewritten + tail;
+                }                // A number as the whole condition -- "if (b)" over a double local, "if ((b = n + 2))",
+                // "while ((t = t - 1))". The interpreter tests Convert.ToBoolean of the numeric field,
+                // which for a double is exactly "!= 0"; C# has no truth value for a double at all
+                // (CS0029). Only a certain number: a bool, a Variable or an element has its own
+                // handling, and a string -- always false there -- has no "!= 0" in C#.
+                // Also a number beside "!", "&&" or "||" -- "if (!b)", "if (b && n < 5)". Each
+                // clause that is certainly a number becomes "(x!=0)", or "(x==0)" under "!", which
+                // is the interpreter's own rule: "!x" is true only for a number that is zero. The
+                // connectives and every other clause stay exactly as written.
+                if (keyword != Constants.RETURN && TryRewriteNumericTerms(rest, out var numericCondition))
+                {
+                    return indent + keyword + " " + numericCondition + tail;
                 }
                 // A bare Variable in an otherwise numeric condition -- "r && n < 5" -- is a
                 // "known expression" and never reaches the token loop, so it is not read as a
@@ -6684,7 +7788,10 @@ namespace SplitAndMerge
                     // so the operator is simply swapped. No spaces around it: statements
                     // reach the translator with their whitespace stripped, and adding any
                     // back makes the operands resolve differently.
-                    if (IsNumericOperand(left) && IsNumericOperand(right))
+                    // An int argument and a local every assignment agrees is a number count too:
+                    // IsNumericOperand only knows arguments declared "double", so "n === 5" over
+                    // "int n" and "v === 6" over a numeric local reached C# as "===" (CS1525).
+                    if (IsStrictNumeric(left) && IsStrictNumeric(right))
                     {
                         rewritten = left + (op == "===" ? "==" : "!=") + right;
                         return true;
@@ -6737,6 +7844,37 @@ namespace SplitAndMerge
                     {
                         rewritten = (op == "!=" ? "!" : "") +
                             "Variable.SameValue(" + right + "," + left + ")";
+                        return true;
+                    }
+                    // A global compared with text: "gstr == \"gs\"". The read yields a Variable,
+                    // and C# has no "==" between that and a string -- nor can Variable be given
+                    // one: an equality operator whose other parameter accepts null captures every
+                    // "variable != null" in the interpreter and recursed through BothNumbers into
+                    // a stack overflow. SameValue is the interpreter's own rule instead, text when
+                    // either side is text. Only against a string: a global beside a number already
+                    // compiles through the numeric operators.
+                    // Against the literal null. The interpreter compares "==" as text whenever
+                    // the sides are not both numbers (Parser.MergeCells), and null is
+                    // Variable.EmptyInstance, whose text is "" -- so "v == null" is true for a null
+                    // local, "" and an empty argument, and false for 0, {} and "gs". SameValue
+                    // against "" is that comparison exactly. Before, "x == null" lost its paren and
+                    // "null == x" compiled to a C# reference test that was always false -- the one
+                    // silent divergence the probe set carried. "null == null" is left alone:
+                    // SameValue answers false for a C# null where the interpreter answers 1.
+                    bool leftNull = left == Constants.NULL;
+                    bool rightNull = right == Constants.NULL;
+                    if (leftNull != rightNull)
+                    {
+                        rewritten = (op == "!=" ? "!" : "") +
+                            "Variable.SameValue(" + (leftNull ? right : left) + ",\"\")";
+                        return true;
+                    }
+                    bool leftGlobal = IsPlainName(left) && IsInterpreterVariable(left);
+                    bool rightGlobal = IsPlainName(right) && IsInterpreterVariable(right);
+                    if ((leftGlobal && IsStringOperand(right)) || (rightGlobal && IsStringOperand(left)))
+                    {
+                        rewritten = (op == "!=" ? "!" : "") +
+                            "Variable.SameValue(" + left + "," + right + ")";
                         return true;
                     }
                     bool mixed = (IsStringName(left) && IsNumericOperand(right)) ||
@@ -6800,7 +7938,9 @@ namespace SplitAndMerge
             // SameValue is one of these too: it is generated C#, not a CSCS member, and the
             // token loop otherwise read the second one in "a == x && b == y" as a call to an
             // unknown function and replaced it with an interpreter callback.
-            return trimmed.StartsWith("CompareCscs", StringComparison.Ordinal) ||
+            return trimmed.StartsWith("IsTrue", StringComparison.Ordinal) ||
+                trimmed.StartsWith("IsFalse", StringComparison.Ordinal) ||
+                trimmed.StartsWith("CompareCscs", StringComparison.Ordinal) ||
                 trimmed.StartsWith("StrictEqCscs", StringComparison.Ordinal) ||
                 trimmed.StartsWith(SAME_VALUE_NAME, StringComparison.Ordinal) ||
                 trimmed.StartsWith("ConvertToVariable", StringComparison.Ordinal);
@@ -6811,6 +7951,21 @@ namespace SplitAndMerge
         /// as the function being translated is concerned. Functions and everything else the
         /// interpreter knows are excluded: only a variable can be read as a value.
         /// </summary>
+        /// <summary>
+        /// Whether this name is a global holding an enum. Its members are read through the
+        /// interpreter: an enum is a Variable of type ENUM whose member names live in its own
+        /// map, so no C# name can stand for "Colors.Green".
+        /// </summary>
+        bool IsEnumGlobal(string name)
+        {
+            if (!IsInterpreterVariable(name))
+            {
+                return false;
+            }
+            var value = m_parentScript.InterpreterInstance.GetVariableValue(name);
+            return value != null && value.Type == Variable.VarType.ENUM;
+        }
+
         bool IsInterpreterVariable(string name)
         {
             if (m_paramMap.ContainsKey(name) || m_newVariables.Contains(name) ||
@@ -6826,6 +7981,177 @@ namespace SplitAndMerge
         }
 
         /// <summary>Whether the operand is a number literal, or a name holding a number.</summary>
+        /// <summary>
+        /// Whether a strict comparison's operand is certainly a number: a literal, an argument
+        /// declared double or int, or a local whose every assignment is a number and which does
+        /// not hold a Variable. Anything whose type is settled only at run time is left out, so
+        /// "===" on it keeps falling back rather than dropping the type check.
+        /// </summary>
+        /// <summary>
+        /// Whether a parenthesised condition is a single term that is certainly a number: a
+        /// numeric argument or local, or an assignment in parentheses to a name typed double.
+        /// </summary>
+        /// <summary>
+        /// Rewrites every clause of a parenthesised condition that is certainly a number into a
+        /// comparison with zero, keeping the connectives and the other clauses as written. False
+        /// when no clause qualifies, so a condition that compiles today is left untouched.
+        /// </summary>
+        bool TryRewriteNumericTerms(string condition, out string rewritten)
+        {
+            rewritten = null;
+            var text = (condition ?? "").Trim();
+            if (text.Length < 2 || text[0] != '(' || FindMatchingParen(text, 0) != text.Length - 1)
+            {
+                return false;
+            }
+            bool any = false;
+            var inner = text.Substring(1, text.Length - 2);
+            // A Variable, an element or a string is read as a truth value only when the condition
+            // joins clauses: on its own it already compiles through AsCondition, and that path
+            // stays as it is. "!= 0" is wrong for those -- the interpreter tests the numeric field,
+            // so an element holding "5" is false there while AsDouble() would call it true.
+            bool joined = SplitTopLevelOn(inner, "&&").Count > 1 || SplitTopLevelOn(inner, "||").Count > 1;
+            var built = RewriteNumericClauses(inner, ref any, joined);
+            if (!any)
+            {
+                return false;
+            }
+            rewritten = "(" + built + ")";
+            return true;
+        }
+
+        string RewriteNumericClauses(string text, ref bool any, bool joined = false)
+        {
+            foreach (var connective in new[] { "||", "&&" })
+            {
+                var clauses = SplitTopLevelOn(text, connective);
+                if (clauses.Count > 1)
+                {
+                    var parts = new List<string>();
+                    foreach (var clause in clauses)
+                    {
+                        parts.Add(RewriteNumericClauses(clause, ref any, joined));
+                    }
+                    // No spaces: the statement arrived with its whitespace stripped.
+                    return string.Join(connective, parts);
+                }
+            }
+            var term = text.Trim();
+            bool negated = false;
+            while (term.StartsWith("!") && !term.StartsWith("!="))
+            {
+                negated = !negated;
+                term = term.Substring(1).Trim();
+            }
+            var grouped = term.StartsWith("(") && FindMatchingParen(term, 0) == term.Length - 1 ?
+                term : "(" + term + ")";
+            if (term.Length == 0)
+            {
+                return text;
+            }
+            if (!IsNumericConditionTerm(grouped))
+            {
+                // A term whose type is settled when it runs: an element, a local holding a
+                // Variable, a string. CscsConvert.IsTrue/IsFalse are the interpreter's own
+                // pair -- NOT one negated, see their comment.
+                // A string term needs no connective: on its own it reaches C# as a string, which
+                // has no truth value there either. "(t = s + \"x\")" keeps doing the assignment.
+                // A comparison first: "vals[0]==\"ab\"" holds a string but is not a string term,
+                // and calling it one skipped the operator check below and emitted a truth test
+                // around a bool -- 45 comparison constructs fell back.
+                bool comparison = term.IndexOfAny(new[] { '<', '>', '&', '|' }) >= 0 ||
+                    term.Contains("==") || term.Contains("!=");
+                bool stringTerm = !comparison &&
+                    (IsStringOperand(term) ||
+                     (IsPlainName(term) && m_localTypes.TryGetValue(term, out var loneType) && loneType == "string") ||
+                     (term.StartsWith("(") && FindMatchingParen(term, 0) == term.Length - 1 &&
+                      IsAssignedStringGroup(term)));
+                if ((!joined && !stringTerm) || comparison ||
+                    (!stringTerm && term.IndexOf('=') >= 0) ||
+                    !(term.EndsWith("]") ||
+                      (IsPlainName(term) && (m_variableLocals.Contains(term) || IsStringOperand(term))) ||
+                      (IsPlainName(term) && m_localTypes.TryGetValue(term, out var clauseType) && clauseType == "string") ||
+                      stringTerm))
+                {
+                    return text;
+                }
+                any = true;
+                return "CscsConvert." + (negated ? "IsFalse(" : "IsTrue(") + term + ")";
+            }
+            any = true;
+            return "(" + term + (negated ? "==0" : "!=0") + ")";
+        }
+
+        /// <summary>Whether a parenthesised group assigns a name whose type is settled as string.</summary>
+        bool IsAssignedStringGroup(string group)
+        {
+            var inner = group.Substring(1, group.Length - 2).Trim();
+            int eq = inner.IndexOf('=');
+            if (eq <= 0 || eq + 1 >= inner.Length || inner[eq + 1] == '=' || "<>!".IndexOf(inner[eq - 1]) >= 0)
+            {
+                return false;
+            }
+            var name = inner.Substring(0, eq).Trim();
+            return IsPlainName(name) && m_localTypes.TryGetValue(name, out var type) && type == "string";
+        }
+
+        bool IsNumericConditionTerm(string condition)
+        {
+            var text = (condition ?? "").Trim();
+            // Peel the condition's own parentheses.
+            while (text.Length >= 2 && text[0] == '(' && FindMatchingParen(text, 0) == text.Length - 1)
+            {
+                var inner = text.Substring(1, text.Length - 2).Trim();
+                int eq = inner.IndexOf('=');
+                // "(b = n + 2)": the term is the name assigned, when its type is settled as double.
+                if (eq > 0 && eq + 1 < inner.Length && inner[eq + 1] != '=' && "<>!".IndexOf(inner[eq - 1]) < 0 &&
+                    IsPlainName(inner.Substring(0, eq).Trim()))
+                {
+                    var assigned = inner.Substring(0, eq).Trim();
+                    return !m_variableLocals.Contains(assigned) &&
+                           m_localTypes.TryGetValue(assigned, out var assignedType) && assignedType == "double";
+                }
+                text = inner;
+            }
+            // "if (b)": a plain name that is certainly a number, and not recorded as anything else.
+            if (!IsPlainName(text) || !IsStrictNumeric(text) ||
+                (m_localTypes.TryGetValue(text, out var recorded) && recorded != "double"))
+            {
+                return false;
+            }
+            // Nor a copy of another name: "c = b" records c as a double, but C# holds whatever b
+            // is -- a bool, for "b = n > 1" -- and "c != 0" then does not compile where "if (c)"
+            // already did.
+            foreach (var statement in m_statements ?? new List<string>())
+            {
+                var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                int eq = line.IndexOf('=');
+                if (AssignedName(line) == text && eq > 0 && IsPlainName(line.Substring(eq + 1).Trim()))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool IsStrictNumeric(string operand)
+        {
+            var name = (operand ?? "").Trim();
+            if (IsNumericOperand(name))
+            {
+                return true;
+            }
+            if (!IsPlainName(name) || m_variableLocals.Contains(name) || m_collectionLocals.Contains(name))
+            {
+                return false;
+            }
+            if (m_argsMap.TryGetValue(name, out var arg))
+            {
+                return arg.Type == Variable.VarType.INT;
+            }
+            return m_localTypes.TryGetValue(name, out var type) && type == "double";
+        }
+
         bool IsNumericOperand(string operand)
         {
             var name = operand.Trim();
