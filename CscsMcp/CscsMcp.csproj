@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    CSCS Playground MCP server: lets any MCP client (Claude, ChatGPT connectors, Cursor, VS Code...)
+    run small CSCS scripts. Every script runs in a separate CscsSandbox process - see
+    SandboxRunner.cs and ../CscsSandbox/Program.cs for the layers that make that safe, and
+    README.md for deployment.
+
+    net9.0 to match the rest of this repository; the .NET 10 runtime on the server runs it as is.
+    It references no CSCS code on purpose: the interpreter only ever runs inside the sandbox.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="LanguageGuide.md" LogicalName="CscsMcp.LanguageGuide.md" />
+    <None Include="README.md" />
+  </ItemGroup>
+
+</Project>

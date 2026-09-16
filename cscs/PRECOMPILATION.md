@@ -90,7 +90,7 @@ a plain interpreted function with an identical body -- and compares the results.
 interpreter is the reference implementation, which is the only definition of correct a
 cfunction has.
 
-Of 784 constructs covered: **769 compile to C#, 15 fall back to the interpreter, 0 behave
+Of 906 constructs covered: **882 compile to C#, 24 fall back to the interpreter, 0 behave
 differently from the interpreter.**
 
 Compiled today: arithmetic and compound assignment, `if`/`else`, `while`, `for`, `break`,
@@ -1043,7 +1043,7 @@ backend works at all, that compiled and interpreted results agree, that compile 
 reported with detail, and that the AOT registry short-circuits code generation.
 
 `Scripts/Samples/test_compiled.cscs` and `Scripts/Samples/test.cscs` are the broader
-regression: 946 assertions in test_compiled.cscs and 542 in test.cscs. Run them with a
+regression: 987 assertions in test_compiled.cscs and 626 in test.cscs. Run them with a
 second argument so the debugger server stays off:
 
 ```bash
@@ -1054,8 +1054,8 @@ dotnet run --project CscsScript/CscsScript.csproj -- Scripts/Samples/test.cscs n
 The two together are the script-level regression suite. `test_compiled.cscs` holds every
 `cfunction` case -- each written twice where it can be, once compiled and once interpreted,
 with the two results compared -- and `test.cscs` keeps the tests of the language itself and
-declares no `cfunction` at all. A clean run is 946 assertions in test_compiled.cscs and 542 in
-test.cscs, 1488 together, with no
+declares no `cfunction` at all. A clean run is 987 assertions in test_compiled.cscs and 626 in
+test.cscs, 1613 together, with no
 "ERROR. Test failed" and a "Finished." at the end of each.
 
 Each file ends by printing its own totals, so the count no longer has to be grepped:
@@ -1595,7 +1595,325 @@ so the trigger is spelt out here:
   two helpers; a single truth test plus `!` is wrong for CSCS. A `Variable.IsTruthy` that invited
   exactly that mistake was removed again.
 
-  Kept on the interpreter: `if (s.Length)` -- a number in CSCS, but a C# `int` in a condition.
+- **A numeric member as the whole condition compiles** (2026-09-13). `if (s.Length)`,
+  `if (a.Size)`, the negated forms, joined with `&&`/`||`, in a `while`, and on a collection, a
+  map, a call result or a local holding a Variable -- 11 shapes. CSCS reads `.Length` and `.Size`
+  as numbers and C# as `int`s, and the two agree on every type: `Variable.Size` is 0 for anything
+  but an array, exactly as the interpreter reports 0 for a string, and `Variable.Length` is
+  `GetLength()`. A C# condition needs a `bool`, so these were `CS0029` until the numeric rewrite
+  learned to certify them and read them as `!= 0`. `s.Size` on a string local has no such member
+  in C# and still falls back, which is the right answer -- the interpreter says 0 there.
+
+- **A member off a Variable-holding local as a condition compiles** (2026-09-13). `if (p.y)`,
+  `if (p.x)` on a zero, the negated form, joined, in a `while`, and on a member holding text --
+  which is false, like every string. The value is a `Variable` when it runs, so it goes through
+  `CscsConvert.IsTrue`/`IsFalse` rather than a C# conversion (`CS0029`). The lone-term form needed
+  the clause rewriter's "only when joined" gate widened as well as the term accepted: the joined
+  form compiled first and `if (p.y)` on its own still fell back, the same two-paths lesson as
+  before.
+
+- **A method on a collection element compiles** (2026-09-13). `return a[1].Sum()`, the first
+  element, one taking an argument, an argument or expression as the subscript, and one inside a
+  loop. The expression builder has always built these -- as `Variable.CallMethod(a[0],"Sum")` --
+  but its element branch runs only for a **known expression**, and that one word is the whole
+  story: `return a[0].Sum() + a[1].Sum();` has an operator and qualified, while the lone
+  `return a[1].Sum();` did not and went out as a C# `.Sum()` on a `Variable` (`CS1929`). A lone
+  call now takes the same path with the flag set for that conversion.
+
+  Keyed subscripts compile too -- `m["p"].Sum()`, a variable key, a map built by assignment --
+  but only after the interpreter bug below was fixed. Until then this path was **restricted to a
+  numeric subscript**, because with keyed reads allowed
+  `m = {"p" : new Point(1,2)}; return m["p"].Sum();` answered 3 where the interpreter threw.
+  `IsStrictNumeric` was what decided that, and it is worth remembering that it tests `VarType.INT`
+  for arguments: asking `m_argsMap` for `VarType.NUMBER` instead missed every int parameter.
+
+- **A member read off an element compiles** (2026-09-13). `a[0].x`, `m["p"].x`, a field on a
+  class instance in a collection, and `.Size`, `.Length`, `.Type`, `.First`, `.Upper` -- 15
+  shapes. Same cause as the element methods above, one layer along: the expression path already
+  emitted `a[0].GetProperty("x")`, but only for a **known expression**, so `a[0].x + a[0].y`
+  compiled while the lone `a[0].x` went out as C# and failed with `CS1061`.
+
+  **A property written as a call compiles too** -- `a[0].Upper()`, `.Size()`, `.Length()`,
+  `.First()`, `.Lower()`. The empty parentheses are dropped, because `Variable.Upper` is a
+  property in C# (`.Upper()` was `CS1955`) and because the interpreter now reads the property and
+  consumes the `()` itself. Only an **empty** pair, and only for the members that really are
+  properties: `Sort`, `Replace`, `Contains` and the rest are methods that keep their call. The
+  rule sits in one helper used by all three places that can meet it -- the token-loop guard, the
+  element-member branch, and the member chain after a call -- because a rule that holds on one
+  path and not another is how the enum-member divergence happened.
+
+- **Interpreter bug found and FIXED** (2026-09-14), in `AssignFunction.ProcessObject`. **A write
+  to a member through a subscript was silently lost.** `a[0].v = 9` left the element at its old
+  value and raised nothing: the owner `a[0]` is not a variable of that name, so the lookup found
+  nothing, a fresh Variable was made, the property set on that, and the result registered under
+  the name "a[0]" -- a phantom beside the collection. Same for a map element and a nested one.
+  `items[i].count = 5` is ordinary code, which makes this the most costly of the six.
+
+  The element is a live reference inside the collection, so the fix resolves the subscript and
+  sets the property on the element itself. One trap on the way: reading `b[0].v` **before**
+  assigning made the fix throw `Object [v] doesn't exist`, because a `GetVarFunction` remembers
+  the property it last read, and asking the collection for its value re-ran that `.v` -- on the
+  collection, which has no such field. Taking the stored `Value` rather than calling `GetValue`
+  avoids re-triggering it. That sequence is now the first assertion of the nine in `test.cscs`.
+
+  Across 956 probes no interpreted value changed. Compiled code still refuses the shape
+  (`CS0650`), so the two agree.
+
+- **Interpreter bug found and FIXED** (2026-09-14): **an error thrown inside a class method read
+  "One or more errors occurred. (message)"** wherever it surfaced: caught outside, uncaught, from an
+  element (`list[0].Deposit(-1)`), inside an expression, rethrown, and in compiled code too. A plain
+  function and a constructor were never affected. A method body runs asynchronously
+  (`ClassInstance.GetProperty` → `CustomFunction.RunAsync`), and `Variable.GetProperty` waited for it
+  with `task.Result`, which wraps any exception in an `AggregateException`. The interpreter then
+  took *that* message as the script's error text.
+
+  Every blocking wait on script code running through a class instance now uses
+  `GetAwaiter().GetResult()`: method calls, `Variable.CallMethod` (the compiled-code path), custom
+  property setters, object property reads, async class constructors, and the member-compound paths.
+  It blocks the same way but rethrows the original exception. Nothing in the repository catches
+  `AggregateException`. The debugger's `.Result` calls are untouched. `Interpreter.Run` has the same
+  pattern, but it is host-facing API where the thrown type is part of the contract, so it is left
+  alone deliberately. Across 972 probes no interpreted value changed. `test.cscs` pins seven call
+  shapes, and test_compiled.cscs pins the compiled twin.
+
+- **Interpreter bug found and FIXED** (2026-09-14), in `OperatorAssignFunction` and
+  `IncrementDecrementFunction`: the **compound and increment forms through a subscript**.
+  `a[0].v += 3` was a silent no-op and `a[1].v++` threw `Object [v] doesn't exist`, on array
+  elements, map elements and nested ones alike. `Utils.GetArrayIndices` rewrites `a[0].v` to plain
+  `a` and drops the `.v` entirely, so the operator applied to a copy that was written back to a
+  phantom name.
+
+  Both now resolve the target first, through one shared `TryResolveMemberTarget`, before
+  `GetArrayIndices` can rewrite the name. It accepts `p.x`, `a[0].v` and `a[0][1].v`, returns the
+  live element, and replaces the named-owner branches the earlier member fix had added to each
+  function. The root is read through `GetVarFunction.Value` for the same stale-property reason as
+  in `ProcessObject`. A control build showed that read-then-compound on a *named* owner
+  (`r = p.x; p.x += 5`) already worked. Only the subscript form was broken. Across 961 probes
+  exactly one interpreted value changed, `a[0].v += 3` going from 1 to 4. `test.cscs` pins the
+  family with 10 assertions.
+
+- **A member write through a subscript compiles** (2026-09-14): `a[0].v = 9`, `a[0].v += 3`,
+  `a[0].v++`/`--`, a string field, an argument or expression as the index, a call as the value, a
+  map element, and all of it inside a loop. Only reachable once the two interpreter fixes above
+  landed. The value is worked out first and the subscript second, which is the order the
+  interpreter uses: `a[i].v = (i = 1) + 10` writes `a[0]` on both sides. The element comes from
+  `CscsConvert.ElementForWrite`. The DeepClone before `Compound` stays, since an unset field is
+  still the shared class default.
+
+  **`Variable.EmptyInstance` is a new object on every read** (`=> new Variable()`), not a
+  singleton. The first version of `ElementForWrite` tested `ReferenceEquals(element,
+  EmptyInstance)` to catch a missing element, which can never be true, so `a[5].v = 1` quietly
+  wrote to a throwaway object and carried on, where the interpreter stops with `Unknown index`. It
+  now repeats the interpreter's own bounds check from `ExtractArrayElement`, message included, and
+  the three out-of-range probes throw identically on both sides. Never compare against
+  `EmptyInstance` by reference.
+
+  Kept on the interpreter, though the write itself compiles: functions that also *read* an element
+  member in a shape the reader does not handle yet, i.e. a nested `e[0][0].v` or an assignment
+  `r = a[0].v`.
+
+- **Interpreter bug found and FIXED** (2026-09-14), in `OperatorAssignFunction.ProcessOperator`
+  and `IncrementDecrementFunction.ProcessAction`. **A compound assignment to a member did
+  nothing, silently.** `p.x += 5` read the field correctly and then wrote the result back with
+  `AddGlobalOrLocalVariable` under the dotted name -- creating a variable called "p.x" beside the
+  object. The field never moved and nothing failed. Where that name had not been written before,
+  the read found nothing either and it threw `Object [p.y] doesn't exist`, so the same defect
+  showed as a no-op or as an error depending on what had run before it.
+
+  The same hole ran through the family: `p.x++` and `p.x--`, `this.x += 2` inside a method
+  (threw), and the implicit `x += 3` on a field inside a method (**silently updated a local**).
+  All of them now read the property, apply the operator and set it back, the way
+  `AssignFunction.ProcessObject` handles the plain `p.x = 9` -- which always worked, and is what
+  made the gap so easy to miss. A method's own locals are untouched: the instance path is taken
+  only when `PropertyExists` says the field is real.
+
+  Across 921 probes no interpreted value changed. `test.cscs` pins it with 16 assertions.
+
+- **A compound assignment to a member compiles** (2026-09-14), and so do `p.x++` / `p.x--`.
+  `+=`, `-=`, `*=`, `/=`, `%=`, a string field, a field plus a number, an argument, a call or an
+  element as the value, and the whole thing inside a `for` or `while`. C# has neither operator for
+  a member of a `Variable` (`CS1061`/`CS1059`), so each becomes the read-apply-write the
+  interpreter does, through the same `CscsConvert.Compound` helper an element compound already
+  used: `p.SetProperty("x", CscsConvert.Compound(p.GetProperty("x").DeepClone(), 5, "+="), null)`.
+
+  **That `DeepClone` is the whole subtlety.** `GetProperty` hands the field back **by reference**,
+  and for a field the constructor never sets, that reference is the class's own default, shared by
+  every instance. `Compound` mutates what it is given, so without the clone the default itself
+  moved: `p.tag += "z"` over three calls read back `tzzz` -- and the same value from all three,
+  because each returned Variable aliased that one default. The interpreter clones for exactly this
+  reason. **No probe could see it**: each probe calls its function once. It took the regression
+  suite, which calls the compiled function and its interpreted twin in turn, to expose it.
+
+  Kept on the interpreter: the prefix form `return ++p.x` (worth the field's new value, which the
+  statement shape does not produce), a member of an element (`a[0].v += 3`), and the deeper
+  `p.kid.v += 1` -- which the interpreter itself still refuses, so both sides throw alike.
+
+- **A truth-valued assignment group beside arithmetic compiles** (2026-09-14).
+  `return (b = n > 2) + b`, the false case, `* 5`, and the same group in a plain assignment. The
+  group is 1 or 0 in CSCS but reaches C# as a `bool`, and `bool + int` does not compile
+  (`CS0019`). The bare `b` next to it was already read as a number; the group is not a single
+  token, so there was nothing for that rule to convert.
+
+  Hoisted instead, into a statement of its own -- the assignment runs first either way, which is
+  the order CSCS evaluates in -- leaving a plain name the bool-to-number rule then handles. Three
+  details had to be right, each found by reading the generated C# rather than reasoning about it:
+  the hoist belongs in `ProcessStatement`, which has the statement text (joining the token list
+  back together produced `return(b=(b=n>2)+b`, since that list is not a plain split); the name
+  needs a **leading** space, or `return(b=n>2)+b` becomes `returnb+b`, one token and a callback to
+  a function called `returnb`; and it must have **no trailing** space, because the bool-to-number
+  rule compares the resolved token against its own trimmed text, and `"b "` is not `"b"`.
+
+  Kept on the interpreter: two groups in one expression (`(b = n > 2) + (c = n > 1) + b + c`),
+  where only the first is hoisted and the second stays a C# bool.
+
+- **A switch with consecutive case labels compiles** (2026-09-14). `case 1: case 2: return 12;`,
+  three labels in a row, string labels, a mix of single and grouped labels, a grouped clause with
+  a body and a `break`, and `case 1: default:`. The labels arrive on one line, so the second was
+  left inside the first clause's body and went out as a C# `case` in the middle of an `if`
+  (`CS1003`).
+
+  Each label now starts its own clause with an empty body, which needed no new machinery: an
+  empty clause is exactly what fall-through already is in this translation -- the first sets
+  `__swMatch` and the next clause's body runs. Real fall-through, where the first clause has a
+  body of its own and no `break`, compiles and answers as the interpreter does.
+
+- **Interpreter bug found and FIXED** (2026-09-13), in `AssignFunction`. **`a[0] = a[1] = 7`
+  overflowed the stack and killed the process.** An assignment to an element returned the
+  *collection* rather than the value assigned, so `b = a[1] = 7` set `b` to the whole `[1, 7]`,
+  and chaining stored the array inside its own element. That cycle made the next `AsString`
+  recurse until the stack died -- about 7569 frames, and a stack overflow cannot be caught, so it
+  took the whole process with it. Plain `x = y = 7` and `a[0] = 7` were always fine.
+
+  Both the sync and async paths ended `ExtendArray(...); return array;` where every other
+  assignment path returns `varValue.DeepClone()`; they now do the same. Across 896 probes no
+  interpreted value changed -- nothing had used an element assignment as a value, which is why
+  this survived so long. `test.cscs` pins it with 9 assertions, and a return of the bug shows up
+  as the whole file crashing rather than one failure.
+
+  Compiled code refused these shapes cleanly at first (`CS0131`/`CS0200`: a `Variable`'s indexer
+  is read only) -- and **they compile now**, see below.
+
+- **A chained assignment onto elements compiles** (2026-09-13). `a[0] = a[1] = 7`,
+  `b = a[1] = 7`, a map (`m["a"] = m["b"] = 3`), a three-target chain, an argument or expression
+  as the index, nested targets (`e[0][1] = e[1][0] = 5`), a variable key, a global collection, and
+  the whole thing inside a loop. Only reachable once the interpreter stopped returning the
+  collection from an element assignment -- before that these shapes crashed the interpreter, so
+  there was nothing to match.
+
+  No new machinery: `TryBuildChainedAssignment` already unrolled `x = y = 7` into one statement
+  per target, writing the innermost first and then giving each target the one to its right, which
+  is the right-to-left order CSCS assigns in. It simply required every target to be a plain name.
+  Allowing an element target is the whole change.
+
+  Kept on the interpreter: an index that can change something (`a[i++] = a[0] = 7`), because the
+  unrolling mentions each target's index twice -- once as a target, once as the value beside it.
+
+- **The same chain onto members compiles** (2026-09-14). `p.x = p.y = 5`, `v = p.y = 6`, a member
+  beside an element (`a[0] = p.y = 4`), two objects, three targets, a string member, and the whole
+  thing in a loop. `p.x = 9` and reading `p.x` both compiled already, so the unrolling had
+  somewhere to land; only the target test needed widening.
+
+  The owner must be a plain name, for the same reason an index must be inert: the unrolling
+  mentions each target twice. So a deeper member (`q.kid.x`) and a member of an element
+  (`a[0].v`) are left to the interpreter, both falling back cleanly.
+
+- **Interpreter bug found and FIXED** (2026-09-13), in `Parser.CheckConsistencyAndSign`. **A map
+  literal whose value is a `new` was not a map.** `m = {"p" : new Point(1,2)}` came out as a plain
+  one-element tuple, so `m["p"]` threw "Unknown index [p] for tuple of size 1", while the same map
+  built by assignment worked and `{"p" : 5}`, `{"p" : f(3)}`, `{"p" : {1,2}}` were all fine.
+
+  The cause is a one-line heuristic: reaching a `CONTROL_FLOW` token with cells already collected
+  clears them, on the guess that a `;` was forgotten. `NEW` is in that list -- and it is the only
+  entry that can legitimately follow other tokens, since `x = new Point(1,2)` and
+  `{"p" : new Point(1,2)}` are ordinary expressions. So on reaching `new` the parser threw away
+  the `"p" :` it had already collected, and the entry lost its key. That also explains why
+  `{"a" : 1, "p" : new Point(1,2)}` half worked: each entry is parsed by its own call, so only the
+  `new` one lost its key, and `TrySetAsMap` decides whether the whole literal is a map by looking
+  at **the first element only**.
+
+  The fix excludes `new` from that clearing rule. Across 874 probes no interpreted value changed,
+  `test.cscs` pins it with 8 assertions, and the precompiler restriction above was lifted
+  afterwards -- the same order as the `s.Upper()` fix: correct the interpreter, then compile the
+  shape.
+
+- **Interpreter bug found and FIXED** (2026-09-13), in `Variable.GetCoreProperty`. **A property
+  written as a call left its `()` behind.** `s.Upper()` on its own looked right, but
+  `s.Upper() == "AB"` was **false**, `s.Upper() + "!"` threw `Couldn't find variable []`, and
+  `s.Upper().Trim()` threw `Couldn't find function [.Trim]`. It was never about `Upper`: every
+  value property broke the same way -- `s.Size()`, `s.Length()`, `a.Size()`, `a.First()`,
+  `a.Length()`, `s.Lower()`. Even the standalone form was quietly wrong, passing `print` an extra
+  empty argument.
+
+  The properties that take arguments consume their own list -- `Substring` and `IndexOf` read it,
+  `Sort` and `Reverse` call `GetFunctionArgs` purely to eat it -- but a value property never did.
+  The token loop has already taken the `(` as the action character that ended the name, so what
+  waits at the pointer is the argument list itself; left there, the empty group was parsed as an
+  expression of its own. The fix consumes it, guarded twice: `script.Prev == START_ARG` says the
+  list is this property's (in `print(s.Upper)` the pointer also sits on a `)`, but that one
+  belongs to `print`), and only an **immediately empty** pair is taken. The second guard was not
+  optional -- consuming unconditionally ate `Replace`'s two arguments and aborted
+  test_compiled.cscs with "Expecting 2 arguments but got 0 in replace". A third guard skips the
+  case where the name was not a property at all, so a class method's own `()` is left alone.
+  **Correction (same day):** as first written, that third guard compared the result against
+  `EmptyInstance`, which is a fresh object on every read, so it passed every case and did
+  nothing. A name the lookup does not know actually comes back as `null`, because the failed
+  `TryGetValue` overwrites the default, so the guard now tests `!= null`. Until then the empty-pair
+  guard alone was protecting `Replace`'s arguments. Method calls with parentheses behaved the same
+  before and after the correction.
+
+  Across 857 probes **no interpreted value changed**: the fix only turns shapes that threw into
+  shapes that work. `test.cscs` pins it with 14 assertions.
+
+- **`s.Upper()` compiles** (2026-09-13), once that fix landed. The member form `s.Upper` always
+  did; the call form came out as `.ToUpper()()` (`CS0149`) because the mapping added a pair of
+  parentheses while the caller was already copying the script's own through. Threading a
+  "a call opens right after this token" flag from `ResolveToken` through
+  `ProcessArray`/`ProcessStringMember`/`MapStringMember` fixes that, and now that the interpreter
+  agrees, `s.Upper()`, `s.Upper() == "AB"`, `s.Upper().Trim()` and `s.Lower()` all compile.
+  **This exact change was written and reverted an hour earlier**: with the interpreter still
+  leaving the parentheses behind, it made two probes diverge. The order mattered, not the patch.
+  `s.Trim` (the member form of a method the interpreter does not trim there) still falls back.
+
+- **An assignment inside a `return` compiles** (2026-09-13). `return (b = n * 2) + b`, the bare
+  `return (b = n * 2)`, `* b`, the string form, two of them in one expression, a doubled
+  parenthesis, and one with a plain assignment before it. The declaration pass that already
+  handled `while ((x = n - t) > 2)` was skipping these: whitespace is stripped by the time it
+  runs, so `return(b=n*2)+b` is shaped **exactly like a call** to a function named `return`, and
+  the guard that refuses assignments inside a call's argument list swallowed it. A keyword's own
+  parenthesis is now found by looking at what directly follows the keyword, rather than taking
+  the first `(` in the statement -- in `return helper((q = n * 2))` the first one is the call's,
+  and that one must keep counting as a call.
+
+  Kept on the interpreter: `return (b = n > 2) + b` (a C# `bool` plus an `int`, `CS0019`) and
+  `return helper((q = n * 2)) + q`, where the call builder does not carry the assignment out of
+  the argument list and emits malformed C#.
+
+- **Interpreter bug found and FIXED** (2026-09-13), in `ReturnStatement.Evaluate` /
+  `EvaluateAsync` (`Functions.Flow.cs`). Inside a block the interpreter **truncated a return whose
+  expression opens with a parenthesised group**: `if (n > 0) { return (n * 2) + n; }` answered
+  **6**, not 9, and `(s + "x") + "y"` gave `ax`. Nothing had to be assigned for it to happen.
+
+  The cause is a method whose name reads like the opposite of what it does.
+  `script.FromPrev(Constants.RETURN.Length)` was meant to ask "is the pointer just past the word
+  `return`?", and the answer decided whether to step back over the character the dispatcher had
+  eaten. But `FromPrev(backChars, maxChars)` starts `backChars` before the pointer and then reads
+  **forward** up to `maxChars`, which defaults to ~40 characters -- so `Contains("return")` was
+  satisfied by the *next* `return` in the function. The step back was skipped, parsing began
+  **inside** the group, and it ended at the `)`, which is one of `NEXT_OR_END_ARRAY`.
+
+  That is why the oddities lined up: correct at the top level and with the group later in the
+  expression (the pointer was already right), correct in an `else` and when nothing follows the
+  block (no second `return` within reach), wrong everywhere a later `return` sat in the window.
+  The fix passes the length twice -- `FromPrev(RETURN.Length, RETURN.Length)` -- so only the six
+  characters before the pointer are read.
+
+  **It had been a silent divergence**: compiled code answered 9, the arithmetic, and a control
+  build confirmed it predated the coverage rounds. `RefuseTruncatedGroupReturn`, written earlier
+  the same day to refuse the family, is gone again, and the four shapes compile. Across 837
+  probes exactly four interpreted values changed -- the ones meant to. `test.cscs` pins the
+  interpreter side with 11 assertions (`retGroupIf`, `retGroupWhile`, `retGroupNested`,
+  `retGroupFor`, `retGroupElse`, `retGroupStr`, `retGroupAsg`, and the three shapes that always
+  worked), and test_compiled.cscs pins that the compiled side agrees.
 
 - **Known limit: chained comparisons** (`1 < n < 10`). Seven shapes, all clean value-matching
   fallbacks, and the semantics reward care rather than a quick rewrite: with `n = 5`, `1<n<10`

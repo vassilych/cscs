@@ -1963,6 +1963,235 @@ Test(asgInGroupNested(0), 14);
 function asgInGroupCompared(n) { if ((b = n > 2) == 1) { return 1; } return 0; }
 Test(asgInGroupCompared(3), 1);
 
+// A return whose expression opens with a parenthesised group, inside a block. Checking for the
+// "return" keyword read ~40 characters PAST the pointer as well as the six before it, so the
+// next "return" in the function satisfied it, a step back was skipped, and parsing began INSIDE
+// the group: it ended at the ")" and dropped the rest, giving 6 here instead of 9.
+function retGroupIf(n) { if (n > 0) { return (n * 2) + n; } return 0; }
+Test(retGroupIf(3), 9);
+function retGroupWhile(n) { while (n > 0) { return (n * 2) + n; } return 0; }
+Test(retGroupWhile(3), 9);
+function retGroupNested(n) { if (n > 0) { if (n > 1) { return (n * 2) + n; } } return 0; }
+Test(retGroupNested(3), 9);
+function retGroupFor(n) { for (i = 0; i < 1; i++) { return (n * 2) + n; } return 0; }
+Test(retGroupFor(3), 9);
+function retGroupElse(n) { if (n < 0) { return 0; } else { return (n * 2) + n; } }
+Test(retGroupElse(3), 9);
+function retGroupStr(s) { if (s != "") { return (s + "x") + "y"; } return ""; }
+Test(retGroupStr("a"), "axy");
+function retGroupAsg(n) { if (n > 0) { return (b = n * 2) + b; } return 0; }
+Test(retGroupAsg(3), 12);
+// A group that really is the whole expression still is.
+function retGroupAlone(n) { if (n > 0) { return (n * 2); } return 0; }
+Test(retGroupAlone(3), 6);
+// It always worked at the top level, with the group later, and with no statement after the
+// block -- the three shapes that kept a second "return" out of range.
+function retGroupTop(n) { return (n * 2) + n; }
+Test(retGroupTop(3), 9);
+function retGroupLate(n) { if (n > 0) { return n + (n * 2); } return 0; }
+Test(retGroupLate(3), 9);
+function retGroupLast(n) { if (n > 0) { return (n * 2) + n; } }
+Test(retGroupLast(3), 9);
+
+// A property written as a call: "s.Upper()" as well as "s.Upper". The ones that take arguments
+// consume their own list, but a value property never did, so its "()" was left for whatever came
+// next -- unnoticed on its own, but in a larger expression the empty group was parsed as one and
+// threw "Couldn't find variable []".
+propStr = "ab";
+propColl = {1, 2, 3};
+Test(propStr.Upper(), "AB");
+Test(propStr.Upper() == "AB", 1);
+Test(propStr.Upper() + "!", "AB!");
+Test(propStr.Upper().Trim(), "AB");
+Test(propStr.Lower() == "ab", 1);
+Test(propStr.Length() == 2, 1);
+// Size is 0 for a string and the element count for a collection, parentheses or not.
+Test(propStr.Size() == 0, 1);
+Test(propColl.Size() == 3, 1);
+Test(propColl.First() == 1, 1);
+// The member form still works, and so do the members that really do take arguments.
+Test(propStr.Upper, "AB");
+Test(propStr.Replace("a", "z"), "zb");
+Test(propStr.Substring(0, 1), "a");
+Test(propStr.IndexOf("b") == 1, 1);
+Test(propColl.Join("-"), "1-2-3");
+
+// A map literal whose value is a "new". "new" sits in CONTROL_FLOW, and reaching one of those
+// clears the cells collected so far -- a guess at a forgotten ";" -- so the key was thrown away
+// and the literal came out a plain tuple: "m[\"p\"]" then threw "Unknown index [p] for tuple of
+// size 1". It is the only entry in that list that can legitimately follow other tokens.
+class MapPt { mx = 0; my = 0; MapPt(a, b) { mx = a; my = b; } function Sum() { return mx + my; } }
+mapLit = {"p" : new MapPt(1, 2)};
+Test(mapLit["p"].Sum(), 3);
+Test(mapLit.Size, 1);
+mapAfter = {"a" : 1, "p" : new MapPt(1, 2)};
+Test(mapAfter["a"] + mapAfter["p"].Sum(), 4);
+mapFirst = {"p" : new MapPt(1, 2), "a" : 1};
+Test(mapFirst["a"] + mapFirst["p"].Sum(), 4);
+mapKey = "p";
+Test(mapLit[mapKey].Sum(), 3);
+// The shapes that always worked, unchanged.
+mapAsg = {};
+mapAsg["p"] = new MapPt(3, 4);
+Test(mapAsg["p"].Sum(), 7);
+mapPlain = {"p" : 5};
+Test(mapPlain["p"], 5);
+mapNested = {"p" : {1, 2}};
+Test(mapNested["p"][1], 2);
+
+// An assignment to an element is worth the value assigned, not the collection it went into.
+// Returning the collection made "b = a[1] = 7" set b to the whole [1, 7], and "a[0] = a[1] = 7"
+// stored the array inside its own element -- a cycle, so the next AsString recursed until the
+// stack died and took the process with it. A crash here reads as the whole file failing.
+chainArr = {1, 2};
+chainVal = chainArr[1] = 7;
+Test(chainVal, 7);
+Test(chainArr[1], 7);
+chainBoth = {1, 2};
+chainBoth[0] = chainBoth[1] = 9;
+Test(chainBoth[0] + chainBoth[1], 18);
+chainTriple = {1, 2};
+chainOut = chainTriple[0] = chainTriple[1] = 4;
+Test(chainOut, 4);
+Test(chainTriple[0] + chainTriple[1], 8);
+chainMap = {};
+chainMap["a"] = chainMap["b"] = 3;
+Test(chainMap["a"] + chainMap["b"], 6);
+// The plain forms are unchanged.
+chainPlainX = 0;
+chainPlainY = 0;
+chainPlainX = chainPlainY = 7;
+Test(chainPlainX + chainPlainY, 14);
+chainNest = {{1, 2}, {3, 4}};
+chainNest[0][1] = 9;
+Test(chainNest[0][1], 9);
+chainOne = {1, 2};
+chainOne[0] = 5;
+Test(chainOne[0], 5);
+
+// A compound assignment to a member. "p.x += 5" read the field but wrote the result back under
+// the dotted name, creating a variable beside the object: the field never moved and nothing
+// failed. Where that name had not been written before, the read found nothing and it threw
+// "Object [p.y] doesn't exist" instead. Same for "p.x++", and inside a method "this.x += 2"
+// threw while the implicit "x += 3" quietly updated a local and left the field behind.
+class CompPt { cx = 1; cy = 2; ctag = "t"; CompPt(a) { cx = a; }
+  function Bump() { this.cx += 2; return this.cx; }
+  function BumpImplicit() { cx += 3; return cx; }
+  function Step() { this.cx++; return this.cx; }
+  function LocalOnly() { t = 1; t += 4; return t; } }
+compP = new CompPt(5);
+compP.cx += 5;
+Test(compP.cx, 10);
+compP.cy -= 1;
+Test(compP.cy, 1);
+compP.cy *= 6;
+Test(compP.cy, 6);
+compP.ctag += "z";
+Test(compP.ctag, "tz");
+compP.cx++;
+Test(compP.cx, 11);
+compP.cx--;
+Test(compP.cx, 10);
+Test(++compP.cx, 11);
+Test(compP.cx, 11);
+// The same field reached from inside the class, named and implicit.
+Test(compP.Bump(), 13);
+Test(compP.BumpImplicit(), 16);
+Test(compP.Step(), 17);
+Test(compP.cx, 17);
+// A method's own local is not a field, and still behaves like one.
+Test(compP.LocalOnly(), 5);
+// The forms that always worked.
+compLocal = 1;
+compLocal += 5;
+Test(compLocal, 6);
+compArr = {1, 2};
+compArr[0] += 5;
+Test(compArr[0], 6);
+compMap = {};
+compMap["k"] = 1;
+compMap["k"] += 4;
+Test(compMap["k"], 5);
+
+// An assignment to a member reached THROUGH a subscript. The owner "a[0]" is not a variable of
+// that name, so the lookup found nothing, a fresh Variable was made, the property set on it, and
+// the result registered under "a[0]" -- a phantom beside the collection. The element never
+// changed and nothing failed, so the write was simply lost.
+class ElemPt2 { ev = 1; etag = "t"; ElemPt2(a) { ev = a; } }
+elemArr = {new ElemPt2(1), new ElemPt2(2)};
+// Read first: the collection's own lookup remembers the property it last read, and asking it for
+// its value again re-ran that ".ev" on the collection itself.
+Test(elemArr[0].ev, 1);
+elemArr[0].ev = 9;
+Test(elemArr[0].ev, 9);
+Test(elemArr[1].ev, 2);
+elemArr[1].etag = "y";
+Test(elemArr[1].etag, "y");
+Test(elemArr[0].etag, "t");
+elemMap = {};
+elemMap["k"] = new ElemPt2(5);
+elemMap["k"].ev = 8;
+Test(elemMap["k"].ev, 8);
+elemNest = {{new ElemPt2(7)}};
+elemNest[0][0].ev = 3;
+Test(elemNest[0][0].ev, 3);
+// The forms that always worked.
+elemNamed = new ElemPt2(1);
+elemNamed.ev = 4;
+Test(elemNamed.ev, 4);
+elemPlain = {1, 2};
+elemPlain[0] = 5;
+Test(elemPlain[0], 5);
+
+// The compound and increment forms through a subscript. GetArrayIndices turned "a[0].v" into
+// plain "a" and dropped the ".v", so "a[0].v += 3" applied to a copy and was written back to a
+// phantom -- silently -- and "a[1].v++" threw "Object [v] doesn't exist".
+elemComp = {new ElemPt2(1), new ElemPt2(2)};
+Test(elemComp[0].ev, 1);
+elemComp[0].ev += 3;
+Test(elemComp[0].ev, 4);
+elemComp[1].ev++;
+Test(elemComp[1].ev, 3);
+elemComp[1].ev--;
+Test(elemComp[1].ev, 2);
+elemComp[0].ev *= 2;
+Test(elemComp[0].ev, 8);
+elemComp[1].etag += "z";
+Test(elemComp[1].etag, "tz");
+Test(elemComp[0].etag, "t");
+elemCompMap = {};
+elemCompMap["k"] = new ElemPt2(5);
+elemCompMap["k"].ev += 2;
+Test(elemCompMap["k"].ev, 7);
+elemCompNest = {{new ElemPt2(7)}};
+elemCompNest[0][0].ev -= 4;
+Test(elemCompNest[0][0].ev, 3);
+elemCompIdx = 0;
+elemComp[elemCompIdx].ev += 10;
+Test(elemComp[0].ev, 18);
+
+// A throw inside a class method, caught outside it. A method body runs asynchronously, and the
+// blocking .Result that waited for it wrapped the error in an AggregateException, whose message
+// became the script's text: "One or more errors occurred. (bad amount -1)". A plain function and a
+// constructor were never affected.
+class ThrowAcc { tbal = 0; ThrowAcc(s) { if (s < 0) { throw "negative start " + s; } tbal = s; } function Deposit(v) { if (v <= 0) { throw "bad amount " + v; } tbal += v; return tbal; } function Outer(v) { return this.Deposit(v); } }
+throwAcc = new ThrowAcc(1);
+throwMsg = ""; try { throwAcc.Deposit(-1); } catch (e) { throwMsg = e; }
+Test(throwMsg, "bad amount -1");
+throwMsg = ""; try { throwAcc.Outer(-2); } catch (e) { throwMsg = e; }
+Test(throwMsg, "bad amount -2");
+throwList = {new ThrowAcc(1)};
+throwMsg = ""; try { throwList[0].Deposit(-3); } catch (e) { throwMsg = e; }
+Test(throwMsg, "bad amount -3");
+throwMsg = ""; try { throwX = throwAcc.Deposit(-4) + 1; } catch (e) { throwMsg = e; }
+Test(throwMsg, "bad amount -4");
+throwMsg = ""; try { try { throwAcc.Deposit(-5); } catch (e) { throw "again: " + e; } } catch (e2) { throwMsg = e2; }
+Test(throwMsg, "again: bad amount -5");
+throwMsg = ""; try { throwB = new ThrowAcc(-6); } catch (e) { throwMsg = e; }
+Test(throwMsg, "negative start -6");
+// The method still works once its error has been caught.
+Test(throwAcc.Deposit(5), 6);
+
 // The three tests above include("functions.cscs") run in the interpreters that
 // NewInterpreter() created, so they are counted there and not here.
 testSummary("test.cscs");

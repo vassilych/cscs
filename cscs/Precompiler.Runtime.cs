@@ -328,6 +328,26 @@ namespace SplitAndMerge
         /// "r = r + \"3\"" gives "53". Calling the interpreter's code is the only way to keep
         /// every one of those corners in step.
         /// </summary>
+        /// <summary>
+        /// The element a member write goes to: "a[i].v = x" in compiled code. The bounds check is
+        /// the interpreter's own, from Utils.ExtractArrayElement, and so is the message. The
+        /// indexer cannot be used for this: a missing element comes back as
+        /// Variable.EmptyInstance, which is a NEW Variable on every read, so a reference check
+        /// against it never matched and "a[5].v = 1" quietly wrote to a throwaway object and
+        /// carried on, where the interpreter stops with "Unknown index".
+        /// </summary>
+        public static Variable ElementForWrite(Variable holder, Variable index)
+        {
+            int size = holder == null || holder.Tuple == null ? 0 : holder.Tuple.Count;
+            int arrayIndex = holder == null || index == null ? -1 : holder.GetArrayIndex(index);
+            if (arrayIndex < 0 || arrayIndex >= size)
+            {
+                throw new ArgumentException("Unknown index [" + (index == null ? "" : index.AsString()) +
+                    "] for tuple of size " + size);
+            }
+            return holder.Tuple[arrayIndex];
+        }
+
         public static Variable Compound(Variable current, object value, string action)
         {
             var left = current ?? new Variable(0.0);

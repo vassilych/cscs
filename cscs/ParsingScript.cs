@@ -379,6 +379,15 @@ namespace SplitAndMerge
             return m_from >= 3 ? m_data[m_from - 3] : Constants.EMPTY;
         }
 
+        /// <summary>
+        /// Text starting <paramref name="backChars"/> characters before the pointer, reading
+        /// FORWARD up to <paramref name="maxChars"/> -- which defaults to 45, well past the
+        /// pointer. It is NOT "the previous N characters", so a Contains() on the result can be
+        /// satisfied by text that is still ahead: ReturnStatement used it to ask whether the
+        /// pointer sat just past "return" and was answered by the NEXT return in the function,
+        /// which silently truncated "return (n * 2) + n" to 6 inside a block. To read only what
+        /// precedes the pointer, pass the same count twice: FromPrev(n, n).
+        /// </summary>
         public string FromPrev(int backChars = 1, int maxChars = Constants.MAX_CHARS_TO_SHOW)
         {
             int from = Math.Max(0, m_from - backChars);

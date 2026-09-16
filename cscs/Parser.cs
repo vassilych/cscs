@@ -320,7 +320,14 @@ namespace SplitAndMerge
 
         public static bool CheckConsistencyAndSign(ParsingScript script, List<Variable> listToMerge, string action, ref string token)
         {
-            if (Constants.CONTROL_FLOW.Contains(token) && listToMerge.Count > 0)
+            // "new" is in CONTROL_FLOW but is not control flow: "x = new Point(1,2)" and
+            // "{\"p\" : new Point(1,2)}" are ordinary expressions, and it is the only entry in
+            // that list that can legitimately follow other tokens. Clearing on it threw away the
+            // key already collected, so a map literal whose value is a "new" came out as a plain
+            // tuple -- "m[\"p\"]" then threw "Unknown index [p] for tuple of size 1", while the
+            // same map built by assignment worked.
+            if (Constants.CONTROL_FLOW.Contains(token) && token != Constants.NEW &&
+                listToMerge.Count > 0)
             {//&&
              //item != Constants.RETURN) {
              // This can happen when the end of statement ";" is forgotten.

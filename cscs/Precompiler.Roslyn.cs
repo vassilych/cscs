@@ -102,6 +102,11 @@ namespace SplitAndMerge
         /// <summary>Compiles C# source and returns the loaded assembly. Throws on errors.</summary>
         public static Assembly Compile(string source, string assemblyNamePrefix, string outputDLL = "")
         {
+            // The one place compiled code is loaded. Explain mode promises it never is.
+            if (PrecompileExplainer.Enabled)
+            {
+                throw new InvalidOperationException("Loading compiled code is disabled in explain mode.");
+            }
             GetReferences();
             var key = Hash(source + "\n@refs:" + s_referencesFingerprint);
             var assemblyName = assemblyNamePrefix + "_" + key;
@@ -155,8 +160,40 @@ namespace SplitAndMerge
             return assembly;
         }
 
+        /// <summary>
+        /// Compiles C# source in memory and returns the errors, empty when it compiles. Nothing is
+        /// loaded or written anywhere -- which is what makes it safe for source nobody has vetted.
+        /// </summary>
+        public static List<string> CheckCompiles(string source, string assemblyNamePrefix)
+        {
+            TryEmit(source, assemblyNamePrefix + "_check", out var errors);
+            return errors;
+        }
+
         static byte[] Emit(string source, string assemblyName)
         {
+            var bytes = TryEmit(source, assemblyName, out var errors);
+            if (errors.Count > 0)
+            {
+                throw new ArgumentException("Compile error: " +
+                    string.Join(" -- ", errors) + "\n--- Generated code ---\n" +
+                    NumberLines(source));
+            }
+            return bytes;
+        }
+
+        static byte[] TryEmit(string source, string assemblyName, out List<string> errors)
+        {
+            // Diagnostic: VDDUMP=<substring> prints the generated C# for any function whose
+            // source contains that text, which is how a fallback's real cause gets found -- the
+            // compile error alone says where C# gave up, not what the translator emitted.
+            // Console.Error, because the probe harness sends stdout to TextWriter.Null.
+            var dump = Environment.GetEnvironmentVariable("VDDUMP");
+            if (!string.IsNullOrEmpty(dump) && source.Contains(dump))
+            {
+                Console.Error.WriteLine("===== " + assemblyName + " =====");
+                Console.Error.WriteLine(source);
+            }
             var tree = CSharpSyntaxTree.ParseText(source,
                 new CSharpParseOptions(LanguageVersion.Latest));
 
@@ -172,23 +209,17 @@ namespace SplitAndMerge
             using (var peStream = new MemoryStream())
             {
                 var result = compilation.Emit(peStream);
-                if (!result.Success)
-                {
-                    var errors = result.Diagnostics
-                        .Where(d => d.Severity == DiagnosticSeverity.Error)
-                        .Select(d =>
-                        {
-                            var span = d.Location.GetLineSpan();
-                            return "(" + (span.StartLinePosition.Line + 1) + "," +
-                                   (span.StartLinePosition.Character + 1) + ") " +
-                                   d.Id + ": " + d.GetMessage();
-                        })
-                        .ToList();
-                    throw new ArgumentException("Compile error: " +
-                        string.Join(" -- ", errors) + "\n--- Generated code ---\n" +
-                        NumberLines(source));
-                }
-                return peStream.ToArray();
+                errors = result.Success ? new List<string>() : result.Diagnostics
+                    .Where(d => d.Severity == DiagnosticSeverity.Error)
+                    .Select(d =>
+                    {
+                        var span = d.Location.GetLineSpan();
+                        return "(" + (span.StartLinePosition.Line + 1) + "," +
+                               (span.StartLinePosition.Character + 1) + ") " +
+                               d.Id + ": " + d.GetMessage();
+                    })
+                    .ToList();
+                return result.Success ? peStream.ToArray() : null;
             }
         }
 

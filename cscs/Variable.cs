@@ -1405,7 +1405,7 @@ namespace SplitAndMerge
             {
                 list.Add(ConvertToVariable(arg));
             }
-            return target.GetProperty(name.ToLower(), list).Result;
+            return target.GetProperty(name.ToLower(), list).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -1659,7 +1659,7 @@ namespace SplitAndMerge
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                result = obj.SetProperty(propName, value).Result;
+                result = obj.SetProperty(propName, value).GetAwaiter().GetResult();
             }
             return result;
         }
@@ -1750,7 +1750,11 @@ namespace SplitAndMerge
                 {
                     var args = GetArgs(script);
                     var task = obj.GetProperty(match, args, script);
-                    result = task != null ? task.Result : null;
+                    // GetAwaiter().GetResult(), not .Result: a method body runs asynchronously, and
+                    // .Result wraps whatever it throws in an AggregateException, whose message
+                    // became the script's error text -- "One or more errors occurred. (boom)" where
+                    // a plain function's "throw \"boom\"" gives "boom". Same blocking, original exception.
+                    result = task != null ? task.GetAwaiter().GetResult() : null;
                     if (result != null)
                     {
                         return result;
@@ -1788,6 +1792,9 @@ namespace SplitAndMerge
 
         Variable SetReflectedProperty(string propName, Variable value)
         {
+            // Not in a sandboxed host: this is how a script reaches arbitrary .NET methods.
+            if (!InterpreterSecurity.AllowDotNet)
+                return null;
             if (Object == null)
                 return null;
 
@@ -1815,6 +1822,9 @@ namespace SplitAndMerge
 
         Variable GetReflectedProperty(string propName, ParsingScript script)
         {
+            // Not in a sandboxed host: this is how a script reaches arbitrary .NET methods.
+            if (!InterpreterSecurity.AllowDotNet)
+                return null;
             if (Object == null)
                 return null;
 
@@ -2210,7 +2220,49 @@ namespace SplitAndMerge
             return true;
         }
 
+        /// <summary>
+        /// A property may be written as a call: "s.Upper()" as well as "s.Upper". The ones that
+        /// take arguments consume their own list -- Substring and IndexOf read it, Sort and
+        /// Reverse call GetFunctionArgs purely to eat it -- but a value property like Upper, Size,
+        /// Length or First never did, so its "()" was left for whatever came next. On its own that
+        /// went unnoticed; in a larger expression the empty group was parsed as one and threw
+        /// "Couldn't find variable []", so "s.Upper() == \"AB\"" and "s.Upper() + \"!\"" failed
+        /// while "s.Upper" worked. Only an empty pair is taken, so a real argument list is left
+        /// for the property that reads it.
+        /// </summary>
         Variable GetCoreProperty(string propName, ParsingScript script = null)
+        {
+            var propertyValue = GetCorePropertyValue(propName, script);
+            // Only when the name really was a property. The lookup is also attempted for names
+            // it does not know, and eating the parentheses there robs whoever does handle them.
+            // A name it does not know comes back as null -- the failed TryGetValue overwrites the
+            // default. This first compared against EmptyInstance, which never matched anything:
+            // EmptyInstance is a new Variable on every read. The empty-pair test in
+            // ConsumeEmptyCall is what kept Replace's arguments safe until then.
+            if (propertyValue != null)
+            {
+                ConsumeEmptyCall(script);
+            }
+            return propertyValue;
+        }
+
+        static void ConsumeEmptyCall(ParsingScript script)
+        {
+            // The "(" is already gone when this runs -- the token loop takes it as the action
+            // character that ended the name "s.Upper" -- so what waits is the argument list
+            // itself, starting at the ")". Prev being "(" is what says the list is this
+            // property's own: in "print(s.Upper)" the pointer also sits on a ")", but the
+            // character before it is the end of the name, and that ")" belongs to print.
+            // Same test GetArgs uses for the properties that do read their arguments. Only an
+            // immediately empty pair is taken, so a real argument list stays for its own reader.
+            if (script != null && script.StillValid() && script.Pointer > 0 &&
+                script.Prev == Constants.START_ARG && script.Current == Constants.END_ARG)
+            {
+                script.Forward();
+            }
+        }
+
+        Variable GetCorePropertyValue(string propName, ParsingScript script = null)
         {
             Variable reflectedProp = GetReflectedProperty(propName, script);
             if (reflectedProp != null)

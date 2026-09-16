@@ -38,7 +38,14 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             script.MoveForwardIf(Constants.SPACE);
-            if (!script.FromPrev(Constants.RETURN.Length).Contains(Constants.RETURN))
+            // Only the characters immediately before the pointer. FromPrev's second argument caps
+            // how far it reads FORWARD, and the default runs ~40 characters PAST the pointer, so
+            // any later "return" in that window satisfied Contains and the step back was skipped.
+            // The pointer then stayed inside the group of "return (n * 2) + n": parsing ended at
+            // the ")" -- it is a separator -- and the "+ n" was dropped, giving 6 where the
+            // arithmetic says 9. Only inside a block, and only with another statement after it,
+            // which is what put a second "return" in range.
+            if (!script.FromPrev(Constants.RETURN.Length, Constants.RETURN.Length).Contains(Constants.RETURN))
             {
                 script.Backward();
             }
@@ -54,7 +61,14 @@ namespace SplitAndMerge
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
             script.MoveForwardIf(Constants.SPACE);
-            if (!script.FromPrev(Constants.RETURN.Length).Contains(Constants.RETURN))
+            // Only the characters immediately before the pointer. FromPrev's second argument caps
+            // how far it reads FORWARD, and the default runs ~40 characters PAST the pointer, so
+            // any later "return" in that window satisfied Contains and the step back was skipped.
+            // The pointer then stayed inside the group of "return (n * 2) + n": parsing ended at
+            // the ")" -- it is a separator -- and the "+ n" was dropped, giving 6 where the
+            // arithmetic says 9. Only inside a block, and only with another statement after it,
+            // which is what put a second "return" in range.
+            if (!script.FromPrev(Constants.RETURN.Length, Constants.RETURN.Length).Contains(Constants.RETURN))
             {
                 script.Backward();
             }
@@ -590,7 +604,7 @@ namespace SplitAndMerge
                 foreach (var prop in props)
                 {
                     var propName = prop.String.ToLower();
-                    var propVal = cscsObj.GetProperty(propName).Result;
+                    var propVal = cscsObj.GetProperty(propName).GetAwaiter().GetResult();
                     if (propVal == null)
                     {
                         continue;
@@ -795,6 +809,8 @@ namespace SplitAndMerge
 
         public static Type GetType(string typeName)
         {
+            if (!InterpreterSecurity.AllowDotNet)
+                return null;
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (var assembly in assemblies)
             {
@@ -834,7 +850,7 @@ namespace SplitAndMerge
 
             if (c is CompiledClassAsync csClassAsync)
             {
-                ScriptObject obj = csClassAsync.GetImplementationAsync(args).Result;
+                ScriptObject obj = csClassAsync.GetImplementationAsync(args).GetAwaiter().GetResult();
                 return new Variable(obj);
             }
 
@@ -2214,7 +2230,47 @@ namespace SplitAndMerge
             // Check if the variable to be set has the form of x[a][b],
             // meaning that this is an array element.
             double newValue = 0;
+
+            // "p.x++" and "a[1].v++": a member, possibly through a subscript. Before
+            // GetArrayIndices for the same reason as the compound assignment -- it turns "a[1].v"
+            // into "a", and the increment then threw "Object [v] doesn't exist".
+            if (script.ClassInstance == null &&
+                OperatorAssignFunction.TryResolveMemberTarget(script, name, out Variable incOwnerValue,
+                    out string incMemberProp, out string incRoot, out Variable incRootValue))
+            {
+                Variable property = incOwnerValue.GetProperty(incMemberProp, script);
+                if (property != null)
+                {
+                    Variable updated = property.DeepClone();
+                    double memberResult = updated.Value + returnDelta;
+                    updated.Value += valueDelta;
+                    incOwnerValue.SetProperty(incMemberProp, updated, script, incRoot);
+                    interpreter.AddGlobalOrLocalVariable(incRoot, new GetVarFunction(incRootValue), script);
+                    return new Variable(memberResult);
+                }
+            }
+
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, name, (string _name) => { name = _name; });
+
+            // Inside a method a bare name can be the instance's own field: "this.x++" threw, and
+            // "x++" quietly moved a local of the same name and left the field alone.
+            if (arrayIndices.Count == 0)
+            {
+                if (script.ClassInstance != null)
+                {
+                    var ownProp = name.StartsWith(Constants.THIS + ".", StringComparison.OrdinalIgnoreCase) ?
+                        name.Substring(Constants.THIS.Length + 1) : name;
+                    if (ownProp.IndexOf('.') < 0 && script.ClassInstance.PropertyExists(ownProp))
+                    {
+                        Variable own = script.ClassInstance.GetProperty(ownProp, null, script).GetAwaiter().GetResult();
+                        Variable ownUpdated = (own ?? Variable.EmptyInstance).DeepClone();
+                        double ownResult = ownUpdated.Value + returnDelta;
+                        ownUpdated.Value += valueDelta;
+                        script.ClassInstance.SetProperty(ownProp, ownUpdated, script).GetAwaiter().GetResult();
+                        return new Variable(ownResult);
+                    }
+                }
+            }
 
             ParserFunction func = interpreter.GetVariable(name, script);
             Utils.CheckNotNull(name, func, script);
@@ -2264,13 +2320,117 @@ namespace SplitAndMerge
             return ProcessOperator(m_name, m_action, script);
         }
 
+        /// <summary>
+        /// Resolves the target of a member write: "p.x", or a member reached through subscripts,
+        /// "a[0].v" and "a[0][1].v". The owner comes back as the live Variable -- an element
+        /// taken with ExtractArrayElement is the one inside the collection -- together with the
+        /// root name and its value, so the root can be registered again after the write. One
+        /// member deep, which is as far as a plain member write goes too.
+        /// The root is read from GetVarFunction.Value rather than GetValue: a GetVarFunction
+        /// remembers the property it last read, so after "r = p.x" asking "p" for its value
+        /// re-ran ".x" and handed back the field instead of the object.
+        /// </summary>
+        internal static bool TryResolveMemberTarget(ParsingScript script, string target,
+            out Variable owner, out string prop, out string rootName, out Variable rootValue)
+        {
+            owner = null;
+            prop = null;
+            rootName = null;
+            rootValue = null;
+            int dot = (target ?? "").LastIndexOf('.');
+            if (dot <= 0 || dot == target.Length - 1)
+            {
+                return false;
+            }
+            prop = target.Substring(dot + 1);
+            var ownerText = target.Substring(0, dot);
+            if (ownerText.IndexOf('.') >= 0 || prop.IndexOfAny(new[] { '[', ']', '(', ')', ' ' }) >= 0)
+            {
+                return false;
+            }
+            int bracket = ownerText.IndexOf(Constants.START_ARRAY);
+            if (bracket == 0 || (bracket > 0 && !ownerText.EndsWith(Constants.END_ARRAY.ToString())))
+            {
+                return false;
+            }
+            rootName = bracket < 0 ? ownerText : ownerText.Substring(0, bracket);
+            ParserFunction rootFunc = script.InterpreterInstance.GetVariable(rootName, script, true);
+            if (rootFunc == null)
+            {
+                return false;
+            }
+            var rootVar = rootFunc as GetVarFunction;
+            rootValue = rootVar != null ? rootVar.Value : rootFunc.GetValue(script);
+            if (rootValue == null)
+            {
+                return false;
+            }
+            if (bracket < 0)
+            {
+                owner = rootValue;
+                return true;
+            }
+            List<Variable> indices = Utils.GetArrayIndices(script, ownerText, (string stripped) => { });
+            if (indices.Count == 0)
+            {
+                return false;
+            }
+            owner = Utils.ExtractArrayElement(rootValue, indices, script);
+            return owner != null;
+        }
+
         public static Variable ProcessOperator(string name, string action, ParsingScript script)
         {
             var interpreter = script.InterpreterInstance;
             // Value to be added to the variable:
             Variable right = Utils.GetItem(script);
 
+            // A member write -- "p.x += 5", or through a subscript, "a[0].v += 3". This has to come
+            // before GetArrayIndices, which rewrites "a[0].v" to plain "a" and drops the ".v"
+            // entirely: the compound then applied to a copy and was written back to a phantom, so
+            // "a[0].v += 3" silently did nothing. Not inside a method, where a bare name can be
+            // the instance's own field; that case is handled below.
+            if (script.ClassInstance == null &&
+                TryResolveMemberTarget(script, name, out Variable memberOwner, out string memberProp,
+                                       out string memberRoot, out Variable memberRootValue))
+            {
+                Variable property = memberOwner.GetProperty(memberProp, script);
+                if (property != null)
+                {
+                    Variable updated = property.DeepClone();
+                    ProcessOperator(updated, right, action, script, name);
+                    memberOwner.SetProperty(memberProp, updated, script, memberRoot);
+                    interpreter.AddGlobalOrLocalVariable(memberRoot, new GetVarFunction(memberRootValue), script);
+                    return updated;
+                }
+            }
+
             List<Variable> arrayIndices = Utils.GetArrayIndices(script, name, (string _name) => { name = _name; });
+
+            // "p.x += 5" is a member, not a variable called "p.x". Reading one worked, but the
+            // result was written back with AddGlobalOrLocalVariable under that dotted name, which
+            // created a variable beside the object: the field never changed and nothing failed,
+            // so "p.x += 5" silently did nothing. Where the name had not been assigned plainly
+            // first there was no such name to read either, and it threw "Object [p.y] doesn't
+            // exist" instead. Handled the way AssignFunction.ProcessObject handles the plain
+            // form: read the property, apply the operator, set it back on the owner.
+            // Inside a method the field is the instance's, not a variable of the same name:
+            // "this.x += 2" threw, and the implicit "x += 3" quietly wrote a local and left the
+            // field alone. Only when the instance really has that property, so a method's own
+            // locals keep the ordinary path.
+            if (arrayIndices.Count == 0 && script.ClassInstance != null)
+            {
+                var ownProp = name.StartsWith(Constants.THIS + ".", StringComparison.OrdinalIgnoreCase) ?
+                    name.Substring(Constants.THIS.Length + 1) : name;
+                if (ownProp.IndexOf('.') < 0 && script.ClassInstance.PropertyExists(ownProp))
+                {
+                    Variable own = script.ClassInstance.GetProperty(ownProp, null, script).GetAwaiter().GetResult();
+                    Variable ownUpdated = (own ?? Variable.EmptyInstance).DeepClone();
+                    ProcessOperator(ownUpdated, right, action, script, name);
+                    script.ClassInstance.SetProperty(ownProp, ownUpdated, script).GetAwaiter().GetResult();
+                    return ownUpdated;
+                }
+            }
 
             ParserFunction func = interpreter.GetVariable(name, script);
             Utils.CheckNotNull(func, name, script);
@@ -2480,7 +2640,11 @@ namespace SplitAndMerge
             ExtendArray(array, arrayIndices, 0, varValue);
 
             InterpreterInstance.AddGlobalOrLocalVariable(m_name, new GetVarFunction(array), script, localIfPossible);
-            return array;
+            // The value assigned, not the collection it went into -- every other path here
+            // returns varValue too. Returning the array made "b = a[1] = 7" set b to the whole
+            // [1, 7], and "a[0] = a[1] = 7" put the array inside its own element: a cycle, so the
+            // next AsString recursed until the stack died, taking the process with it.
+            return varValue.DeepClone();
         }
 
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
@@ -2545,7 +2709,11 @@ namespace SplitAndMerge
             ExtendArray(array, arrayIndices, 0, varValue);
 
             InterpreterInstance.AddGlobalOrLocalVariable(m_name, new GetVarFunction(array), script, localIfPossible);
-            return array;
+            // The value assigned, not the collection it went into -- every other path here
+            // returns varValue too. Returning the array made "b = a[1] = 7" set b to the whole
+            // [1, 7], and "a[0] = a[1] = 7" put the array inside its own element: a cycle, so the
+            // next AsString recursed until the stack died, taking the process with it.
+            return varValue.DeepClone();
         }
 
         Variable ProcessObject(ParsingScript script, Variable varValue)
@@ -2559,7 +2727,7 @@ namespace SplitAndMerge
             if (script.ClassInstance != null)
             {
                 //varName = script.ClassInstance.InstanceName + "." + m_name;
-                varValue = script.ClassInstance.SetProperty(m_name, varValue, script).Result;
+                varValue = script.ClassInstance.SetProperty(m_name, varValue, script).GetAwaiter().GetResult();
                 return varValue.DeepClone();
             }
 
@@ -2573,6 +2741,40 @@ namespace SplitAndMerge
 
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
+
+            // "a[0].v = 9": the owner is an element, not a variable called "a[0]". That name
+            // resolved to nothing, so a fresh Variable was made, the property set on it, and the
+            // result registered under "a[0]" -- a phantom beside the collection. The element never
+            // changed and nothing failed, so the write was simply lost. The element is a live
+            // reference inside the collection, so setting the property on it is all it takes.
+            if (name.IndexOf(Constants.START_ARRAY) > 0 && name.EndsWith(Constants.END_ARRAY.ToString()))
+            {
+                var collectionName = name;
+                List<Variable> elementIndices = Utils.GetArrayIndices(script, name,
+                    (string stripped) => { collectionName = stripped; });
+                ParserFunction collectionFunc = elementIndices.Count == 0 ? null :
+                    InterpreterInstance.GetVariable(collectionName, script, true);
+                // The stored value, not GetValue: a GetVarFunction remembers the property from the
+                // last time it was evaluated, so asking "b" for its value after "b[0].v" was read
+                // re-runs that ".v" -- on the collection this time, which has no such field, and
+                // it threw "Object [v] doesn't exist".
+                var collectionVar = collectionFunc as GetVarFunction;
+                Variable collection = collectionVar != null ? collectionVar.Value :
+                    collectionFunc == null ? null : collectionFunc.GetValue(script);
+                if (collection != null)
+                {
+                    Variable element = Utils.ExtractArrayElement(collection, elementIndices, script);
+                    if (element != null)
+                    {
+                        element.SetProperty(prop, varValue, script, collectionName);
+                        // The collection goes back under its own name, as the plain path does for
+                        // its owner: without it the next statement read a stale entry.
+                        InterpreterInstance.AddGlobalOrLocalVariable(collectionName,
+                            new GetVarFunction(collection), script);
+                        return varValue.DeepClone();
+                    }
+                }
+            }
 
             if (InterpreterInstance.TryAddToNamespace(prop, name, varValue))
             {
@@ -2613,6 +2815,37 @@ namespace SplitAndMerge
 
             string name = varName.Substring(0, ind);
             string prop = varName.Substring(ind + 1);
+
+            // "a[0].v = 9": the owner is an element, not a variable called "a[0]". That name
+            // resolved to nothing, so a fresh Variable was made, the property set on it, and the
+            // result registered under "a[0]" -- a phantom beside the collection. The element never
+            // changed and nothing failed, so the write was simply lost. The element is a live
+            // reference inside the collection, so setting the property on it is all it takes.
+            if (name.IndexOf(Constants.START_ARRAY) > 0 && name.EndsWith(Constants.END_ARRAY.ToString()))
+            {
+                var collectionName = name;
+                List<Variable> elementIndices = await Utils.GetArrayIndicesAsync(script, name,
+                    (string stripped) => { collectionName = stripped; });
+                ParserFunction collectionFunc = elementIndices.Count == 0 ? null :
+                    InterpreterInstance.GetVariable(collectionName, script, true);
+                // The stored value, not GetValue -- see the comment in the sync path above.
+                var collectionVar = collectionFunc as GetVarFunction;
+                Variable collection = collectionVar != null ? collectionVar.Value :
+                    collectionFunc == null ? null : await collectionFunc.GetValueAsync(script);
+                if (collection != null)
+                {
+                    Variable element = Utils.ExtractArrayElement(collection, elementIndices, script);
+                    if (element != null)
+                    {
+                        element.SetProperty(prop, varValue, script, collectionName);
+                        // The collection goes back under its own name, as the plain path does for
+                        // its owner: without it the next statement read a stale entry.
+                        InterpreterInstance.AddGlobalOrLocalVariable(collectionName,
+                            new GetVarFunction(collection), script);
+                        return varValue.DeepClone();
+                    }
+                }
+            }
 
             if (InterpreterInstance.TryAddToNamespace(prop, name, varValue))
             {
@@ -2908,6 +3141,10 @@ namespace SplitAndMerge
 
         public static Type GetTypeAnywhere(string typeName, bool ignoreCase = false)
         {
+            // A sandboxed host allows no .NET type by name: "new" then only builds CSCS classes,
+            // and "typeRef" reports the type as not found. See InterpreterSecurity.
+            if (!InterpreterSecurity.AllowDotNet)
+                return null;
             // If this is called often and is slow, we could save the Assembly array globally
             // We could also save the answer in a Dictionary<string, Type>
             Type type = Type.GetType(typeName, false, ignoreCase);

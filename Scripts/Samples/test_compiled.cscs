@@ -2516,6 +2516,370 @@ Test(strCondCompiled(""), strCondNormal(""));
 Test(strCondCompiled(""), "100000|y");
 Test(strCondCompiled("ab"), strCondNormal("ab"));
 
+// An assignment inside a return: "return(b=n*2)+b" is shaped like a call to a function named
+// "return" once whitespace is stripped, which is why nothing used to declare b.
+cfunction double retAsgSum(int n) {
+  return (b = n * 2) + b;
+}
+function retAsgSumNormal(n) {
+  return (b = n * 2) + b;
+}
+Test(retAsgSum(3), retAsgSumNormal(3));
+Test(retAsgSum(3), 12);
+cfunction string retAsgStr(string s) {
+  return (t = s + "x") + t;
+}
+function retAsgStrNormal(s) {
+  return (t = s + "x") + t;
+}
+Test(retAsgStr("a"), retAsgStrNormal("a"));
+Test(retAsgStr("a"), "axax");
+
+// A return that opens with a group, inside a block. The interpreter used to truncate it at the
+// closing parenthesis and answer 6; fixed in ReturnStatement.Evaluate, which was testing for the
+// "return" keyword with a window that read forward past the pointer. test.cscs pins the
+// interpreter side of it; this pins that the compiled side agrees.
+cfunction double retGrpBlock(int n) {
+  if (n > 0) { return (n * 2) + n; }
+  return 0;
+}
+function retGrpBlockNormal(n) {
+  if (n > 0) { return (n * 2) + n; }
+  return 0;
+}
+Test(retGrpBlock(3), retGrpBlockNormal(3));
+Test(retGrpBlock(3), 9);
+cfunction double retGrpOrder(int n) {
+  if (n > 0) { return n + (n * 2); }
+  return 0;
+}
+Test(retGrpOrder(3), 9);
+
+// A numeric member as the whole condition: CSCS reads ".Length" and ".Size" as numbers, and
+// ".Size" is 0 for anything that is not a collection -- a string included -- exactly as
+// Variable.Size reports it. A C# condition needs a bool, so these took a "!= 0".
+cfunction double lenCondCompiled(string s) {
+  r = 0;
+  if (s.Length) { r += 1; }
+  if (!s.Length) { r += 10; }
+  a = {1, 2};
+  if (a.Size) { r += 100; }
+  e = {};
+  if (e.Size) { r += 1000; }
+  if (!e.Size) { r += 10000; }
+  return r;
+}
+function lenCondNormal(s) {
+  r = 0;
+  if (s.Length) { r += 1; }
+  if (!s.Length) { r += 10; }
+  a = {1, 2};
+  if (a.Size) { r += 100; }
+  e = {};
+  if (e.Size) { r += 1000; }
+  if (!e.Size) { r += 10000; }
+  return r;
+}
+Test(lenCondCompiled("ab"), lenCondNormal("ab"));
+Test(lenCondCompiled("ab"), 10101);
+Test(lenCondCompiled(""), lenCondNormal(""));
+Test(lenCondCompiled(""), 10110);
+
+// A member read off a local holding a Variable is a Variable when it runs, so its truth is the
+// interpreter's test -- a number that is not zero -- rather than any C# conversion.
+class MemPair { a = 0; b = 0; MemPair(x, y) { a = x; b = y; } }
+cfunction double memCondCompiled(int n) {
+  r = 0;
+  tp = new MemPair(0, 5);
+  if (tp.b) { r += 1; }
+  if (tp.a) { r += 10; }
+  if (!tp.a) { r += 100; }
+  if (tp.b && 1 == 1) { r += 1000; }
+  return r;
+}
+function memCondNormal(n) {
+  r = 0;
+  tp = new MemPair(0, 5);
+  if (tp.b) { r += 1; }
+  if (tp.a) { r += 10; }
+  if (!tp.a) { r += 100; }
+  if (tp.b && 1 == 1) { r += 1000; }
+  return r;
+}
+Test(memCondCompiled(0), memCondNormal(0));
+Test(memCondCompiled(0), 1101);
+
+// A property written as a call compiles now that the interpreter consumes the "()" itself: the
+// mapping must not add a pair of its own, since the script's own parentheses are copied through.
+cfunction string upperCallCompiled(string s) {
+  r = s.Upper();
+  r += "|";
+  if (s.Upper() == "AB") { r += "eq"; }
+  r += "|" + s.Upper().Trim() + "|" + s.Lower();
+  return r;
+}
+function upperCallNormal(s) {
+  r = s.Upper();
+  r += "|";
+  if (s.Upper() == "AB") { r += "eq"; }
+  r += "|" + s.Upper().Trim() + "|" + s.Lower();
+  return r;
+}
+Test(upperCallCompiled("ab"), upperCallNormal("ab"));
+Test(upperCallCompiled("ab"), "AB|eq|AB|ab");
+
+// A method called on a collection element. The expression builder always knew how to build
+// these, but only for an expression it had already judged "known" -- one with an operator in it
+// -- so "return pts[1].Sum();" on its own went out as a C# call on a Variable.
+class ElemPt { ex = 0; ey = 0; ElemPt(a, b) { ex = a; ey = b; }
+  function Sum() { return ex + ey; } function Scale(f) { return ex * f; } }
+cfunction string elemMethodCompiled(int n) {
+  pts = {new ElemPt(1, 2), new ElemPt(3, 4)};
+  r = pts[1].Sum();
+  r += pts[0].Sum();
+  r += pts[n].Scale(2);
+  t = 0;
+  for (i = 0; i < 2; i++) { t += pts[i].Sum(); }
+  return r + "|" + t;
+}
+function elemMethodNormal(n) {
+  pts = {new ElemPt(1, 2), new ElemPt(3, 4)};
+  r = pts[1].Sum();
+  r += pts[0].Sum();
+  r += pts[n].Scale(2);
+  t = 0;
+  for (i = 0; i < 2; i++) { t += pts[i].Sum(); }
+  return r + "|" + t;
+}
+Test(elemMethodCompiled(0), elemMethodNormal(0));
+Test(elemMethodCompiled(0), "12|10");
+
+// A keyed element method. These were refused while a map literal holding a "new" came out of the
+// interpreter as a tuple; that is fixed in the parser, so both sides agree and they compile.
+class MapPair { pa = 0; pb = 0; MapPair(a, b) { pa = a; pb = b; } function Sum() { return pa + pb; } }
+cfunction double mapElemCompiled(int n) {
+  mp = {"k" : new MapPair(2, 3), "n" : 4};
+  r = mp["k"].Sum();
+  r += mp["n"];
+  key = "k";
+  r += mp[key].Sum();
+  return r;
+}
+function mapElemNormal(n) {
+  mp = {"k" : new MapPair(2, 3), "n" : 4};
+  r = mp["k"].Sum();
+  r += mp["n"];
+  key = "k";
+  r += mp[key].Sum();
+  return r;
+}
+Test(mapElemCompiled(0), mapElemNormal(0));
+Test(mapElemCompiled(0), 14);
+
+// A member read off a collection element: a class field goes through GetProperty, a Variable's
+// own property is read directly, and a property written as a call drops the empty parentheses --
+// the interpreter reads the property and eats them itself.
+class FieldPt { fx = 0; fy = 0; FieldPt(a, b) { fx = a; fy = b; } }
+cfunction string elemFieldCompiled(int n) {
+  pts = {new FieldPt(1, 2)};
+  words = {"ab"};
+  nums = {{3, 4, 5}};
+  r = pts[0].fx + pts[0].fy;
+  r += nums[0].Size;
+  r += nums[0].Size();
+  return r + "|" + words[0].Upper + "|" + words[0].Upper() + "|" + words[0].Length();
+}
+function elemFieldNormal(n) {
+  pts = {new FieldPt(1, 2)};
+  words = {"ab"};
+  nums = {{3, 4, 5}};
+  r = pts[0].fx + pts[0].fy;
+  r += nums[0].Size;
+  r += nums[0].Size();
+  return r + "|" + words[0].Upper + "|" + words[0].Upper() + "|" + words[0].Length();
+}
+Test(elemFieldCompiled(0), elemFieldNormal(0));
+Test(elemFieldCompiled(0), "9|AB|AB|2");
+
+// A chained assignment onto elements. It unrolls to one statement per target, right to left,
+// which is the order CSCS assigns in; written as it stands, C# would assign to a Variable's
+// indexer, which is read only.
+cfunction double chainElemCompiled(int n) {
+  a = {1, 2};
+  a[0] = a[1] = 7;
+  r = a[0] + a[1];
+  b = {1, 2};
+  taken = b[1] = 4;
+  r += taken + b[1];
+  m = {};
+  m["x"] = m["y"] = 3;
+  r += m["x"] + m["y"];
+  return r;
+}
+function chainElemNormal(n) {
+  a = {1, 2};
+  a[0] = a[1] = 7;
+  r = a[0] + a[1];
+  b = {1, 2};
+  taken = b[1] = 4;
+  r += taken + b[1];
+  m = {};
+  m["x"] = m["y"] = 3;
+  r += m["x"] + m["y"];
+  return r;
+}
+Test(chainElemCompiled(0), chainElemNormal(0));
+Test(chainElemCompiled(0), 28);
+
+// A chained assignment onto members unrolls the same way as one onto elements: write the
+// innermost, then give each target the one to its right.
+class ChainPt { x = 0; y = 0; ChainPt(a, b) { x = a; y = b; } }
+cfunction double chainMemberCompiled(int n) {
+  p = new ChainPt(1, 2);
+  p.x = p.y = 5;
+  r = p.x + p.y;
+  taken = p.y = 6;
+  r += taken + p.y;
+  q = new ChainPt(0, 0);
+  p.x = q.y = 3;
+  r += p.x + q.y;
+  return r;
+}
+function chainMemberNormal(n) {
+  p = new ChainPt(1, 2);
+  p.x = p.y = 5;
+  r = p.x + p.y;
+  taken = p.y = 6;
+  r += taken + p.y;
+  q = new ChainPt(0, 0);
+  p.x = q.y = 3;
+  r += p.x + q.y;
+  return r;
+}
+Test(chainMemberCompiled(0), chainMemberNormal(0));
+Test(chainMemberCompiled(0), 28);
+
+// A compound assignment to a member, and the increment forms: the read-apply-write the
+// interpreter does, since C# has neither "+=" nor "++" for a member of a Variable.
+class CompPt2 { x = 0; y = 0; tag = "t"; CompPt2(a, b) { x = a; y = b; } }
+cfunction string memCompCompiled(int n) {
+  p = new CompPt2(1, 2);
+  p.x += 5;
+  p.y -= 1;
+  p.y *= 4;
+  p.x++;
+  p.y--;
+  for (i = 0; i < 3; i++) { p.x += 2; }
+  p.tag += "z";
+  p.tag += n;
+  return p.x + "|" + p.y + "|" + p.tag;
+}
+function memCompNormal(n) {
+  p = new CompPt2(1, 2);
+  p.x += 5;
+  p.y -= 1;
+  p.y *= 4;
+  p.x++;
+  p.y--;
+  for (i = 0; i < 3; i++) { p.x += 2; }
+  p.tag += "z";
+  p.tag += n;
+  return p.x + "|" + p.y + "|" + p.tag;
+}
+Test(memCompCompiled(7), memCompNormal(7));
+Test(memCompCompiled(7), "13|3|tz7");
+
+// A switch with consecutive case labels, and one that really falls through. Each label is its
+// own clause with an empty body, so the match flag carries into the next one.
+cfunction string switchFallCompiled(int n) {
+  r = "";
+  switch (n) { case 1: case 2: r += "12"; break; default: r += "d"; }
+  t = 0;
+  switch (n) { case 1: t += 1; case 2: t += 10; break; default: t = 99; }
+  switch (n) { case 1: default: r += "|any"; }
+  return r + "|" + t;
+}
+function switchFallNormal(n) {
+  r = "";
+  switch (n) { case 1: case 2: r += "12"; break; default: r += "d"; }
+  t = 0;
+  switch (n) { case 1: t += 1; case 2: t += 10; break; default: t = 99; }
+  switch (n) { case 1: default: r += "|any"; }
+  return r + "|" + t;
+}
+Test(switchFallCompiled(1), switchFallNormal(1));
+Test(switchFallCompiled(1), "12|any|11");
+Test(switchFallCompiled(2), switchFallNormal(2));
+Test(switchFallCompiled(5), switchFallNormal(5));
+
+// A truth-valued assignment group beside arithmetic: 1 or 0 in CSCS, a bool in C#. The group is
+// hoisted into its own statement, which is the order CSCS evaluates in anyway.
+cfunction double boolGroupCompiled(int n) {
+  r = (b = n > 2) + b;
+  r += (c = n > 5) * 10;
+  return r;
+}
+function boolGroupNormal(n) {
+  r = (b = n > 2) + b;
+  r += (c = n > 5) * 10;
+  return r;
+}
+Test(boolGroupCompiled(3), boolGroupNormal(3));
+Test(boolGroupCompiled(3), 2);
+Test(boolGroupCompiled(7), boolGroupNormal(7));
+Test(boolGroupCompiled(7), 12);
+Test(boolGroupCompiled(1), boolGroupNormal(1));
+
+// A member write through a subscript -- plain, compound, increment, in a loop, on a map element.
+// Called twice below: a field the constructor never sets is the class's shared default, and a
+// write that aliased it would show up on the second call.
+class ElemW { w = 0; label = "t"; ElemW(a) { w = a; } }
+cfunction string elemWriteCompiled(int n) {
+  items = {new ElemW(1), new ElemW(2)};
+  items[0].w = 9;
+  items[1].w += n;
+  items[0].w++;
+  items[1].label += "z";
+  for (i = 0; i < 2; i++) { items[i].w *= 2; }
+  lookup = {};
+  lookup["k"] = new ElemW(5);
+  lookup["k"].w -= 1;
+  return items[0].w + "|" + items[1].w + "|" + items[1].label + "|" + items[0].label + "|" + lookup["k"].w;
+}
+function elemWriteNormal(n) {
+  items = {new ElemW(1), new ElemW(2)};
+  items[0].w = 9;
+  items[1].w += n;
+  items[0].w++;
+  items[1].label += "z";
+  for (i = 0; i < 2; i++) { items[i].w *= 2; }
+  lookup = {};
+  lookup["k"] = new ElemW(5);
+  lookup["k"].w -= 1;
+  return items[0].w + "|" + items[1].w + "|" + items[1].label + "|" + items[0].label + "|" + lookup["k"].w;
+}
+Test(elemWriteCompiled(3), elemWriteNormal(3));
+Test(elemWriteCompiled(3), "20|10|tz|t|4");
+Test(elemWriteCompiled(3), "20|10|tz|t|4");
+
+// A throw inside a class method, caught by the caller: the plain message, not
+// "One or more errors occurred. (...)", in compiled code as in interpreted.
+class ThrowBox { v = 0; function Put(x) { if (x < 0) { throw "negative: " + x; } v = x; return v; } }
+cfunction string methodThrowCompiled(int n) {
+  box = new ThrowBox();
+  r = "";
+  try { box.Put(n); } catch (e) { r = "caught " + e; }
+  return r + "|" + box.Put(7);
+}
+function methodThrowNormal(n) {
+  box = new ThrowBox();
+  r = "";
+  try { box.Put(n); } catch (e) { r = "caught " + e; }
+  return r + "|" + box.Put(7);
+}
+Test(methodThrowCompiled(-2), methodThrowNormal(-2));
+Test(methodThrowCompiled(-2), "caught negative: -2|7");
+
 // A compound assignment is not "x = x + v": it dispatches on the left type and takes the
 // right side's numeric field, so a string on the right contributes 0. A step is different
 // again: it steps the numeric field, so "5"++ is 1 while "5" += 1 concatenates to "51".

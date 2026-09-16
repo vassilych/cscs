@@ -1073,6 +1073,187 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("strcond_not_join", "(int n)", "(n)", "vals = {\"5\", 0}; r = 0; if (!vals[0] && n == 0) { r += 10; } if (!vals[1] && n == 0) { r += 100; } return r;", "(0)"),
             // Kept on the interpreter: ".Length" is a number there, but a C# int in a condition.
             new Construct("strcond_len_keep", "(string s)", "(s)", "if (s.Length) { return 1; } return 0;", "(\"ab\")"),
+
+            // An assignment inside a return. Whitespace is stripped by the time the declaration scan
+            // runs, so "return(b=n*2)+b" looked exactly like a call to a function named "return" and
+            // nothing declared b (CS0103). A keyword's own parenthesis is now told apart from a call's.
+            new Construct("retasg_plus", "(int n)", "(n)", "return (b = n * 2) + b;", "(3)"),
+            new Construct("retasg_alone", "(int n)", "(n)", "return (b = n * 2);", "(3)"),
+            new Construct("retasg_mult", "(int n)", "(n)", "return (b = n * 2) * b;", "(3)"),
+            new Construct("retasg_str", "(string s)", "(s)", "return (t = s + \"x\") + t;", "(\"a\")"),
+            new Construct("retasg_double", "(int n)", "(n)", "return (b = n * 2) + (c = b + 1) + c;", "(3)"),
+            new Construct("retasg_nested", "(int n)", "(n)", "return ((b = n * 2)) + b;", "(3)"),
+            new Construct("retasg_pre", "(int n)", "(n)", "b = 1; return (b = n * 2) + b;", "(3)"),
+            new Construct("retasg_used_later", "(int n)", "(n)", "x = 0; if (n > 0) { x = (b = n * 2) + b; } return x; ", "(3)"),
+            // A return that opens with a group, inside a block. The interpreter used to truncate these
+            // at the closing parenthesis -- 6 where the arithmetic says 9 -- so they were refused to
+            // keep compiled code from answering differently. Fixed in ReturnStatement.Evaluate
+            // (Functions.Flow.cs) on 2026-09-13, and compiled since.
+            new Construct("retasg_block", "(int n)", "(n)", "if (n > 0) { return (b = n * 2) + b; } return 0;", "(3)"),
+            new Construct("retgrp_block", "(int n)", "(n)", "if (n > 0) { return (n * 2) + n; } return 0;", "(3)"),
+            new Construct("retgrp_while", "(int n)", "(n)", "while (n > 0) { return (n * 2) + n; } return 0;", "(3)"),
+            new Construct("retgrp_str", "(string s)", "(s)", "if (s != \"\") { return (s + \"x\") + \"y\"; } return \"\";", "(\"a\")"),
+            // Kept: "(b = n > 2) + b" adds a C# bool to an int (CS0019).
+            // A truth-valued assignment group beside arithmetic. It is 1 or 0 in CSCS but a C# bool, and
+            // there is no single token to convert, so the group is hoisted into a statement of its own --
+            // the order CSCS evaluates in anyway -- leaving a name the bool-to-number rule handles.
+            new Construct("boolgrp_ret", "(int n)", "(n)", "return (b = n > 2) + b;", "(3)"),
+            new Construct("boolgrp_ret_false", "(int n)", "(n)", "return (b = n > 2) + b;", "(1)"),
+            new Construct("boolgrp_mult", "(int n)", "(n)", "return (b = n > 2) * 5;", "(3)"),
+            new Construct("boolgrp_asg", "(int n)", "(n)", "t = (b = n > 2) + 10; return t;", "(3)"),
+            // Kept: two groups in one expression -- the second is not hoisted, so it stays a C# bool.
+            new Construct("boolgrp_twice_keep", "(int n)", "(n)", "return (b = n > 2) + (c = n > 1) + b + c;", "(3)"),
+            // Kept: the call builder does not carry an assignment out of an argument list.
+            new Construct("retasg_call_keep", "(int n)", "(n)", "return helper((q = n * 2)) + q;", "(4)"),
+
+            // A numeric member as the whole condition. CSCS reads ".Length" and ".Size" as numbers, C#
+            // as ints, and the two agree on every type -- Variable.Size is 0 for anything but an array,
+            // just as the interpreter reports 0 for a string. A C# condition needs a bool, so these were
+            // CS0029 until the numeric rewrite learned to read them as "!= 0".
+            new Construct("len_cond", "(string s)", "(s)", "if (s.Length) { return 1; } return 0;", "(\"ab\")"),
+            new Construct("len_cond_empty", "(string s)", "(s)", "if (s.Length) { return 1; } return 0;", "(\"\")"),
+            new Construct("len_not", "(string s)", "(s)", "if (!s.Length) { return 1; } return 0;", "(\"\")"),
+            new Construct("len_and", "(string s, int n)", "(s, n)", "if (s.Length && n > 1) { return 1; } return 0;", "(\"ab\", 2)"),
+            new Construct("len_while", "(string s)", "(s)", "t = 0; while (s.Length) { t += 1; s = s.Substring(1, s.Length - 1); } return t;", "(\"abc\")"),
+            new Construct("size_cond", "(int n)", "(n)", "a = {1,2}; if (a.Size) { return 1; } return 0;", "(0)"),
+            new Construct("size_empty", "(int n)", "(n)", "a = {}; if (a.Size) { return 1; } return 0;", "(0)"),
+            new Construct("size_not", "(int n)", "(n)", "a = {}; if (!a.Size) { return 1; } return 0;", "(0)"),
+            new Construct("size_map", "(int n)", "(n)", "m = {\"k\" : 1}; if (m.Size) { return 1; } return 0;", "(0)"),
+            new Construct("size_call_result", "(int n)", "(n)", "c = build(); if (c.Size) { return 1; } return 0;", "(0)"),
+            new Construct("size_of_var", "(int n)", "(n)", "v = helper(n); if (v.Size) { return 1; } return 0;", "(2)"),
+            // A member read off a local holding a Variable is a Variable when it runs, so its truth is
+            // the interpreter's own test, not a C# conversion. A member holding text is false there.
+            new Construct("mem_cond", "(int n)", "(n)", "p = new Point(0, 5); if (p.y) { return 1; } return 0;", "(0)"),
+            new Construct("mem_cond_zero", "(int n)", "(n)", "p = new Point(0, 5); if (p.x) { return 1; } return 0;", "(0)"),
+            new Construct("mem_not", "(int n)", "(n)", "p = new Point(0, 5); if (!p.x) { return 1; } return 0;", "(0)"),
+            new Construct("mem_and", "(int n)", "(n)", "p = new Point(0, 5); if (p.y && n == 0) { return 1; } return 0;", "(0)"),
+            new Construct("mem_str_false", "(int n)", "(n)", "q = new Named(1, \"t\"); if (q.tag) { return 1; } return 0;", "(0)"),
+            new Construct("mem_num", "(int n)", "(n)", "q = new Named(7, \"t\"); if (q.v) { return 1; } return 0;", "(0)"),
+            new Construct("mem_while", "(int n)", "(n)", "p = new Point(0, 3); t = 0; while (p.y) { t += 1; p.y = p.y - 1; } return t;", "(0)"),
+            // Kept on the interpreter: a C# string has no Size member at all.
+            new Construct("str_size_keep", "(string s)", "(s)", "if (s.Size) { return 1; } return 0;", "(\"ab\")"),
+            // A property written as a call. The mapping adds no parentheses of its own -- the script's
+            // own are copied through -- and it is safe to compile only since the interpreter stopped
+            // leaving a property's "()" behind. "s.Trim" stays interpreted: it does not trim there.
+                        new Construct("upper_call", "(string s)", "(s)", "return s.Upper();", "(\"ab\")"),
+            new Construct("upper_call_cmp", "(string s)", "(s)", "if (s.Upper() == \"AB\") { return 1; } return 0;", "(\"ab\")"),
+            new Construct("upper_call_chain", "(string s)", "(s)", "return s.Upper().Trim();", "(\" ab \")"),
+            new Construct("lower_call", "(string s)", "(s)", "return s.Lower();", "(\"AB\")"),
+            new Construct("trim_prop_keep", "(string s)", "(s)", "return s.Trim;", "(\" a \")"),
+            // A method on a collection element. The expression builder has always built these, but only
+            // for a KNOWN expression: "return a[0].Sum() + a[1].Sum();" qualified and the lone
+            // "return a[1].Sum();" did not, so the call went out as C# ".Sum()" on a Variable (CS1929).
+            // Keyed subscripts too: they were refused while a map literal holding a "new" came out of the
+            // interpreter as a tuple, which is fixed in Parser.CheckConsistencyAndSign.
+            new Construct("elem_method", "(int n)", "(n)", "a = {new Point(1,2), new Point(3,4)}; return a[1].Sum();", "(0)"),
+            new Construct("elem_method_first", "(int n)", "(n)", "a = {new Point(1,2)}; return a[0].Sum();", "(0)"),
+            new Construct("elem_method_arg", "(int n)", "(n)", "a = {new Point(1,2)}; return a[0].Scale(n);", "(3)"),
+            new Construct("elem_method_argvar", "(int n)", "(n)", "a = {new Point(1,2), new Point(3,4)}; return a[n].Sum();", "(1)"),
+            new Construct("elem_method_expr", "(int n)", "(n)", "a = {new Point(1,2), new Point(3,4)}; return a[n - 1].Sum();", "(2)"),
+            new Construct("elem_method_loop", "(int n)", "(n)", "a = {new Point(1,2), new Point(3,4)}; t = 0; for (i = 0; i < 2; i++) { t += a[i].Sum(); } return t;", "(0)"),
+            // A member read off an element: a field goes through GetProperty, a Variable's own property
+            // is read directly, and a property written as a call -- "a[0].Upper()" -- drops the
+            // empty parentheses, exactly as the interpreter's own property lookup now does.
+            new Construct("elem_field", "(int n)", "(n)", "a = {new Point(1,2)}; return a[0].x;", "(0)"),
+            new Construct("elem_field_cond", "(int n)", "(n)", "a = {new Point(1,2)}; if (a[0].y > 1) { return 1; } return 0;", "(0)"),
+            new Construct("elem_str_field", "(int n)", "(n)", "q = {new Named(1, \"t\")}; return q[0].tag;", "(0)"),
+            new Construct("elem_size", "(int n)", "(n)", "a = {{1,2,3}}; return a[0].Size;", "(0)"),
+            new Construct("elem_type", "(int n)", "(n)", "a = {\"abc\"}; return a[0].Type;", "(0)"),
+            new Construct("elem_first", "(int n)", "(n)", "a = {{5,6}}; return a[0].First;", "(0)"),
+            new Construct("elem_upper_call", "(int n)", "(n)", "a = {\"ab\"}; return a[0].Upper();", "(0)"),
+            new Construct("elem_size_call", "(int n)", "(n)", "a = {{1,2,3}}; return a[0].Size();", "(0)"),
+            new Construct("elem_first_call", "(int n)", "(n)", "a = {{5,6}}; return a[0].First();", "(0)"),
+            new Construct("elem_lower_call", "(int n)", "(n)", "a = {\"AB\"}; return a[0].Lower();", "(0)"),
+            new Construct("elem_sort_still", "(int n)", "(n)", "a = {{3,1,2}}; a[0].Sort(); return a[0][0];", "(0)"),
+            new Construct("elem_replace_still", "(int n)", "(n)", "a = {\"abc\"}; return a[0].Replace(\"a\", \"z\");", "(0)"),
+            // A chained assignment whose targets are elements. The unrolling that already handled
+            // "x = y = 7" -- write the innermost, then assign each target the one to its right, which is
+            // the right-to-left order CSCS evaluates in -- now takes element targets too. Emitting it as
+            // written made C# assign to a Variable's indexer, which is read only (CS0200/CS0131).
+            new Construct("chain_elem", "(int n)", "(n)", "a = {1,2}; a[0] = a[1] = 7; return a[0] + a[1];", "(0)"),
+            new Construct("chain_elem_value", "(int n)", "(n)", "a = {1,2}; b = a[1] = 7; return b + a[0];", "(0)"),
+            new Construct("chain_map", "(int n)", "(n)", "m = {}; m[\"a\"] = m[\"b\"] = 3; return m[\"a\"] + m[\"b\"];", "(0)"),
+            new Construct("chain_triple", "(int n)", "(n)", "f = {1,2}; g = f[0] = f[1] = 4; return g + f[0] + f[1];", "(0)"),
+            new Construct("chain_idx_param", "(int n)", "(n)", "a = {1,2,3}; a[n] = a[0] = 7; return a[n] + a[0];", "(2)"),
+            new Construct("chain_nested", "(int n)", "(n)", "e = {{1,2},{3,4}}; e[0][1] = e[1][0] = 5; return e[0][1] + e[1][0];", "(0)"),
+            new Construct("chain_map_varkey", "(int n)", "(n)", "m = {}; k = \"z\"; m[k] = m[\"y\"] = 4; return m[k] + m[\"y\"];", "(0)"),
+            new Construct("chain_four", "(int n)", "(n)", "a = {1,2,3}; a[0] = a[1] = a[2] = 6; return a[0] + a[1] + a[2];", "(0)"),
+            new Construct("chain_global", "(int n)", "(n)", "garr[0] = garr[1] = 8; return garr[0] + garr[1];", "(0)"),
+            // Kept: the index runs twice in the unrolling -- once as a target, once as the value beside
+            // it -- so one that can change something is left alone. A member target is left alone too.
+            new Construct("chain_inc_index_keep", "(int n)", "(n)", "a = {1,2,3}; i = 0; a[i++] = a[0] = 7; return a[0] + i;", "(0)"),
+            new Construct("chain_member", "(int n)", "(n)", "p = new Point(1,2); p.x = p.y = 5; return p.x + p.y;", "(0)"),
+            new Construct("chain_member_value", "(int n)", "(n)", "p = new Point(1,2); v = p.y = 6; return v + p.y;", "(0)"),
+            new Construct("chain_member_elem", "(int n)", "(n)", "p = new Point(1,2); a = {0,0}; a[0] = p.y = 4; return a[0] + p.y;", "(0)"),
+            new Construct("chain_two_objects", "(int n)", "(n)", "p = new Point(1,2); q = new Point(3,4); p.x = q.y = 5; return p.x + q.y;", "(0)"),
+            new Construct("chain_three_members", "(int n)", "(n)", "p = new Point(1,2); q = new Point(3,4); p.x = p.y = q.x = 6; return p.x + p.y + q.x;", "(0)"),
+            new Construct("chain_str_member", "(int n)", "(n)", "q = new Named(1, \"t\"); v = q.tag = \"z\"; return v + q.tag;", "(0)"),
+            new Construct("chain_member_loop", "(int n)", "(n)", "p = new Point(0,0); t = 0; for (i = 1; i < 3; i++) { p.x = p.y = i; t += p.x + p.y; } return t;", "(0)"),
+            // Kept: the owner has to be a name the unrolling can mention twice without re-running it,
+            // so a deeper member ("q.kid.x") and a member of an element ("a[0].v") stay interpreted.
+            new Construct("chain_deep_keep", "(int n)", "(n)", "q = new Named(1, \"t\"); q.kid = new Point(1,2); q.kid.x = q.v = 5; return q.v;", "(0)"),
+            new Construct("chain_elem_member_keep", "(int n)", "(n)", "a = {new Named(1, \"t\")}; p = new Point(1,2); a[0].v = p.x = 3; return p.x;", "(0)"),
+            // A compound assignment to a member, and the increment forms. C# has neither for a member of
+            // a Variable (CS1061/CS1059), so each becomes the read-apply-write the interpreter does,
+            // through the same Compound helper an element compound already used.
+            new Construct("memcomp_plus", "(int n)", "(n)", "p = new Point(1,2); p.x += 5; return p.x;", "(0)"),
+            new Construct("memcomp_minus", "(int n)", "(n)", "p = new Point(1,2); p.y -= 1; return p.y;", "(0)"),
+            new Construct("memcomp_mult", "(int n)", "(n)", "p = new Point(1,2); p.y *= 3; return p.y;", "(0)"),
+            new Construct("memcomp_div", "(int n)", "(n)", "p = new Point(8,2); p.x /= 4; return p.x;", "(0)"),
+            new Construct("memcomp_str", "(int n)", "(n)", "q = new Named(1, \"t\"); q.tag += \"z\"; return q.tag;", "(0)"),
+            new Construct("memcomp_str_num", "(int n)", "(n)", "q = new Named(1, \"t\"); q.tag += n; return q.tag;", "(7)"),
+            new Construct("memcomp_inc", "(int n)", "(n)", "p = new Point(1,2); p.x++; return p.x;", "(0)"),
+            new Construct("memcomp_dec", "(int n)", "(n)", "p = new Point(1,2); p.y--; return p.y;", "(0)"),
+            new Construct("memcomp_arg", "(int n)", "(n)", "p = new Point(1,2); p.x += n; return p.x;", "(4)"),
+            new Construct("memcomp_call_value", "(int n)", "(n)", "p = new Point(1,2); p.x += helper(n); return p.x;", "(2)"),
+            new Construct("memcomp_loop", "(int n)", "(n)", "p = new Point(0,0); for (i = 0; i < 3; i++) { p.x += 2; } return p.x;", "(0)"),
+            new Construct("memcomp_while", "(int n)", "(n)", "p = new Point(5,0); while (p.x > 2) { p.x--; } return p.x;", "(0)"),
+            // Kept: the prefix form is worth the field's new value, which the statement shape does not
+            // produce, and a member of an element is not a named owner.
+            new Construct("memcomp_pre_keep", "(int n)", "(n)", "p = new Point(1,2); return ++p.x;", "(0)"),
+            new Construct("elemwrite_comp", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].v += 3; return a[0].v;", "(0)"),
+            // A member write through a subscript: plain, compound and increment, on an array element,
+            // a map element, with an argument or an expression as the index. The value is worked out
+            // before the subscript, the order the interpreter uses, and the element is taken through
+            // CscsConvert.ElementForWrite, which throws on a missing element exactly as the interpreter
+            // does -- the indexer cannot, since a missing element reads back as a brand-new Variable.
+            new Construct("elemwrite_set", "(int n)", "(n)", "a = {new Named(1, \"t\"), new Named(2, \"u\")}; a[0].v = 9; return a[0].v + a[1].v;", "(0)"),
+            new Construct("elemwrite_set_str", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].tag = \"z\"; return a[0].tag;", "(0)"),
+            new Construct("elemwrite_arg_idx", "(int n)", "(n)", "a = {new Named(1, \"t\"), new Named(2, \"u\")}; a[n].v = 7; return a[n].v;", "(1)"),
+            new Construct("elemwrite_call_val", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].v = helper(n); return a[0].v;", "(2)"),
+            new Construct("elemwrite_map", "(int n)", "(n)", "m = {}; m[\"k\"] = new Named(5, \"t\"); m[\"k\"].v = 8; return m[\"k\"].v;", "(0)"),
+            new Construct("elemwrite_order", "(int n)", "(n)", "a = {new Named(1, \"t\"), new Named(2, \"u\")}; i = 0; a[i].v = (i = 1) + 10; return a[0].v + \"|\" + a[1].v;", "(0)"),
+            new Construct("elemwrite_comp_str", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].tag += \"z\"; return a[0].tag;", "(0)"),
+            new Construct("elemwrite_default_twice", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].tag += \"z\"; b = {new Named(2, \"t\")}; return a[0].tag + \"|\" + b[0].tag;", "(0)"),
+            new Construct("elemwrite_inc", "(int n)", "(n)", "a = {new Named(1, \"t\")}; a[0].v++; a[0].v++; return a[0].v;", "(0)"),
+            new Construct("elemwrite_dec", "(int n)", "(n)", "a = {new Named(5, \"t\")}; a[0].v--; return a[0].v;", "(0)"),
+            new Construct("elemwrite_comp_map", "(int n)", "(n)", "m = {}; m[\"k\"] = new Named(5, \"t\"); m[\"k\"].v *= 2; return m[\"k\"].v;", "(0)"),
+            new Construct("elemwrite_loop", "(int n)", "(n)", "a = {new Named(0, \"t\"), new Named(0, \"u\")}; for (i = 0; i < 2; i++) { a[i].v += i + 1; a[i].v++; } return a[0].v + a[1].v;", "(0)"),
+            // Kept: the WRITE compiles, but a read in the same function does not yet -- a nested
+            // element member ("e[0][0].v") and an element member assigned to a local ("r = a[0].v").
+            new Construct("elemwrite_nested_read_keep", "(int n)", "(n)", "e = {{new Named(7, \"t\")}}; e[0][0].v = 3; return e[0][0].v;", "(0)"),
+            new Construct("elemwrite_assign_read_keep", "(int n)", "(n)", "a = {new Named(1, \"t\")}; r = a[0].v; a[0].v += 5; return r + \"|\" + a[0].v;", "(0)"),
+            // A switch with consecutive case labels. They arrive on one line, so the second label was
+            // left inside the first clause's body and went out as a C# "case" in the middle of an if
+            // (CS1003). Each label now starts its own clause with an empty body, which is what
+            // fall-through already is here: the first sets the match flag, the next clause's body runs.
+            new Construct("switch_fall_two", "(int n)", "(n)", "switch (n) { case 1: case 2: return 12; default: return 0; }", "(2)"),
+            new Construct("switch_fall_first", "(int n)", "(n)", "switch (n) { case 1: case 2: return 12; default: return 0; }", "(1)"),
+            new Construct("switch_fall_miss", "(int n)", "(n)", "switch (n) { case 1: case 2: return 12; default: return 0; }", "(5)"),
+            new Construct("switch_fall_three", "(int n)", "(n)", "switch (n) { case 1: case 2: case 3: return 99; default: return 0; }", "(3)"),
+            new Construct("switch_fall_str", "(string s)", "(s)", "switch (s) { case \"a\": case \"b\": return \"ab\"; default: return \"z\"; }", "(\"b\")"),
+            new Construct("switch_fall_mixed", "(int n)", "(n)", "switch (n) { case 1: return 10; case 2: case 3: return 23; default: return 0; }", "(3)"),
+            new Construct("switch_fall_body", "(int n)", "(n)", "t = 0; switch (n) { case 1: case 2: t = 5; break; default: t = 1; } return t;", "(2)"),
+            new Construct("switch_fall_default", "(int n)", "(n)", "switch (n) { case 1: default: return 7; }", "(9)"),
+            // Real fall-through, where the first clause has a body of its own and no break.
+            new Construct("switch_real_fall", "(int n)", "(n)", "t = 0; switch (n) { case 1: t += 1; case 2: t += 10; break; default: t = 99; } return t;", "(1)"),
+            new Construct("mapasg_method", "(int n)", "(n)", "m = {}; m[\"p\"] = new Point(1,2); return m[\"p\"].Sum();", "(0)"),
+            new Construct("mapnew_direct", "(int n)", "(n)", "m = {\"p\" : new Point(1,2)}; return m[\"p\"].Sum();", "(0)"),
+            new Construct("mapnew_varkey", "(int n)", "(n)", "m = {\"p\" : new Point(1,2)}; k = \"p\"; return m[k].Sum();", "(0)"),
+            new Construct("mapnew_mixed", "(int n)", "(n)", "m = {\"a\" : 1, \"p\" : new Point(1,2)}; return m[\"a\"] + m[\"p\"].Sum();", "(0)"),
+            new Construct("mapnew_first", "(int n)", "(n)", "m = {\"p\" : new Point(1,2), \"a\" : 1}; return m[\"a\"] + m[\"p\"].Sum();", "(0)"),
+            // A field on a map element reads the same way.
+            new Construct("elem_map_field", "(int n)", "(n)", "m = {\"p\" : new Point(1,2)}; return m[\"p\"].x;", "(0)"),
             // "===" on an int argument or a numeric local: rewritten to "==", both sides being
             // certainly numbers. An element, a mixed pair or a conflicting local still falls back.
             new Construct("strict_int_eq", "(int n)", "(n)", "if (n === 5) { return 1; } return 0;", "(5)"),
@@ -1444,6 +1625,33 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             "truthy_str_and", "truthy_elem_not_and",
             "strcond_alone", "strcond_num", "strcond_empty", "strcond_local", "strcond_asg",
             "strcond_not", "strcond_not_str", "strcond_not_join",
+            "retasg_plus", "retasg_alone", "retasg_mult", "retasg_str", "retasg_double",
+            "retasg_nested", "retasg_pre", "retasg_used_later",
+            "retasg_block", "retgrp_block", "retgrp_while", "retgrp_str",
+            "len_cond", "len_cond_empty", "len_not", "len_and", "len_while",
+            "size_cond", "size_empty", "size_not", "size_map", "size_call_result", "size_of_var",
+            "mem_cond", "mem_cond_zero", "mem_not", "mem_and", "mem_str_false", "mem_num", "mem_while",
+            "upper_call", "upper_call_cmp", "upper_call_chain", "lower_call",
+            "elem_method", "elem_method_first", "elem_method_arg", "elem_method_argvar",
+            "elem_method_expr", "elem_method_loop",
+            "mapasg_method", "mapnew_direct", "mapnew_varkey", "mapnew_mixed", "mapnew_first",
+            "elem_field", "elem_field_cond", "elem_str_field", "elem_size", "elem_type", "elem_first",
+            "elem_map_field", "elem_upper_call", "elem_size_call", "elem_first_call", "elem_lower_call",
+            "elem_sort_still", "elem_replace_still",
+            "chain_elem", "chain_elem_value", "chain_map", "chain_triple", "chain_idx_param",
+            "chain_nested", "chain_map_varkey", "chain_four", "chain_global",
+            "chain_member", "chain_member_value", "chain_member_elem", "chain_two_objects",
+            "chain_three_members", "chain_str_member", "chain_member_loop",
+            "memcomp_plus", "memcomp_minus", "memcomp_mult", "memcomp_div", "memcomp_str",
+            "memcomp_str_num", "memcomp_inc", "memcomp_dec", "memcomp_arg", "memcomp_call_value",
+            "memcomp_loop", "memcomp_while",
+            "switch_fall_two", "switch_fall_first", "switch_fall_miss", "switch_fall_three",
+            "switch_fall_str", "switch_fall_mixed", "switch_fall_body", "switch_fall_default",
+            "switch_real_fall",
+            "boolgrp_ret", "boolgrp_ret_false", "boolgrp_mult", "boolgrp_asg",
+            "elemwrite_comp", "elemwrite_set", "elemwrite_set_str", "elemwrite_arg_idx", "elemwrite_call_val",
+            "elemwrite_map", "elemwrite_order", "elemwrite_comp_str", "elemwrite_default_twice", "elemwrite_inc",
+            "elemwrite_dec", "elemwrite_comp_map", "elemwrite_loop",
             "enum_eq_num", "enum_ne_num", "enum_eq_and", "enum_ret_eq", "global_eq_num",
             "bool_compound_add", "bool_compound_sub", "bool_compound_loop",
             "bool_eq_one", "bool_eq_zero", "bool_ne_zero",

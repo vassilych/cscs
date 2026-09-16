@@ -813,8 +813,7 @@ namespace SplitAndMerge
 
             m_statements = TokenizeScript(m_cscsCode);
             CollectVariableLocals(m_statements);
-            RefuseReturnInTryWithFinally(m_statements);
-            DeclareBlockCrossingLocals(m_statements);
+            RefuseReturnInTryWithFinally(m_statements);            DeclareBlockCrossingLocals(m_statements);
             CollectLocalTypes(m_statements);
             m_statementId = 0;
             while (m_statementId < m_statements.Count)
@@ -1522,6 +1521,24 @@ namespace SplitAndMerge
                 return variableCompound;
             }
 
+            // "p.x += 5" and "p.x++" on a local that holds a Variable: read the field, apply the
+            // interpreter's own compound operator, set it back -- C# has neither the "+=" nor the
+            // "++" for a member of a Variable (CS1061/CS1059).
+            var memberCompound = TryBuildMemberCompound(statement);
+            if (memberCompound != null)
+            {
+                return memberCompound;
+            }
+
+            // "return (b = n > 2) + b": the group is 1 or 0 in CSCS but a C# bool, and "bool + int"
+            // does not compile. Hoisted into a statement of its own, which is the order CSCS
+            // evaluates in anyway, leaving a plain name the bool-to-number rule already handles.
+            var boolGroup = TryHoistBoolGroupAssignment(statement, nextStatement, addNewVars);
+            if (boolGroup != null)
+            {
+                return boolGroup;
+            }
+
             // "a[f(0)]" -- a call inside a subscript. The resolver builds the index itself
             // and cannot produce the statements a call needs, so it is worked out first.
             var hoistedIndex = TryHoistSubscriptCall(statement, nextStatement, addNewVars);
@@ -2112,6 +2129,18 @@ namespace SplitAndMerge
                 {
                     labels.Add(label);
                     bodies.Add(new List<string>());
+                    // "case 1: case 2: return 12;" arrives as one line, so the second label was
+                    // left in the first clause's body and went out as a C# "case" in the middle
+                    // of an if (CS1003). Each label starts its own clause with an empty body,
+                    // which is what fall-through already is here: the first sets the match flag
+                    // and the next clause's body runs.
+                    while (!string.IsNullOrWhiteSpace(rest) &&
+                           TrySplitClause(rest.Trim(), out var nextLabel, out var nextRest))
+                    {
+                        labels.Add(nextLabel);
+                        bodies.Add(new List<string>());
+                        rest = nextRest;
+                    }
                     if (!string.IsNullOrWhiteSpace(rest))
                     {
                         bodies[bodies.Count - 1].Add(rest);
@@ -2892,6 +2921,24 @@ namespace SplitAndMerge
                         return;
                     }
                 }
+                // "a[1].Sum()": a method on the element. The expression path builds these --
+                // "return a[0].Sum() + a[1].Sum();" compiled -- but only when it is handed the
+                // whole thing; splitting the receiver off and converting "[1].Sum()" on its own
+                // left the call as C# ".Sum()" on a Variable (CS1929). A lone call has no operator
+                // to make the statement a known expression, so it arrives here instead.
+                if (isArray && ElementMethodCallFollows(suffix))
+                {
+                    // The element branch in the expression builder only runs for a known
+                    // expression, which is what "a[0].Sum() + a[1].Sum()" is and a lone call is
+                    // not -- that one difference is why the pair compiled and the single did not.
+                    // Set for this conversion only: the element is certainly a Variable here, so
+                    // the branch's own assumption holds.
+                    var knownOuter = m_knownExpression;
+                    m_knownExpression = true;
+                    result += ReplaceArgsInString(token);
+                    m_knownExpression = knownOuter;
+                    return;
+                }
                 result += isArray && !string.IsNullOrEmpty(suffix) ?
                     functionName + ReplaceArgsInString(suffix) : token;
                 return;
@@ -2975,7 +3022,7 @@ namespace SplitAndMerge
                 return replacement;
             }
 
-            if (ProcessArray(token, ref replacement))
+            if (ProcessArray(token, ref replacement, isCall))
             {
                 return replacement;
             }
@@ -3310,9 +3357,25 @@ namespace SplitAndMerge
                     nameEnd++;
                 }
                 var member = text.Substring(i + 2, nameEnd - i - 2);
-                if (member.Length == 0 || (nameEnd < text.Length && text[nameEnd] == '('))
+                if (member.Length == 0)
                 {
-                    break;      // a call: not a member read
+                    break;
+                }
+                if (nameEnd < text.Length && text[nameEnd] == '(')
+                {
+                    // A property written as a call -- "a[0].Upper()". The interpreter reads the
+                    // property and consumes the empty parentheses itself (GetCoreProperty), so the
+                    // same value is read here and the "()" is dropped: Variable.Upper is a
+                    // property, and ".Upper()" was CS1955. Only an empty pair, and only for the
+                    // members that really are properties -- ".Sort()" and friends are methods and
+                    // need their call, which the branches above build.
+                    if (!IsEmptyPropertyCall(text, nameEnd, member))
+                    {
+                        break;      // a call: not a member read
+                    }
+                    sb.Append("." + CanonicalVariableMember(member));
+                    i = nameEnd + 1;
+                    continue;
                 }
                 sb.Append(IsVariableMember(member) || IsMappedStringMember(member) ?
                     "." + CanonicalVariableMember(member) : ".GetProperty(\"" + member + "\")");
@@ -3368,6 +3431,62 @@ namespace SplitAndMerge
             return m_variableLocals.Contains(owner) && IsPlainName(member) &&
                    !IsVariableMember(member) && !IsMappedStringMember(member) &&
                    !IsCollectionMethod(member);
+        }
+
+        /// <summary>
+        /// Whether an index is followed by a member of the element: the "[1].Sum(" of
+        /// "a[1].Sum()", or the "[0].x" of "a[0].x". For a call, only a method the element could
+        /// really have -- a Variable's own members, the mapped string ones and a collection's
+        /// methods keep the path they already had.
+        /// </summary>
+        bool ElementMethodCallFollows(string suffix)
+        {
+            var text = (suffix ?? "").Trim();
+            if (!text.StartsWith("["))
+            {
+                return false;
+            }
+            int depth = 0;
+            int close = -1;
+            for (int i = 0; i < text.Length && close < 0; i++)
+            {
+                if (text[i] == '[')
+                {
+                    depth++;
+                }
+                else if (text[i] == ']' && --depth == 0)
+                {
+                    close = i;
+                }
+            }
+            if (close < 0 || close + 1 >= text.Length || text[close + 1] != '.')
+            {
+                return false;
+            }
+            int nameEnd = close + 2;
+            while (nameEnd < text.Length && (char.IsLetterOrDigit(text[nameEnd]) || text[nameEnd] == '_'))
+            {
+                nameEnd++;
+            }
+            // Any subscript, numeric or keyed. Keyed reads were refused while a map literal whose
+            // value was a "new" came out of the interpreter as a plain tuple -- "m[\"p\"]" threw
+            // there while the compiled subscript answered 3. Fixed in CheckConsistencyAndSign
+            // (Parser.cs), so the two agree and the restriction is gone.
+            var method = text.Substring(close + 2, nameEnd - close - 2);
+            if (method.Length == 0)
+            {
+                return false;
+            }
+            // A member read with no call of its own -- "a[0].x" -- goes the same way: the
+            // expression path emits GetProperty for it, which is how a field on a class instance
+            // is reached, while the token loop left "a[0].x" as C# (CS1061).
+            if (nameEnd >= text.Length || text[nameEnd] != '(' ||
+                IsEmptyPropertyCall(text, nameEnd, method))
+            {
+                return true;
+            }
+            return !IsVariableMember(method) && !IsMappedStringMember(method) &&
+                   !IsCollectionMethod(method);
         }
 
         /// <summary>
@@ -3558,6 +3677,14 @@ namespace SplitAndMerge
                         }
                         var elemMember = argStr.Substring(i + 2, nameEnd - i - 2);
                         bool isCallMember = nameEnd < argStr.Length && argStr[nameEnd] == '(';
+                        if (elemMember.Length > 0 && IsEmptyPropertyCall(argStr, nameEnd, elemMember))
+                        {
+                            sb.Append(".").Append(CanonicalVariableMember(elemMember));
+                            i = nameEnd + 1;
+                            prevSeparator = ')';
+                            token = "";
+                            continue;
+                        }
                         if (elemMember.Length > 0 && !isCallMember && !IsVariableMember(elemMember) &&
                             !IsMappedStringMember(elemMember))
                         {
@@ -4436,7 +4563,7 @@ namespace SplitAndMerge
             {
                 return null;
             }
-            if (!term.EndsWith("]") && !(IsPlainName(term) &&
+            if (!term.EndsWith("]") && !IsVariableMemberTerm(term) && !(IsPlainName(term) &&
                 (m_variableLocals.Contains(term) || IsStringOperand(term) ||
                  (m_localTypes.TryGetValue(term, out var termType) && termType == "string"))))
             {
@@ -4796,7 +4923,7 @@ namespace SplitAndMerge
             return sb.ToString();
         }
 
-        bool ProcessArray(string argStr, ref string result)
+        bool ProcessArray(string argStr, ref string result, bool callFollows = false)
         {
             int index = argStr.IndexOf('.');
             if (index <= 0)
@@ -4805,7 +4932,7 @@ namespace SplitAndMerge
             }
             string arrayName = argStr.Substring(0, index);
             string methodName = argStr.Substring(index + 1);
-            if (ProcessStringMember(arrayName, methodName, ref result))
+            if (ProcessStringMember(arrayName, methodName, ref result, callFollows))
             {
                 return true;
             }
@@ -4822,7 +4949,8 @@ namespace SplitAndMerge
         /// reaches a string. .Length, .Substring, .IndexOf and .Replace need no mapping --
         /// a string argument is a real C# string, so those already compile natively.
         /// </summary>
-        bool ProcessStringMember(string name, string member, ref string result)
+        bool ProcessStringMember(string name, string member, ref string result,
+                                 bool callFollows = false)
         {
             Variable arg;
             if (!m_argsMap.TryGetValue(name, out arg) || arg.Type != Variable.VarType.STRING ||
@@ -4832,7 +4960,7 @@ namespace SplitAndMerge
             }
 
             var target = m_paramMap[name];
-            return MapStringMember(target, member, ref result);
+            return MapStringMember(target, member, ref result, callFollows);
         }
 
         /// <summary>
@@ -4881,6 +5009,26 @@ namespace SplitAndMerge
                 { "removeat", "RemoveAt" }, { "insert", "Insert" }, { "clear", "Clear" },
             };
 
+        /// <summary>
+        /// Whether "(" at <paramref name="callStart"/> is an EMPTY call on a member that is a
+        /// property in C#: "a[0].Upper()". The interpreter reads the property and eats the
+        /// parentheses itself (Variable.GetCoreProperty), so the value is the property's and the
+        /// "()" is dropped -- ".Upper()" would be CS1955. A member that really is a method keeps
+        /// its call.
+        /// </summary>
+        static bool IsEmptyPropertyCall(string text, int callStart, string member)
+        {
+            return callStart < text.Length && text[callStart] == '(' &&
+                   callStart + 1 < text.Length && text[callStart + 1] == ')' &&
+                   s_variableProperties.Contains((member ?? "").ToLower());
+        }
+
+        /// <summary>The members of that map that are properties in C#, not methods.</summary>
+        static readonly HashSet<string> s_variableProperties = new HashSet<string>
+        {
+            "size", "count", "keys", "first", "last", "type", "length", "upper", "lower",
+        };
+
         static bool IsVariableMember(string member)
         {
             int callStart = member.IndexOf('(');
@@ -4925,7 +5073,14 @@ namespace SplitAndMerge
             return MapStringMember("", member, ref ignored);
         }
 
-        static bool MapStringMember(string target, string member, ref string result)
+        /// <summary>The call's own parentheses: from the member, from the caller, or added here.</summary>
+        static string CallParens(int callStart, string call, bool callFollows)
+        {
+            return callStart >= 0 ? call : callFollows ? "" : "()";
+        }
+
+        static bool MapStringMember(string target, string member, ref string result,
+                                    bool callFollows = false)
         {
             // The member can arrive with its call still attached -- "EndsWith(\"d\"))" --
             // so the name has to be separated from the arguments, which the caller appends.
@@ -4940,7 +5095,7 @@ namespace SplitAndMerge
             {
                 string head = null;
                 return MapStringMember(target, member.Substring(0, chain), ref head) &&
-                       MapStringMember(head, member.Substring(chain + 1), ref result);
+                       MapStringMember(head, member.Substring(chain + 1), ref result, callFollows);
             }
             // A member can also follow a call -- "s.At(0).Upper" -- and appending "(0).Upper"
             // as the call's arguments left a C# "Upper" that does not exist. The chain is split
@@ -4950,13 +5105,20 @@ namespace SplitAndMerge
             {
                 string head = null;
                 return MapStringMember(target, member.Substring(0, callEnd + 1), ref head) &&
-                       MapStringMember(head, member.Substring(callEnd + 2), ref result);
+                       MapStringMember(head, member.Substring(callEnd + 2), ref result, callFollows);
             }
             string call = callStart < 0 ? "" : member.Substring(callStart);
             switch ((callStart < 0 ? member : member.Substring(0, callStart)).Trim().ToLower())
             {
-                case "upper": result = target + ".ToUpper()" + call; return true;
-                case "lower": result = target + ".ToLower()" + call; return true;
+                // The parentheses reach here three ways, and adding a pair unconditionally --
+                // ".ToUpper()" -- doubled them into ".ToUpper()()" (CS0149) for "s.Upper()", the
+                // spelling scripts use most. They are in "member" already when it arrives with its
+                // call attached; the caller appends the script's own when callFollows says a call
+                // opens right after this token; and only the bare member form "s.Upper" needs a
+                // pair supplied here. Compiling the call form was unsafe until the interpreter
+                // stopped leaving a property's "()" unconsumed (Variable.GetCoreProperty).
+                case "upper": result = target + ".ToUpper" + CallParens(callStart, call, callFollows); return true;
+                case "lower": result = target + ".ToLower" + CallParens(callStart, call, callFollows); return true;
                 // CSCS Length on a string is the character count, which is what C# Length
                 // gives. Size is deliberately not mapped: the interpreter returns 0 for it on
                 // a string, so compiling it to .Length would diverge rather than fall back.
@@ -6251,6 +6413,151 @@ namespace SplitAndMerge
         /// compound assignment is not "r = r + value": it dispatches on the left type and
         /// takes the right side's numeric field, so "r = 5; r += \"3\"" leaves 5.
         /// </summary>
+        /// <summary>
+        /// Translates "p.x += 5", and "p.x++" / "p.x--", into the read-apply-write the
+        /// interpreter does, through the same Compound helper an element compound uses. One dot
+        /// only: that is as far as the interpreter itself goes -- "p.kid.v += 1" still throws
+        /// there, so compiling it would answer where the interpreter does not.
+        /// </summary>
+        /// <summary>
+        /// Pulls "(b = &lt;comparison&gt;)" out of an expression into its own statement when b is a
+        /// bool local and the group sits beside arithmetic -- the one shape the expression cannot
+        /// express, since the group reaches C# as a bool. Never for a keyword's own condition:
+        /// "if ((b = n > 2))" has a path of its own, and a "for" header must not be split.
+        /// </summary>
+        string TryHoistBoolGroupAssignment(string statement, string nextStatement, bool addNewVars)
+        {
+            var trimmed = (statement ?? "").Trim();
+            if (trimmed.Length == 0 || trimmed.IndexOfAny(new[] { '"', '{', '}' }) >= 0 ||
+                StartsWithKeyword(trimmed, Constants.IF) || StartsWithKeyword(trimmed, Constants.WHILE) ||
+                StartsWithKeyword(trimmed, Constants.ELSE_IF) || StartsWithKeyword(trimmed, Constants.FOR))
+            {
+                return null;
+            }
+            for (int open = trimmed.IndexOf('('); open >= 0; open = trimmed.IndexOf('(', open + 1))
+            {
+                int close = FindMatchingParen(trimmed, open);
+                if (close < 0)
+                {
+                    return null;
+                }
+                var inner = trimmed.Substring(open + 1, close - open - 1).Trim();
+                int eq = inner.IndexOf('=');
+                if (eq <= 0 || eq + 1 >= inner.Length || inner[eq + 1] == '=' ||
+                    "<>!+-*/%".IndexOf(inner[eq - 1]) >= 0)
+                {
+                    continue;
+                }
+                var name = inner.Substring(0, eq).Trim();
+                var value = inner.Substring(eq + 1).Trim();
+                char before = open > 0 ? trimmed[open - 1] : '\0';
+                char after = close + 1 < trimmed.Length ? trimmed[close + 1] : '\0';
+                if (!IsPlainName(name) || !YieldsBool(value) ||
+                    !m_localTypes.TryGetValue(name, out var nameType) || nameType != "bool" ||
+                    (!IsArithmeticPosition(before) && !IsArithmeticPosition(after)))
+                {
+                    continue;
+                }
+                // A space either side of the name, and no parentheses. Statements arrive with
+                // their whitespace stripped, so a bare name made "return(b=n>2)+b" into
+                // "returnb+b" -- one token, and a callback to a function called "returnb". Keeping
+                // the group's parentheses fixed that but left "(b)" beside the arithmetic, which
+                // the bool-to-number rule does not see: it converts a bare token only. Nor may a
+                // space follow the name -- that rule compares the resolved token with its own
+                // trimmed text, and "b " is not "b".
+                var rest = trimmed.Substring(0, open) + " " + name + trimmed.Substring(close + 1);
+                return ProcessStatement(name + "=" + value, ";", addNewVars) +
+                       ProcessStatement(rest, nextStatement, addNewVars);
+            }
+            return null;
+        }
+
+        string TryBuildMemberCompound(string statement)
+        {
+            var trimmed = statement.Trim().TrimEnd(';').Trim();
+            string target = null;
+            string value = null;
+            string action = null;
+            foreach (var candidate in new[] { "+=", "-=", "*=", "/=", "%=" })
+            {
+                int at = trimmed.IndexOf(candidate, StringComparison.Ordinal);
+                if (at > 0)
+                {
+                    target = trimmed.Substring(0, at).Trim();
+                    value = trimmed.Substring(at + candidate.Length).Trim();
+                    action = candidate;
+                    break;
+                }
+            }
+            if (action == null && (trimmed.EndsWith("++") || trimmed.EndsWith("--")))
+            {
+                // Only the statement form. "return ++p.x" is worth the field's new value, which
+                // this shape does not produce, so that one is left to the interpreter.
+                target = trimmed.Substring(0, trimmed.Length - 2).Trim();
+                value = "1";
+                action = trimmed.EndsWith("++") ? "+=" : "-=";
+            }
+            if (action == null || string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(target))
+            {
+                return null;
+            }
+            int dot = target.IndexOf('.');
+            if (dot <= 0 || target.IndexOf('.', dot + 1) >= 0)
+            {
+                return null;
+            }
+            var owner = target.Substring(0, dot).Trim();
+            var field = target.Substring(dot + 1).Trim();
+            bool elementOwner = owner.IndexOf('[') > 0;
+            if (!IsPlainName(field) || IsVariableMember(field) ||
+                (!elementOwner && (!IsPlainName(owner) || !m_variableLocals.Contains(owner))))
+            {
+                return null;
+            }
+            // The same statement-level flags TryBuildVariableCompound sets, for the same reason:
+            // they still describe the previous statement until this one is tokenized, and the
+            // field has to stay a Variable so Compound reads a string as a string.
+            m_statementRelational = HasPlainRelational(trimmed);
+            m_statementBitwise = HasPlainBitwise(trimmed);
+            m_statementSameValue = trimmed.Contains(SAME_VALUE_CALL);
+            m_statementInlineCalls = m_forceInlineCalls || NeedsInlineCalls(trimmed);
+            m_statementHasString = trimmed.Contains("\"");
+            m_statementVariableAccum = true;
+            var outerPrelude = m_statementPrelude;
+            m_statementPrelude = "";
+            bool hasConversion = MentionsConversionCall(value);
+            m_knownExpression = !hasConversion;
+            var resolved = hasConversion ?
+                ProcessStatement(value, "", false).Trim().TrimEnd(';') :
+                ReplaceArgsInString(value);
+            var valuePrelude = m_statementPrelude;
+            m_statementPrelude = outerPrelude;
+            // "a[0].v += 3" and "a[1].v++": the same read-apply-write on the element. The value
+            // first, then the element -- the order OperatorAssignFunction evaluates them in.
+            if (elementOwner)
+            {
+                string ownerPrelude;
+                var valueTemp = "__memVal" + (++m_tempVarId);
+                var valueLine = m_depth + "var " + valueTemp + " = Variable.ConvertToVariable(" + resolved + ");\n";
+                var elemOwner = BuildElementOwnerForWrite(owner, out ownerPrelude);
+                if (elemOwner == null)
+                {
+                    return null;
+                }
+                return valuePrelude + valueLine + ownerPrelude + m_depth + elemOwner +
+                    ".SetProperty(\"" + field + "\", CscsConvert.Compound(" + elemOwner +
+                    ".GetProperty(\"" + field + "\").DeepClone(), " + valueTemp + ", \"" + action + "\"), null);\n";
+            }
+            // DeepClone before applying: GetProperty hands back the field BY REFERENCE, and for a
+            // field the constructor never sets that reference is the class's own default, shared
+            // by every instance. Compound mutates what it is given, so without the clone the
+            // default itself moved -- "p.tag += \"z\"" over three calls read back "tzzz", the same
+            // value from all three, since the returned Variable aliased that one default too.
+            // The interpreter clones for the same reason (OperatorAssignFunction.ProcessOperator).
+            return valuePrelude + m_depth + owner + ".SetProperty(\"" + field + "\", CscsConvert.Compound(" +
+                owner + ".GetProperty(\"" + field + "\").DeepClone(), " + resolved + ", \"" + action + "\"), null);\n";
+        }
+
         string TryBuildVariableCompound(string statement)
         {
             var trimmed = statement.Trim().TrimEnd(';').Trim();
@@ -6305,6 +6612,44 @@ namespace SplitAndMerge
         /// when the statement is not one. Only plain names are accepted as targets, so an
         /// element or a field keeps its own path.
         /// </summary>
+        /// <summary>
+        /// A target a chained assignment can unroll onto: a plain name, or an element read whose
+        /// index cannot change anything. The unrolling writes each target in its own statement and
+        /// reads the one to its right, so an index with a side effect -- "a[i++]" -- would run
+        /// twice, once as a target and once as the value beside it. Those keep the old path.
+        /// </summary>
+        bool IsChainTarget(string target)
+        {
+            var text = (target ?? "").Trim();
+            if (IsPlainName(text))
+            {
+                return true;
+            }
+            // "p.x": a member of a local, both plain names. No index to run twice, and the plain
+            // form "p.x = 9" already compiles, so the unrolling has something to unroll onto.
+            // The owner has to be a name -- "f().x" or "a[0].v" would be evaluated twice.
+            int memberDot = text.IndexOf('.');
+            if (memberDot > 0 && text.IndexOf('.', memberDot + 1) < 0 && !text.EndsWith("]"))
+            {
+                return IsPlainName(text.Substring(0, memberDot).Trim()) &&
+                       IsPlainName(text.Substring(memberDot + 1).Trim());
+            }
+            if (!text.EndsWith("]"))
+            {
+                return false;
+            }
+            int bracket = text.IndexOf('[');
+            if (bracket <= 0 || !IsPlainName(text.Substring(0, bracket).Trim()))
+            {
+                return false;
+            }
+            var index = text.Substring(bracket + 1, text.Length - bracket - 2);
+            return index.Trim().Length > 0 && index.IndexOf('(') < 0 &&
+                   index.IndexOf("++", StringComparison.Ordinal) < 0 &&
+                   index.IndexOf("--", StringComparison.Ordinal) < 0 &&
+                   index.IndexOf('=') < 0;
+        }
+
         string TryBuildChainedAssignment(string statement, string nextStatement, bool addNewVars)
         {
             var trimmed = statement.Trim().TrimEnd(';').Trim();
@@ -6315,7 +6660,7 @@ namespace SplitAndMerge
             }
             for (int i = 0; i < parts.Count - 1; i++)
             {
-                if (!IsPlainName(parts[i].Trim()))
+                if (!IsChainTarget(parts[i].Trim()))
                 {
                     return null;
                 }
@@ -6490,6 +6835,54 @@ namespace SplitAndMerge
         /// property setter puts them, so the write goes through that rather than through a C#
         /// member that does not exist.
         /// </summary>
+        /// <summary>
+        /// The element a member write goes to, for "a[i].v" and "a[i][j].v" on a local that holds
+        /// a collection: a temp assigned through CscsConvert.ElementForWrite, one subscript at a
+        /// time, so each index is worked out once. Returns the temp's name and the statement that
+        /// declares it, or null when the owner is not such an element.
+        /// </summary>
+        string BuildElementOwnerForWrite(string ownerText, out string prelude)
+        {
+            prelude = null;
+            int bracket = ownerText.IndexOf('[');
+            if (bracket <= 0 || !ownerText.EndsWith("]"))
+            {
+                return null;
+            }
+            var name = ownerText.Substring(0, bracket).Trim();
+            if (!IsPlainName(name) || m_paramMap.ContainsKey(name) ||
+                !(m_collectionLocals.Contains(name) || m_variableLocals.Contains(name)))
+            {
+                return null;
+            }
+            var holder = name;
+            int at = bracket;
+            int levels = 0;
+            while (at < ownerText.Length && ownerText[at] == '[')
+            {
+                int close = FindMatchingBracket(ownerText, at);
+                if (close < 0)
+                {
+                    return null;
+                }
+                var index = ReplaceArgsInString(ownerText.Substring(at + 1, close - at - 1));
+                if (string.IsNullOrWhiteSpace(index))
+                {
+                    return null;
+                }
+                holder = "CscsConvert.ElementForWrite(" + holder + ", Variable.ConvertToVariable(" + index + "))";
+                at = close + 1;
+                levels++;
+            }
+            if (at != ownerText.Length || levels == 0)
+            {
+                return null;
+            }
+            var elem = "__memElem" + (++m_tempVarId);
+            prelude = m_depth + "var " + elem + " = " + holder + ";\n";
+            return elem;
+        }
+
         string TryBuildFieldAssignment(string statement)
         {
             var trimmed = statement.TrimEnd().TrimEnd(';').TrimEnd().Trim();
@@ -6511,6 +6904,25 @@ namespace SplitAndMerge
             }
             var owner = target.Substring(0, dot);
             var field = target.Substring(dot + 1);
+            // "a[0].v = 9": a member of an element. Written to the live element, which the
+            // interpreter has done since its own version of this was fixed; the C# as it stood
+            // declared "double a[0].v=9" (CS0650). The value is worked out before the subscript,
+            // the order AssignFunction evaluates them in.
+            if (owner.IndexOf('[') > 0 && target.LastIndexOf('.') == dot &&
+                IsPlainName(field) && !IsVariableMember(field) && !string.IsNullOrWhiteSpace(sides[1]))
+            {
+                string builtElem;
+                var elemValue = TryBuildArrayLiteral(sides[1].Trim(), out builtElem) ? builtElem :
+                    "Variable.ConvertToVariable(" + ReplaceArgsInString(sides[1]) + ")";
+                var valueTemp = "__memVal" + (++m_tempVarId);
+                string ownerPrelude;
+                var elemOwner = BuildElementOwnerForWrite(owner, out ownerPrelude);
+                if (elemOwner != null)
+                {
+                    return m_depth + "var " + valueTemp + " = " + elemValue + ";\n" + ownerPrelude +
+                           m_depth + elemOwner + ".SetProperty(\"" + field + "\", " + valueTemp + ", null);\n";
+                }
+            }
             // "p.kid.v = 9": the field written is the last one, on whatever the chain before it
             // reads -- the same GetProperty chain a read of "p.kid.v" builds. Only a plain field
             // at every step: a Variable member or a call in the middle is not a field. Before,
@@ -7045,8 +7457,25 @@ namespace SplitAndMerge
                 foreach (var raw in statements)
                 {
                     var statement = (raw ?? "").Trim();
-                    bool keywordCondition = StartsWithKeyword(statement, Constants.IF) ||
-                        StartsWithKeyword(statement, Constants.WHILE) || StartsWithKeyword(statement, Constants.ELSE_IF);
+
+                    // The parenthesis a keyword opens itself, if it opens one at all. Whitespace is
+                    // stripped by now, so "return(b=n*2)+b" is shaped exactly like a call to a
+                    // function named "return" -- the insideCall guard below skipped it, and nothing
+                    // declared b (CS0103). Taking IndexOf('(') instead would be wrong the other way:
+                    // in "return helper((q=n*2))" the first parenthesis is the call's, and that one
+                    // must keep counting as a call.
+                    int keywordParen = -1;
+                    foreach (var keyword in new[] { Constants.ELSE_IF, Constants.IF, Constants.WHILE, Constants.RETURN })
+                    {
+                        if (!StartsWithKeyword(statement, keyword))
+                        {
+                            continue;
+                        }
+                        int k = keyword.Length;
+                        while (k < statement.Length && char.IsWhiteSpace(statement[k])) { k++; }
+                        keywordParen = k < statement.Length && statement[k] == '(' ? k : -1;
+                        break;
+                    }
                     // Elsewhere too -- "x = ((b = 7))", "return (b = n * 2) + b" -- but never a "for"
                     // header, whose own assignments are the counter's.
                     if (StartsWithKeyword(statement, Constants.FOR))
@@ -7071,7 +7500,6 @@ namespace SplitAndMerge
                         // -- declaring q made compiled code answer 5 where the interpreter says 9. Only
                         // grouping parentheses outside every call count; a keyword's own condition
                         // parenthesis ("if(") is not a call.
-                        int keywordParen = keywordCondition ? statement.IndexOf('(') : -1;
                         bool insideCall = false;
                         for (int o = 0; o <= i && !insideCall; o++)
                         {
@@ -8066,9 +8494,12 @@ namespace SplitAndMerge
                      (IsPlainName(term) && m_localTypes.TryGetValue(term, out var loneType) && loneType == "string") ||
                      (term.StartsWith("(") && FindMatchingParen(term, 0) == term.Length - 1 &&
                       IsAssignedStringGroup(term)));
-                if ((!joined && !stringTerm) || comparison ||
+                // A lone term needs no connective when its truth cannot be read by C# at all: a
+                // string, or a member off a Variable-holding local. Both reach C# as something
+                // an "if" will not take (CS0029), so there is nothing to lose by rewriting them.
+                if ((!joined && !stringTerm && !IsVariableMemberTerm(term)) || comparison ||
                     (!stringTerm && term.IndexOf('=') >= 0) ||
-                    !(term.EndsWith("]") ||
+                    !(term.EndsWith("]") || IsVariableMemberTerm(term) ||
                       (IsPlainName(term) && (m_variableLocals.Contains(term) || IsStringOperand(term))) ||
                       (IsPlainName(term) && m_localTypes.TryGetValue(term, out var clauseType) && clauseType == "string") ||
                       stringTerm))
@@ -8095,6 +8526,26 @@ namespace SplitAndMerge
             return IsPlainName(name) && m_localTypes.TryGetValue(name, out var type) && type == "string";
         }
 
+        /// <summary>
+        /// Whether the term reads a member off a local holding a Variable -- "p.y" on a class
+        /// instance. The value is a Variable when it runs, so its truth is the interpreter's own
+        /// test rather than a C# conversion (CS0029 before this). Length and Size are excluded:
+        /// those are ints in C# and go the numeric route, which reads them as "!= 0".
+        /// </summary>
+        bool IsVariableMemberTerm(string term)
+        {
+            int dot = term.IndexOf('.');
+            if (dot <= 0 || term.IndexOf('.', dot + 1) >= 0 || term.EndsWith("."))
+            {
+                return false;
+            }
+            var owner = term.Substring(0, dot).Trim();
+            var member = term.Substring(dot + 1).Trim();
+            return IsPlainName(owner) && IsPlainName(member) &&
+                   member.ToLower() != "length" && member.ToLower() != "size" &&
+                   (m_variableLocals.Contains(owner) || m_newVariables.Contains(owner));
+        }
+
         bool IsNumericConditionTerm(string condition)
         {
             var text = (condition ?? "").Trim();
@@ -8112,6 +8563,25 @@ namespace SplitAndMerge
                            m_localTypes.TryGetValue(assigned, out var assignedType) && assignedType == "double";
                 }
                 text = inner;
+            }
+            // "if (s.Length)" and "if (a.Size)": a number in CSCS and an int in C#, and the two
+            // agree on every type -- Variable.Size is 0 for anything but an array, exactly as the
+            // interpreter reports 0 for a string, Variable.Length is GetLength(), and a string
+            // argument arrives as a C# string whose Length is the character count. A C# condition
+            // needs a bool, so without the "!= 0" this rewrite adds it was CS0029. Anything else
+            // spelled ".Size" -- a string local, say -- has no such member in C# and falls back.
+            int memberDot = text.LastIndexOf('.');
+            if (memberDot > 0)
+            {
+                var owner = text.Substring(0, memberDot).Trim();
+                var property = text.Substring(memberDot + 1).Trim().ToLower();
+                if ((property == "length" || property == "size") && IsPlainName(owner) &&
+                    (m_paramMap.ContainsKey(owner) || m_localTypes.ContainsKey(owner) ||
+                     m_collectionLocals.Contains(owner) || m_variableLocals.Contains(owner) ||
+                     m_newVariables.Contains(owner)))
+                {
+                    return true;
+                }
             }
             // "if (b)": a plain name that is certainly a number, and not recorded as anything else.
             if (!IsPlainName(text) || !IsStrictNumeric(text) ||

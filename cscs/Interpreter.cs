@@ -2020,6 +2020,29 @@ namespace SplitAndMerge
             return enumVar;
         }
 
+        /// <summary>The names of every registered function, as the parser looks them up.</summary>
+        public IList<string> FunctionNames => s_functions.Keys.ToList();
+
+        /// <summary>
+        /// Removes every registered function the predicate does not keep, and returns how many went.
+        /// For a host that runs untrusted scripts: an allowlist applied after all registration is
+        /// done, so a function added to the language later stays out until someone lets it in.
+        /// Names are compared as the parser stores them (Constants.ConvertName).
+        /// </summary>
+        public int RestrictFunctions(Func<string, ParserFunction, bool> keep)
+        {
+            var removed = 0;
+            foreach (var name in s_functions.Keys.ToList())
+            {
+                if (!keep(name, s_functions[name]))
+                {
+                    s_functions.Remove(name);
+                    removed++;
+                }
+            }
+            return removed;
+        }
+
         public void RegisterFunction(string name, ParserFunction function,
                                             bool isNative = true)
         {
@@ -2199,6 +2222,11 @@ namespace SplitAndMerge
         {
             lock (s_variables)
             {
+                if (InterpreterSecurity.MaxCallDepth > 0 && s_locals.Count >= InterpreterSecurity.MaxCallDepth)
+                {
+                    throw new ArgumentException("Recursion too deep: more than " +
+                        InterpreterSecurity.MaxCallDepth + " nested function calls.");
+                }
                 s_locals.Push(locals);
                 s_lastExecutionLevel = locals;
             }

@@ -826,6 +826,32 @@ namespace SplitAndMerge
             string body = Utils.GetBodyBetween(script, Constants.START_GROUP, Constants.END_GROUP);
 
             Precompiler precompiler = new Precompiler(funcName, args, argsMap, body, script);
+            if (PrecompileExplainer.Enabled)
+            {
+                // Translate and compile in memory, report, and run the function interpreted. See
+                // PrecompileExplainer: nothing compiled from a script is ever loaded in this mode.
+                var report = new PrecompileReport { FunctionName = funcName, ReturnType = funcReturn, Arguments = args };
+                try
+                {
+                    report.CSharpCode = precompiler.GetCSharpCode(m_scriptInCSharp);
+                    report.Translated = true;
+                    var errors = RoslynCompiler.CheckCompiles(report.CSharpCode, "CscsPrecompiled_" + funcName);
+                    report.Compiles = errors.Count == 0;
+                    report.Reason = report.Compiles ? null : "Compile error: " + string.Join(" -- ", errors);
+                }
+                catch (Exception exc)
+                {
+                    report.Reason = exc.Message;
+                }
+                PrecompileExplainer.Add(report);
+
+                var explainedBody = Utils.ConvertToScript(InterpreterInstance, body, out _);
+                var explainedFunc = new CustomFunction(funcName, explainedBody, args, script);
+                explainedFunc.ParentScript = script;
+                explainedFunc.ParentOffset = script.ParentOffset;
+                InterpreterInstance.RegisterFunction(funcName, explainedFunc, false /* not native */);
+                return new Variable(funcName);
+            }
             try
             {
                 precompiler.Compile(m_scriptInCSharp);

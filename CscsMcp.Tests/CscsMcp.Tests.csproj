@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Security and behaviour tests for the CSCS Playground: every test starts real CscsSandbox
+    processes through the server's SandboxRunner, so what is tested is what gets deployed.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.2" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CscsMcp/CscsMcp.csproj" />
+    <!-- Built first, run as its own process; nothing of it is loaded into the test host. -->
+    <ProjectReference Include="../CscsSandbox/CscsSandbox.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
