@@ -27,7 +27,6 @@ public sealed class WindowsAppContainer : IDisposable
     const uint CREATE_SUSPENDED = 0x00000004;
     const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     const uint CREATE_NO_WINDOW = 0x08000000;
-    const int ERROR_ALREADY_EXISTS = unchecked((int)0x800700B7);
     const uint WAIT_OBJECT_0 = 0;
     const uint WAIT_TIMEOUT = 0x102;
 
@@ -35,17 +34,25 @@ public sealed class WindowsAppContainer : IDisposable
 
     WindowsAppContainer(IntPtr sid) => _sid = sid;
 
-    /// <summary>Creates the AppContainer profile if it does not exist, and returns it.</summary>
+    /// <summary>
+    /// Creates the AppContainer profile if it does not exist, and returns it. The profile is only a
+    /// convenience (a per-container folder and registry hive, which the worker does not use: its TEMP
+    /// is the run's own directory). CreateProcess needs just the SID, so when the profile cannot be
+    /// created -- which can happen under a service's virtual account -- the SID is derived from the
+    /// name instead.
+    /// </summary>
     public static WindowsAppContainer Create(string name, string displayName, string description)
     {
-        int hr = CreateAppContainerProfile(name, displayName, description, IntPtr.Zero, 0, out var sid);
-        if (hr == ERROR_ALREADY_EXISTS)
+        int created = CreateAppContainerProfile(name, displayName, description, IntPtr.Zero, 0, out var sid);
+        if (created == 0)
         {
-            hr = DeriveAppContainerSidFromAppContainerName(name, out sid);
+            return new WindowsAppContainer(sid);
         }
-        if (hr != 0)
+        int derived = DeriveAppContainerSidFromAppContainerName(name, out sid);
+        if (derived != 0)
         {
-            throw new InvalidOperationException($"AppContainer profile '{name}' could not be created (HRESULT 0x{hr:X8}).");
+            throw new InvalidOperationException(
+                $"AppContainer '{name}': CreateAppContainerProfile HRESULT 0x{created:X8}, DeriveAppContainerSidFromAppContainerName HRESULT 0x{derived:X8}.");
         }
         return new WindowsAppContainer(sid);
     }
@@ -89,11 +96,23 @@ public sealed class WindowsAppContainer : IDisposable
             var commandLine = new StringBuilder("\"").Append(exePath).Append("\" ").Append(arguments);
             var flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW;
 
-            var ok = CreateProcess(exePath, commandLine, IntPtr.Zero, IntPtr.Zero, false,
-                flags, BuildEnvironmentBlock(environment), workingDir, ref startup, out var pi);
+            var envBlock = BuildEnvironmentBlock(environment);
+            PROCESS_INFORMATION pi;
+            bool ok;
+            int error;
+            try
+            {
+                ok = CreateProcess(exePath, commandLine, IntPtr.Zero, IntPtr.Zero, false,
+                    flags, envBlock, workingDir, ref startup, out pi);
+                error = Marshal.GetLastWin32Error();
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(envBlock); // CreateProcess copies it
+            }
             if (!ok)
             {
-                throw new InvalidOperationException("CreateProcess (AppContainer) failed: " + Marshal.GetLastWin32Error());
+                throw new InvalidOperationException($"CreateProcess (AppContainer) failed: Win32 error {error}.");
             }
 
             try

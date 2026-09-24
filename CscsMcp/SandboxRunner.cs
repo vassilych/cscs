@@ -284,6 +284,9 @@ public sealed class SandboxRunner : IDisposable
         OperatingSystem.IsWindows() &&
         string.Equals(_options.Isolation, "windows", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>When and why the last isolated launch failed; null while none has. Shown by /health.</summary>
+    public string? LastIsolationError { get; private set; }
+
     Windows.WindowsAppContainer? _container;
     readonly object _containerLock = new();
 
@@ -309,12 +312,28 @@ public sealed class SandboxRunner : IDisposable
             return new RunOutcome { Error = "The playground is misconfigured: isolation requires the published CscsSandbox.exe. This is a server problem, not your script." };
         }
 
-        var workDir = Path.Combine(IsolationRunsDir(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(workDir);
+        var workDir = "";
         var clock = Stopwatch.StartNew();
-        var container = GetContainer();
-        var job = new Windows.WindowsJobObject(
-            (long)_options.HeapHardLimitMb * 1024 * 1024, _options.JobMaxProcesses, _options.CpuHardCapPercent);
+        Windows.WindowsAppContainer container;
+        Windows.WindowsJobObject job;
+        try
+        {
+            workDir = Path.Combine(IsolationRunsDir(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(workDir);
+            container = GetContainer();
+            job = new Windows.WindowsJobObject(
+                (long)_options.HeapHardLimitMb * 1024 * 1024, _options.JobMaxProcesses, _options.CpuHardCapPercent);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LastIsolationError = $"{DateTime.UtcNow:u} {ex.Message}";
+            _log.LogError(ex, "AppContainer or Job Object setup failed");
+            DeleteWorkDir(workDir);
+            return new RunOutcome
+            {
+                Error = "The playground's OS sandbox could not start this run. This is a server problem, not your script: " + ex.Message,
+            };
+        }
         Windows.WindowsAppContainer.LaunchedProcess? proc = null;
         try
         {
@@ -327,7 +346,21 @@ public sealed class SandboxRunner : IDisposable
             }, s_json);
             await File.WriteAllTextAsync(Path.Combine(workDir, "request.json"), request, cancellationToken);
 
-            proc = container.Launch(exe, $"--io-dir \"{workDir}\"", workDir, WorkerEnvironment(workDir), job);
+            try
+            {
+                proc = container.Launch(exe, $"--io-dir \"{workDir}\"", workDir, WorkerEnvironment(workDir), job);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Fail closed with the reason: never fall back to running the script unisolated.
+                LastIsolationError = $"{DateTime.UtcNow:u} {ex.Message}";
+                _log.LogError(ex, "isolated worker launch failed");
+                return new RunOutcome
+                {
+                    ElapsedMs = clock.ElapsedMilliseconds,
+                    Error = "The playground's OS sandbox could not start this run. This is a server problem, not your script: " + ex.Message,
+                };
+            }
 
             var deadline = timeLimitMs + GraceMs;
             var exited = await Task.Run(() => proc.WaitForExit(deadline), cancellationToken);

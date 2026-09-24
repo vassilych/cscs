@@ -60,6 +60,9 @@ app.MapGet("/health", (SandboxRunner runner) =>
         isolation = runner.UseWindowsIsolation ? "windows"
             : string.Equals(runner.Options.Isolation, "windows", StringComparison.OrdinalIgnoreCase) ? "windows-requested-inactive"
             : "none",
+        // The last failure to start an isolated worker, so a broken deploy can be diagnosed from
+        // outside: a virtual service account often cannot write to the Windows event log.
+        isolationError = runner.LastIsolationError,
         limits = new
         {
             runner.Options.TimeLimitMs,
