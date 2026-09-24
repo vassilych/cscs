@@ -36,7 +36,7 @@ builder.Services
     .WithHttpTransport(options => options.Stateless = true)
     .WithTools<CscsTools>();
 
-var urls = builder.Configuration["Cscs:Urls"] ?? "http://0.0.0.0:17577";
+var urls = builder.Configuration["Cscs:Urls"] ?? "http://0.0.0.0:17578";
 builder.WebHost.UseUrls(urls);
 
 var app = builder.Build();

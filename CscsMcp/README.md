@@ -99,20 +99,39 @@ backticks in it, so a script cannot print its way out of the fence to pose as th
 ```bash
 dotnet build CscsSandbox/CscsSandbox.csproj
 dotnet build CscsMcp/CscsMcp.csproj
-Cscs__Urls=http://127.0.0.1:17577 \
+Cscs__Urls=http://127.0.0.1:17578 \
 Cscs__SandboxPath=$PWD/CscsSandbox/bin/Debug/net9.0/CscsSandbox \
 Cscs__TrustForwardedHeaders=false \
 dotnet CscsMcp/bin/Debug/net9.0/CscsMcp.dll
 ```
 
-Then `curl http://127.0.0.1:17577/health`, or connect a client to `http://127.0.0.1:17577/mcp`.
+Then `curl http://127.0.0.1:17578/health`, or connect a client to `http://127.0.0.1:17578/mcp`.
 
 Tests: `dotnet test CscsMcp.Tests/CscsMcp.Tests.csproj`.
 
 ## Deploy on the Windows server (next to BrainPingPong)
 
-It is a separate Windows Service on its own port (17577; BrainPingPong uses 17575 and ChatCompare
-MCP 17576). It shares nothing with them: no database, no settings file, no secrets.
+It is a separate Windows Service on its own port (17578; BrainPingPong uses 17575, ChatCompare
+MCP 17576, and the AgeFace connector inside the ChatCompare service 17577). It shares nothing with
+them: no database, no settings file, no secrets.
+
+**The short way (install and every update).** On any machine with the .NET SDK:
+
+```bash
+CscsMcp/deploy/publish-windows.sh
+```
+
+It builds `CscsMcp/bin/CscsMcp-win-x64.zip`: server and worker self-contained for win-x64 (the
+server needs no .NET install), plus `install-cscs.ps1`. Copy the zip to the server, unzip it, and in
+an elevated PowerShell in that folder run
+`powershell -ExecutionPolicy Bypass -File .\install-cscs.ps1`. The script does steps 1, 2 and the
+firewall part of 3 below: it copies the files to `C:\Services\CscsMcp`, creates the service under
+`NT SERVICE\CscsMcp` (restart on failure), grants its folder, denies it `C:\Services\BrainPingPong`
+and `C:\Services\ChatCompareMcp`, opens 17578 to Cloudflare's IPv4 ranges only, starts it and
+checks `/health`. Running it again updates the binaries and keeps the server's `appsettings.json`.
+Keep the zip out of git: it is about 90 MB.
+
+The steps it automates, for reference:
 
 **1. Publish** (from this repository). ReadyToRun matters here, because every run starts a new
 process:
@@ -143,12 +162,15 @@ the same way.
 **3. Network: publish it as `cscs.brainpingpong.com`**, the same way `mcp.brainpingpong.com` reaches
 port 17576:
 
-- In Cloudflare DNS for `brainpingpong.com`, add `cscs`, proxied (orange cloud), pointing at the
-  server — or add a public hostname `cscs.brainpingpong.com` → `http://localhost:17577` if the other
-  services come in through a Cloudflare Tunnel.
-- If `mcp.` reaches its port through an Origin Rule, add the same rule for `cscs.brainpingpong.com`
-  with destination port 17577.
-- Let Windows Firewall accept 17577 only from localhost or Cloudflare's IP ranges, like 17575/17576.
+- In Cloudflare DNS for `brainpingpong.com`, add `cscs`, proxied (orange cloud), with the same
+  target as the `mcp` record — or add a public hostname `cscs.brainpingpong.com` →
+  `http://localhost:17578` if the other services come in through a Cloudflare Tunnel.
+- `mcp.` reaches 17576 through the Origin Rule `MCP Port`; add a rule `CSCS Port` the same way:
+  hostname equals `cscs.brainpingpong.com` → destination port 17578. Without it Cloudflare connects
+  to port 80/443 and reaches the wrong service or nothing.
+- Give `cscs.` whatever SSL/TLS mode and WAF / bot-protection exceptions `mcp.` has. Claude's
+  connector calls come from Anthropic's servers, not a browser, so a challenge page breaks them.
+- Let Windows Firewall accept 17578 only from localhost or Cloudflare's IP ranges, like 17575/17576.
   Keep `Cscs:TrustForwardedHeaders` `true` only while the port is unreachable directly; otherwise
   anyone can forge `CF-Connecting-IP` to dodge the per-client limit.
 
@@ -211,7 +233,7 @@ of `print(1)` still returns `1`, and the service log shows the worker running un
 
 | Setting | Default | |
 |---|---|---|
-| `Urls` | `http://0.0.0.0:17577` | listen address |
+| `Urls` | `http://0.0.0.0:17578` | listen address |
 | `SandboxPath` | `sandbox/CscsSandbox(.exe)` | worker location |
 | `TimeLimitMs` / `MaxOutputChars` / `MaxScriptChars` | 5000 / 16000 / 20000 | per run; the worker also caps what may be asked for |
 | `HeapHardLimitMb` | 384 | runtime heap limit for the worker |
