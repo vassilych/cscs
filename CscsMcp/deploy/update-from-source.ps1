@@ -1,14 +1,19 @@
 # Builds the CSCS Playground from this repository and installs or updates the "CscsMcp" service,
 # on the server itself: the same package publish-windows.sh makes, without copying a zip around.
-# Needs the .NET 9 SDK (dotnet --list-sdks). After a git pull, in an elevated PowerShell:
+# Needs a .NET SDK 9 or newer (dotnet --list-sdks): a newer SDK builds these net9.0 projects and
+# fetches the .NET 9 runtime packs from NuGet. After a git pull, in an elevated PowerShell:
 #   powershell -ExecutionPolicy Bypass -File C:\Vassili\cscs\CscsMcp\deploy\update-from-source.ps1
 
 $ErrorActionPreference = "Stop"
 $Repo  = (Resolve-Path "$PSScriptRoot\..\..").Path
 $Stage = Join-Path $env:TEMP "cscs-package"
 
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue) -or -not (dotnet --list-sdks | Select-String '^9\.')) {
-    throw "The .NET 9 SDK is needed to build. Install it (winget install Microsoft.DotNet.SDK.9), or build the zip elsewhere with publish-windows.sh."
+$sdkMajors = @()
+if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+    $sdkMajors = dotnet --list-sdks | ForEach-Object { [int]($_ -split '\.')[0] }
+}
+if (-not ($sdkMajors | Where-Object { $_ -ge 9 })) {
+    throw "A .NET SDK 9 or newer is needed to build (https://dotnet.microsoft.com/download), or build the zip elsewhere with publish-windows.sh."
 }
 
 Remove-Item $Stage -Recurse -Force -ErrorAction SilentlyContinue

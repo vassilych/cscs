@@ -131,7 +131,8 @@ and `C:\Services\ChatCompareMcp`, opens 17578 to Cloudflare's IPv4 ranges only, 
 checks `/health`. Running it again updates the binaries and keeps the server's `appsettings.json`.
 Keep the zip out of git: it is about 90 MB.
 
-With this repository cloned on the server and the .NET 9 SDK installed there, skip the zip: after
+With this repository cloned on the server and a .NET SDK 9 or newer installed there (10 works; it
+fetches the .NET 9 runtime packs), skip the zip: after
 `git pull`, `CscsMcp\deploy\update-from-source.ps1` (elevated) builds the same package locally and
 runs `install-cscs.ps1` on it.
 
