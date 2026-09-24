@@ -320,6 +320,10 @@ namespace SplitAndMerge
             m_scriptInCSharp = scriptInCSharp;
 
             m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
+            if (!scriptInCSharp)
+            {
+                m_cscsCode = RewriteTernaryNew(RewriteChainedComparisons(RewriteIff(m_cscsCode)));
+            }
             RemoveIrrelevant(m_cscsCode);
 
             // First pass: assume this function never calls back into the interpreter and
@@ -2109,32 +2113,39 @@ namespace SplitAndMerge
                 return false;
             }
 
-            // "continue" would leave the do/while rather than the enclosing loop, so those
-            // switches keep the interpreter instead of being translated wrongly.
-            // Matched as a word anywhere in the statement, not as the whole of it: a clause
-            // carries whatever follows its label, so "case 1: continue;" is a single statement
-            // and comparing the whole of it let that one through to be compiled wrongly.
-            foreach (var line in body)
-            {
-                if (ContainsWord(line, Constants.CONTINUE))
-                {
-                    return false;
-                }
-            }
+            // "continue" would leave the do/while rather than the enclosing loop. It is
+            // redirected instead (see RedirectContinue): it sets a flag and breaks out of the
+            // do/while, and the flag continues the loop right after it. Matched as a word
+            // anywhere in the statement, not as the whole of it: a clause carries whatever
+            // follows its label, so "case 1: continue;" is a single statement.
+            bool hasContinue = body.Any(line => ContainsWord(line, Constants.CONTINUE));
 
             // Group the statements into clauses, in order.
             var labels = new List<string>();          // null marks the default clause
             var bodies = new List<List<string>>();
+            // Labels count only at the switch's own level: a nested switch's "case" lines
+            // belong to the clause that holds it, and TranslateClause translates that switch.
+            int nesting = 0;
             foreach (var line in body)
             {
                 var trimmed = line.Trim();
-                if (trimmed == ";" || string.IsNullOrWhiteSpace(trimmed))
+                if (string.IsNullOrWhiteSpace(trimmed))
                 {
+                    continue;
+                }
+                // Kept inside a clause: a "for" header is three statements joined by these,
+                // and its builder reads them from the statement list (see TranslateClause).
+                if (trimmed == ";")
+                {
+                    if (bodies.Count > 0)
+                    {
+                        bodies[bodies.Count - 1].Add(line);
+                    }
                     continue;
                 }
                 string label;
                 string rest;
-                if (TrySplitClause(trimmed, out label, out rest))
+                if (nesting == 0 && TrySplitClause(trimmed, out label, out rest))
                 {
                     labels.Add(label);
                     bodies.Add(new List<string>());
@@ -2160,6 +2171,8 @@ namespace SplitAndMerge
                 {
                     return false;      // a statement before any case label
                 }
+                if (trimmed == "{") { nesting++; }
+                else if (trimmed == "}") { nesting--; }
                 bodies[bodies.Count - 1].Add(line);
             }
             if (labels.Count == 0)
@@ -2180,13 +2193,18 @@ namespace SplitAndMerge
             var matchVar = "__swMatch" + id2;
             var sb = new StringBuilder();
             var outer = m_depth;
+            var continueVar = "__swCont" + id2;
 
             // A "break" inside a switch ends the switch and nothing else, as it does in C#
             // and JavaScript. The do/while(false) wrapper is what gives it somewhere to go,
             // so it is always emitted -- inside a loop as much as outside one, since without
             // it the break would reach the real loop and turn the switch into a single pass
             // through it. "continue" still belongs to the enclosing loop, and the wrapper
-            // would capture that, which is why a body containing one is not translated.
+            // would capture that, which is why a body containing one is redirected.
+            if (hasContinue)
+            {
+                sb.Append(outer + "bool " + continueVar + " = false;\n");
+            }
             sb.Append(outer + "do {\n");
             var switchValue = ReplaceArgsInString(switchExpr);
             // A switch on something that holds a Variable -- a class field, say -- cannot use
@@ -2197,32 +2215,38 @@ namespace SplitAndMerge
             sb.Append(outer + "  var " + valueVar + " = " + switchValue + ";\n");
             sb.Append(outer + "  bool " + matchVar + " = false;\n");
 
+            var clauses = new StringBuilder();
             for (int i = 0; i < labels.Count; i++)
             {
                 if (labels[i] == null)
                 {
-                    sb.Append(outer + "  {\n");
+                    clauses.Append(outer + "  {\n");
                 }
                 else
                 {
                     var labelTest = valueIsVariable ?
                         "Variable.SameValue(" + valueVar + ", " + ReplaceArgsInString(labels[i]) + ")" :
                         valueVar + " == " + ReplaceArgsInString(labels[i]);
-                    sb.Append(outer + "  if (" + matchVar + " || " + labelTest + ") { " +
+                    clauses.Append(outer + "  if (" + matchVar + " || " + labelTest + ") { " +
                         matchVar + " = true;\n");
                 }
 
                 m_depth = outer + "    ";
-                for (int j = 0; j < bodies[i].Count; j++)
-                {
-                    var next = j + 1 < bodies[i].Count ? bodies[i][j + 1] : "";
-                    sb.Append(ProcessStatement(bodies[i][j], next));
-                }
+                clauses.Append(TranslateClause(bodies[i]));
                 m_depth = outer;
-                sb.Append(outer + "  }\n");
+                clauses.Append(outer + "  }\n");
             }
 
+            sb.Append(hasContinue ?
+                RedirectContinue(clauses.ToString(), "{ " + continueVar + " = true; break; }") :
+                clauses.ToString());
             sb.Append(outer + "} while (false);\n");
+            if (hasContinue)
+            {
+                // Outside any loop this is a C# error (CS0139), so the function falls back --
+                // as it should: a continue with no loop around it means nothing.
+                sb.Append(outer + "if (" + continueVar + ") { continue; }\n");
+            }
 
             m_statementId = id;        // the main loop advances past the closing brace
             converted = sb.ToString();
@@ -2255,6 +2279,143 @@ namespace SplitAndMerge
                 }
                 from = at + 1;
             }
+        }
+
+        /// <summary>
+        /// Translates a clause's statements with the main loop's own machinery. The builders
+        /// for "for" and a nested "switch" read ahead in m_statements by index -- the header's
+        /// condition and step, the block after the switch -- so a clause handed over one
+        /// statement at a time left them reading the function's statements instead: a loop in a
+        /// case came out as "for(j=0; __actionTempVar = ..." (CS1003) and a nested switch was
+        /// copied through as a C# switch (CS8070). The clause becomes the statement list for
+        /// the duration, exactly as the function body is.
+        /// </summary>
+        string TranslateClause(List<string> statements)
+        {
+            var savedStatements = m_statements;
+            var savedId = m_statementId;
+            var savedCurrent = m_currentStatement;
+            var savedNext = m_nextStatement;
+            var sb = new StringBuilder();
+            try
+            {
+                m_statements = statements;
+                m_statementId = 0;
+                while (m_statementId < m_statements.Count)
+                {
+                    m_currentStatement = m_statements[m_statementId];
+                    m_nextStatement = m_statementId < m_statements.Count - 1 ? m_statements[m_statementId + 1] : "";
+                    var converted = ProcessStatement(m_currentStatement, m_nextStatement);
+                    if (!string.IsNullOrWhiteSpace(converted))
+                    {
+                        sb.Append(converted);
+                    }
+                    m_statementId++;
+                }
+            }
+            finally
+            {
+                m_statements = savedStatements;
+                m_statementId = savedId;
+                m_currentStatement = savedCurrent;
+                m_nextStatement = savedNext;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Replaces each "continue;" in generated C# that belongs to the loop around a switch --
+        /// one not inside a for, foreach, while or do of its own within the text -- with the
+        /// replacement. A nested switch is a do/while too, so its own continues are skipped
+        /// here; it redirected them itself, and the "if (flag) continue;" it left after its
+        /// block sits at this level and is redirected in turn.
+        /// </summary>
+        static string RedirectContinue(string csharp, string replacement)
+        {
+            // Which characters are inside string or char literals, so neither a brace nor the
+            // word in text is taken for code.
+            var inLiteral = new bool[csharp.Length];
+            for (int i = 0; i < csharp.Length; i++)
+            {
+                char c = csharp[i];
+                bool verbatim = c == '@' && i + 1 < csharp.Length && csharp[i + 1] == '"';
+                if (c != '"' && c != '\'' && !verbatim)
+                {
+                    continue;
+                }
+                int j = verbatim ? i + 2 : i + 1;
+                char quote = verbatim ? '"' : c;
+                while (j < csharp.Length)
+                {
+                    if (!verbatim && csharp[j] == '\\') { j += 2; continue; }
+                    if (csharp[j] == quote)
+                    {
+                        if (verbatim && j + 1 < csharp.Length && csharp[j + 1] == '"') { j += 2; continue; }
+                        break;
+                    }
+                    j++;
+                }
+                for (int k = i; k <= j && k < csharp.Length; k++) { inLiteral[k] = true; }
+                i = j;
+            }
+
+            var sb = new StringBuilder(csharp.Length);
+            var loops = new Stack<bool>();
+            int loopDepth = 0;
+            for (int i = 0; i < csharp.Length; i++)
+            {
+                char c = csharp[i];
+                if (inLiteral[i]) { sb.Append(c); continue; }
+                if (c == '{')
+                {
+                    bool isLoop = OpensLoop(csharp, i, inLiteral);
+                    loops.Push(isLoop);
+                    if (isLoop) { loopDepth++; }
+                }
+                else if (c == '}' && loops.Count > 0)
+                {
+                    if (loops.Pop()) { loopDepth--; }
+                }
+                else if (loopDepth == 0 && c == 'c' && (i == 0 || !IsNameChar(csharp[i - 1])) &&
+                         string.CompareOrdinal(csharp, i, "continue", 0, 8) == 0)
+                {
+                    int after = i + 8;
+                    while (after < csharp.Length && char.IsWhiteSpace(csharp[after])) { after++; }
+                    if (after < csharp.Length && csharp[after] == ';' &&
+                        (i + 8 >= csharp.Length || !IsNameChar(csharp[i + 8])))
+                    {
+                        sb.Append(replacement);
+                        i = after;
+                        continue;
+                    }
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Whether the "{" at this position opens the body of a for, foreach, while
+        /// or do.</summary>
+        static bool OpensLoop(string csharp, int brace, bool[] inLiteral)
+        {
+            int i = brace - 1;
+            while (i >= 0 && char.IsWhiteSpace(csharp[i])) { i--; }
+            if (i >= 0 && csharp[i] == ')' && !inLiteral[i])
+            {
+                int depth = 0;
+                for (; i >= 0; i--)
+                {
+                    if (inLiteral[i]) { continue; }
+                    if (csharp[i] == ')') { depth++; }
+                    else if (csharp[i] == '(' && --depth == 0) { break; }
+                }
+                i--;
+                while (i >= 0 && char.IsWhiteSpace(csharp[i])) { i--; }
+            }
+            int end = i;
+            while (i >= 0 && IsNameChar(csharp[i])) { i--; }
+            var word = end > i ? csharp.Substring(i + 1, end - i) : "";
+            return word == "for" || word == "foreach" || word == "while" || word == "do";
         }
 
         static bool TrySplitClause(string statement, out string label, out string rest)
@@ -2419,6 +2580,283 @@ namespace SplitAndMerge
         }
 
         static bool IsNameChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+        /// <summary>
+        /// "iff(c, a, b)" as "((c)?(a):(b))". The interpreter's iff evaluates the condition and
+        /// then only the branch it picks, which is what a ternary does in both CSCS and C#, so
+        /// the two mean the same; the ternary compiles and iff (a statement that needs the
+        /// script around it) cannot. Anything but three arguments is left for the interpreter.
+        /// </summary>
+        static string RewriteIff(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    sb.Append(c);
+                    if (c == '\\' && i + 1 < code.Length) { sb.Append(code[++i]); }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; sb.Append(c); continue; }
+                if ((c == 'i' || c == 'I') && (i == 0 || (!IsNameChar(code[i - 1]) && code[i - 1] != '.')) &&
+                    string.Compare(code, i, "iff(", 0, 4, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    int close = MatchingParen(code, i + 3);
+                    if (close > 0)
+                    {
+                        var args = SplitTopLevel(code.Substring(i + 4, close - i - 4), ',');
+                        if (args.Count == 3 && args.All(a => !string.IsNullOrWhiteSpace(a)))
+                        {
+                            sb.Append("((").Append(RewriteIff(args[0])).Append(")?(")
+                              .Append(RewriteIff(args[1])).Append("):(")
+                              .Append(RewriteIff(args[2])).Append("))");
+                            i = close;
+                            continue;
+                        }
+                    }
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Chained comparisons the way CSCS evaluates them. CSCS ranks the operators as C# does
+        /// (&lt; &lt;= &gt; &gt;= above == !=) and applies each level left to right, but every
+        /// comparison yields the number 1 or 0, which the next one compares -- so "1 &lt; n &lt; 10"
+        /// is "(1&lt;n?1:0)&lt;10" and "1 &lt; n == 1" is "(1&lt;n?1:0)==1". Copied through, both are
+        /// C#'s "bool against int" (CS0019) and fell back. Only a run of plain operands (names,
+        /// numbers, members, subscripts, arithmetic) joined by two or more comparisons is
+        /// rewritten; a parenthesised operand leaves the run as it was.
+        /// </summary>
+        static string RewriteChainedComparisons(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            bool inString = false;
+            char quote = '\0';
+            int i = 0;
+            while (i < code.Length)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    sb.Append(c);
+                    if (c == '\\' && i + 1 < code.Length) { sb.Append(code[++i]); }
+                    else if (c == quote) { inString = false; }
+                    i++;
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; sb.Append(c); i++; continue; }
+                if (ComparisonRunStep(code, i) == 0)
+                {
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+                int start = i;
+                for (int step; i < code.Length && (step = ComparisonRunStep(code, i)) > 0; i += step) { }
+                sb.Append(RewriteComparisonRun(code.Substring(start, i - start)));
+            }
+            return sb.ToString();
+        }
+
+        static bool IsOperandChar(char c) =>
+            IsNameChar(c) || c == '.' || c == '[' || c == ']' ||
+            c == '+' || c == '-' || c == '*' || c == '/' || c == '%';
+
+        /// <summary>How many characters at this position belong to a comparison run: an
+        /// operand character, or a comparison operator; 0 ends the run. "===" (strict
+        /// equality) and a lone "=" (assignment) are never part of one.</summary>
+        static int ComparisonRunStep(string code, int i)
+        {
+            char c = code[i];
+            char next = i + 1 < code.Length ? code[i + 1] : '\0';
+            char third = i + 2 < code.Length ? code[i + 2] : '\0';
+            if ((c == '<' || c == '>') && next == '=') { return 2; }
+            if ((c == '=' || c == '!') && next == '=' && third != '=') { return 2; }
+            if (c == '<' || c == '>' || IsOperandChar(c)) { return 1; }
+            return 0;
+        }
+
+        static string RewriteComparisonRun(string run)
+        {
+            var operands = new List<string>();
+            var operators = new List<string>();
+            int depth = 0, start = 0;
+            for (int i = 0; i < run.Length; i++)
+            {
+                char c = run[i];
+                if (c == '[') { depth++; continue; }
+                if (c == ']') { depth--; continue; }
+                if (depth != 0)
+                {
+                    continue;
+                }
+                string op = null;
+                char next = i + 1 < run.Length ? run[i + 1] : '\0';
+                if ((c == '<' || c == '>') && next == '=') { op = c + "="; }
+                else if ((c == '=' || c == '!') && next == '=') { op = c + "="; }
+                else if (c == '<' || c == '>') { op = c.ToString(); }
+                if (op == null)
+                {
+                    continue;
+                }
+                operands.Add(run.Substring(start, i - start));
+                operators.Add(op);
+                i += op.Length - 1;
+                start = i + 1;
+            }
+            operands.Add(run.Substring(start));
+            if (operators.Count < 2 || depth != 0 || operands.Any(string.IsNullOrEmpty))
+            {
+                return run;
+            }
+
+            // Split at == / != into groups of relational comparisons.
+            var groups = new List<Tuple<List<string>, List<string>>>();
+            var equalities = new List<string>();
+            var current = Tuple.Create(new List<string> { operands[0] }, new List<string>());
+            for (int k = 0; k < operators.Count; k++)
+            {
+                if (operators[k] == "==" || operators[k] == "!=")
+                {
+                    groups.Add(current);
+                    equalities.Add(operators[k]);
+                    current = Tuple.Create(new List<string> { operands[k + 1] }, new List<string>());
+                }
+                else
+                {
+                    current.Item1.Add(operands[k + 1]);
+                    current.Item2.Add(operators[k]);
+                }
+            }
+            groups.Add(current);
+
+            if (equalities.Count == 0)
+            {
+                return RelationalChain(groups[0]);
+            }
+            var expr = AsNumber(groups[0]);
+            for (int k = 0; k < equalities.Count; k++)
+            {
+                var step = expr + equalities[k] + AsNumber(groups[k + 1]);
+                expr = k < equalities.Count - 1 ? "(" + step + "?1:0)" : step;
+            }
+            return expr;
+        }
+
+        /// <summary>A left-to-right chain of relational comparisons, as a C# bool.</summary>
+        static string RelationalChain(Tuple<List<string>, List<string>> group)
+        {
+            var expr = group.Item1[0];
+            var ops = group.Item2;
+            for (int k = 0; k < ops.Count; k++)
+            {
+                var step = expr + ops[k] + group.Item1[k + 1];
+                expr = k < ops.Count - 1 ? "(" + step + "?1:0)" : step;
+            }
+            return expr;
+        }
+
+        /// <summary>
+        /// "p = c ? new A(..) : new B(..);" as "if(c){p=new A(..);}else{p=new B(..);}". The
+        /// translator builds an instance only as the whole right-hand side of an assignment, and
+        /// handed the ternary it passed "Point(1,2):new Point(3,4)" to the interpreter's "new"
+        /// (CS1003). A ternary evaluates only the branch it picks, as the if/else does, so the
+        /// two mean the same. Only a statement that is exactly such an assignment, with one
+        /// top-level "?" and a branch starting with "new", is rewritten.
+        /// </summary>
+        static string RewriteTernaryNew(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            int start = 0;
+            bool inString = false;
+            char quote = '\0';
+            int depth = 0;
+            for (int i = 0; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[') { depth++; continue; }
+                if (c == ')' || c == ']') { depth--; continue; }
+                if (depth != 0 || (c != ';' && c != '{' && c != '}'))
+                {
+                    continue;
+                }
+                var statement = code.Substring(start, i - start);
+                sb.Append(c == ';' ? TernaryNewAsIfElse(statement) ?? statement : statement);
+                sb.Append(c);
+                start = i + 1;
+            }
+            sb.Append(code.Substring(start));
+            return sb.ToString();
+        }
+
+        static string TernaryNewAsIfElse(string statement)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(statement, @"^([A-Za-z_]\w*)=(?!=)(.+)$");
+            if (!m.Success)
+            {
+                return null;
+            }
+            var rhs = m.Groups[2].Value;
+            int question = -1, colon = -1, depth = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < rhs.Length; i++)
+            {
+                char c = rhs[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[' || c == '{') { depth++; continue; }
+                if (c == ')' || c == ']' || c == '}') { depth--; continue; }
+                if (depth != 0) { continue; }
+                if (c == '?')
+                {
+                    if (question >= 0) { return null; }   // a nested ternary: left alone
+                    question = i;
+                }
+                else if (c == ':' && question >= 0)
+                {
+                    if (colon >= 0) { return null; }
+                    colon = i;
+                }
+            }
+            if (question <= 0 || colon <= question + 1 || colon >= rhs.Length - 1)
+            {
+                return null;
+            }
+            var condition = rhs.Substring(0, question);
+            var whenTrue = rhs.Substring(question + 1, colon - question - 1);
+            var whenFalse = rhs.Substring(colon + 1);
+            if (!StartsWithKeyword(whenTrue, "new") && !StartsWithKeyword(whenFalse, "new"))
+            {
+                return null;
+            }
+            var name = m.Groups[1].Value;
+            return "if(" + condition + "){" + name + "=" + whenTrue + ";}else{" + name + "=" + whenFalse + ";}";
+        }
+
+        /// <summary>A group as the number CSCS makes of it: a plain operand stays as it is, a
+        /// comparison becomes 1 or 0.</summary>
+        static string AsNumber(Tuple<List<string>, List<string>> group) =>
+            group.Item2.Count == 0 ? group.Item1[0] : "(" + RelationalChain(group) + "?1:0)";
 
         /// <summary>An integer literal, a read-only int argument, or (as a bound only) a
         /// ".Size"/".Length"/".Count", optionally followed by "+ k" or "- k".</summary>

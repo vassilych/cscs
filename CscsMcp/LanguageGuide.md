@@ -185,13 +185,23 @@ produces does not compile, the function quietly falls back to the interpreter an
 answer, only without the speed-up:
 
 ```cscs
-cfunction int inRange(int n) { return 1 < n < 10; }
-print("inRange(5) =", inRange(5));
+class Box {
+  w = 0;
+  Box(x) { w = x; }
+  function Area() { return w * w; }
+}
+cfunction double boxOfArea(int n) {
+  b = new Box(new Box(n).Area());
+  return b.w;
+}
+print("boxOfArea(3) =", boxOfArea(3));
 ```
 
 Pass scripts with `cfunction`s to **`explain_cscs`**, not `run_cscs`: it shows the generated C# for
-each one, whether it compiles, or the exact reason it falls back — here a chained comparison, which
-C# rejects. In this sandbox that C# is compiled but never executed, so every function runs
+each one, whether it compiles, or the exact reason it falls back — here an object built inside
+another constructor's arguments, which the translator leaves to the interpreter. Chained
+comparisons (`1 < n < 10`), `iff(...)`, and `continue` inside a `switch` all compile; the report
+shows what they become. In this sandbox that C# is compiled but never executed, so every function runs
 interpreted; `run_cscs` does not accept `cfunction` at all.
 
 ## What this sandbox does not allow

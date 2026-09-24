@@ -1232,8 +1232,8 @@ collection, iterating a map (which walks its **values** -- `m.Keys` is what give
 assignment inside a ternary branch, five levels of nesting, a local named after a function the
 script defines, and a body with many locals.
 
-Left to the interpreter: chained comparisons (`1 < n < 10`, which C# reads as bool against
-int) and text times a number inside a compound assignment.
+Left to the interpreter: text times a number inside a compound assignment. (Chained
+comparisons were too, until September 2026 -- see "Rewritten before translation".)
 
 ## References, and try inside a loop
 
@@ -1275,6 +1275,50 @@ so the trigger is spelt out here:
   a function is a local there and invisible from the lookup. It now rewrites to
   `this.<method>`, which is the instance itself. Sibling calls on an instance created at the
   top level always worked, which is why this looked at first like "sibling calls are broken".
+
+## Rewritten before translation (September 2026)
+
+Four shapes had no C# spelling the token translator could produce, and each has an exact
+equivalent in CSCS itself that already compiled. `GetCSharpCode` rewrites the CSCS source
+before tokenizing it -- the interpreted form of the function is untouched, so the interpreter
+stays the reference the coverage fixture compares against.
+
+- **Chained comparisons** (`RewriteChainedComparisons`). CSCS ranks the operators as C# does
+  (`<` `<=` `>` `>=` above `==` `!=`, `Parser.GetPriority`) and applies each level left to right,
+  but a comparison yields the number 1 or 0, and C# rejects `bool < int`. So `1<n<10` becomes
+  `(1<n?1:0)<10`, `1<n==1` becomes `(1<n?1:0)==1`, and a four-way chain nests. Only a run of
+  plain operands -- names, numbers, members, subscripts, arithmetic -- joined by two or more
+  comparisons is rewritten; a parenthesised operand or `===` leaves it alone. The seven
+  documented shapes and four more are in the fixture, every one agreeing with the interpreter.
+- **`iff(c, a, b)`** (`RewriteIff`) becomes `((c)?(a):(b))`. The interpreter's `ProcessIff`
+  evaluates the condition and then only the chosen branch, which is what a ternary does in both
+  languages; called back with only its arguments, iff had no script to skip through, so it was
+  refused. Nested iffs and iff inside arithmetic compile.
+- **`p = c ? new A(..) : new B(..);`** (`RewriteTernaryNew`) becomes the `if`/`else` it means.
+  The translator builds an instance only as the whole right-hand side of an assignment.
+- **`continue` inside a `switch`** is no longer refused: the switch's `do { } while (false)`
+  wrapper would capture it, so `RedirectContinue` turns each one that belongs to the loop around
+  the switch into `{ __swContN = true; break; }`, and `if (__swContN) { continue; }` follows the
+  block. A continue inside a loop of its own within a case is left alone; a nested switch
+  redirects its own and its trailing `if` is redirected in turn.
+
+Two more switch fixes came with it. Case bodies are translated through the main statement loop
+(`TranslateClause`) instead of one statement at a time -- the builders for `for` and for a
+nested `switch` read ahead in `m_statements` by index, so a loop in a case came out as
+`for(j=0; __actionTempVar = ...` (CS1003) -- and `;` tokens are kept in a clause, since a `for`
+header is three statements joined by them. Clause labels now count only at the switch's own
+brace level.
+
+**Interpreter bug, fixed:** a `switch` inside a `case` gave its labels to the outer switch.
+`Utils.GetBodySize`, which finds the next `case`/`default`, matched them at any brace depth and
+inside text, so `switch (n) { case 1: switch (m) { ... default: t += 50; } break; default: t =
+-1; }` ran the inner default for `n = 3` and answered 50; a string such as `"case 2: no"` or a
+name such as `cases` could be taken for a label too. It now matches only a whole word at the
+switch's own level, outside quotes. test.cscs pins it (`swNested`, `swText`, `swLoopContinue`).
+
+Coverage after this round: 913 of 933 constructs compile, 20 fall back, 0 diverge (it was 882
+of 906). The playground's language guide used `1 < n < 10` as its fallback example; it uses an
+object built inside another constructor's arguments now.
 
 ## Known limits
 
@@ -1929,8 +1973,9 @@ so the trigger is spelt out here:
   `retGroupFor`, `retGroupElse`, `retGroupStr`, `retGroupAsg`, and the three shapes that always
   worked), and test_compiled.cscs pins that the compiled side agrees.
 
-- **Known limit: chained comparisons** (`1 < n < 10`). Seven shapes, all clean value-matching
-  fallbacks, and the semantics reward care rather than a quick rewrite: with `n = 5`, `1<n<10`
+- **Chained comparisons** (`1 < n < 10`) -- a known limit until September 2026, now compiled (see
+  "Rewritten before translation"). Seven shapes, and the semantics reward care rather than a
+  quick rewrite: with `n = 5`, `1<n<10`
   is 1, `20<n<10` is **1**, `1<n<0` is **0**, `1>n>10` is 0, `n<10<20` is 1, `1<n==1` is 1 and
   the four-way chain is 1 -- left-to-right, each comparison collapsing to 1 or 0 before the
   next. C# rejects the shape outright (`bool < int`), so today it falls back cleanly; a

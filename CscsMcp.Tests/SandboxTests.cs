@@ -219,12 +219,18 @@ public class SandboxTests
     [TestMethod]
     public async Task Explain_ReportsWhyAFunctionFallsBack()
     {
-        var outcome = await Explain("cfunction int inRange(int n) { return 1 < n < 10; }\nprint(inRange(5));");
+        // An object built inside another constructor's arguments is left to the interpreter.
+        // (A chained comparison played this role until it started compiling.)
+        var outcome = await Explain(
+            "class Box { w = 0; Box(x) { w = x; } function Area() { return w * w; } }\n" +
+            "cfunction double boxOfArea(int n) { b = new Box(new Box(n).Area()); return b.w; }\n" +
+            "print(boxOfArea(3));");
 
         Assert.IsTrue(outcome.Ok, outcome.Error);
+        Assert.AreEqual("9", outcome.Output.Trim());
         var entry = outcome.Precompile!.Single();
         Assert.IsFalse(entry.Compiles);
-        StringAssert.Contains(entry.Reason ?? "", "CS0019");
+        StringAssert.Contains(entry.Reason ?? "", "class instance");
     }
 
     /// <summary>

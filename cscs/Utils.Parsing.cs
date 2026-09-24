@@ -1501,6 +1501,19 @@ namespace SplitAndMerge
             return result;
         }
 
+        static bool IsWordAt(ParsingScript script, string word)
+        {
+            if (string.IsNullOrEmpty(word) || !script.StartsWith(word))
+            {
+                return false;
+            }
+            char before = script.Prev;
+            int after = script.Pointer + word.Length;
+            char next = after < script.String.Length ? script.String[after] : Constants.EMPTY;
+            return !(char.IsLetterOrDigit(before) || before == '_') &&
+                   !(char.IsLetterOrDigit(next) || next == '_');
+        }
+
         public static string GetBodySize(ParsingScript script, string endToken1, string endToken2 = null)
         {
             int start = script.Pointer;
@@ -1515,12 +1528,17 @@ namespace SplitAndMerge
 
             for (; script.StillValid(); script.Forward())
             {
-                if (script.StartsWith(endToken1))
+                // Only a label of this switch: at its own brace level, outside text, and as a
+                // whole word. A switch nested inside a clause used to hand its "case" and
+                // "default" to the outer one -- "switch (n) { case 1: switch (m) { default: ...
+                // } break; default: ... }" ran the inner default for n = 3 -- and a string or
+                // a name such as "cases" was taken for a label too.
+                if (braces == 0 && !inQuotes && IsWordAt(script, endToken1))
                 {
                     script.Forward(endToken1.Length + 1);
                     return endToken1;
                 }
-                if (script.StartsWith(endToken2))
+                if (braces == 0 && !inQuotes && IsWordAt(script, endToken2))
                 {
                     script.Forward(endToken2.Length + 1);
                     return endToken2;

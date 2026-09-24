@@ -1236,6 +1236,30 @@ switch(++x) {
   default: console.log(x, " default"); Test(true, true);
 }
 
+// A switch inside a clause keeps its labels to itself. Looking for its own next label, the
+// outer switch used to find the inner one's "default" and run it: swNested(3) gave 50.
+// Text that looks like a label, and a name such as "cases", are not labels either.
+function swNested(n) {
+  t = 0;
+  switch (n) {
+    case 1: switch (n + 1) { case 2: t += 5; break; default: t += 50; } t += 1; break;
+    default: t = -1;
+  }
+  return t;
+}
+Test(swNested(1), 6);
+Test(swNested(3), -1);
+cases = 2;
+swText = "";
+switch (cases) { case 1: swText = "case 2: no"; break; case 2: swText = "two"; break; default: swText = "d"; }
+Test(swText, "two");
+function swLoopContinue(n) {
+  t = 0;
+  for (i = 0; i < 4; i++) { switch (i) { case 1: continue; default: t += 1; } t += 100; }
+  return t;
+}
+Test(swLoopContinue(0), 303);
+
 Print("Testing bitwise operators...");
 // "&" is bitwise AND. It used to be the reference operator, so "5 & 3" parsed as
 // "take a reference to 3" and died with a null reference. The reference operator is "@".

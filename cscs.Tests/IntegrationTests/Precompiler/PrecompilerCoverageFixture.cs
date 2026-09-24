@@ -1525,6 +1525,33 @@ namespace cscs.Tests.IntegrationTests.Precompiler
 
             // Left interpreted: C# cannot chain comparisons, the second one being bool against int.
             new Construct("chained_compare", "(int n)", "(n)", "if (1 < n < 10) { return 1; } return 0;", "(5)"),
+            new Construct("chain_lt_lt", "(int n)", "(n)", "return 1 < n < 10;", "(5)"),
+            new Construct("chain_lt_lt_false", "(int n)", "(n)", "return 20 < n < 10;", "(5)"),
+            new Construct("chain_lt_lt_zero", "(int n)", "(n)", "return 1 < n < 0;", "(5)"),
+            new Construct("chain_gt_gt", "(int n)", "(n)", "return 1 > n > 10;", "(5)"),
+            new Construct("chain_arg_first", "(int n)", "(n)", "return n < 10 < 20;", "(5)"),
+            new Construct("chain_lt_eq", "(int n)", "(n)", "return 1 < n == 1;", "(5)"),
+            new Construct("chain_four", "(int n)", "(n)", "return 1 < n < 10 < 20;", "(5)"),
+            new Construct("chain_eq_eq", "(int n)", "(n)", "return n == 5 == 1;", "(5)"),
+            new Construct("chain_le_ge", "(int n)", "(n)", "t = 0; for (i = 0; i < 6; i++) { if (0 <= i <= 1) { t += 1; } if (i >= 2 >= 1) { t += 10; } } return t;", "(0)"),
+            new Construct("chain_arith", "(int n)", "(n)", "return 1 < n + 1 < 10;", "(8)"),
+            new Construct("chain_in_and", "(int n)", "(n)", "if (1 < n < 10 && n != 3) { return 1; } return 0;", "(3)"),
+            new Construct("iff_num", "(int n)", "(n)", "return iff(n > 2, 10, 20);", "(1)"),
+            new Construct("iff_nested", "(int n)", "(n)", "t = 0; for (i = 0; i < n; i++) { t += iff(i % 2 == 0, 1, iff(i > 2, 100, 10)); } return t;", "(6)"),
+            new Construct("iff_in_expr", "(int n)", "(n)", "return iff(n > 0, n, -n) * 2 + 1;", "(-4)"),
+            new Construct("iff_call_branch", "(int n)", "(n)", "return iff(n > 0, helper(n), 0);", "(2)"),
+            new Construct("iff_str_concat", "(string s)", "(s)", "return \"x\" + iff(s == \"a\", \"A\", \"B\");", "(\"a\")"),
+            new Construct("sw_continue_while", "(int n)", "(n)", "t = 0; i = 0; while (i < 5) { i++; switch (i % 2) { case 0: continue; default: t += i; } t += 100; } return t;", "(0)"),
+            new Construct("sw_continue_inner", "(int n)", "(n)", "t = 0; for (i = 0; i < 3; i++) { switch (i) { case 1: for (j = 0; j < 3; j++) { if (j == 1) { continue; } t += 10; } break; default: continue; } t += 1000; } return t;", "(0)"),
+            new Construct("sw_continue_nested", "(int n)", "(n)", "t = 0; for (i = 0; i < 4; i++) { switch (i % 2) { case 0: switch (i) { case 2: continue; default: t += 1; } t += 10; break; default: t += 100; } t += 1000; } return t;", "(0)"),
+            new Construct("sw_continue_fall", "(int n)", "(n)", "t = 0; for (i = 0; i < 4; i++) { switch (i) { case 1: t += 5; case 2: continue; default: t += 1; } t += 100; } return t;", "(0)"),
+            new Construct("class_tern_args", "(int n)", "(n)", "p = n > 0 ? new Point(n, 2) : new Point(3, 4); q = p; return q.Sum();", "(5)"),
+            new Construct("class_tern_false", "(int n)", "(n)", "p = n > 0 ? new Point(1,2) : new Point(3,4); return p.y * 10 + p.x;", "(0)"),
+            new Construct("sw_nested", "(int n)", "(n)", "t = 0; switch (n) { case 1: switch (n + 1) { case 2: t += 5; break; default: t += 50; } t += 1; break; default: t = -1; } return t;", "(3)"),
+            new Construct("sw_nested_match", "(int n)", "(n)", "t = 0; switch (n) { case 1: switch (n + 1) { case 2: t += 5; break; default: t += 50; } t += 1; break; default: t = -1; } return t;", "(1)"),
+            new Construct("sw_loop_in_case", "(int n)", "(n)", "t = 0; for (i = 0; i < 3; i++) { switch (i) { case 1: for (j = 0; j < 3; j++) { t += 10; } break; default: t += 1; } } return t;", "(0)"),
+            new Construct("sw_while_in_case", "(int n)", "(n)", "t = 0; switch (n) { case 1: k = 0; while (k < 3) { k++; t += k; } break; default: t = -1; } return t;", "(1)"),
+            new Construct("sw_label_text", "(int n)", "(n)", "s = \"\"; switch (n) { case 1: s = \"case 2: no\"; break; case 2: s = \"two\"; break; default: s = \"d\"; } return s;", "(2)"),
 
             // Left interpreted: text times a number inside a compound assignment.
             new Construct("str_mult_loop", "(int n)", "(n)", "s = \"\"; for (i = 0; i < n; i++) { s += \"ab\" * 2; } return s.Length;", "(3)"),
@@ -1567,6 +1594,7 @@ namespace cscs.Tests.IntegrationTests.Precompiler
         /// </summary>
         static readonly HashSet<string> Supported = new HashSet<string>
         {
+            "sw_continue", "fn_iff", "chained_compare", "class_tern", "sw_nested", "sw_nested_match", "sw_loop_in_case", "sw_while_in_case", "sw_label_text", "chain_lt_lt", "chain_lt_lt_false", "chain_lt_lt_zero", "chain_gt_gt", "chain_arg_first", "chain_lt_eq", "chain_four", "chain_eq_eq", "chain_le_ge", "chain_arith", "chain_in_and", "iff_num", "iff_nested", "iff_in_expr", "iff_call_branch", "iff_str_concat", "sw_continue_while", "sw_continue_inner", "sw_continue_nested", "sw_continue_fall", "class_tern_args", "class_tern_false",
             "arith", "compound", "if_else", "while", "for", "break", "continue", "nested_loop",
             "modulo", "string_concat", "string_len", "string_upper", "string_sub",
             "string_idx", "string_repl", "math_calls", "multi_return", "string_num",
