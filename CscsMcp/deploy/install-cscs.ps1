@@ -38,6 +38,10 @@ sc.exe config CscsMcp obj= "$Account" | Out-Null
 Write-Host "4. File permissions"
 icacls $Target /grant "${Account}:(OI)(CI)(RX)" | Out-Null
 icacls "$Target\runs" /grant "${Account}:(OI)(CI)(M)" | Out-Null
+# For Isolation = "windows": AppContainers (all app packages, S-1-15-2-1) may run the worker and
+# write its answer in runs\. Nothing else. Harmless while isolation is off.
+icacls "$Target\sandbox" /grant "*S-1-15-2-1:(OI)(CI)(RX)" | Out-Null
+icacls "$Target\runs" /grant "*S-1-15-2-1:(OI)(CI)(M)" | Out-Null
 # The playground account must never read the other services' secrets (MySQL, AI keys, MCP keys).
 foreach ($secret in "C:\Services\BrainPingPong", "C:\Services\ChatCompareMcp") {
     if (Test-Path $secret) { icacls $secret /deny "${Account}:(OI)(CI)(F)" | Out-Null; Write-Host "   denied $secret" }

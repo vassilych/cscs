@@ -29,6 +29,15 @@ public sealed class WindowsAppContainer : IDisposable
     const uint CREATE_NO_WINDOW = 0x08000000;
     const uint WAIT_OBJECT_0 = 0;
     const uint WAIT_TIMEOUT = 0x102;
+    const int UOI_NAME = 2;
+    const int SE_WINDOW_OBJECT = 7;
+    const uint DACL_SECURITY_INFORMATION = 0x4;
+    const uint READ_CONTROL = 0x00020000;
+    const uint WRITE_DAC = 0x00040000;
+    const uint GENERIC_ALL = 0x10000000;
+    const int GRANT_ACCESS = 1;
+    const int TRUSTEE_IS_SID = 0;
+    const int TRUSTEE_IS_UNKNOWN = 0;
 
     IntPtr _sid;
 
@@ -44,17 +53,117 @@ public sealed class WindowsAppContainer : IDisposable
     public static WindowsAppContainer Create(string name, string displayName, string description)
     {
         int created = CreateAppContainerProfile(name, displayName, description, IntPtr.Zero, 0, out var sid);
-        if (created == 0)
+        if (created != 0)
         {
-            return new WindowsAppContainer(sid);
+            int derived = DeriveAppContainerSidFromAppContainerName(name, out sid);
+            if (derived != 0)
+            {
+                throw new InvalidOperationException(
+                    $"AppContainer '{name}': CreateAppContainerProfile HRESULT 0x{created:X8}, DeriveAppContainerSidFromAppContainerName HRESULT 0x{derived:X8}.");
+            }
         }
-        int derived = DeriveAppContainerSidFromAppContainerName(name, out sid);
-        if (derived != 0)
+        var container = new WindowsAppContainer(sid);
+        try
         {
-            throw new InvalidOperationException(
-                $"AppContainer '{name}': CreateAppContainerProfile HRESULT 0x{created:X8}, DeriveAppContainerSidFromAppContainerName HRESULT 0x{derived:X8}.");
+            GrantWindowStationAndDesktop(sid);
         }
-        return new WindowsAppContainer(sid);
+        catch
+        {
+            container.Dispose();
+            throw;
+        }
+        return container;
+    }
+
+    /// <summary>
+    /// Every process connects to its parent's window station and desktop while its Windows DLLs
+    /// initialize (user32 does, and the .NET runtime loads it). A service runs on its own hidden,
+    /// non-interactive window station, whose DACL does not include AppContainers, so a contained
+    /// child dies before its first instruction with STATUS_DLL_INIT_FAILED (0xC0000142). Grant this
+    /// container's SID -- not all app packages -- access to both. The desktop belongs to this service
+    /// alone and shows no windows, so broad rights on it expose nothing; the file system and network
+    /// stay denied. The grant lasts as long as the window station, i.e. until the service restarts,
+    /// and Create runs again on the next start.
+    /// </summary>
+    static void GrantWindowStationAndDesktop(IntPtr sid)
+    {
+        var station = OpenWindowStation(ObjectName(GetProcessWindowStation()), false, READ_CONTROL | WRITE_DAC);
+        if (station == IntPtr.Zero)
+        {
+            throw new InvalidOperationException($"OpenWindowStation failed: Win32 error {Marshal.GetLastWin32Error()}.");
+        }
+        try
+        {
+            AddAllowAce(station, sid, "window station");
+        }
+        finally
+        {
+            CloseWindowStation(station);
+        }
+
+        var desktop = OpenDesktop(ObjectName(GetThreadDesktop(GetCurrentThreadId())), 0, false, READ_CONTROL | WRITE_DAC);
+        if (desktop == IntPtr.Zero)
+        {
+            throw new InvalidOperationException($"OpenDesktop failed: Win32 error {Marshal.GetLastWin32Error()}.");
+        }
+        try
+        {
+            AddAllowAce(desktop, sid, "desktop");
+        }
+        finally
+        {
+            CloseDesktop(desktop);
+        }
+    }
+
+    static string ObjectName(IntPtr handle)
+    {
+        GetUserObjectInformation(handle, UOI_NAME, null, 0, out var needed);
+        var buffer = new char[Math.Max(needed / 2, 1)];
+        if (!GetUserObjectInformation(handle, UOI_NAME, buffer, needed, out _))
+        {
+            throw new InvalidOperationException($"GetUserObjectInformation failed: Win32 error {Marshal.GetLastWin32Error()}.");
+        }
+        return new string(buffer).TrimEnd('\0');
+    }
+
+    static void AddAllowAce(IntPtr handle, IntPtr sid, string what)
+    {
+        uint err = GetSecurityInfo(handle, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION,
+            IntPtr.Zero, IntPtr.Zero, out var oldDacl, IntPtr.Zero, out var descriptor);
+        if (err != 0)
+        {
+            throw new InvalidOperationException($"GetSecurityInfo ({what}) failed: Win32 error {err}.");
+        }
+        var newDacl = IntPtr.Zero;
+        try
+        {
+            var access = new EXPLICIT_ACCESS
+            {
+                grfAccessPermissions = GENERIC_ALL,
+                grfAccessMode = GRANT_ACCESS,
+                grfInheritance = 0,
+                Trustee = new TRUSTEE { TrusteeForm = TRUSTEE_IS_SID, TrusteeType = TRUSTEE_IS_UNKNOWN, ptstrName = sid },
+            };
+            err = SetEntriesInAcl(1, ref access, oldDacl, out newDacl);
+            if (err != 0)
+            {
+                throw new InvalidOperationException($"SetEntriesInAcl ({what}) failed: Win32 error {err}.");
+            }
+            err = SetSecurityInfo(handle, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION, IntPtr.Zero, IntPtr.Zero, newDacl, IntPtr.Zero);
+            if (err != 0)
+            {
+                throw new InvalidOperationException($"SetSecurityInfo ({what}) failed: Win32 error {err}.");
+            }
+        }
+        finally
+        {
+            if (newDacl != IntPtr.Zero)
+            {
+                LocalFree(newDacl);
+            }
+            LocalFree(descriptor);
+        }
     }
 
     /// <summary>
@@ -226,6 +335,61 @@ public sealed class WindowsAppContainer : IDisposable
         public IntPtr hProcess, hThread;
         public int dwProcessId, dwThreadId;
     }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct TRUSTEE
+    {
+        public IntPtr pMultipleTrustee;
+        public int MultipleTrusteeOperation;
+        public int TrusteeForm;
+        public int TrusteeType;
+        public IntPtr ptstrName;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct EXPLICIT_ACCESS
+    {
+        public uint grfAccessPermissions;
+        public int grfAccessMode;
+        public uint grfInheritance;
+        public TRUSTEE Trustee;
+    }
+
+    [DllImport("user32", SetLastError = true)]
+    static extern IntPtr GetProcessWindowStation();
+
+    [DllImport("user32", SetLastError = true)]
+    static extern IntPtr GetThreadDesktop(uint dwThreadId);
+
+    [DllImport("kernel32")]
+    static extern uint GetCurrentThreadId();
+
+    [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern bool GetUserObjectInformation(IntPtr hObj, int nIndex, [Out] char[]? pvInfo, int nLength, out int lpnLengthNeeded);
+
+    [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern IntPtr OpenWindowStation(string lpszWinSta, bool fInherit, uint dwDesiredAccess);
+
+    [DllImport("user32", SetLastError = true)]
+    static extern bool CloseWindowStation(IntPtr hWinSta);
+
+    [DllImport("user32", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern IntPtr OpenDesktop(string lpszDesktop, uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+    [DllImport("user32", SetLastError = true)]
+    static extern bool CloseDesktop(IntPtr hDesktop);
+
+    [DllImport("advapi32")]
+    static extern uint GetSecurityInfo(IntPtr handle, int objectType, uint securityInfo, IntPtr ppsidOwner, IntPtr ppsidGroup, out IntPtr ppDacl, IntPtr ppSacl, out IntPtr ppSecurityDescriptor);
+
+    [DllImport("advapi32")]
+    static extern uint SetSecurityInfo(IntPtr handle, int objectType, uint securityInfo, IntPtr psidOwner, IntPtr psidGroup, IntPtr pDacl, IntPtr pSacl);
+
+    [DllImport("advapi32", CharSet = CharSet.Unicode)]
+    static extern uint SetEntriesInAcl(uint cCountOfExplicitEntries, ref EXPLICIT_ACCESS pListOfExplicitEntries, IntPtr oldAcl, out IntPtr newAcl);
+
+    [DllImport("kernel32")]
+    static extern IntPtr LocalFree(IntPtr hMem);
 
     [DllImport("userenv", CharSet = CharSet.Unicode)]
     static extern int CreateAppContainerProfile(string pszAppContainerName, string pszDisplayName, string pszDescription, IntPtr pCapabilities, uint dwCapabilityCount, out IntPtr ppSidAppContainerSid);

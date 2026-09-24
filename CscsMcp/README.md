@@ -186,12 +186,12 @@ This adds OS-enforced containment (layer 7 above) on top of the interpreter's ow
 doing even though compiled code is never run, because it means a stranger's *interpreted* script is
 also denied network and disk by the kernel, not only by the allowlist.
 
-> Built and unit-tested for the file-IO contract, but the Win32 AppContainer/Job path itself could
-> not be exercised on the (macOS) build machine. Validate on the server with the self-check below
-> before relying on it; until then leave `Isolation` at `none`.
+Running on the production server since 2026-09-24: normal runs, classes and exceptions, the time,
+memory and recursion limits, the .NET escape attempt, `explain_cscs` (Roslyn inside the container)
+and four parallel runs all behave as without isolation.
 
-**1. Grant the AppContainer (`ALL_APPLICATION_PACKAGES`) the two accesses it needs.** Once, after
-publishing:
+**1. Grant the AppContainer (`ALL_APPLICATION_PACKAGES`) the two accesses it needs.**
+`install-cscs.ps1` does this on every install; by hand it is:
 
 ```powershell
 icacls C:\Services\CscsMcp\sandbox /grant "*S-1-15-2-1:(OI)(CI)(RX)"
@@ -201,7 +201,8 @@ icacls C:\Services\CscsMcp\runs /grant "*S-1-15-2-1:(OI)(CI)(M)"
 
 `S-1-15-2-1` is the well-known SID for all app packages, which every AppContainer belongs to. The
 worker binaries need read+execute; the runs directory needs modify (it writes `response.json`
-there). The .NET runtime under Program Files already grants app packages read+execute.
+there). The package is self-contained, so the .NET runtime is inside `sandbox\` and covered by
+the first grant.
 
 **2. Point the service at that runs directory and turn isolation on** in `appsettings.json`:
 
@@ -216,9 +217,23 @@ Restart the service. It must be the **native** `CscsSandbox.exe` (the publish st
 `dotnet CscsSandbox.dll` — isolation refuses the `.dll` form.
 
 **3. Self-check.** `https://cscs.brainpingpong.com/health` must now show `"isolation":"windows"`
-(not `windows-requested-inactive`). Then, through any connected client, confirm a script is denied
-the network and disk at the OS level even though the interpreter would already refuse them — a run
-of `print(1)` still returns `1`, and the service log shows the worker running under the container.
+(not `windows-requested-inactive`) and `"isolationError": null`, and a run of `print(1)` must still
+return `1`. If a contained worker cannot start, the run fails closed -- it is never retried without
+isolation -- and both the tool result and `isolationError` name the Win32 error or exit code; the
+Windows event log usually has nothing, since a virtual service account cannot register an event
+source. To switch it off again, set `Isolation` to `none` and restart.
+
+Two things the service does for the container that are easy to miss when changing this code:
+
+- **LOCALAPPDATA.** Windows redirects a contained process's TEMP/LOCALAPPDATA to
+  `%LOCALAPPDATA%\Packages\<name>\AC` and refuses to start it (Win32 error 203,
+  `ERROR_ENVVAR_NOT_FOUND`) if the variable is missing, as it is from the minimal worker environment.
+  The worker gets LOCALAPPDATA pointing into its own run directory.
+- **Window station and desktop.** The worker's Windows DLLs connect to the service's hidden window
+  station and desktop while they initialize; their DACL does not include AppContainers, so the
+  worker died with `0xC0000142` (`STATUS_DLL_INIT_FAILED`). When it creates the container, the
+  service grants that container's SID access to both. They belong to this service alone and show
+  no windows.
 
 ## Connecting a client
 
@@ -251,8 +266,8 @@ of `print(1)` still returns `1`, and the service log shows the worker running un
 
 - Recursion through a class *method* can use enough memory per call to stop at the 256 MB limit
   before the 2,000-call cap. It still ends as a clean error.
-- The heap limit covers managed memory only; there is no OS-level (Job Object) CPU or memory quota.
-  CSCS scripts have no native allocation path left in the sandbox, and the per-process time limit
-  bounds CPU.
+- Without `Isolation: windows` the heap limit covers managed memory only; with it, the Job Object
+  adds an OS-enforced memory cap (and an optional CPU cap). CSCS scripts have no native allocation
+  path left in the sandbox either way, and the per-process time limit bounds CPU.
 - Compiled `cfunction` code never runs here; `explain_cscs` shows it instead. Running it would
   need every symbol the generated C# uses checked against a strict allowlist before loading.

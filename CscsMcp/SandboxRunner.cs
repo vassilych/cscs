@@ -348,7 +348,16 @@ public sealed class SandboxRunner : IDisposable
 
             try
             {
-                proc = container.Launch(exe, $"--io-dir \"{workDir}\"", workDir, WorkerEnvironment(workDir), job);
+                // Windows rewrites an AppContainer process's TEMP/TMP/LOCALAPPDATA to
+                // %LOCALAPPDATA%\Packages\<container>\AC and refuses to start it (error 203,
+                // ERROR_ENVVAR_NOT_FOUND) when LOCALAPPDATA is missing, as it is from the minimal
+                // worker environment. Point it into the run's own directory, and create that folder
+                // so it inherits the runs directory's grant and is deleted with the run.
+                var env = WorkerEnvironment(workDir);
+                env["LOCALAPPDATA"] = workDir;
+                env["APPDATA"] = workDir;
+                Directory.CreateDirectory(Path.Combine(workDir, "Packages", _options.AppContainerName, "AC", "Temp"));
+                proc = container.Launch(exe, $"--io-dir \"{workDir}\"", workDir, env, job);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -383,12 +392,7 @@ public sealed class SandboxRunner : IDisposable
                     Error = $"Time limit reached ({timeLimitMs} ms); the interpreter had to be stopped.",
                 };
             }
-            return new RunOutcome
-            {
-                ElapsedMs = clock.ElapsedMilliseconds,
-                Error = $"The interpreter crashed (exit code {proc.ExitCode}) before it could report a result. " +
-                        "The usual cause is a stack overflow from very deep recursion inside one expression.",
-            };
+            return IsolatedCrash(proc.ExitCode, clock.ElapsedMilliseconds);
         }
         finally
         {
@@ -397,6 +401,34 @@ public sealed class SandboxRunner : IDisposable
             job.Dispose(); // kills anything still in the job
             DeleteWorkDir(workDir);
         }
+    }
+
+    /// <summary>
+    /// A contained worker that died without writing response.json. Only a stack overflow is the
+    /// script's doing; anything else is the container or the runtime failing to start, which is a
+    /// server problem and is recorded for /health.
+    /// </summary>
+    RunOutcome IsolatedCrash(int exitCode, long elapsedMs)
+    {
+        const int StatusStackOverflow = unchecked((int)0xC00000FD);
+        if (exitCode == StatusStackOverflow)
+        {
+            return new RunOutcome
+            {
+                ElapsedMs = elapsedMs,
+                Error = "The interpreter crashed with a stack overflow before it could report a result, " +
+                        "usually from very deep recursion inside one expression.",
+            };
+        }
+        var code = $"0x{exitCode:X8}";
+        LastIsolationError = $"{DateTime.UtcNow:u} worker exited with {code} without a result";
+        _log.LogError("isolated worker exited with {Code} without writing a result", code);
+        return new RunOutcome
+        {
+            ElapsedMs = elapsedMs,
+            Error = $"The playground's OS sandbox stopped the interpreter (exit code {code}) before it reported a result. " +
+                    "This is most likely a server problem, not your script.",
+        };
     }
 
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
