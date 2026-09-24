@@ -60,6 +60,72 @@ namespace cscs.Tests.IntegrationTests.Precompiler
         }
 
         [TestMethod]
+        public void Loop_Counter_Is_An_Int_Only_Where_That_Cannot_Change_An_Answer()
+        {
+            // Explain mode hands back the generated C# without loading it.
+            SplitAndMerge.PrecompileExplainer.Enabled = true;
+            try
+            {
+                Process(@"
+                    cfunction double ctrPlain(int n) { t = 0; for (i = 0; i < n; i++) { t += i; } return t; }
+                    cfunction double ctrDown(int n) { t = 0; for (k = 10; k >= 0; k -= 2) { t += k; } return t; }
+                    cfunction double ctrIndex(int n) { a = {1, 2, 3}; t = 0; for (i = 0; i < a.Size; i++) { t += a[i] * 2; } return t; }
+                    cfunction double ctrDivide(int n) { t = 0; for (i = 0; i < n; i++) { t += (i + 1) / 2; } return t; }
+                    cfunction double ctrSquare(int n) { t = 0; for (i = 0; i < n; i++) { t += i * i; } return t; }
+                    cfunction double ctrCopied(int n) { t = 0; for (i = 0; i < n; i++) { x = i + 1; t += x; } return t; }
+                    cfunction double ctrAssigned(int n) { t = 0; for (i = 0; i < n; i++) { t += i; i += 1; } return t; }
+                    cfunction double ctrDoubleBound(double n) { t = 0; for (i = 0; i < n; i++) { t += i; } return t; }
+                    1;");
+            }
+            finally
+            {
+                SplitAndMerge.PrecompileExplainer.Enabled = false;
+            }
+            AssertNoCscsException();
+
+            string Code(string name) =>
+                SplitAndMerge.PrecompileExplainer.Reports.Last(r => r.FunctionName == name).CSharpCode ?? "";
+
+            StringAssert.Contains(Code("ctrPlain"), "int i;");
+            StringAssert.Contains(Code("ctrDown"), "int k;");
+            StringAssert.Contains(Code("ctrIndex"), "int i;");
+            // "/" truncates between ints, "*" overflows, a copy would declare x from an int,
+            // an assignment could leave the counter fractional, and a double bound can be
+            // fractional or huge: each keeps the CSCS double.
+            StringAssert.Contains(Code("ctrDivide"), "double i;");
+            StringAssert.Contains(Code("ctrSquare"), "double i;");
+            StringAssert.Contains(Code("ctrCopied"), "double i;");
+            StringAssert.Contains(Code("ctrAssigned"), "double i;");
+            StringAssert.Contains(Code("ctrDoubleBound"), "double i;");
+        }
+
+        [TestMethod]
+        public void Int_And_Double_Loop_Counters_Answer_As_The_Interpreter_Does()
+        {
+            // Each body runs compiled and interpreted; the two must agree, and must compile.
+            var cases = new[]
+            {
+                ("ctrSum",    "(int n)", "t = 0; for (i = 0; i < n; i++) { t += i; } return t;", "(100)"),
+                ("ctrText",   "(int n)", "r = \"\"; for (i = 0; i < n; i++) { r += \"v\" + i; } return r;", "(4)"),
+                ("ctrRound",  "(int n)", "t = 0; for (i = 0; i < n; i++) { t += Math.Round(2.34567, i); } return t;", "(4)"),
+                ("ctrStep",   "(int n)", "t = 0; for (k = 10; k >= 0; k -= 3) { t += k; } return t;", "(0)"),
+                ("ctrHalf",   "(int n)", "t = 0; for (i = 0; i < n; i++) { t += (i + 1) / 2; } return t;", "(7)"),
+                ("ctrBig",    "(int n)", "t = 0; for (i = 0; i < n; i++) { t += i * i; } return t;", "(50000)"),
+            };
+            foreach (var (name, sig, body, call) in cases)
+            {
+                SplitAndMerge.Precompiler.ClearFallbacks();
+                var result = Process(
+                    "cfunction " + name + "C" + sig + " { " + body + " }\n" +
+                    "function " + name + "P(n) { " + body + " }\n" +
+                    name + "C" + call + " == " + name + "P" + call + ";");
+                AssertNoCscsException();
+                Assert.AreEqual(1, result.AsInt(), name + ": compiled and interpreted answers differ");
+                Assert.IsFalse(SplitAndMerge.Precompiler.DidFallBack(name + "C"), name + " fell back to the interpreter");
+            }
+        }
+
+        [TestMethod]
         public void Compiled_While_Loop_Runs()
         {
             var result = Process(@"

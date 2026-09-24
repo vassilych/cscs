@@ -27,6 +27,8 @@ namespace SplitAndMerge
         // the arguments from, so it is never changed.
         Dictionary<string, Variable> m_declaredArgsMap;
         HashSet<string> m_collectionArgs = new HashSet<string>();
+        // Loop counters declared "int" rather than "double" -- see FindIntCounters.
+        HashSet<string> m_intCounters = new HashSet<string>();
         // Int arguments the body assigns to. They become double locals: see ConvertScript.
         HashSet<string> m_widenedIntArgs = new HashSet<string>();
         Dictionary<string, string> m_widenedIntSlots = new Dictionary<string, string>();
@@ -662,6 +664,13 @@ namespace SplitAndMerge
                     assignedNames.Add(assigned);
                 }
             }
+            // An int argument keeps its int slot only while nothing assigns to it (above), so
+            // only those can seed or bound an int counter.
+            var readOnlyIntArgs = new HashSet<string>(m_declaredArgsMap
+                .Where(arg => arg.Value.Type == Variable.VarType.INT && !assignedNames.Contains(arg.Key))
+                .Select(arg => arg.Key));
+            m_intCounters = FindIntCounters(m_cscsCode, readOnlyIntArgs,
+                new HashSet<string>(m_declaredArgsMap.Keys));
             m_lastStatementReturn = false;
             m_knownExpression = false;
             m_statementPrelude = "";
@@ -2286,6 +2295,319 @@ namespace SplitAndMerge
             return !string.IsNullOrWhiteSpace(label);
         }
 
+        /// <summary>
+        /// The loop counters that can be declared "int" without changing an answer.
+        ///
+        /// A counter is otherwise declared "double", because CSCS numbers are doubles and an
+        /// int differs from one in exactly two ways a script can see: "/" between two ints
+        /// truncates ("(i + 1) / 2" is 1 for i = 2, where CSCS says 1.5), and "*" overflows
+        /// ("i * i" wraps past i = 46340). An int is also faster, and it is what an index or an
+        /// overload such as Math.Round(x, i) wants. So a counter is an int only when all of
+        /// this holds for every loop that uses the name, and it stays a double otherwise:
+        ///   - the header is "name = start; name OP bound; step", where start is an integer
+        ///     literal or an int argument nothing assigns to, OP is &lt; &lt;= &gt; or &gt;=, bound
+        ///     is such a literal or argument or a ".Size"/".Length"/".Count" (with an optional
+        ///     "+ k"/"- k"), and step is ++, --, "+= k" or "-= k" for a small literal k -- so the
+        ///     counter holds whole numbers well inside int range;
+        ///   - nothing else in the function assigns to it (including ++/--);
+        ///   - no statement using it outside an index contains "*" outside an index, and no
+        ///     statement using it at all contains "/";
+        ///   - it is not copied into a new local ("x = i + 1" would declare x from an int);
+        ///   - nothing reads a member off it or calls it.
+        /// Uses inside [...] are exempt from the "*" and copy rules: an index is an int anyway.
+        /// </summary>
+        static HashSet<string> FindIntCounters(string code, HashSet<string> intArgs, HashSet<string> argNames)
+        {
+            var text = StripSpacesOutsideStrings(code ?? "");
+            var qualifying = new HashSet<string>();
+            var rejected = new HashSet<string>();
+            var blanked = text.ToCharArray();
+
+            // Pass 1: every "for(" header. A qualifying one is blanked out, so the scan below
+            // sees only the other uses of its counter.
+            bool inString = false;
+            char quote = '\0';
+            for (int pos = 0; pos < text.Length; pos++)
+            {
+                char c = text[pos];
+                if (inString)
+                {
+                    if (c == '\\') { pos++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c != 'f' || string.CompareOrdinal(text, pos, "for(", 0, 4) != 0 ||
+                    (pos > 0 && IsNameChar(text[pos - 1])))
+                {
+                    continue;
+                }
+                int close = MatchingParen(text, pos + 3);
+                if (close < 0)
+                {
+                    continue;
+                }
+                var header = text.Substring(pos + 4, close - pos - 4);
+                var parts = SplitTopLevelSemicolons(header);
+                if (parts.Count != 3)
+                {
+                    // "for (v in a)": its variable is an element, never a counter.
+                    var name = LeadingName(header);
+                    if (name != null) { rejected.Add(name); }
+                    continue;
+                }
+                var init = System.Text.RegularExpressions.Regex.Match(parts[0], @"^([A-Za-z_]\w*)=(?!=)(.+)$");
+                if (!init.Success)
+                {
+                    continue;
+                }
+                var counter = init.Groups[1].Value;
+                var escaped = System.Text.RegularExpressions.Regex.Escape(counter);
+                bool ok = !argNames.Contains(counter) && IsIntAtom(init.Groups[2].Value, intArgs, false) &&
+                    System.Text.RegularExpressions.Regex.IsMatch(parts[1], "^" + escaped + @"(<=|>=|<|>)(.+)$") &&
+                    IsIntAtom(System.Text.RegularExpressions.Regex.Match(parts[1], "^" + escaped + @"(<=|>=|<|>)(.+)$").Groups[2].Value, intArgs, true) &&
+                    System.Text.RegularExpressions.Regex.IsMatch(parts[2],
+                        "^(" + escaped + @"\+\+|\+\+" + escaped + "|" + escaped + "--|--" + escaped +
+                        "|" + escaped + @"[+-]=\d{1,4})$");
+                if (!ok)
+                {
+                    rejected.Add(counter);
+                    continue;
+                }
+                qualifying.Add(counter);
+                for (int k = pos + 4; k < close; k++) { blanked[k] = ' '; }
+                pos = close;
+            }
+            qualifying.ExceptWith(rejected);
+            if (qualifying.Count == 0)
+            {
+                return qualifying;
+            }
+
+            // Pass 2: every other use of each candidate, statement by statement.
+            var scan = new string(blanked);
+            foreach (var segment in Statements(scan))
+            {
+                var body = scan.Substring(segment.Item1, segment.Item2 - segment.Item1);
+                var shape = Shape(body);   // strings removed, index contents marked
+                bool hasDivision = shape.Contains('/');
+                bool hasTopLevelProduct = TopLevel(shape).Contains('*');
+                var assignment = System.Text.RegularExpressions.Regex.Match(shape, @"^([A-Za-z_]\w*)=(?!=)");
+                foreach (var counter in qualifying.ToList())
+                {
+                    foreach (var at in NameOccurrences(shape, counter))
+                    {
+                        bool inIndex = IndexDepth(shape, at) > 0;
+                        var after = shape.Substring(at + counter.Length);
+                        var before = shape.Substring(0, at);
+                        bool assigned = (after.StartsWith("=") && !after.StartsWith("==")) ||
+                            after.StartsWith("+=") || after.StartsWith("-=") || after.StartsWith("*=") ||
+                            after.StartsWith("/=") || after.StartsWith("%=") ||
+                            after.StartsWith("++") || after.StartsWith("--") ||
+                            before.EndsWith("++") || before.EndsWith("--");
+                        bool member = after.StartsWith(".") || after.StartsWith("(");
+                        bool copied = !inIndex && assignment.Success && assignment.Groups[1].Value != counter;
+                        if (assigned || member || hasDivision || copied || (!inIndex && hasTopLevelProduct))
+                        {
+                            qualifying.Remove(counter);
+                            break;
+                        }
+                    }
+                }
+            }
+            return qualifying;
+        }
+
+        static bool IsNameChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+        /// <summary>An integer literal, a read-only int argument, or (as a bound only) a
+        /// ".Size"/".Length"/".Count", optionally followed by "+ k" or "- k".</summary>
+        static bool IsIntAtom(string text, HashSet<string> intArgs, bool isBound)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(text,
+                @"^(-?\d{1,9}|[A-Za-z_]\w*(\.(Size|Length|Count))?)([+-]\d{1,6})?$");
+            if (!m.Success)
+            {
+                return false;
+            }
+            // The start is emitted as the counter's first value, so it must already be an
+            // int in C#: a literal or an int slot. Arithmetic on an int argument is widened to
+            // double by the translator, and a member is not known to be an int.
+            if (!isBound && (m.Groups[4].Success || m.Groups[2].Success))
+            {
+                return false;
+            }
+            var atom = m.Groups[1].Value;
+            if (atom.Length > 0 && (char.IsDigit(atom[0]) || atom[0] == '-'))
+            {
+                var value = long.Parse(atom, CultureInfo.InvariantCulture);
+                return value >= -1000000000 && value <= 1000000000;
+            }
+            return m.Groups[2].Success || intArgs.Contains(atom);
+        }
+
+        static string StripSpacesOutsideStrings(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    sb.Append(c);
+                    if (c == '\\' && i + 1 < code.Length) { sb.Append(code[++i]); }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                if (!char.IsWhiteSpace(c)) { sb.Append(c); }
+            }
+            return sb.ToString();
+        }
+
+        static int MatchingParen(string text, int open)
+        {
+            int depth = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = open; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                else if (c == '(') { depth++; }
+                else if (c == ')' && --depth == 0) { return i; }
+            }
+            return -1;
+        }
+
+        static List<string> SplitTopLevelSemicolons(string header)
+        {
+            var parts = new List<string>();
+            int depth = 0, start = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < header.Length; i++)
+            {
+                char c = header[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                else if (c == '(' || c == '[' || c == '{') { depth++; }
+                else if (c == ')' || c == ']' || c == '}') { depth--; }
+                else if (c == ';' && depth == 0) { parts.Add(header.Substring(start, i - start)); start = i + 1; }
+            }
+            parts.Add(header.Substring(start));
+            return parts;
+        }
+
+        static string LeadingName(string text)
+        {
+            int end = 0;
+            while (end < text.Length && IsNameChar(text[end])) { end++; }
+            return end > 0 ? text.Substring(0, end) : null;
+        }
+
+        /// <summary>The spans between ";", "{" and "}" outside string literals.</summary>
+        static IEnumerable<Tuple<int, int>> Statements(string text)
+        {
+            int start = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                else if (c == ';' || c == '{' || c == '}')
+                {
+                    if (i > start) { yield return Tuple.Create(start, i); }
+                    start = i + 1;
+                }
+            }
+            if (text.Length > start) { yield return Tuple.Create(start, text.Length); }
+        }
+
+        /// <summary>The statement with each string literal's contents replaced by '_', so no
+        /// operator or name inside text is mistaken for code. Same length as the input.</summary>
+        static string Shape(string statement)
+        {
+            var chars = statement.ToCharArray();
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char c = chars[i];
+                if (inString)
+                {
+                    if (c == '\\' && i + 1 < chars.Length) { chars[i] = '_'; chars[++i] = '_'; continue; }
+                    if (c == quote) { inString = false; continue; }
+                    chars[i] = '_';
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+            }
+            return new string(chars);
+        }
+
+        /// <summary>The shape with everything inside [...] removed.</summary>
+        static string TopLevel(string shape)
+        {
+            var sb = new StringBuilder(shape.Length);
+            int depth = 0;
+            foreach (var c in shape)
+            {
+                if (c == '[') { depth++; }
+                else if (c == ']') { depth--; }
+                else if (depth == 0) { sb.Append(c); }
+            }
+            return sb.ToString();
+        }
+
+        static int IndexDepth(string shape, int at)
+        {
+            int depth = 0;
+            for (int i = 0; i < at; i++)
+            {
+                if (shape[i] == '[') { depth++; }
+                else if (shape[i] == ']') { depth--; }
+            }
+            return depth;
+        }
+
+        /// <summary>Where a name occurs as a whole name -- not part of a longer one, and not a
+        /// member of something else ("p.i").</summary>
+        static IEnumerable<int> NameOccurrences(string shape, string name)
+        {
+            for (int at = shape.IndexOf(name, StringComparison.Ordinal); at >= 0;
+                 at = shape.IndexOf(name, at + 1, StringComparison.Ordinal))
+            {
+                bool startOk = at == 0 || (!IsNameChar(shape[at - 1]) && shape[at - 1] != '.');
+                int end = at + name.Length;
+                bool endOk = end >= shape.Length || !IsNameChar(shape[end]);
+                if (startOk && endOk)
+                {
+                    yield return at;
+                }
+            }
+        }
+
         bool ProcessForStatement(string statement, List<string> tokens, ref string converted)
         {
             string functionName = GetFunctionName(statement, out string suffix, out bool isArray).Trim();
@@ -2338,7 +2660,8 @@ namespace SplitAndMerge
                 // counts as definite assignment. Repeating the initialiser here went wrong
                 // whenever GetFunctionName cut it short -- at a call ("= helper") or at a
                 // member, where "i = s.Length - 1" became "double i = s", a string.
-                converted = m_depth + "double " + varName + ";\n";
+                converted = m_depth + (m_intCounters.Contains(varName) ? "int " : "double ") +
+                            varName + ";\n";
             }
             converted += forParen < 0 ? m_depth + statement :
                 m_depth + statement.Substring(0, forParen + 1) +
@@ -2688,7 +3011,7 @@ namespace SplitAndMerge
                 // which is what stopped a ternary with string branches from compiling.
                 result += token;
                 return;
-            }
+            }
             // A member of an enum declared in this function, reached through the token loop --
             // "return Local.Type", "\"v=\" + Local.Y". Sent through ReplaceArgsInString so
             // ResolveToken's rule applies: a declared member, or nothing. Left to the branches
@@ -4210,7 +4533,7 @@ namespace SplitAndMerge
                 }
                 built += ")";
                 // "p.Kid().v": the member that follows reads from the call's result.
-                var afterCall = (trailing ?? "").Trim();
+                var afterCall = (trailing ?? "").Trim();
                 // "p.Kid().Kid().v": a further method call runs on what the previous one returned.
                 // It was appended verbatim, and C# looked for a "Kid" on Variable (CS1061). Each
                 // one wraps the result so far the same way the first call was built. A Variable,

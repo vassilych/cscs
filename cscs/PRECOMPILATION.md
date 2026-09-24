@@ -132,7 +132,8 @@ the subscript stopped being converted to a number -- the key says nothing about 
 the expression around it.
 
 Subscripts carry no cast any more. `Variable` has an indexer for each type an index can
-arrive as -- `int`, `double` (loop counters are declared double so `/` is real division),
+arrive as -- `int`, `double` (a loop counter is declared double so `/` is real division,
+unless `FindIntCounters` shows an `int` cannot change an answer -- see below),
 `string`, and `Variable`, which is what `m[keys[i]]` produces. Casting the index to `int`
 covered the numeric cases and made the other two impossible to compile.
 
@@ -981,6 +982,19 @@ slot, since what the interpreter would put there need not be an int -- `n = n / 
 and `n = 3 * n + 1` outgrows an int. That is what lets the Collatz-style loops compile.
 `SubstringCscs` and `AtCscs` take a double position and truncate it as `GetSafeInt` does.
 `Math.Round(x, n + 1)` is left interpreted: its digits must be an int.
+
+**Loop counters are ints where that cannot change an answer** (September 2026). A counter is
+declared `double` so that `/` stays real division, but most loops never divide by it, and an
+`int` is faster, is what an index wants, and picks `Math.Round(x, i)`'s `int` overload, which
+used to fall back. `FindIntCounters` makes a counter an `int` only when every loop using the
+name has the header `i = start; i OP bound; step` -- start an integer literal or a read-only
+`int` argument, `OP` one of `<`, `<=`, `>`, `>=`, bound such a literal or argument or a
+`.Size`/`.Length`/`.Count` (optionally `± k`), step `++`, `--` or `+=`/`-=` a small literal --
+and, everywhere else in the function, nothing assigns to it, no statement using it contains `/`,
+none using it outside an index contains `*` (`i * i` wraps past 46340), it is not copied into a
+new local (`x = i + 1` would declare `x` an int), and nothing reads a member off it. Anything
+else keeps `double`. The coverage fixture was unchanged by it (882 compile, 24 fall back, 0
+diverge); `PrecompilerFixture` pins both the declarations and the answers.
 
 **Locals that outlive their block.** C# scopes a local to the block it is declared in; CSCS
 does not. A local used outside the block it is first assigned in -- two loops both using `c`,
