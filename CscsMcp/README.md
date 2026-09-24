@@ -15,7 +15,7 @@ Three projects in this repository:
 - `CscsMcp/` — the MCP server (ASP.NET Core, `ModelContextProtocol.AspNetCore`, stateless HTTP).
   It never runs CSCS itself and references no CSCS code.
 - `CscsSandbox/` — runs exactly one script per process and exits. All CSCS execution happens here.
-- `CscsMcp.Tests/` — 40 tests that start real sandbox processes: escape attempts, limits, the
+- `CscsMcp.Tests/` — 42 tests that start real sandbox processes: escape attempts, limits, the
   allowlist, explain mode, and every example in the guide.
 
 ## Security model
@@ -130,6 +130,10 @@ firewall part of 3 below: it copies the files to `C:\Services\CscsMcp`, creates 
 and `C:\Services\ChatCompareMcp`, opens 17578 to Cloudflare's IPv4 ranges only, starts it and
 checks `/health`. Running it again updates the binaries and keeps the server's `appsettings.json`.
 Keep the zip out of git: it is about 90 MB.
+
+With this repository cloned on the server and the .NET 9 SDK installed there, skip the zip: after
+`git pull`, `CscsMcp\deploy\update-from-source.ps1` (elevated) builds the same package locally and
+runs `install-cscs.ps1` on it.
 
 The steps it automates, for reference:
 
