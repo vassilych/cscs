@@ -17,17 +17,17 @@ namespace SplitAndMerge
             bool inQuotes = script.Current == Constants.QUOTE;
             bool inQuotes1 = script.Current == Constants.QUOTE1;
 
+            var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
+            sep = TryAddCharToArray(sep, extraSep);
             if (script.Current == Constants.START_GROUP)
             {
-                return ProcessList(script);
+                return ListOperand(ProcessList(script), script, sep, eatLast);
             }
             if (script.Current == Constants.START_ARRAY)
             {
                 return ProcessArrayMap(script);
             }
             var rest = script.Rest;
-            var sep = script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY;
-            sep = TryAddCharToArray(sep, extraSep);
 
             // A variable, a function, or a number.
             Variable var = script.Execute(sep);
@@ -46,6 +46,61 @@ namespace SplitAndMerge
                 script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
             }
             return var;
+        }
+
+        // A list literal as the first operand -- "{} ? \"t\" : \"f\"", "{1} || 0", "{1, 2} + 3": the
+        // literal was taken as the whole value and the rest of the expression dropped ("{1} || 0"
+        // was [1]). The rest is evaluated with the literal bound to a name no script can spell, so
+        // precedence and short-circuiting are the parser's own. A ":" (a ternary's or a map's),
+        // "=" or a compound assignment after the literal ends the value, as before.
+        static int s_listOperands;
+        static Variable ListOperand(Variable list, ParsingScript script, char[] sep, bool eatLast)
+        {
+            int start = script.Pointer;
+            int end = start - 1;
+            while (end > 0 && script.String[end] == Constants.SPACE)
+            {
+                end--;
+            }
+            script.MoveForwardIf(Constants.SPACE);
+            // An empty literal's parse can take what follows it, "f({}) + x" -- only a literal that
+            // ended at its own "}" has an operand after it.
+            if (!script.StillValid() || end < 0 || script.String[end] != Constants.END_GROUP)
+            {
+                script.Pointer = start;
+                return list;
+            }
+            int operatorAt = script.Pointer;
+            string action = script.Current == Constants.TERNARY_OPERATOR ? "?" : ValidAction(script.Rest);
+            if (action == null || action == ":" || action == "=" || action == "->" ||
+                (action.Length > 1 && action.EndsWith("=") && action != "==" && action != "!=" &&
+                 action != "<=" && action != ">=" && action != "===" && action != "!=="))
+            {
+                script.Pointer = start;
+                return list;
+            }
+            var interpreter = script.InterpreterInstance;
+            var name = "__cscs_list_operand_" + System.Threading.Interlocked.Increment(ref s_listOperands);
+            interpreter.AddGlobalOrLocalVariable(name, new GetVarFunction(list), script);
+            try
+            {
+                var tempScript = script.GetTempScript(name + script.String.Substring(operatorAt));
+                tempScript.Namespace = script.Namespace;
+                tempScript.CurrentClass = script.CurrentClass;
+                tempScript.ClassInstance = script.ClassInstance;
+                Variable result = tempScript.Execute(sep);
+                script.Pointer = operatorAt + Math.Max(0, tempScript.Pointer - name.Length);
+                if (eatLast)
+                {
+                    script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+                }
+                return result;
+            }
+            finally
+            {
+                interpreter.PopLocalVariable(name);
+                interpreter.RemoveGlobal(name);
+            }
         }
 
         static char[] TryAddCharToArray(char[] array, char[] extraSep)
@@ -67,7 +122,9 @@ namespace SplitAndMerge
 
             if (script.Current == Constants.START_GROUP)
             {
-                return ProcessList(script);
+                return ListOperand(ProcessList(script), script,
+                    TryAddCharToArray(script.ProcessingList ? Constants.NEXT_OR_END_ARRAY_EXT : Constants.NEXT_OR_END_ARRAY, extraSep),
+                    eatLast);
             }
             if (script.Current == Constants.START_ARRAY)
             {
@@ -407,6 +464,10 @@ namespace SplitAndMerge
             bool inQuotes2 = false;
             char prev = Constants.EMPTY;
             char prevprev = Constants.EMPTY;
+            // Looking for a ternary's ":", the ":" of a ternary nested in the skipped branch is
+            // not it, in parentheses or not: "x ? (x ? 1 : 2) : 3" with x false answered 2.
+            bool toSeparator = toChar == Constants.TERNARY_SEPARATOR[0];
+            int nestedTernaries = 0;
 
             while (script.StillValid())
             {
@@ -416,11 +477,27 @@ namespace SplitAndMerge
                     script.Forward();
                     continue;
                 }
-                if (currentChar == toChar && braceRead <= 0)
+                if (currentChar == toChar && braceRead <= 0 && !(toSeparator && argRead > 0) && !inQuotes)
                 {
                     // Not inside a literal: a map literal in a ternary branch holds the very
                     // ":" this is looking for -- "c ? {\"a\":1} : {\"b\":2}".
+                    if (toSeparator && nestedTernaries > 0)
+                    {
+                        nestedTernaries--;
+                        script.Forward();
+                        prevprev = prev;
+                        prev = currentChar;
+                        continue;
+                    }
                     return;
+                }
+                if (toSeparator && currentChar == Constants.TERNARY_OPERATOR && argRead <= 0 && braceRead <= 0 && !inQuotes)
+                {
+                    nestedTernaries++;
+                    script.Forward();
+                    prevprev = prev;
+                    prev = currentChar;
+                    continue;
                 }
 
                 switch (currentChar)
@@ -582,7 +659,21 @@ namespace SplitAndMerge
             // character belonging to the body between start and end characters. 
             while (script.Pointer < tempScript.Pointer)
             {
-                Variable item = Utils.GetItem(script, false);
+                // One level deeper while the argument is read: an assignment at the called script
+                // function's own level names a parameter (ParsingScript.NamedArgDepth).
+                Variable item;
+                var outerArgStart = script.ArgStart;
+                script.ArgDepth++;
+                script.ArgStart = script.Pointer;
+                try
+                {
+                    item = Utils.GetItem(script, false);
+                }
+                finally
+                {
+                    script.ArgDepth--;
+                    script.ArgStart = outerArgStart;
+                }
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
@@ -637,7 +728,21 @@ namespace SplitAndMerge
 
             while (script.Pointer < tempScript.Pointer)
             {
-                Variable item = await Utils.GetItemAsync(script, false);
+                // One level deeper while the argument is read: an assignment at the called script
+                // function's own level names a parameter (ParsingScript.NamedArgDepth).
+                Variable item;
+                var outerArgStart = script.ArgStart;
+                script.ArgDepth++;
+                script.ArgStart = script.Pointer;
+                try
+                {
+                    item = await Utils.GetItemAsync(script, false);
+                }
+                finally
+                {
+                    script.ArgDepth--;
+                    script.ArgStart = outerArgStart;
+                }
                 args.Add(item);
                 if (script.Pointer < tempScript.Pointer)
                 {
@@ -783,7 +888,7 @@ namespace SplitAndMerge
             var sep = new char[] { ' ' };
             for (int i = 0; i < args.Count; i++)
             {
-                var arg1 = args[i].ToLower().Trim();
+                var arg1 = args[i].Trim();
                 // A default value, as in "cfunction f(int n = 5)". Split it off first: the
                 // name was taken as the last space-separated word, which for "int n = 5" was
                 // "5" -- an argument called 5, rejected at the first call as an illegal name,
@@ -797,6 +902,10 @@ namespace SplitAndMerge
                     defValue = arg1.Substring(eq + 1).Trim();
                     arg1 = arg1.Substring(0, eq).Trim();
                 }
+                // Only the type and the name are lowercased: lowercasing the whole argument
+                // turned the default of "string s = \"HeLLo\"" into "hello", which an
+                // interpreted function keeps as written.
+                arg1 = arg1.ToLower();
                 string[] pair = arg1.Split(sep, StringSplitOptions.RemoveEmptyEntries);
                 var pair1 = pair[0];
                 var pair2 = pair[pair.Length - 1];
@@ -1419,6 +1528,43 @@ namespace SplitAndMerge
                     continue;
                 }
                 var needed = tokens.Contains(token);
+                // A class or a namespace is skipped whole: what is declared inside belongs to it.
+                // Read a statement at a time, "SmShared(){}function Put(x){...return ...}" had no
+                // ";" before "function", so the keyword went by as text and the method's "return"
+                // was extracted as a top-level statement ("Unbalanced curly braces"); a method
+                // that was found was hoisted out of its class as a global function.
+                if (!needed && (token == Constants.CLASS || token == Constants.NAMESPACE.ToLower()))
+                {
+                    while (script.StillValid() && script.Current != Constants.START_GROUP &&
+                           script.Current != Constants.END_STATEMENT)
+                    {
+                        script.Forward();
+                    }
+                    if (script.StillValid() && script.Current == Constants.START_GROUP)
+                    {
+                        int depth = 0;
+                        bool quoted = false;
+                        char before = Constants.EMPTY;
+                        while (script.StillValid())
+                        {
+                            char ch = script.CurrentAndForward();
+                            if (ch == Constants.QUOTE && before != '\\')
+                            {
+                                quoted = !quoted;
+                            }
+                            else if (!quoted && ch == Constants.START_GROUP)
+                            {
+                                depth++;
+                            }
+                            else if (!quoted && ch == Constants.END_GROUP && --depth == 0)
+                            {
+                                break;
+                            }
+                            before = ch;
+                        }
+                    }
+                    continue;
+                }
                 var needForward = false;
                 string extracted = token;
                 if (!needed)
@@ -1755,6 +1901,32 @@ namespace SplitAndMerge
             delta = deltaRes;
             return arrayIndices;
         }
+        // The "]" that closes the subscript opened at start, past any nested one and any quoted
+        // text. The next "]" was taken instead, so in "g[0][g[0].Size - 1]" the second subscript ended
+        // inside itself and the rest was read as a name: "Couldn't find variable [1]]".
+        static int MatchingArrayEnd(string text, int start)
+        {
+            int depth = 0;
+            bool inQuotes = false;
+            for (int i = start; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == Constants.QUOTE && (i == 0 || text[i - 1] != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (!inQuotes && ch == Constants.START_ARRAY)
+                {
+                    depth++;
+                }
+                else if (!inQuotes && ch == Constants.END_ARRAY && --depth == 0)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         public static List<Variable> GetArrayIndices(ParsingScript script, string varName, int end, Action<string, int> updateVals=null)
         {
             List<Variable> indices = new List<Variable>();
@@ -1769,7 +1941,7 @@ namespace SplitAndMerge
             while (argStart < varName.Length &&
                    varName[argStart] == Constants.START_ARRAY)
             {
-                int argEnd = varName.IndexOf(Constants.END_ARRAY, argStart + 1);
+                int argEnd = MatchingArrayEnd(varName, argStart);
                 if (argEnd == -1 || argEnd <= argStart + 1)
                 {
                     break;
@@ -1810,7 +1982,7 @@ namespace SplitAndMerge
             while (argStart < varName.Length &&
                    varName[argStart] == Constants.START_ARRAY)
             {
-                int argEnd = varName.IndexOf(Constants.END_ARRAY, argStart + 1);
+                int argEnd = MatchingArrayEnd(varName, argStart);
                 if (argEnd == -1 || argEnd <= argStart + 1)
                 {
                     break;
@@ -1857,6 +2029,19 @@ namespace SplitAndMerge
             for (int i = 0; i < indices.Count; i++)
             {
                 Variable index = indices[i];
+                // Text: the character at that position, as text -- "abc"[1] is "b".
+                if (currLevel.Type == Variable.VarType.STRING && index.Type == Variable.VarType.NUMBER)
+                {
+                    var text = currLevel.AsString();
+                    int at = (int)index.Value;
+                    if (at < 0 || at >= text.Length || index.Value != Math.Floor(index.Value))
+                    {
+                        ThrowErrorMsg("Unknown index [" + index.AsString() +
+                                      "] for text of length " + text.Length, script, index.AsString());
+                    }
+                    currLevel = new Variable(text[at].ToString());
+                    continue;
+                }
                 int arrayIndex = currLevel.GetArrayIndex(index);
 
                 int tupleSize = currLevel.Tuple != null ? currLevel.Tuple.Count : 0;

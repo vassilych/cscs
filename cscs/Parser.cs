@@ -150,6 +150,30 @@ namespace SplitAndMerge
             return listToMerge;
         }
 
+        // Whether the operand collected so far has a "[" it has not closed, outside quotes.
+        static bool HasOpenSubscript(StringBuilder item)
+        {
+            int open = 0;
+            bool quoted = false;
+            for (int i = 0; i < item.Length; i++)
+            {
+                char c = item[i];
+                if (c == Constants.QUOTE && (i == 0 || item[i - 1] != '\\'))
+                {
+                    quoted = !quoted;
+                }
+                else if (!quoted && c == Constants.START_ARRAY)
+                {
+                    open++;
+                }
+                else if (!quoted && c == Constants.END_ARRAY)
+                {
+                    open--;
+                }
+            }
+            return open > 0;
+        }
+
         public static string ExtractNextToken(ParsingScript script, char[] to, ref bool inQuotes,
             ref int arrayIndexDepth, ref int negated, ref int bitNegated, out char ch, out string action,
             bool throwExc = true)
@@ -178,7 +202,11 @@ namespace SplitAndMerge
                 ch = script.CurrentAndForward();
                 CheckQuotesIndices(script, ch, ref inQuotes, ref arrayIndexDepth);
 
+                // A "]" that closes a subscript of this operand's own belongs to it even where "]"
+                // also ends the expression -- inside an index, "g[1][g[0][0]]": the token stopped
+                // at "g[0]", and the element read was the whole row.
                 bool keepCollecting = inQuotes || arrayIndexDepth > 0 ||
+                     (ch == Constants.END_ARRAY && HasOpenSubscript(item)) ||
                      StillCollecting(item.ToString(), to, script, ref action);
                 if (keepCollecting)
                 {
@@ -242,11 +270,13 @@ namespace SplitAndMerge
                 current = new Variable(-1 * current.Value);
             }
 
-            if (negated > 0 && current.Type == Variable.VarType.NUMBER)
+            if (negated > 0)
             {
-                // If there has been a NOT sign, this is a boolean.
+                // If there has been a NOT sign, this is a boolean -- for any value, by the one
+                // truth rule (Variable.IsTrue): "!\"abc\"" is 0, "!{}" is 1. It used to leave
+                // anything but a number as it was.
                 // Use XOR (true if exactly one of the arguments is true).
-                bool neg = !((negated % 2 == 0) ^ Convert.ToBoolean(current.Value));
+                bool neg = !((negated % 2 == 0) ^ current.IsTrue());
                 current = new Variable(Convert.ToDouble(neg));
                 negated = 0;
             }
@@ -291,9 +321,12 @@ namespace SplitAndMerge
             }
 
             char next = script.TryCurrent(); // we've already moved forward
+            // Not done before a "?": text or a list can be a ternary's condition too, and ending
+            // the expression here left the "?" to be read as a token of its own.
             bool done = listToMerge.Count == 0 &&
                         (next == Constants.END_STATEMENT ||
-                        (action == Constants.NULL_ACTION && current.Type != Variable.VarType.NUMBER) ||
+                        (action == Constants.NULL_ACTION && current.Type != Variable.VarType.NUMBER &&
+                         next != Constants.TERNARY_OPERATOR) ||
                          current.IsReturn);
             if (done)
             {
@@ -506,27 +539,35 @@ namespace SplitAndMerge
             Variable result;
             Variable arg1 = MergeList(listInput, script);
             script.MoveForwardIf(Constants.TERNARY_OPERATOR);
-            double condition = arg1.AsDouble();
-            if (condition != 0)
+            // The one truth rule (Variable.IsTrue): text or a list as the condition used to fail
+            // here ("Couldn't find variable []"), reading it as a number.
+            if (arg1.IsTrue())
             {
-                result = Utils.GetItem(script, true, Constants.TERNARY_SEPARATOR);
+                // The branch runs to its own ":", past any ternary nested in it: evaluated in
+                // place, "x ? x ? 1 : 2 : 3" stopped at the inner ":" and the nested ternary's
+                // skip then ate the rest of the statement -- print's later arguments too.
+                int branchStart = script.Pointer;
+                Utils.SkipRestExpr(script, Constants.TERNARY_SEPARATOR[0]);
+                string branch = script.Substr(branchStart, script.Pointer - branchStart);
+                if (branch.IndexOf(Constants.TERNARY_OPERATOR) >= 0)
+                {
+                    ParsingScript branchScript = script.GetTempScript(branch);
+                    branchScript.Namespace = script.Namespace;
+                    branchScript.CurrentClass = script.CurrentClass;
+                    result = Utils.GetItem(branchScript, true);
+                }
+                else
+                {
+                    script.Pointer = branchStart;
+                    result = Utils.GetItem(script, true, Constants.TERNARY_SEPARATOR);
+                }
                 result.TrySetAsMap();
                 script.MoveForwardIf(Constants.TERNARY_SEPARATOR);
                 Utils.SkipRestExpr(script, Constants.END_STATEMENT);
+                // What follows the ternary's group -- ") + \">\"" -- is the enclosing expression's,
+                // as it is after the other branch. Joining it here added it as a number to a
+                // number branch and dropped it after a list: "<" + (c ? 7 : "x") + ">" was "<7".
                 script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
-                if (script.Current == '+')
-                {
-                    script.Forward();
-                    var rest = GetNextItem(script);
-                    if (result.Type == Variable.VarType.NUMBER)
-                    {
-                        result.Value += rest.AsDouble();
-                    }
-                    else
-                    {
-                        result.String += rest.AsString();
-                    }
-                }
             }
             else
             {
@@ -554,26 +595,96 @@ namespace SplitAndMerge
             return result;
         }
 
+        // Where the next "||" of this expression's own level is, or -1 when the expression ends
+        // first -- at ";", ",", "?", ":" or a closing bracket of an enclosing level.
+        static int OrAtSameLevel(ParsingScript script)
+        {
+            int depth = 0;
+            bool quoted = false;
+            for (int i = script.Pointer; i < script.Size(); i++)
+            {
+                char c = script.At(i);
+                if (c == Constants.QUOTE && (i == 0 || script.At(i - 1) != '\\'))
+                {
+                    quoted = !quoted;
+                    continue;
+                }
+                if (quoted)
+                {
+                    continue;
+                }
+                if (c == '(' || c == '[' || c == '{')
+                {
+                    depth++;
+                }
+                else if (c == ')' || c == ']' || c == '}')
+                {
+                    if (depth-- == 0)
+                    {
+                        return -1;
+                    }
+                }
+                else if (depth == 0 && (c == ';' || c == ',' || c == '?' || c == ':'))
+                {
+                    return -1;
+                }
+                else if (depth == 0 && c == '|' && i + 1 < script.Size() && script.At(i + 1) == '|')
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         static bool UpdateIfBool(ParsingScript script, Variable current, Action<Variable> updateCurrent, List<Variable> listInput, Action<List<Variable>> listToMerge)
         {
             // Short-circuit evaluation: check if don't need to evaluate more.
+            // The left operand of "&&" / "||" is worked out first: the cells before it that bind
+            // at least as tightly -- "1 < 2" in "1 < 2 && 5". Only those: merging the whole list
+            // took in "0 ||" in "0 || r.Size < 2 && 0", whose "||" binds more loosely, and Merge
+            // then waited for a cell it could merge that with, for ever. And the merged operand
+            // stays in the list: it was dropped, so "1 < 2 && 5" was 5 rather than 1.
             bool needToAdd = true;
             if ((current.Action == "&&" || current.Action == "||") &&
                     listInput.Count > 0)
             {
-                if (CanMergeCells(listInput.Last(), current))
+                int priority = GetPriority(current.Action);
+                int start = listInput.Count;
+                while (start > 0 && GetPriority(listInput[start - 1].Action) >= priority)
                 {
-                    listInput.Add(current);
-                    current = MergeList(listInput, script);
+                    start--;
+                }
+                if (start < listInput.Count)
+                {
+                    var operand = listInput.GetRange(start, listInput.Count - start);
+                    operand.Add(current);
+                    current = MergeList(operand, script);
+                    listInput.RemoveRange(start, listInput.Count - start);
                     updateCurrent(current);
-                    listInput.Clear();
-                    needToAdd = false;
                 }
             }
-            if ((current.Action == "&&" && current.Value == 0.0) ||
-                (current.Action == "||" && current.Value != 0.0))
+            // A false "&&" skips its own right side only, up to an "||" at the same level:
+            // "0 && x || 1" is 1. Skipping to the end of the expression answered 0.
+            if (current.Action == "&&" && !current.IsTrue())
             {
+                int orAt = OrAtSameLevel(script);
+                if (orAt >= 0)
+                {
+                    script.Pointer = orAt + 2;
+                    current = new Variable(0);
+                    current.Action = "||";
+                    updateCurrent(current);
+                    listToMerge(listInput);
+                    return true;
+                }
+            }
+            if ((current.Action == "&&" && !current.IsTrue()) ||
+                (current.Action == "||" && current.IsTrue()))
+            {
+                // The rest is not evaluated, and the answer is the truth value, 1 or 0 -- not the
+                // left operand itself, which "3 || 0" used to give back as 3.
                 Utils.SkipRestExpr(script);
+                current = new Variable(current.Action == "||" ? 1 : 0);
                 current.Action = Constants.NULL_ACTION;
                 needToAdd = true;
                 updateCurrent(current);
@@ -660,6 +771,21 @@ namespace SplitAndMerge
             return current;
         }
 
+        /// <summary>
+        /// One binary operation exactly as an expression performs it: left value, operator,
+        /// right value. For precompiled code that has both values in hand and needs the
+        /// interpreter's answer (CscsOps). Both are copied; neither is changed.
+        /// </summary>
+        internal static Variable MergePair(Variable left, string action, Variable right, ParsingScript script)
+        {
+            var leftCell = left.Clone();
+            var rightCell = right.Clone();
+            leftCell.Action = action;
+            rightCell.Action = Constants.NULL_ACTION;
+            MergeCells(leftCell, rightCell, script);
+            return leftCell;
+        }
+
         private static void MergeCells(Variable leftCell, Variable rightCell, ParsingScript script)
         {
             if (leftCell.IsReturn ||
@@ -669,7 +795,14 @@ namespace SplitAndMerge
                 // Done!
                 return;
             }
-            if (leftCell.Type  == Variable.VarType.NUMBER &&
+            if (leftCell.Action == "&&" || leftCell.Action == "||")
+            {
+                // "&&" and "||" answer 1 or 0 whatever they join, by the truth rule.
+                bool left = leftCell.IsTrue();
+                bool right = rightCell.IsTrue();
+                leftCell.Value = (leftCell.Action == "&&" ? left && right : left || right) ? 1 : 0;
+            }
+            else if (leftCell.Type  == Variable.VarType.NUMBER &&
                 rightCell.Type == Variable.VarType.NUMBER)
             {
                 MergeNumbers(leftCell, rightCell, script);
@@ -809,6 +942,12 @@ namespace SplitAndMerge
                 case "!==":
                     leftCell.Value = Convert.ToDouble(leftCell.Value != rightCell.Value);
                     break;
+                case "<<":
+                    leftCell.Value = (int)leftCell.Value << (int)rightCell.Value;
+                    break;
+                case ">>":
+                    leftCell.Value = (int)leftCell.Value >> (int)rightCell.Value;
+                    break;
                 case "&":
                     leftCell.Value = (int)leftCell.Value & (int)rightCell.Value;
                     break;
@@ -920,12 +1059,15 @@ namespace SplitAndMerge
             {
                 case "**":
                 case "++":
-                case "--": return 11;
+                case "--": return 12;
                 case "%":
                 case "*":
-                case "/":  return 10;
+                case "/":  return 11;
                 case "+":
-                case "-":  return 9;
+                case "-":  return 10;
+                // Shifts bind between + - and the comparisons, as in C#: 1 << 2 + 1 is 8.
+                case "<<":
+                case ">>": return 9;
                 case "<":
                 case ">":
                 case ">=":

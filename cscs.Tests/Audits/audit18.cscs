@@ -1,0 +1,120 @@
+class Pt { x = 0; t = "ab"; function Pt(a) { x = a; } }
+fsD = 0;
+cfunction fsc0(int n) { p = new Pt(n); r = ++p.x; return r + "/" + p.x; }
+function fsi0(n) { p = new Pt(n); r = ++p.x; return r + "/" + p.x; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc0(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi0(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.x; return r + '/' + p.x; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc0")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc0(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi0(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.x; return r + '/' + p.x; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc0")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc0(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi0(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.x; return r + '/' + p.x; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc0")); }
+if (!is_precompiled("fsc0")) { print("FALLBACK p = new Pt(n); r = ++p.x; return r + '/' + p.x;"); }
+cfunction fsc1(int n) { p = new Pt(n); r = p.x++; return r + "/" + p.x; }
+function fsi1(n) { p = new Pt(n); r = p.x++; return r + "/" + p.x; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = p.x++; return r + '/' + p.x; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc1")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = p.x++; return r + '/' + p.x; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc1")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc1(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi1(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = p.x++; return r + '/' + p.x; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc1")); }
+if (!is_precompiled("fsc1")) { print("FALLBACK p = new Pt(n); r = p.x++; return r + '/' + p.x;"); }
+cfunction fsc2(int n) { p = new Pt(n); r = --p.x; return r + "/" + p.x; }
+function fsi2(n) { p = new Pt(n); r = --p.x; return r + "/" + p.x; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = --p.x; return r + '/' + p.x; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc2")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = --p.x; return r + '/' + p.x; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc2")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc2(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi2(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = --p.x; return r + '/' + p.x; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc2")); }
+if (!is_precompiled("fsc2")) { print("FALLBACK p = new Pt(n); r = --p.x; return r + '/' + p.x;"); }
+cfunction fsc3(int n) { p = new Pt(n); r = ++p.t; return r + "/" + p.t; }
+function fsi3(n) { p = new Pt(n); r = ++p.t; return r + "/" + p.t; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.t; return r + '/' + p.t; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc3")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.t; return r + '/' + p.t; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc3")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc3(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi3(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.t; return r + '/' + p.t; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc3")); }
+if (!is_precompiled("fsc3")) { print("FALLBACK p = new Pt(n); r = ++p.t; return r + '/' + p.t;"); }
+cfunction fsc4(int n) { p = new Pt(n); r = ++p.zz; return r; }
+function fsi4(n) { p = new Pt(n); r = ++p.zz; return r; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.zz; return r; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc4")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.zz; return r; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc4")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc4(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi4(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF p = new Pt(n); r = ++p.zz; return r; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc4")); }
+if (!is_precompiled("fsc4")) { print("FALLBACK p = new Pt(n); r = ++p.zz; return r;"); }
+cfunction fsc5(int n) { return 4 * "ab" * 2; }
+function fsi5(n) { return 4 * "ab" * 2; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 4 * 'ab' * 2; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc5")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 4 * 'ab' * 2; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc5")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc5(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi5(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 4 * 'ab' * 2; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc5")); }
+if (!is_precompiled("fsc5")) { print("FALLBACK return 4 * 'ab' * 2;"); }
+cfunction fsc6(int n) { return n * "ab"; }
+function fsi6(n) { return n * "ab"; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n * 'ab'; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc6")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n * 'ab'; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc6")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc6(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi6(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n * 'ab'; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc6")); }
+if (!is_precompiled("fsc6")) { print("FALLBACK return n * 'ab';"); }
+cfunction fsc7(int n) { return "ab" * n; }
+function fsi7(n) { return "ab" * n; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' * n; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc7")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' * n; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc7")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc7(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi7(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' * n; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc7")); }
+if (!is_precompiled("fsc7")) { print("FALLBACK return 'ab' * n;"); }
+cfunction fsc8(int n) { return n - "ab"; }
+function fsi8(n) { return n - "ab"; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n - 'ab'; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc8")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n - 'ab'; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc8")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc8(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi8(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n - 'ab'; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc8")); }
+if (!is_precompiled("fsc8")) { print("FALLBACK return n - 'ab';"); }
+cfunction fsc9(int n) { return "ab" / n; }
+function fsi9(n) { return "ab" / n; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' / n; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc9")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' / n; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc9")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc9(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi9(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return 'ab' / n; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc9")); }
+if (!is_precompiled("fsc9")) { print("FALLBACK return 'ab' / n;"); }
+cfunction fsc10(int n) { return n % "3"; }
+function fsi10(n) { return n % "3"; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n % '3'; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc10")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n % '3'; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc10")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc10(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi10(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return n % '3'; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc10")); }
+if (!is_precompiled("fsc10")) { print("FALLBACK return n % '3';"); }
+cfunction fsc11(int n) { s = "x"; return s * n + 1; }
+function fsi11(n) { s = "x"; return s * n + 1; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF s = 'x'; return s * n + 1; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc11")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF s = 'x'; return s * n + 1; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc11")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc11(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi11(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF s = 'x'; return s * n + 1; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc11")); }
+if (!is_precompiled("fsc11")) { print("FALLBACK s = 'x'; return s * n + 1;"); }
+cfunction fsc12(int n) { return "3" * "4"; }
+function fsi12(n) { return "3" * "4"; }
+a1 = ""; a2 = ""; try { a1 = "" + fsc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return '3' * '4'; on 0 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc12")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return '3' * '4'; on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc12")); }
+a1 = ""; a2 = ""; try { a1 = "" + fsc12(2); } catch (e) { a1 = "ERR"; } try { a2 = "" + fsi12(2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { fsD++; print("DIFF return '3' * '4'; on 2 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("fsc12")); }
+if (!is_precompiled("fsc12")) { print("FALLBACK return '3' * '4';"); }
+print("FS DONE diffs " + fsD);

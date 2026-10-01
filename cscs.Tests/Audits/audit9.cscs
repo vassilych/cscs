@@ -1,0 +1,318 @@
+cfDiffs = 0; cfCompiled = 0; cfTotal = 0; cfMissing = "";
+cfunction cxc1(variable x) { switch (x) { case 3: return "three"; case "abc": return "text"; default: return "other"; } }
+function cxi1(x) { switch (x) { case 3: return "three"; case "abc": return "text"; default: return "other"; } }
+cfTotal++; cfCompiled += is_precompiled("cxc1"); if (!is_precompiled("cxc1")) { cfMissing += "switch (x) { case 3: return 'three'; case 'abc': return 'text'; default: return 'other'; } | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc1("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi1("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF switch (x) { case 3: return 'three'; case 'abc': return 'tex on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc2(variable x) { r = ""; switch (x) { case 0: r = "zero"; break; case "5": r = "five"; break; default: r = "d"; } return r; }
+function cxi2(x) { r = ""; switch (x) { case 0: r = "zero"; break; case "5": r = "five"; break; default: r = "d"; } return r; }
+cfTotal++; cfCompiled += is_precompiled("cxc2"); if (!is_precompiled("cxc2")) { cfMissing += "r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r = 'five'; break; default: r = 'd'; } return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc2("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi2("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = ''; switch (x) { case 0: r = 'zero'; break; case '5': r  on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc3(variable x) { try { if (x == 3) { throw "t" + x; } return "no"; } catch (e) { return "caught " + e; } }
+function cxi3(x) { try { if (x == 3) { throw "t" + x; } return "no"; } catch (e) { return "caught " + e; } }
+cfTotal++; cfCompiled += is_precompiled("cxc3"); if (!is_precompiled("cxc3")) { cfMissing += "try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e) { return 'caught ' + e; } | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc3("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi3("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { if (x == 3) { throw 't' + x; } return 'no'; } catch (e on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc4(variable x) { try { throw x; } catch (e) { return "c:" + e; } }
+function cxi4(x) { try { throw x; } catch (e) { return "c:" + e; } }
+cfTotal++; cfCompiled += is_precompiled("cxc4"); if (!is_precompiled("cxc4")) { cfMissing += "try { throw x; } catch (e) { return 'c:' + e; } | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc4("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi4("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { throw x; } catch (e) { return 'c:' + e; } on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc5(variable x) { try { r = x / 0; return r; } catch (e) { return "err"; } }
+function cxi5(x) { try { r = x / 0; return r; } catch (e) { return "err"; } }
+cfTotal++; cfCompiled += is_precompiled("cxc5"); if (!is_precompiled("cxc5")) { cfMissing += "try { r = x / 0; return r; } catch (e) { return 'err'; } | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc5("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi5("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF try { r = x / 0; return r; } catch (e) { return 'err'; } on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc6(variable x) { s = 0; for (e : x) { if (e == 2) { continue; } s += e; } return s; }
+function cxi6(x) { s = 0; for (e : x) { if (e == 2) { continue; } s += e; } return s; }
+cfTotal++; cfCompiled += is_precompiled("cxc6"); if (!is_precompiled("cxc6")) { cfMissing += "s = 0; for (e : x) { if (e == 2) { continue; } s += e; } return s; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc6("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi6("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = 0; for (e : x) { if (e == 2) { continue; } s += e; } ret on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc7(variable x) { s = ""; for (e : x) { if (e == "a") { break; } s += e; } return s; }
+function cxi7(x) { s = ""; for (e : x) { if (e == "a") { break; } s += e; } return s; }
+cfTotal++; cfCompiled += is_precompiled("cxc7"); if (!is_precompiled("cxc7")) { cfMissing += "s = ''; for (e : x) { if (e == 'a') { break; } s += e; } return s; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc7("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi7("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF s = ''; for (e : x) { if (e == 'a') { break; } s += e; } ret on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc8(variable x) { n = 0; for (e : x) { for (f : x) { n++; } } return n; }
+function cxi8(x) { n = 0; for (e : x) { for (f : x) { n++; } } return n; }
+cfTotal++; cfCompiled += is_precompiled("cxc8"); if (!is_precompiled("cxc8")) { cfMissing += "n = 0; for (e : x) { for (f : x) { n++; } } return n; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc8("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi8("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; for (e : x) { for (f : x) { n++; } } return n; on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc9(variable x) { n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } n += i; } return n; }
+function cxi9(x) { n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } n += i; } return n; }
+cfTotal++; cfCompiled += is_precompiled("cxc9"); if (!is_precompiled("cxc9")) { cfMissing += "n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } n += i; } return n; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc9("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi9("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; i = 0; while (i < 5) { i++; if (i == x) { continue; } on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc10(variable x) { n = 0; do { n++; } while (n < 3); return n + x; }
+function cxi10(x) { n = 0; do { n++; } while (n < 3); return n + x; }
+cfTotal++; cfCompiled += is_precompiled("cxc10"); if (!is_precompiled("cxc10")) { cfMissing += "n = 0; do { n++; } while (n < 3); return n + x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc10("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi10("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF n = 0; do { n++; } while (n < 3); return n + x; on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc11(variable x) { if (x) { return 1; } elif (x == 0) { return 2; } else { return 3; } }
+function cxi11(x) { if (x) { return 1; } elif (x == 0) { return 2; } else { return 3; } }
+cfTotal++; cfCompiled += is_precompiled("cxc11"); if (!is_precompiled("cxc11")) { cfMissing += "if (x) { return 1; } elif (x == 0) { return 2; } else { return 3; } | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc11("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi11("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF if (x) { return 1; } elif (x == 0) { return 2; } else { retu on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc12(variable x) { r = x == 3 ? "a" : (x == "abc" ? "b" : "c"); return r; }
+function cxi12(x) { r = x == 3 ? "a" : (x == "abc" ? "b" : "c"); return r; }
+cfTotal++; cfCompiled += is_precompiled("cxc12"); if (!is_precompiled("cxc12")) { cfMissing += "r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc12("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi12("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF r = x == 3 ? 'a' : (x == 'abc' ? 'b' : 'c'); return r; on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc13(variable x) { k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k += i; } return k + "" + x; }
+function cxi13(x) { k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k += i; } return k + "" + x; }
+cfTotal++; cfCompiled += is_precompiled("cxc13"); if (!is_precompiled("cxc13")) { cfMissing += "k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k += i; } return k + '' + x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc13("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi13("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF k = 0; for (i = 0; i < 3; i++) { if (i == 1) { continue; } k on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc14(variable x) { return x == 3 || x == "abc"; }
+function cxi14(x) { return x == 3 || x == "abc"; }
+cfTotal++; cfCompiled += is_precompiled("cxc14"); if (!is_precompiled("cxc14")) { cfMissing += "return x == 3 || x == 'abc'; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc14("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi14("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return x == 3 || x == 'abc'; on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction cxc15(variable x) { return !(x == 3) && x != ""; }
+function cxi15(x) { return !(x == 3) && x != ""; }
+cfTotal++; cfCompiled += is_precompiled("cxc15"); if (!is_precompiled("cxc15")) { cfMissing += "return !(x == 3) && x != ''; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cxc15("3"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cxi15("3"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF return !(x == 3) && x != ''; on '3' -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT9 DONE compiled " + cfCompiled + " of " + cfTotal + ", diffs " + cfDiffs);
+print("NOT COMPILED: " + cfMissing);

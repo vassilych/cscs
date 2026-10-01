@@ -196,13 +196,40 @@ namespace SplitAndMerge
 
         public virtual Variable Clone()
         {
+            MakeMaps();
             Variable newVar = (Variable)this.MemberwiseClone();
             newVar.ID = ++GlobalID;
             return newVar;
         }
 
+        /// <summary>
+        /// Makes this Variable hold what another holds -- type, number, text, collection,
+        /// object -- keeping its own identity (ID, Parent, ParamName). A compound assignment works
+        /// on the variable's own cell, which may be an element inside a collection, and now
+        /// computes its result as "x = x op y" does (OperatorAssignFunction.ProcessOperator).
+        /// </summary>
+        // Looked up once: a compound assignment copies through these on every run.
+        static readonly System.Reflection.FieldInfo[] s_instanceFields = typeof(Variable).GetFields(
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public |
+            System.Reflection.BindingFlags.NonPublic);
+
+        internal void CopyValueFrom(Variable other)
+        {
+            var keepId = ID;
+            var keepParent = Parent;
+            var keepName = ParamName;
+            foreach (var field in s_instanceFields)
+            {
+                field.SetValue(this, field.GetValue(other));
+            }
+            ID = keepId;
+            Parent = keepParent;
+            ParamName = keepName;
+        }
+
         public virtual Variable DeepClone(string newName = "")
         {
+            MakeMaps();
             Variable newVar = (Variable)this.MemberwiseClone();
             newVar.ID = ++GlobalID;
             if (Type == VarType.ARRAY && m_tuple != null)
@@ -648,6 +675,40 @@ namespace SplitAndMerge
 
             string hash = indexVar.AsString();
             return Exists(hash);
+        }
+
+        /// <summary>
+        /// Whether the value counts as true in a condition, "?:", "!", "&&" and "||": a number
+        /// that is not 0; text that is not empty, "0" or "false" (any case); a list or map that
+        /// is not empty; null, undefined and NONE never; anything else -- an object, a date --
+        /// always. One rule for every place a script asks, where each place used to ask the raw
+        /// numeric field and text and lists came out by accident (an empty list true, "abc" false).
+        /// </summary>
+        public bool IsTrue()
+        {
+            switch (Type)
+            {
+                case VarType.NUMBER:
+                case VarType.INT:
+                    return Value != 0.0 && !double.IsNaN(Value);
+                case VarType.STRING:
+                    var text = AsString();
+                    return text.Length > 0 && text != "0" &&
+                           !text.Equals("false", StringComparison.OrdinalIgnoreCase);
+                case VarType.ARRAY:
+                case VarType.ARRAY_NUM:
+                case VarType.ARRAY_STR:
+                case VarType.ARRAY_INT:
+                case VarType.MAP_INT:
+                case VarType.MAP_NUM:
+                case VarType.MAP_STR:
+                    return (Tuple != null && Tuple.Count > 0) || (m_dictionary != null && m_dictionary.Count > 0);
+                case VarType.NONE:
+                case VarType.UNDEFINED:
+                    return false;
+                default:
+                    return Object != null || Type != VarType.OBJECT;
+            }
         }
 
         public virtual bool AsBool()
@@ -1162,9 +1223,10 @@ namespace SplitAndMerge
         /// for those, so "a[0].Size" on a scalar element came back as 1 where the interpreter
         /// says 0. Nothing in the interpreter reads this; it exists for precompiled code.
         /// </summary>
+        // The number of elements of a collection, and of characters of text (0 for text before).
         public int Size
         {
-            get { return Type == VarType.ARRAY ? Count : 0; }
+            get { return Type == VarType.ARRAY ? Count : Type == VarType.STRING ? AsString().Length : 0; }
         }
 
         public int Count
@@ -1195,7 +1257,7 @@ namespace SplitAndMerge
             }
             if (!BothNumbers(left, right))
             {
-                return new Variable(left.AsString() + right.AsString());
+                return InterpreterMerge(left, "+", right);
             }
             return new Variable(left.Value + right.Value);
         }
@@ -1250,6 +1312,17 @@ namespace SplitAndMerge
                    left.Type == VarType.NUMBER && right.Type == VarType.NUMBER;
         }
 
+        /// <summary>
+        /// Anything but two numbers, merged as the interpreter merges it (Parser.MergePair) --
+        /// not just the text it gives, but the value it leaves: "x + \"!\"" keeps the left side's
+        /// number underneath the text, which is what the interpreter's truth test reads ("if (x +
+        /// \"!\")" is true for x = 3, false for "abc"). A fresh Variable of the text had 0 there.
+        /// </summary>
+        static Variable InterpreterMerge(Variable left, string action, Variable right)
+        {
+            return Parser.MergePair(left, action, right, new ParsingScript(Interpreter.LastInstance, ""));
+        }
+
         static Variable Arithmetic(Variable left, Variable right, string action)
         {
             if (left == null || right == null)
@@ -1258,11 +1331,7 @@ namespace SplitAndMerge
             }
             if (!BothNumbers(left, right))
             {
-                if (action == "*")
-                {
-                    return new Variable(left.AsString().Trim() + right.AsString().Trim());
-                }
-                throw new ArgumentException("Can't process operation [" + action + "] on strings.");
+                return InterpreterMerge(left, action, right);
             }
             switch (action)
             {
@@ -1307,15 +1376,15 @@ namespace SplitAndMerge
         {
             return new Variable(-(value == null ? 0 : value.Value));
         }
-        // "++" and "--" step the numeric field for the same reason: incrementing the element
-        // "7" gives 1 in the interpreter, not 8, because a string's numeric field is 0.
+        // "++" and "--" step as the interpreter does (OperatorAssignFunction.Stepped): a number
+        // by one, numeric text as its number ("7"++ is 8), anything else as "x + 1".
         public static Variable operator ++(Variable value)
         {
-            return new Variable((value == null ? 0 : value.Value) + 1);
+            return OperatorAssignFunction.Stepped(value, 1);
         }
         public static Variable operator --(Variable value)
         {
-            return new Variable((value == null ? 0 : value.Value) - 1);
+            return OperatorAssignFunction.Stepped(value, -1);
         }
         public static Variable operator -(Variable left, Variable right) { return Arithmetic(left, right, "-"); }
         public static Variable operator -(Variable left, double right) { return Arithmetic(left, new Variable(right), "-"); }
@@ -1372,6 +1441,19 @@ namespace SplitAndMerge
         /// operator on Variable, which would change what every existing reference comparison
         /// in the interpreter means.
         /// </summary>
+        /// <summary>
+        /// The same question for an operator the two-argument form does not cover -- "===" --
+        /// answered by the interpreter's own merge (Parser.MergePair), so it cannot differ from
+        /// the script. Kept under the SameValue name: the translator gives calls to it special
+        /// handling (their arguments stay Variables).
+        /// </summary>
+        public static bool SameValue(object left, object right, string action)
+        {
+            var result = Parser.MergePair(CscsOps.AsOperand(left), action, CscsOps.AsOperand(right),
+                                          new ParsingScript(null, ""));
+            return result.Value != 0;
+        }
+
         public static bool SameValue(object left, object label)
         {
             // Either side may arrive as a C# value: "a[0].Trim()" is already a string.
@@ -1476,9 +1558,63 @@ namespace SplitAndMerge
             return AsString().SubstringCscs(startFrom, length);
         }
 
+        // Positions that are Variables -- "s.Substring(n - 1)" with n declared "variable" -- are
+        // read as the interpreter reads them, through Utils.GetSafeInt.
+        public string Substring(Variable startFrom, Variable length = null)
+        {
+            var args = new List<Variable> { startFrom ?? Variable.EmptyInstance };
+            if (length != null)
+            {
+                args.Add(length);
+            }
+            return AsString().SubstringCscs(Utils.GetSafeInt(args, 0, 0), Utils.GetSafeInt(args, 1, int.MaxValue));
+        }
+
+        public string Substring(Variable startFrom, double length)
+        {
+            return Substring(startFrom, new Variable(length));
+        }
+
+        public string Substring(double startFrom, Variable length)
+        {
+            return Substring(new Variable(startFrom), length);
+        }
+
         public string Replace(string what, string with)
         {
             return AsString().Replace(what, with);
+        }
+
+        // The same members with a Variable where the interpreter reads text (Utils.GetSafeString,
+        // i.e. AsString()): "w.StartsWith(prefix)" with prefix an untyped argument.
+        public bool StartsWith(Variable what, string mode = "case")
+        {
+            return StartsWith(what == null ? "" : what.AsString(), mode);
+        }
+
+        public bool EndsWith(Variable what, string mode = "case")
+        {
+            return EndsWith(what == null ? "" : what.AsString(), mode);
+        }
+
+        public int IndexOf(Variable what, int startFrom = 0, string mode = "case")
+        {
+            return IndexOf(what == null ? "" : what.AsString(), startFrom, mode);
+        }
+
+        public string Replace(Variable what, Variable with)
+        {
+            return Replace(what == null ? "" : what.AsString(), with == null ? "" : with.AsString());
+        }
+
+        public string Replace(Variable what, string with)
+        {
+            return Replace(what == null ? "" : what.AsString(), with);
+        }
+
+        public string Replace(string what, Variable with)
+        {
+            return Replace(what, with == null ? "" : with.AsString());
         }
 
         // The interpreter's Trim property is AsString().Trim(); a loop element needs it by
@@ -1582,9 +1718,17 @@ namespace SplitAndMerge
             return Count;
         }
 
+        // A property that leaves the value what it is: SetProperty makes it an OBJECT, which a
+        // caught exception must not become -- "catch (e) { print(\"x\" + e); }" still reads text.
+        internal void AddTextProperty(string propName, Variable value)
+        {
+            m_propertyMap[propName] = value;
+            m_propertyStringMap[Constants.ConvertName(propName)] = propName;
+        }
+
         public Variable SetProperty(string propName, Variable value, ParsingScript script, string baseName = "")
         {
-            int ind = propName.IndexOf('.');
+            int ind = TopLevelDot(propName);
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -1598,7 +1742,7 @@ namespace SplitAndMerge
 
         public async Task<Variable> SetPropertyAsync(string propName, Variable value, ParsingScript script, string baseName = "")
         {
-            int ind = propName.IndexOf('.');
+            int ind = TopLevelDot(propName);
             if (ind > 0)
             { // The case a.b.c = ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
@@ -1681,10 +1825,18 @@ namespace SplitAndMerge
         public Variable GetEnumProperty(string propName, ParsingScript script, string baseName = "")
         {
             propName = Constants.ConvertName(propName);
-            if (script.Prev == Constants.START_ARG)
+            // A call: after its "(", or -- as Variable.GetArgs has it too -- a script that is the
+            // argument list itself, starting at 0, the way compiled code calls "Colors.ToString(n)"
+            // by name. That read "ToString" as a member: "Object [tostring] doesn't exist".
+            if (script.Prev == Constants.START_ARG ||
+                (script.Pointer == 0 && script.StillValid() && !string.IsNullOrWhiteSpace(script.Rest)))
             {
                 Variable value = Utils.GetItem(script);
-                if (propName == Constants.TO_STRING)
+                // "Colors.ToString(2)" is "Blue". The name arrives lower-cased, and it was compared
+                // with TO_STRING -- "string", the conversion's name -- so ToString fell through to
+                // the membership test below and answered 1.
+                if (propName == Constants.TO_STRING ||
+                    propName.Equals(Constants.PROP_TO_STRING, StringComparison.OrdinalIgnoreCase))
                 {
                     return ConvertEnumToString(value);
                 }
@@ -1706,7 +1858,10 @@ namespace SplitAndMerge
 
             if (tokens.Length > 1)
             {
-                result = ConvertEnumToString(result);
+                // "Colors.Green.Type" is the member's type, the type of its value (NUMBER). It was
+                // the member's name, as any other word after a member still is ("Colors.Green.Name").
+                result = tokens[1].Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase) ?
+                    new Variable(Constants.TypeToString(result.Type)) : ConvertEnumToString(result);
                 if (tokens.Length > 2)
                 {
                     string rest = string.Join(".", tokens, 2, tokens.Length - 2);
@@ -1727,28 +1882,69 @@ namespace SplitAndMerge
             return Variable.EmptyInstance;
         }
 
+        // The first "." of a member path outside any subscript or quotes: in "l[b.l.Size - 1]" the dot
+        // belongs to the index, and splitting there looked up a field "l[b" (NullReferenceException).
+        static int TopLevelDot(string name)
+        {
+            int depth = 0;
+            bool quoted = false;
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                if (c == Constants.QUOTE && (i == 0 || name[i - 1] != '\\'))
+                {
+                    quoted = !quoted;
+                }
+                else if (!quoted && c == Constants.START_ARRAY)
+                {
+                    depth++;
+                }
+                else if (!quoted && c == Constants.END_ARRAY)
+                {
+                    depth--;
+                }
+                else if (!quoted && depth == 0 && c == '.')
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         public Variable GetProperty(string propName, ParsingScript script = null)
+        {
+            return GetProperty(propName, script, false);
+        }
+
+        // "intermediate": a segment a member path goes on from -- "items" in "c1.items.Add(1)".
+        // It is never the call, so it takes no arguments; read as it was, a field of a class
+        // instance took "(1)" for its own, and Add was then left with none ("Expecting 1
+        // arguments but got 0 in add").
+        Variable GetProperty(string propName, ParsingScript script, bool intermediate)
         {
             Variable result = Variable.EmptyInstance;
 
-            int ind = propName.IndexOf('.');
+            int ind = TopLevelDot(propName);
             if (ind > 0)
             { // The case x = a.b.c ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
-                Variable property = GetProperty(varName, script);
+                Variable property = GetProperty(varName, script, true);
                 result = string.IsNullOrEmpty(actualPropName) ? property :
                                property.GetProperty(actualPropName, script);
                 return result;
             }
 
+            (string purePropName, string rest) = Utils.Extract(propName);
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                string match = GetActualPropertyName(propName, obj.GetProperties());
+                // The field's own name: "l[1]" on an instance was looked up whole, found nothing,
+                // and the subscript then ran on no value at all (NullReferenceException).
+                string match = GetActualPropertyName(purePropName, obj.GetProperties());
                 if (!string.IsNullOrWhiteSpace(match))
                 {
-                    var args = GetArgs(script);
+                    var args = intermediate ? new List<Variable>() : GetArgs(script);
                     var task = obj.GetProperty(match, args, script);
                     // GetAwaiter().GetResult(), not .Result: a method body runs asynchronously, and
                     // .Result wraps whatever it throws in an AggregateException, whose message
@@ -1757,12 +1953,16 @@ namespace SplitAndMerge
                     result = task != null ? task.GetAwaiter().GetResult() : null;
                     if (result != null)
                     {
+                        if (!string.IsNullOrWhiteSpace(rest))
+                        {
+                            var fieldIndices = Utils.GetArrayIndices(script ?? new ParsingScript(Interpreter.LastInstance, ""), propName);
+                            result = Utils.ExtractArrayElement(result, fieldIndices, script);
+                        }
                         return result;
                     }
                 }
             }
 
-            (string purePropName, string rest) = Utils.Extract(propName);
             var propValue = GetCoreProperty(purePropName, script);
             if (!string.IsNullOrWhiteSpace(rest))
             {
@@ -2134,27 +2334,39 @@ namespace SplitAndMerge
 
         public async Task<Variable> GetPropertyAsync(string propName, ParsingScript script = null)
         {
+            return await GetPropertyAsync(propName, script, false);
+        }
+
+        // "intermediate": see GetProperty.
+        async Task<Variable> GetPropertyAsync(string propName, ParsingScript script, bool intermediate)
+        {
             Variable result = Variable.EmptyInstance;
 
-            int ind = propName.IndexOf('.');
+            int ind = TopLevelDot(propName);
             if (ind > 0)
             { // The case x = a.b.c ... is dealt here recursively
                 string varName = propName.Substring(0, ind);
                 string actualPropName = propName.Substring(ind + 1);
-                Variable property = await GetPropertyAsync(varName, script);
+                Variable property = await GetPropertyAsync(varName, script, true);
                 result = string.IsNullOrEmpty(actualPropName) ? property :
                                await property.GetPropertyAsync(actualPropName, script);
                 return result;
             }
 
+            (string purePropName, string rest) = Utils.Extract(propName);
             if (Object is ScriptObject)
             {
                 ScriptObject obj = Object as ScriptObject;
-                string match = GetActualPropertyName(propName, obj.GetProperties());
+                // The field's own name, the subscript applied after: see GetProperty.
+                string match = GetActualPropertyName(purePropName, obj.GetProperties());
                 if (!string.IsNullOrWhiteSpace(match))
                 {
                     List<Variable> args = null;
-                    if (script != null &&
+                    if (intermediate)
+                    {
+                        args = new List<Variable>();
+                    }
+                    else if (script != null &&
                        (script.Pointer == 0 || script.Prev == Constants.START_ARG))
                     {
                         args = await script.GetFunctionArgsAsync();
@@ -2166,12 +2378,16 @@ namespace SplitAndMerge
                     result = await obj.GetProperty(match, args, script);
                     if (result != null)
                     {
+                        if (!string.IsNullOrWhiteSpace(rest))
+                        {
+                            var fieldIndices = Utils.GetArrayIndices(script ?? new ParsingScript(Interpreter.LastInstance, ""), propName);
+                            result = Utils.ExtractArrayElement(result, fieldIndices, script);
+                        }
                         return result;
                     }
                 }
             }
 
-            (string purePropName, string rest) = Utils.Extract(propName);
             var propValue = GetCoreProperty(purePropName, script);
             if (!string.IsNullOrWhiteSpace(rest))
             {
@@ -2346,7 +2562,9 @@ namespace SplitAndMerge
             }
             else if (script != null && propName.Equals(Constants.REVERSE, StringComparison.OrdinalIgnoreCase))
             {
-                script.GetFunctionArgs();
+                // Its own "()" only: read regardless, "s.Trim + \"]\"" took the rest of the
+                // expression for arguments and dropped it.
+                GetArgs(script);
                 if (Tuple != null)
                 {
                     Tuple.Reverse();
@@ -2362,7 +2580,9 @@ namespace SplitAndMerge
             }
             else if (script != null && propName.Equals(Constants.SORT, StringComparison.OrdinalIgnoreCase))
             {
-                script.GetFunctionArgs();
+                // Its own "()" only: read regardless, "s.Trim + \"]\"" took the rest of the
+                // expression for arguments and dropped it.
+                GetArgs(script);
                 Sort();
 
                 return this;
@@ -2484,7 +2704,9 @@ namespace SplitAndMerge
             }
             else if (script != null && propName.Equals(Constants.DEEP_COPY, StringComparison.OrdinalIgnoreCase))
             {
-                script.GetFunctionArgs();
+                // Its own "()" only: read regardless, "s.Trim + \"]\"" took the rest of the
+                // expression for arguments and dropped it.
+                GetArgs(script);
                 return DeepClone();
             }
             else if (script != null && propName.Equals(Constants.AT, StringComparison.OrdinalIgnoreCase))
@@ -2600,7 +2822,9 @@ namespace SplitAndMerge
             }
             else if (script != null && propName.Equals(Constants.TRIM, StringComparison.OrdinalIgnoreCase))
             {
-                script.GetFunctionArgs();
+                // Its own "()" only: read regardless, "s.Trim + \"]\"" took the rest of the
+                // expression for arguments and dropped it.
+                GetArgs(script);
                 return new Variable(AsString().Trim());
             }
             else if (propName.Equals(Constants.KEYS, StringComparison.OrdinalIgnoreCase))
@@ -2661,7 +2885,9 @@ namespace SplitAndMerge
 
         public int GetSize()
         {
-            int size = Type == Variable.VarType.ARRAY ? Tuple.Count : 0;
+            // Text counts its characters, as Length does; it used to be 0.
+            int size = Type == Variable.VarType.ARRAY ? Tuple.Count :
+                       Type == Variable.VarType.STRING ? AsString().Length : 0;
             return size;
         }
 
@@ -2735,20 +2961,44 @@ namespace SplitAndMerge
             return TokenizeFunction.Tokenize(AsString(), sep, option, max);
         }
 
+        /// <summary>
+        /// What a script's Join(...) does (GetCorePropertyValue): the elements' text with the
+        /// separator between them, " " by default; anything but a collection gives its own text.
+        /// </summary>
+        public Variable Join(object sep = null)
+        {
+            var separator = sep == null ? " " : (sep as Variable)?.AsString() ?? sep.ToString();
+            if (Tuple == null)
+            {
+                return new Variable(AsString());
+            }
+            return new Variable(string.Join(separator, Tuple));
+        }
+
         /// <summary>Reverses a collection in place, as a script's Reverse() does.</summary>
-        public void Reverse()
+        // What the script's Reverse does (GetCorePropertyValue): a list in place, text too, and
+        // the Variable itself back. Compiled "v.Reverse()" on text left it as it was.
+        public Variable Reverse()
         {
             if (Tuple != null)
             {
                 Tuple.Reverse();
             }
+            else if (Type == VarType.STRING)
+            {
+                char[] charArray = AsString().ToCharArray();
+                Array.Reverse(charArray);
+                String = new string(charArray);
+            }
+            return this;
         }
 
-        public void Sort()
+        // Returns the Variable itself, as the script's Sort does, so "return a.Sort()" works.
+        public Variable Sort()
         {
             if (Tuple == null || Tuple.Count <= 1)
             {
-                return;
+                return this;
             }
 
             List<double> numbers = new List<double>();
@@ -2786,6 +3036,7 @@ namespace SplitAndMerge
                 newTuple.Add(v);
             }
             Tuple = newTuple;
+            return this;
         }
 
         public virtual void AddToDate(Variable valueB, int sign)
@@ -2953,11 +3204,41 @@ namespace SplitAndMerge
         CustomFunction m_customFunctionSet;
         protected List<Variable> m_tuple;
         protected byte[] m_byteArray;
-        Dictionary<string, int> m_dictionary = new Dictionary<string, int>();
-        Dictionary<string, string> m_keyMappings = new Dictionary<string, string>();
-        Dictionary<string, string> m_propertyStringMap = new Dictionary<string, string>();
-
-        Dictionary<string, Variable> m_propertyMap = new Dictionary<string, Variable>();
+        // The four maps are made on first use: most Variables are numbers and text that never
+        // need them, and four empty dictionaries were three quarters of the cost of making a
+        // Variable (85 ns of which 64). Clone and DeepClone make them first, so a clone shares
+        // them with its original exactly as the MemberwiseClone of eagerly made maps did.
+        Dictionary<string, int> m_dictionaryMap;
+        Dictionary<string, string> m_keyMappingsMap;
+        Dictionary<string, string> m_propertyStringMapMap;
+        Dictionary<string, Variable> m_propertyMapMap;
+        Dictionary<string, int> m_dictionary
+        {
+            get { return m_dictionaryMap ?? (m_dictionaryMap = new Dictionary<string, int>()); }
+            set { m_dictionaryMap = value; }
+        }
+        Dictionary<string, string> m_keyMappings
+        {
+            get { return m_keyMappingsMap ?? (m_keyMappingsMap = new Dictionary<string, string>()); }
+            set { m_keyMappingsMap = value; }
+        }
+        Dictionary<string, string> m_propertyStringMap
+        {
+            get { return m_propertyStringMapMap ?? (m_propertyStringMapMap = new Dictionary<string, string>()); }
+            set { m_propertyStringMapMap = value; }
+        }
+        Dictionary<string, Variable> m_propertyMap
+        {
+            get { return m_propertyMapMap ?? (m_propertyMapMap = new Dictionary<string, Variable>()); }
+            set { m_propertyMapMap = value; }
+        }
+        void MakeMaps()
+        {
+            if (m_dictionaryMap == null) { m_dictionaryMap = new Dictionary<string, int>(); }
+            if (m_keyMappingsMap == null) { m_keyMappingsMap = new Dictionary<string, string>(); }
+            if (m_propertyStringMapMap == null) { m_propertyStringMapMap = new Dictionary<string, string>(); }
+            if (m_propertyMapMap == null) { m_propertyMapMap = new Dictionary<string, Variable>(); }
+        }
         Dictionary<int, string> m_enumMap;
 
         public static int GlobalID { get; private set; }

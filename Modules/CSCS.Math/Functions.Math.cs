@@ -66,6 +66,22 @@ namespace CSCSMath
             interpreter.RegisterFunction(Constants.MATH_TAN, new TanFunction());
             interpreter.RegisterFunction(Constants.MATH_TANH, new TanhFunction());
             interpreter.RegisterFunction(Constants.MATH_TRUNC, new FloorFunction());
+
+            // The functions by their bare names too -- "sqrt(x)", "abs(x)", "round(x, 2)" -- which
+            // compiled code has always read as Math's. Not the constants (E, PI): a variable is
+            // much more often called "e" than the function is meant. A script's own function of
+            // one of these names still takes it over, as for any built-in.
+            foreach (var name in new[] { "Abs", "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atan2", "Atanh",
+                                         "Cbrt", "Ceil", "Ceiling", "Cos", "Cosh", "Exp", "Floor", "Log",
+                                         "Min", "Max", "Pow", "Round", "Sqrt", "Sign", "Sin", "Sinh",
+                                         "Tan", "Tanh", "Trunc" })
+            {
+                var math = interpreter.GetFunction("Math." + name);
+                if (math != null && interpreter.GetFunction(name) == null)
+                {
+                    interpreter.RegisterFunction(name, math);
+                }
+            }
         }
     }
 

@@ -836,6 +836,33 @@ namespace SplitAndMerge
                     report.CSharpCode = precompiler.GetCSharpCode(m_scriptInCSharp);
                     report.Translated = true;
                     var errors = RoslynCompiler.CheckCompiles(report.CSharpCode, "CscsPrecompiled_" + funcName);
+                    if (errors.Any(RoslynCompiler.IsRepairable))
+                    {
+                        // The same repair a real compile makes (Precompiler.Compile).
+                        var repaired = RoslynCompiler.RepairOperators(report.CSharpCode,
+                            name => InterpreterInstance.GetFunction(name) != null);
+                        if (repaired != report.CSharpCode)
+                        {
+                            report.CSharpCode = repaired;
+                            errors = RoslynCompiler.CheckCompiles(repaired, "CscsPrecompiled_" + funcName);
+                        }
+                    }
+                    if (errors.Count > 0 && precompiler.UntypedCSharpCode != null)
+                    {
+                        // As Precompiler.Compile does: typed returns that do not compile are dropped.
+                        report.CSharpCode = precompiler.UntypedCSharpCode;
+                        errors = RoslynCompiler.CheckCompiles(report.CSharpCode, "CscsPrecompiled_" + funcName);
+                        if (errors.Any(RoslynCompiler.IsRepairable))
+                        {
+                            var repaired = RoslynCompiler.RepairOperators(report.CSharpCode,
+                                name => InterpreterInstance.GetFunction(name) != null);
+                            if (repaired != report.CSharpCode)
+                            {
+                                report.CSharpCode = repaired;
+                                errors = RoslynCompiler.CheckCompiles(repaired, "CscsPrecompiled_" + funcName);
+                            }
+                        }
+                    }
                     report.Compiles = errors.Count == 0;
                     report.Reason = report.Compiles ? null : "Compile error: " + string.Join(" -- ", errors);
                 }

@@ -188,13 +188,32 @@ namespace CSCS.ConsoleApp
         /// <summary>Shared script published at &lt;webroot&gt;/shared/script.cscs.</summary>
         protected virtual string SharedScriptUrl =>
             Environment.GetEnvironmentVariable("CSCS_SHARED_SCRIPT_URL")
-            ?? "http://185.32.124.162:17575/shared/script.cscs";
+            ?? "https://api.brainpingpong.com/shared/script.cscs";
 
         /// <summary>
         /// Whether to fetch and execute the shared script at startup. This runs whatever
         /// the server returns, in this process -- only leave it on for a server you control.
+        /// On unless CSCS_SHARED_SCRIPT is "0", "off" or "false".
         /// </summary>
-        protected virtual bool RunSharedScriptOnStartup => true;
+        protected virtual bool RunSharedScriptOnStartup
+        {
+            get
+            {
+                var setting = (Environment.GetEnvironmentVariable("CSCS_SHARED_SCRIPT") ?? "").Trim();
+                return !(setting == "0" || setting.Equals("off", StringComparison.OrdinalIgnoreCase) ||
+                         setting.Equals("false", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        /// <summary>
+        /// How long the startup fetch may take: CSCS_SHARED_SCRIPT_TIMEOUT seconds, 3 by default.
+        /// It used the interpreter's shared HttpClient, whose 15 seconds every run then waited out
+        /// whenever the server did not answer.
+        /// </summary>
+        protected virtual TimeSpan SharedScriptTimeout =>
+            TimeSpan.FromSeconds(double.TryParse(Environment.GetEnvironmentVariable("CSCS_SHARED_SCRIPT_TIMEOUT"),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture,
+                out var seconds) && seconds > 0 ? seconds : 3);
 
         /// <summary>
         /// Downloads the shared script and runs it. It reports its own checks and throws on
@@ -207,7 +226,12 @@ namespace CSCS.ConsoleApp
             string localPath;
             try
             {
-                localPath = SplitAndMerge.DownloadFileFunction.Download(url).AsString();
+                using (var client = new System.Net.Http.HttpClient { Timeout = SharedScriptTimeout })
+                {
+                    var bytes = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+                    localPath = Path.GetTempFileName() + Path.GetExtension(url);
+                    File.WriteAllBytes(localPath, bytes);
+                }
             }
             catch (Exception exc)
             {

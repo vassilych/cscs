@@ -427,22 +427,20 @@ namespace SplitAndMerge
 
         Variable ProcessArrayFor(ParsingScript script, string forString)
         {
-            var tokens = forString.Split(' ');
-            var sep = tokens.Length > 2 ? tokens[1] : "";
-            string varName = tokens[0];
-
-            if (sep != Constants.FOR_EACH && sep != Constants.FOR_IN && sep != Constants.FOR_OF)
+            // The loop variable, then ":" or the word "in" or "of", then the collection. Split on
+            // spaces, a string element with a space in it -- {"ab", " a "} -- moved the collection's
+            // start into the first element, and the loop walked its characters; "in" straight
+            // before a literal ("v in{...}") had no space to split on at all.
+            var header = System.Text.RegularExpressions.Regex.Match(forString,
+                @"^\s*([A-Za-z_][\w.]*)\s*(?::|\b(?:in|of)\b)\s*");
+            if (!header.Success || header.Length >= forString.Length)
             {
-                int index = forString.IndexOf(Constants.FOR_EACH);
-                if (index <= 0 || index == forString.Length - 1)
-                {
-                    Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
-                                     script, Constants.FOR);
-                }
-                varName = forString.Substring(0, index);
+                Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
+                                 script, Constants.FOR);
             }
+            string varName = header.Groups[1].Value;
 
-            ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
+            ParsingScript forScript = script.GetTempScript(forString, header.Length);
             forScript.Debugger = script.Debugger;
             Variable result = Variable.EmptyInstance;
             Variable arrayValue = Utils.GetItem(forScript);
@@ -465,7 +463,7 @@ namespace SplitAndMerge
                     // pass, so the body read the value from before the loop. An assignment
                     // passes the script for the same reason.
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
-                    result = ProcessBlock(script);
+                    result = ProcessLoopBody(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -491,7 +489,7 @@ namespace SplitAndMerge
                     // pass, so the body read the value from before the loop. An assignment
                     // passes the script for the same reason.
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
-                    result = ProcessBlock(script);
+                    result = ProcessLoopBody(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -499,28 +497,26 @@ namespace SplitAndMerge
                 }
             }
             script.Pointer = startForCondition;
-            SkipBlock(script);
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
         async Task<Variable> ProcessArrayForAsync(ParsingScript script, string forString)
         {
-            var tokens = forString.Split(' ');
-            var sep = tokens.Length > 2 ? tokens[1] : "";
-            string varName = tokens[0];
-
-            if (sep != Constants.FOR_EACH && sep != Constants.FOR_IN && sep != Constants.FOR_OF)
+            // The loop variable, then ":" or the word "in" or "of", then the collection. Split on
+            // spaces, a string element with a space in it -- {"ab", " a "} -- moved the collection's
+            // start into the first element, and the loop walked its characters; "in" straight
+            // before a literal ("v in{...}") had no space to split on at all.
+            var header = System.Text.RegularExpressions.Regex.Match(forString,
+                @"^\s*([A-Za-z_][\w.]*)\s*(?::|\b(?:in|of)\b)\s*");
+            if (!header.Success || header.Length >= forString.Length)
             {
-                int index = forString.IndexOf(Constants.FOR_EACH);
-                if (index <= 0 || index == forString.Length - 1)
-                {
-                    Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
-                                     script, Constants.FOR);
-                }
-                varName = forString.Substring(0, index);
+                Utils.ThrowErrorMsg("Expecting: for(item :/in/of array)",
+                                 script, Constants.FOR);
             }
+            string varName = header.Groups[1].Value;
 
-            ParsingScript forScript = script.GetTempScript(forString, varName.Length + sep.Length + 1);
+            ParsingScript forScript = script.GetTempScript(forString, header.Length);
             forScript.Debugger = script.Debugger;
             Variable result = Variable.EmptyInstance;
             Variable arrayValue = await Utils.GetItemAsync(forScript);
@@ -541,7 +537,7 @@ namespace SplitAndMerge
                     // pass, so the body read the value from before the loop. An assignment
                     // passes the script for the same reason.
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
-                    result = ProcessBlock(script);
+                    result = await ProcessLoopBodyAsync(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -567,7 +563,7 @@ namespace SplitAndMerge
                     // pass, so the body read the value from before the loop. An assignment
                     // passes the script for the same reason.
                     AddGlobalOrLocalVariable(varName, new GetVarFunction(current), script);
-                    result = await ProcessBlockAsync(script);
+                    result = await ProcessLoopBodyAsync(script);
                     if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                     {
                         break;
@@ -575,7 +571,7 @@ namespace SplitAndMerge
                 }
             }
             script.Pointer = startForCondition;
-            SkipBlock(script);
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
@@ -600,8 +596,10 @@ namespace SplitAndMerge
             Variable result = Variable.EmptyInstance;
             while (stillValid)
             {
+                // "for (;;)": no condition is always true. Its empty result is false by the one
+                // truth rule, and the loop would never run.
                 Variable condResult = condScript.Execute(null, 0);
-                stillValid = Convert.ToBoolean(condResult.Value);
+                stillValid = string.IsNullOrWhiteSpace(forTokens[1]) || condResult.IsTrue();
                 if (!stillValid)
                 {
                     break;
@@ -614,11 +612,11 @@ namespace SplitAndMerge
                 }
 
                 script.Pointer = startForCondition;
-                result = ProcessBlock(script);
+                result = ProcessLoopBody(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     //script.Pointer = startForCondition;
-                    //SkipBlock(script);
+                    //SkipLoopBody(script);
                     //return;
                     break;
                 }
@@ -626,7 +624,7 @@ namespace SplitAndMerge
             }
 
             script.Pointer = startForCondition;
-            SkipBlock(script);
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
         async Task<Variable> ProcessCanonicalForAsync(ParsingScript script, string forString)
@@ -651,8 +649,10 @@ namespace SplitAndMerge
 
             while (stillValid)
             {
+                // "for (;;)": no condition is always true. Its empty result is false by the one
+                // truth rule, and the loop would never run.
                 Variable condResult = await condScript.ExecuteAsync(null, 0);
-                stillValid = Convert.ToBoolean(condResult.Value);
+                stillValid = string.IsNullOrWhiteSpace(forTokens[1]) || condResult.IsTrue();
                 if (!stillValid)
                 {
                     break;
@@ -665,11 +665,11 @@ namespace SplitAndMerge
                 }
 
                 script.Pointer = startForCondition;
-                result = await ProcessBlockAsync(script);
+                result = await ProcessLoopBodyAsync(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     //script.Pointer = startForCondition;
-                    //SkipBlock(script);
+                    //SkipLoopBody(script);
                     //return;
                     break;
                 }
@@ -677,13 +677,14 @@ namespace SplitAndMerge
             }
 
             script.Pointer = startForCondition;
-            SkipBlock(script);
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
         internal Variable ProcessWhile(ParsingScript script)
         {
             int startWhileCondition = script.Pointer;
+            int bodyStart = -1;
 
             // A check against an infinite loop.
             int cycles = 0;
@@ -696,7 +697,8 @@ namespace SplitAndMerge
 
                 //int startSkipOnBreakChar = from;
                 Variable condResult = script.Execute(Constants.END_ARG_ARRAY);
-                stillValid = Convert.ToBoolean(condResult.Value);
+                bodyStart = script.Pointer;
+                stillValid = condResult.IsTrue();
                 if (!stillValid)
                 {
                     break;
@@ -709,7 +711,7 @@ namespace SplitAndMerge
                         cycles + " cycles.");
                 }
 
-                result = ProcessBlock(script);
+                result = ProcessLoopBody(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     script.Pointer = startWhileCondition;
@@ -718,14 +720,20 @@ namespace SplitAndMerge
             }
 
             // The while condition is not true anymore: must skip the whole while
-            // block before continuing with next statements.
-            SkipBlock(script);
+            // block before continuing with next statements -- from where the body starts,
+            // which a braceless one needs (after a break the pointer is back at the condition).
+            if (bodyStart >= 0)
+            {
+                script.Pointer = bodyStart;
+            }
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
         internal async Task<Variable> ProcessWhileAsync(ParsingScript script)
         {
             int startWhileCondition = script.Pointer;
+            int bodyStart = -1;
 
             // A check against an infinite loop.
             int cycles = 0;
@@ -738,7 +746,8 @@ namespace SplitAndMerge
 
                 //int startSkipOnBreakChar = from;
                 Variable condResult = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
-                stillValid = Convert.ToBoolean(condResult.Value);
+                bodyStart = script.Pointer;
+                stillValid = condResult.IsTrue();
                 if (!stillValid)
                 {
                     break;
@@ -751,7 +760,7 @@ namespace SplitAndMerge
                         cycles + " cycles.");
                 }
 
-                result = await ProcessBlockAsync(script);
+                result = await ProcessLoopBodyAsync(script);
                 if (result.IsReturn || result.Type == Variable.VarType.BREAK)
                 {
                     script.Pointer = startWhileCondition;
@@ -760,8 +769,13 @@ namespace SplitAndMerge
             }
 
             // The while condition is not true anymore: must skip the whole while
-            // block before continuing with next statements.
-            SkipBlock(script);
+            // block before continuing with next statements -- from where the body starts,
+            // which a braceless one needs (after a break the pointer is back at the condition).
+            if (bodyStart >= 0)
+            {
+                script.Pointer = bodyStart;
+            }
+            SkipLoopBody(script);
             return result.IsReturn ? result : Variable.EmptyInstance;
         }
 
@@ -770,12 +784,15 @@ namespace SplitAndMerge
             int startDoCondition = script.Pointer;
             bool stillValid = true;
             Variable result = Variable.EmptyInstance;
+            // "do n++; while (n < 3);": a body of one statement, without the "{" the token
+            // leaves the pointer past. Read as a block it hung, as a braceless while did.
+            bool braceless = BlockStartBefore(script, startDoCondition) == startDoCondition;
 
             while (stillValid)
             {
                 script.Pointer = startDoCondition;
 
-                var block = ProcessBlock(script);
+                var block = braceless ? ProcessLoopBody(script) : ProcessBlock(script);
                 if (block == null)
                 {
                     // Nothing to run means this is not a do-loop body -- something handed the
@@ -794,15 +811,23 @@ namespace SplitAndMerge
                     // it -- the same thing a while loop does. Without this a continue left
                     // the rest of the body to be read as the loop condition, which then ran
                     // it a second time.
-                    script.Pointer = BlockStartBefore(script, startDoCondition);
-                    SkipBlock(script);
+                    if (braceless)
+                    {
+                        script.Pointer = startDoCondition;
+                        SkipLoopBody(script);
+                    }
+                    else
+                    {
+                        script.Pointer = BlockStartBefore(script, startDoCondition);
+                        SkipBlock(script);
+                    }
                 }
 
                 // Always consume the trailing "while (...)", even on the way out: a do-loop
                 // has to test its condition after a continue, and leaving the keyword behind
                 // makes the interpreter run into it and execute it as a fresh while statement.
                 Variable condResult = ConsumeDoWhileCondition(script);
-                stillValid = !stop && Convert.ToBoolean(condResult.Value);
+                stillValid = !stop && condResult.IsTrue();
             }
 
             // Unlike a while loop, whose block is still ahead of the pointer when the
@@ -952,8 +977,20 @@ namespace SplitAndMerge
             int startIfCondition = script.Pointer;
 
             Variable result = script.Execute(Constants.END_ARG_ARRAY);
-            bool isTrue = Convert.ToBoolean(result.Value);
+            bool isTrue = result.IsTrue();
 
+            // A body of one statement without braces -- "if (x > 1) return \"big\";".
+            bool braceless = !NextIsBlock(script);
+            if (isTrue && braceless)
+            {
+                SkipToBody(script);
+                result = script.Execute();
+                script.MoveForwardIf(Constants.END_STATEMENT);
+                SkipRestBlocks(script);
+                return result.IsReturn ||
+                       result.Type == Variable.VarType.BREAK ||
+                       result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
+            }
             if (isTrue)
             {
                 result = ProcessBlock(script);
@@ -975,7 +1012,15 @@ namespace SplitAndMerge
             }
 
             // We are in Else. Skip everything in the If statement.
-            SkipBlock(script);
+            if (braceless)
+            {
+                SkipToBody(script);
+                SkipStatement(script);
+            }
+            else
+            {
+                SkipBlock(script);
+            }
 
             ParsingScript nextData = new ParsingScript(script);
             nextData.ParentScript = script;
@@ -989,8 +1034,16 @@ namespace SplitAndMerge
             }
             else if (Constants.ELSE == nextToken)
             {
-                script.Pointer = nextData.Pointer + 1;
-                result = ProcessBlock(script);
+                script.Pointer = nextData.Pointer;
+                if (NextIsBlock(script))
+                {
+                    script.Pointer = nextData.Pointer + 1;
+                    result = ProcessBlock(script);
+                }
+                else
+                {
+                    result = script.Execute();
+                }
             }
 
             return result.IsReturn ||
@@ -1003,8 +1056,20 @@ namespace SplitAndMerge
             int startIfCondition = script.Pointer;
 
             Variable result = await script.ExecuteAsync(Constants.END_ARG_ARRAY);
-            bool isTrue = Convert.ToBoolean(result.Value);
+            bool isTrue = result.IsTrue();
 
+            // A body of one statement without braces -- "if (x > 1) return \"big\";".
+            bool braceless = !NextIsBlock(script);
+            if (isTrue && braceless)
+            {
+                SkipToBody(script);
+                result = await script.ExecuteAsync();
+                script.MoveForwardIf(Constants.END_STATEMENT);
+                SkipRestBlocks(script);
+                return result.IsReturn ||
+                       result.Type == Variable.VarType.BREAK ||
+                       result.Type == Variable.VarType.CONTINUE ? result : Variable.EmptyInstance;
+            }
             if (isTrue)
             {
                 result = await ProcessBlockAsync(script);
@@ -1026,7 +1091,15 @@ namespace SplitAndMerge
             }
 
             // We are in Else. Skip everything in the If statement.
-            SkipBlock(script);
+            if (braceless)
+            {
+                SkipToBody(script);
+                SkipStatement(script);
+            }
+            else
+            {
+                SkipBlock(script);
+            }
 
             ParsingScript nextData = new ParsingScript(script);
             nextData.ParentScript = script;
@@ -1040,8 +1113,16 @@ namespace SplitAndMerge
             }
             else if (Constants.ELSE == nextToken)
             {
-                script.Pointer = nextData.Pointer + 1;
-                result = await ProcessBlockAsync(script);
+                script.Pointer = nextData.Pointer;
+                if (NextIsBlock(script))
+                {
+                    script.Pointer = nextData.Pointer + 1;
+                    result = await ProcessBlockAsync(script);
+                }
+                else
+                {
+                    result = await script.ExecuteAsync();
+                }
             }
 
             return result.IsReturn ||
@@ -1052,7 +1133,7 @@ namespace SplitAndMerge
         internal Variable ProcessIff(ParsingScript script)
         {
             Variable result = script.Execute(Constants.NEXT_ARG_ARRAY);
-            bool isTrue = Convert.ToBoolean(result.Value);
+            bool isTrue = result.IsTrue();
             script.MoveForwardIf(Constants.NEXT_ARG);
 
             if (isTrue)
@@ -1071,7 +1152,7 @@ namespace SplitAndMerge
         internal async Task<Variable> ProcessIffAsync(ParsingScript script)
         {
             Variable result = await script.ExecuteAsync(Constants.NEXT_ARG_ARRAY);
-            bool isTrue = Convert.ToBoolean(result.Value);
+            bool isTrue = result.IsTrue();
             script.MoveForwardIf(Constants.NEXT_ARG);
 
             if (isTrue)
@@ -1121,24 +1202,44 @@ namespace SplitAndMerge
                 SkipBlock(script);
             }
 
+            // A catch, a finally, or both: "try { ... } finally { ... }" needs no catch, and an
+            // exception it does not catch goes on after the finally has run.
+            var catchPos = script.Pointer;
             string catchToken = Utils.GetNextToken(script);
-            script.Forward(); // skip opening parenthesis
-                              // The next token after the try block must be a catch.
-            if (Constants.CATCH != catchToken)
+            bool hasCatch = Constants.CATCH == catchToken;
+            if (!hasCatch && string.Compare(catchToken, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) != 0)
             {
-                throw new ArgumentException("Expecting a 'catch()' but got [" +
+                throw new ArgumentException("Expecting a 'catch()' or 'finally' but got [" +
                     catchToken + "]");
             }
+            if (!hasCatch)
+            {
+                script.Pointer = catchPos;
+                if (exception != null)
+                {
+                    InvalidateStacksAfterLevel(currentStackLevel);
+                }
+            }
+            string exceptionName = "";
+            if (hasCatch)
+            {
+                script.Forward(); // skip opening parenthesis
+                exceptionName = Utils.GetNextToken(script);
+                script.Forward(); // skip closing parenthesis
+            }
 
-            string exceptionName = Utils.GetNextToken(script);
-            script.Forward(); // skip closing parenthesis
-
-            if (exception != null)
+            if (hasCatch && exception != null)
             {
                 string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
                 InvalidateStacksAfterLevel(currentStackLevel);
 
-                GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
+                // The caught value stays the message text, and also answers e.Message and e.Stack --
+                // those threw "Object [message] doesn't exist": a dotted read is a property lookup
+                // on e, and the separate "e.Stack" variable below is never consulted for it.
+                var caught = new Variable(exception.Message);
+                caught.AddTextProperty("Message", new Variable(exception.Message));
+                caught.AddTextProperty("Stack", new Variable(excStack));
+                GetVarFunction excMsgFunc = new GetVarFunction(caught);
                 // With no script the binding has nowhere to go when a local of that name
                 // already exists, so "e = \"pre\"; try { throw \"boom\"; } catch (e)" caught the
                 // exception and then read "pre". A "for (x in ...)" had the same fault.
@@ -1149,21 +1250,41 @@ namespace SplitAndMerge
                 result = ProcessBlock(script);
                 PopLocalVariable(exceptionName);
             }
-            else
+            else if (hasCatch)
             {
                 SkipBlock(script);
             }
 
-            SkipRestBlocks(script);
+            if (hasCatch)
+            {
+                SkipRestBlocks(script);
+            }
+            bool finallyTookOver = false;
             var pos = script.Pointer;
             var fin = Utils.GetNextToken(script);
             if (string.Compare(fin, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) == 0)
             {
-                result = ProcessBlock(script);
+                // The finally block runs, but the try's or the catch's return stands -- it used to
+                // be replaced by the finally block's value, so "try { return n * 2; } ...
+                // finally { r = 99; } return r;" answered 99. Only a return, break or continue of
+                // the finally's own takes over.
+                var finResult = ProcessBlock(script);
+                if (finResult != null && (finResult.IsReturn ||
+                    finResult.Type == Variable.VarType.BREAK || finResult.Type == Variable.VarType.CONTINUE))
+                {
+                    result = finResult;
+                    finallyTookOver = true;
+                }
             }
             else
             {
                 script.Pointer = pos;
+            }
+            // Unless the finally left with a return, break or continue of its own, which takes
+            // over from the exception as it does from the try's return.
+            if (!hasCatch && exception != null && !finallyTookOver)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception).Throw();
             }
             // Empty unless the block left with a return, a break or a continue, which is how
             // ProcessIf and ProcessWhile end too: the value is what tells the parser the
@@ -1208,24 +1329,44 @@ namespace SplitAndMerge
                 SkipBlock(script);
             }
 
+            // A catch, a finally, or both: "try { ... } finally { ... }" needs no catch, and an
+            // exception it does not catch goes on after the finally has run.
+            var catchPos = script.Pointer;
             string catchToken = Utils.GetNextToken(script);
-            script.Forward(); // skip opening parenthesis
-                              // The next token after the try block must be a catch.
-            if (Constants.CATCH != catchToken)
+            bool hasCatch = Constants.CATCH == catchToken;
+            if (!hasCatch && string.Compare(catchToken, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) != 0)
             {
-                throw new ArgumentException("Expecting a 'catch()' but got [" +
+                throw new ArgumentException("Expecting a 'catch()' or 'finally' but got [" +
                     catchToken + "]");
             }
+            if (!hasCatch)
+            {
+                script.Pointer = catchPos;
+                if (exception != null)
+                {
+                    InvalidateStacksAfterLevel(currentStackLevel);
+                }
+            }
+            string exceptionName = "";
+            if (hasCatch)
+            {
+                script.Forward(); // skip opening parenthesis
+                exceptionName = Utils.GetNextToken(script);
+                script.Forward(); // skip closing parenthesis
+            }
 
-            string exceptionName = Utils.GetNextToken(script);
-            script.Forward(); // skip closing parenthesis
-
-            if (exception != null)
+            if (hasCatch && exception != null)
             {
                 string excStack = CreateExceptionStack(exceptionName, currentStackLevel);
                 InvalidateStacksAfterLevel(currentStackLevel);
 
-                GetVarFunction excMsgFunc = new GetVarFunction(new Variable(exception.Message));
+                // The caught value stays the message text, and also answers e.Message and e.Stack --
+                // those threw "Object [message] doesn't exist": a dotted read is a property lookup
+                // on e, and the separate "e.Stack" variable below is never consulted for it.
+                var caught = new Variable(exception.Message);
+                caught.AddTextProperty("Message", new Variable(exception.Message));
+                caught.AddTextProperty("Stack", new Variable(excStack));
+                GetVarFunction excMsgFunc = new GetVarFunction(caught);
                 // With no script the binding has nowhere to go when a local of that name
                 // already exists, so "e = \"pre\"; try { throw \"boom\"; } catch (e)" caught the
                 // exception and then read "pre". A "for (x in ...)" had the same fault.
@@ -1236,21 +1377,41 @@ namespace SplitAndMerge
                 result = await ProcessBlockAsync(script);
                 PopLocalVariable(exceptionName);
             }
-            else
+            else if (hasCatch)
             {
                 SkipBlock(script);
             }
 
-            SkipRestBlocks(script);
+            if (hasCatch)
+            {
+                SkipRestBlocks(script);
+            }
+            bool finallyTookOver = false;
             var pos = script.Pointer;
             var fin = Utils.GetNextToken(script);
             if (string.Compare(fin, Constants.FINALLY, StringComparison.OrdinalIgnoreCase) == 0)
             {
-                result = await ProcessBlockAsync(script);
+                // The finally block runs, but the try's or the catch's return stands -- it used to
+                // be replaced by the finally block's value, so "try { return n * 2; } ...
+                // finally { r = 99; } return r;" answered 99. Only a return, break or continue of
+                // the finally's own takes over.
+                var finResult = await ProcessBlockAsync(script);
+                if (finResult != null && (finResult.IsReturn ||
+                    finResult.Type == Variable.VarType.BREAK || finResult.Type == Variable.VarType.CONTINUE))
+                {
+                    result = finResult;
+                    finallyTookOver = true;
+                }
             }
             else
             {
                 script.Pointer = pos;
+            }
+            // Unless the finally left with a return, break or continue of its own, which takes
+            // over from the exception as it does from the try's return.
+            if (!hasCatch && exception != null && !finallyTookOver)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception).Throw();
             }
             // Empty unless the block left with a return, a break or a continue, which is how
             // ProcessIf and ProcessWhile end too: the value is what tells the parser the
@@ -1516,7 +1677,200 @@ namespace SplitAndMerge
                     return;
                 }
                 script.Pointer = nextData.Pointer;
+                if (Constants.ELSE_IF == nextToken)
+                {
+                    // Past the condition first: a braceless body is one statement after it.
+                    int conditionEnd = ConditionEnd(script);
+                    if (conditionEnd > 0 && !NextIsBlock(script, conditionEnd))
+                    {
+                        script.Pointer = conditionEnd;
+                        SkipStatement(script);
+                        continue;
+                    }
+                }
+                else if (!NextIsBlock(script))
+                {
+                    SkipStatement(script);
+                    continue;
+                }
                 SkipBlock(script);
+            }
+        }
+
+        // Whether the next thing, past spaces, is a "{" -- a block, not one statement. Past a ")"
+        // too: a condition with a call in it can leave its own last ")" unread, as the block
+        // reader (GoToNextStatement) knows.
+        // A loop's body: its block, or without braces the one statement after the header --
+        // "for (i = 0; i < 3; i++) r += i;". Read as a block, a braceless body ran the rest of the
+        // script as the loop's body, over and over.
+        // The statement's extent is SkipStatement's, an "if" with its "else" chain as one; its
+        // statements run until the end of it -- the "else" is reached as a statement of its own,
+        // as at the top level.
+        Variable ProcessLoopBody(ParsingScript script)
+        {
+            if (NextIsBlock(script))
+            {
+                return ProcessBlock(script);
+            }
+            SkipToBody(script);
+            int bodyStart = script.Pointer;
+            SkipStatement(script);
+            int bodyEnd = script.Pointer;
+            script.Pointer = bodyStart;
+            Variable result = Variable.EmptyInstance;
+            while (script.StillValid() && script.Pointer < bodyEnd)
+            {
+                result = script.Execute() ?? Variable.EmptyInstance;
+                script.MoveForwardIf(Constants.END_STATEMENT);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK ||
+                    result.Type == Variable.VarType.CONTINUE)
+                {
+                    break;
+                }
+            }
+            return result;
+        }
+
+        async Task<Variable> ProcessLoopBodyAsync(ParsingScript script)
+        {
+            if (NextIsBlock(script))
+            {
+                return await ProcessBlockAsync(script);
+            }
+            SkipToBody(script);
+            int bodyStart = script.Pointer;
+            SkipStatement(script);
+            int bodyEnd = script.Pointer;
+            script.Pointer = bodyStart;
+            Variable result = Variable.EmptyInstance;
+            while (script.StillValid() && script.Pointer < bodyEnd)
+            {
+                result = await script.ExecuteAsync() ?? Variable.EmptyInstance;
+                script.MoveForwardIf(Constants.END_STATEMENT);
+                if (result.IsReturn || result.Type == Variable.VarType.BREAK ||
+                    result.Type == Variable.VarType.CONTINUE)
+                {
+                    break;
+                }
+            }
+            return result;
+        }
+
+        void SkipLoopBody(ParsingScript script)
+        {
+            if (NextIsBlock(script))
+            {
+                SkipBlock(script);
+                return;
+            }
+            SkipToBody(script);
+            SkipStatement(script);
+        }
+
+        static bool NextIsBlock(ParsingScript script, int from = -1)
+        {
+            int at = from < 0 ? script.Pointer : from;
+            while (at < script.Size() && (script.At(at) == ' ' || script.At(at) == Constants.END_ARG))
+            {
+                at++;
+            }
+            return at < script.Size() && script.At(at) == Constants.START_GROUP;
+        }
+
+        // Past the spaces and any ")" a condition left unread, to its braceless body.
+        static void SkipToBody(ParsingScript script)
+        {
+            while (script.StillValid() && (script.Current == ' ' || script.Current == Constants.END_ARG))
+            {
+                script.Forward();
+            }
+        }
+
+        // Where the parenthesised condition at the pointer ends (past its ")"), or -1.
+        static int ConditionEnd(ParsingScript script)
+        {
+            int at = script.Pointer;
+            while (at < script.Size() && script.At(at) == ' ')
+            {
+                at++;
+            }
+            if (at >= script.Size() || script.At(at) != Constants.START_ARG)
+            {
+                return -1;
+            }
+            int depth = 0;
+            bool inQuotes = false;
+            for (; at < script.Size(); at++)
+            {
+                char c = script.At(at);
+                if (c == '"' && (at == 0 || script.At(at - 1) != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (!inQuotes && c == Constants.START_ARG)
+                {
+                    depth++;
+                }
+                else if (!inQuotes && c == Constants.END_ARG && --depth == 0)
+                {
+                    return at + 1;
+                }
+            }
+            return -1;
+        }
+
+        // Skips one statement: up to its ";" at depth 0, or through a block it ends with. An
+        // "if" skipped this way takes its own elif and else along -- the else belongs to the
+        // nearest if, as in C: "if (a) if (b) x = 1; else x = 2;".
+        void SkipStatement(ParsingScript script)
+        {
+            int start = script.Pointer;
+            while (start < script.Size() && script.At(start) == ' ')
+            {
+                start++;
+            }
+            bool isIf = start + 2 < script.Size() && script.At(start) == 'i' && script.At(start + 1) == 'f' &&
+                        (script.At(start + 2) == '(' || script.At(start + 2) == ' ');
+            SkipOneStatement(script);
+            if (isIf)
+            {
+                script.MoveForwardIf(Constants.END_STATEMENT);
+                SkipRestBlocks(script);
+            }
+        }
+
+        static void SkipOneStatement(ParsingScript script)
+        {
+            int depth = 0;
+            bool inQuotes = false;
+            while (script.StillValid())
+            {
+                char c = script.CurrentAndForward();
+                if (c == '"' && (script.Pointer < 2 || script.At(script.Pointer - 2) != '\\'))
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+                if (inQuotes)
+                {
+                    continue;
+                }
+                if (c == '(' || c == '[' || c == '{')
+                {
+                    depth++;
+                }
+                else if (c == ')' || c == ']' || c == '}')
+                {
+                    depth--;
+                    if (depth == 0 && c == '}')
+                    {
+                        return;
+                    }
+                }
+                else if (c == ';' && depth == 0)
+                {
+                    return;
+                }
             }
         }
 
@@ -1649,6 +2003,12 @@ namespace SplitAndMerge
             }
         }
 
+
+        /// <summary>Whether a namespace of that name has been declared.</summary>
+        public bool NamespaceExists(string name)
+        {
+            return s_namespaces.ContainsKey(Constants.ConvertName(name));
+        }
 
         public ParserFunction GetFromNamespace(string name)
         {
@@ -1795,6 +2155,15 @@ namespace SplitAndMerge
             }
 
             return null;
+        }
+
+        /// <summary>The function registered under a name already in the form ConvertName gives,
+        /// as registered -- no NewInstance copy, no namespace search; null when there is none.
+        /// For compiled code that only needs to know what the name stands for right now.</summary>
+        internal ParserFunction GetRegisteredFunction(string convertedName)
+        {
+            s_functions.TryGetValue(convertedName, out var function);
+            return function;
         }
 
         public ParserFunction GetFunction(string name)
@@ -2217,6 +2586,10 @@ namespace SplitAndMerge
             action.InterpreterInstance = this;
             s_actions[name] = action;
         }
+
+        /// <summary>The number of stack levels pushed -- what InterpreterSecurity.MaxCallDepth
+        /// limits. Compiled code calling itself directly adds its own count (CscsDirect).</summary>
+        public int CallDepth { get { return s_locals.Count; } }
 
         public void AddLocalVariables(StackLevel locals)
         {

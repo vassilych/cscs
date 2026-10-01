@@ -26,16 +26,16 @@ namespace SplitAndMerge
         // collection arguments taken out -- the original is also what the runtime prepares
         // the arguments from, so it is never changed.
         Dictionary<string, Variable> m_declaredArgsMap;
-        HashSet<string> m_collectionArgs = new HashSet<string>();
+        HashSet<string> m_collectionArgs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // Loop counters declared "int" rather than "double" -- see FindIntCounters.
         HashSet<string> m_intCounters = new HashSet<string>();
         // Int arguments the body assigns to. They become double locals: see ConvertScript.
-        HashSet<string> m_widenedIntArgs = new HashSet<string>();
-        Dictionary<string, string> m_widenedIntSlots = new Dictionary<string, string>();
+        HashSet<string> m_widenedIntArgs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> m_widenedIntSlots = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         string[] m_defaultArgs;
         StringBuilder m_converted = new StringBuilder();
         Dictionary<string, Variable> m_argsMap;
-        Dictionary<string, string> m_paramMap = new Dictionary<string, string>();
+        Dictionary<string, string> m_paramMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, int> m_definitionsMap = new Dictionary<string, int>();
 
         HashSet<string> m_newVariables = new HashSet<string>();
@@ -54,6 +54,20 @@ namespace SplitAndMerge
         // any statement is translated: the declaration comes from the first assignment, which
         // may be "v = 0" long before "v = m[key]" reveals what v really has to hold.
         HashSet<string> m_variableLocals = new HashSet<string>();
+        // Locals first assigned at the function's own top level, so declared in the scope that
+        // every later statement sees -- see DeclareBlockCrossingLocals.
+        HashSet<string> m_topLevelAssigned = new HashSet<string>();
+        // Names the function declares with "var": locals even where the interpreter holds a
+        // global of that name, so no global read or write-back may reach them.
+        HashSet<string> m_varLocals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Every name the body assigns, steps, loops over or catches into: a local, wherever in the
+        // body it is first read. Only a name outside this set can be read late (CscsLate).
+        HashSet<string> m_assignedAnywhere = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> m_readFirst = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // The read-first names whose first write reads them: "x = !x" (ReadBeforeAssigned).
+        HashSet<string> m_selfReadFirst = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // ProcessFunction is handling a name with no parentheses of its own (GetCSCSFunction).
+        bool m_nameWithoutCall;
         // Locals every one of whose assignments is a string. Only those can take part in a
         // rewritten string comparison: a local that is ever given a number has to keep the
         // numeric comparison, which orders by value rather than by text.
@@ -175,6 +189,24 @@ namespace SplitAndMerge
         public string ClassName { get; set; } = "Precompiler";
         public bool IsStatic { get; set; } = true;
 
+        /// <summary>The C# types of the typed entry point ("int", "double", "string",
+        /// "Variable"), or null when the function has none (MakeDirectSelfCalls).</summary>
+        public List<string> DirectTypes { get; private set; }
+
+        /// <summary>Whether compiled functions call each other and themselves through their typed
+        /// entry points (MakeDirectSelfCalls, CscsDirect). On by default; off, every call goes
+        /// through the interpreter's call as before.</summary>
+        public static bool DirectCalls { get; set; } = true;
+
+        // The code without typed returns, kept while CSharpCode holds the variant with them: that
+        // variant is proved by compiling it, and when it does not compile this one is used.
+        string m_untypedCSharpCode;
+        internal string UntypedCSharpCode { get { return m_untypedCSharpCode; } }
+
+        /// <summary>The typed entry point, NAME__direct, as a Func of those types, once compiled.
+        /// A compiled caller runs it in place of the interpreter's call (CscsDirect.Call).</summary>
+        public Delegate Direct { get; private set; }
+
         static string STRING_VAR_ARG = "__varStr";
         static string NUMERIC_VAR_ARG = "__varNum";
         static string INT_VAR_ARG = "__varInt";
@@ -261,8 +293,6 @@ namespace SplitAndMerge
         /// Stops the translation of anything whose C# spelling would not mean what the
         /// interpreter means by it. Throwing leaves the whole function to the interpreter,
         /// which is the granularity the fallback works at.
-        ///   "&lt;&lt;" and "&gt;&gt;": the interpreter implements no shift -- "3 &lt;&lt; 2" is 0 there,
-        ///     where C#'s shift makes it 12. A silently different answer, so not compiled.
         ///   "iff(c, a, b)": a statement in the interpreter, which needs the script around it.
         ///     Called back with only its arguments it threw "Couldn't skip expression".
         /// </summary>
@@ -272,7 +302,7 @@ namespace SplitAndMerge
             for (int i = 0; i < statement.Length; i++)
             {
                 var ch = statement[i];
-                if (ch == '"' && (i == 0 || statement[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(statement, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -281,14 +311,18 @@ namespace SplitAndMerge
                 {
                     continue;
                 }
-                if ((ch == '<' || ch == '>') && i + 1 < statement.Length && statement[i + 1] == ch)
-                {
-                    throw new ArgumentException("No shift operator in CSCS: " + statement);
-                }
                 if ((ch == 'i' || ch == 'I') && (i == 0 || !char.IsLetterOrDigit(statement[i - 1])) &&
                     i + 4 <= statement.Length && statement.Substring(i, 4).ToLower() == "iff(")
                 {
                     throw new ArgumentException("iff() needs the interpreter: " + statement);
+                }
+                // "e.Stack" on a catch variable is the interpreter's call chain at the throw
+                // (Interpreter.CreateExceptionStack), which compiled code has no record of.
+                if (ch == '.' && i + 6 <= statement.Length &&
+                    string.Equals(statement.Substring(i + 1, 5), "stack", StringComparison.OrdinalIgnoreCase) &&
+                    (i + 6 == statement.Length || !char.IsLetterOrDigit(statement[i + 6]) && statement[i + 6] != '_'))
+                {
+                    throw new ArgumentException("A caught exception's Stack needs the interpreter: " + statement);
                 }
             }
         }
@@ -320,11 +354,22 @@ namespace SplitAndMerge
             m_scriptInCSharp = scriptInCSharp;
 
             m_cscsCode = Utils.ConvertToScript(m_parentScript.InterpreterInstance, m_originalCode, out _);
+            s_scriptFunctions = ScriptFunctionsShadowingMath();
             if (!scriptInCSharp)
             {
-                m_cscsCode = RewriteTernaryNew(RewriteChainedComparisons(RewriteIff(m_cscsCode)));
+                m_cscsCode = RewriteNestedNew(RewriteIfAssignment(RewriteTernaryNew(RewriteComparisonsAsNumbers(
+                    RewriteChainedComparisons(RewriteIff(RewriteTextTimesNumber(RewriteBraceLiterals(RewriteVariableMemberCalls(RewriteVarDeclarations(RewriteCaseBlocks(RewriteSizeCalls(RewriteForEachSeparator(RewriteBracketLiterals(RewriteTypeCalls(RewritePrefixStepInIf(RewriteReturnStep(RewriteForEachLiterals(RewriteBracelessBodies(TerminateLiteralStatements(RewriteNamedArgumentCalls(NormalizeArgSpelling(m_cscsCode))))))))))))))))))))));
             }
             RemoveIrrelevant(m_cscsCode);
+            m_assignedAnywhere = AssignedAnywhere(m_cscsCode);
+            m_selfReadFirst = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            m_readFirst = ReadBeforeAssigned(m_cscsCode, m_assignedAnywhere, m_selfReadFirst);
+            var callText = WithoutStringContents(m_cscsCode ?? "");
+            s_localNames = new HashSet<string>(m_assignedAnywhere.Concat(m_declaredArgsMap.Keys)
+                .Where(local => !System.Text.RegularExpressions.Regex.IsMatch(callText,
+                    @"(?<![\w.])" + System.Text.RegularExpressions.Regex.Escape(local) + @"\s*\(",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase)),
+                StringComparer.OrdinalIgnoreCase);
 
             // First pass: assume this function never calls back into the interpreter and
             // leave out the per-assignment write-back.
@@ -341,7 +386,529 @@ namespace SplitAndMerge
                 CSharpCode = ConvertScript(startClass, finish);
             }
 
+            if (!scriptInCSharp && m_usesInterpreter)
+            {
+                // Where it can call back, a local standing for an interpreter variable is read
+                // from the interpreter (ReadGlobalsThroughInterpreter).
+                var bound = GlobalBoundNames();
+                CSharpCode = RoslynCompiler.ReadGlobalsThroughInterpreter(CSharpCode, bound);
+                if (m_untypedCSharpCode != null)
+                {
+                    m_untypedCSharpCode = RoslynCompiler.ReadGlobalsThroughInterpreter(m_untypedCSharpCode, bound);
+                }
+            }
+            if (!scriptInCSharp)
+            {
+                CSharpCode = TruthTestLogicalOperands(CSharpCode);
+                CSharpCode = ScriptMembersAsFields(CSharpCode);
+                CSharpCode = MakeDirectSelfCalls(CSharpCode);
+                // "return x++" came back as "__rsN = x; x++; return __rsN;" (RewriteReturnStep): the
+                // interpreter's postfix step returns the number underneath the old value, which for
+                // text is not the text.
+                CSharpCode = StepValueReturns(CSharpCode);
+                if (m_untypedCSharpCode != null)
+                {
+                    m_untypedCSharpCode = StepValueReturns(m_untypedCSharpCode);
+                }
+                CSharpCode = RoslynCompiler.InterpreterCompoundsAndElements(RoslynCompiler.NumbersForBoolsInText(
+                    RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(CSharpCode))));
+                if (m_untypedCSharpCode != null)
+                {
+                    m_untypedCSharpCode = RoslynCompiler.InterpreterCompoundsAndElements(RoslynCompiler.NumbersForBoolsInText(
+                        RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(m_untypedCSharpCode))));
+                }
+            }
             return CSharpCode;
+        }
+
+        /// <summary>A "for" counter the interpreter would write as a global: one exists under the
+        /// name, and nothing in the function (an argument, a "var") hides it.</summary>
+        bool IsGlobalCounter(string name)
+        {
+            var interpreter = m_parentScript?.InterpreterInstance;
+            return !m_scriptInCSharp && interpreter != null && IsPlainName(name) && !m_varLocals.Contains(name) &&
+                   !m_declaredArgsMap.Keys.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase)) &&
+                   interpreter.GetVariable(name, m_parentScript) is GetVarFunction;
+        }
+
+        /// <summary>
+        /// The names this function assigns that are the interpreter's rather than its own: a
+        /// global when the function was translated -- an assignment inside a function writes an
+        /// existing global -- or a name read before it is assigned (ReadBeforeAssigned). Not an
+        /// argument and not a "var" local, which hide a global of their name.
+        /// </summary>
+        List<string> GlobalBoundNames()
+        {
+            var interpreter = m_parentScript?.InterpreterInstance;
+            return m_assignedAnywhere.Where(name =>
+                    !name.StartsWith("__", StringComparison.Ordinal) && !m_varLocals.Contains(name) &&
+                    !m_declaredArgsMap.Keys.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase)) &&
+                    (m_readFirst.Contains(name) ||
+                     (interpreter != null && interpreter.GetVariable(name, m_parentScript) is GetVarFunction)))
+                .ToList();
+        }
+
+        /// <summary>
+        /// C#'s Variable has members of its own that scripts cannot mean -- Count, Value, String,
+        /// Tuple, Object -- and a script's "v.Count" copied into the C# bound to them: 2 for a
+        /// list, where the interpreter looks the property up and does not find it. On a local
+        /// holding a Variable or a "variable" argument, such a member (not called) is read as the
+        /// interpreter reads a property (ReadField). Generated code never uses them on those names.
+        /// </summary>
+        string ScriptMembersAsFields(string code)
+        {
+            var holders = new HashSet<string>(m_variableLocals.Concat(m_collectionLocals), StringComparer.Ordinal);
+            return System.Text.RegularExpressions.Regex.Replace(code,
+                @"(?<![\w.""])([A-Za-z_]\w*|__varVar\[\d+\])\.(Count|Value|String|Tuple|Object|ObjectType)\b(?!\s*\()",
+                m =>
+                {
+                    var owner = m.Groups[1].Value;
+                    bool scriptHolder = owner.StartsWith(CSCS_VAR_ARG + "[", StringComparison.Ordinal) ||
+                                        (holders.Contains(owner) && !owner.StartsWith("__", StringComparison.Ordinal));
+                    return scriptHolder && !InsideQuotes(code, m.Index) ?
+                        owner + ".ReadField(\"" + m.Groups[2].Value + "\")" : m.Value;
+                });
+        }
+
+        /// <summary>
+        /// Recursion without the interpreter. A function whose body needs nothing of the
+        /// interpreter's except calls to itself -- recursive fib, gcd, a power by squaring -- and
+        /// whose arguments are all scalars is split in three: the entry point the interpreter
+        /// calls keeps its signature and only unpacks the argument lists into typed values;
+        /// "NAME__body" is the body with those values as parameters; "NAME__direct" counts the
+        /// depth (CscsDirect) and calls the body. Each call to itself goes to NAME__direct with
+        /// the arguments converted as PrepareArgs converts them, instead of CscsCalls.Call's
+        /// lookup, argument frame and nine lists. Nothing observes the frames it skips: the body
+        /// reads no variable, calls no function and publishes no local through the interpreter.
+        /// The first call, from the interpreter, still pushes its level, so the depth counted is
+        /// the same as before and MaxCallDepth stops at the same call. Anything that does not fit
+        /// leaves the code as it was.
+        /// </summary>
+        string MakeDirectSelfCalls(string code)
+        {
+            DirectTypes = null;
+            m_untypedCSharpCode = null;
+            if (!DirectCalls || AsyncMode || !IsStatic || m_scriptInCSharp || m_usesInterpreter || m_collectionArgs.Count > 0 ||
+                string.IsNullOrEmpty(m_functionName))
+            {
+                return code;
+            }
+            var selfCall = new System.Text.RegularExpressions.Regex(
+                @"CscsCalls\.Call\(__interpreter,\s*""" + System.Text.RegularExpressions.Regex.Escape(m_functionName) + @"""",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var types = new List<string>();
+            var slots = new List<string>();
+            foreach (var arg in m_actualArgs)
+            {
+                if (!m_declaredArgsMap.TryGetValue(arg, out var declared))
+                {
+                    return code;
+                }
+                string slot;
+                if (!m_paramMap.TryGetValue(arg, out slot) && !m_widenedIntSlots.TryGetValue(arg, out slot))
+                {
+                    return code;
+                }
+                switch (declared.Type)
+                {
+                    case Variable.VarType.INT: types.Add("int"); break;
+                    case Variable.VarType.NUMBER: types.Add("double"); break;
+                    case Variable.VarType.STRING: types.Add("string"); break;
+                    case Variable.VarType.VARIABLE: types.Add("Variable"); break;
+                    default: return code;
+                }
+                slots.Add(slot);
+            }
+
+            var header = System.Text.RegularExpressions.Regex.Match(code,
+                @"public static Variable " + System.Text.RegularExpressions.Regex.Escape(m_functionName) +
+                @"\s*\(Interpreter __interpreter,[^)]*List<Variable> " + CSCS_VAR_ARG + @"\)\s*\{");
+            if (!header.Success)
+            {
+                return code;
+            }
+            int open = header.Index + header.Length - 1;
+            int close = MatchingBraceInCSharp(code, open);
+            if (close < 0)
+            {
+                return code;
+            }
+            var body = code.Substring(open + 1, close - open - 1);
+            var parameters = new List<string>();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                body = body.Replace(slots[i], "__p" + i);
+                parameters.Add(types[i] + " __p" + i);
+            }
+            if (System.Text.RegularExpressions.Regex.IsMatch(body,
+                    @"__var(Str|Num|Int|ArrStr|ArrNum|ArrInt|MapStr|MapNum|Var)\b"))
+            {
+                return code;
+            }
+            body = DirectSelfCalls(body, selfCall, types);
+            if (body == null)
+            {
+                return code;
+            }
+
+            var name = m_functionName;
+            var typedParams = string.Concat(parameters.Select(p => ", " + p));
+            var names = string.Concat(Enumerable.Range(0, slots.Count).Select(i => ", __p" + i));
+            var nl = Environment.NewLine;
+            var entry = "{" + nl +
+                        "        return " + name + "__body(__interpreter" + string.Concat(slots.Select(s => ", " + s)) + ");" + nl +
+                        "    }" + nl;
+            var bodyMethod = "    public static Variable " + name + "__body(Interpreter __interpreter" + typedParams + ") {" +
+                             body + "}" + nl;
+            var directMethod = "    public static Variable " + name + "__direct(Interpreter __interpreter" + typedParams + ") {" + nl +
+                               "        CscsDirect.Enter(__interpreter);" + nl +
+                               "        try { return " + name + "__body(__interpreter" + names + "); }" + nl +
+                               "        finally { CscsDirect.Leave(); }" + nl +
+                               "    }" + nl;
+            DirectTypes = types;
+            var untyped = code.Substring(0, open) + entry + bodyMethod + directMethod + code.Substring(close + 1);
+            var numBody = TypedReturnBody(body);
+            if (numBody == null)
+            {
+                return untyped;
+            }
+            // Typed returns: the body again, returning a double, its calls to itself taking and
+            // giving doubles (NAME__numdirect). The entry points build their Variable from it,
+            // which for a number is the Variable the untyped body returned.
+            var slotArgs = string.Concat(slots.Select(s => ", " + s));
+            var typedEntry = "{" + nl +
+                             "        return Variable.ConvertToVariable(" + name + "__numbody(__interpreter" + slotArgs + "));" + nl +
+                             "    }" + nl;
+            var numMethod = "    public static double " + name + "__numbody(Interpreter __interpreter" + typedParams + ") {" +
+                            numBody + "}" + nl;
+            var numDirect = "    public static double " + name + "__numdirect(Interpreter __interpreter" + typedParams + ") {" + nl +
+                            "        CscsDirect.Enter(__interpreter);" + nl +
+                            "        try { return " + name + "__numbody(__interpreter" + names + "); }" + nl +
+                            "        finally { CscsDirect.Leave(); }" + nl +
+                            "    }" + nl;
+            var typedDirect = "    public static Variable " + name + "__direct(Interpreter __interpreter" + typedParams + ") {" + nl +
+                              "        CscsDirect.Enter(__interpreter);" + nl +
+                              "        try { return Variable.ConvertToVariable(" + name + "__numbody(__interpreter" + names + ")); }" + nl +
+                              "        finally { CscsDirect.Leave(); }" + nl +
+                              "    }" + nl;
+            var typed = code.Substring(0, open) + typedEntry + numMethod + numDirect + typedDirect + code.Substring(close + 1);
+            // A double where a Variable was is the same number, but C# writes it into text its
+            // own way: "r + \"x\"" would no longer be the interpreter's "3x" for every r.
+            if (RoslynCompiler.JoinsNumberToText(typed, name + "__numbody"))
+            {
+                return untyped;
+            }
+            m_untypedCSharpCode = untyped;
+            return typed;
+        }
+
+        /// <summary>
+        /// The body of a function that calls itself, rewritten to return a double: a call to itself
+        /// held in a temporary -- "__varTempVar = CscsDirect.Result(NAME__direct(..)); Variable
+        /// __varTempVarK = __varTempVar;" -- becomes "double __varTempVarK = NAME__numdirect(..);",
+        /// one returned at once becomes "return NAME__numdirect(..);", and every
+        /// "return Variable.ConvertToVariable(E);" becomes "return CscsDirect.Number(E);". Number
+        /// takes a double or an int only, so if any value returned is text, a truth value or a
+        /// Variable, the result does not compile, and the untyped code is used instead
+        /// (Precompiler.Compile): the C# compiler is the proof that every return is a number. Null
+        /// when the body has no such call to itself, where typed returns would gain nothing.
+        /// </summary>
+        string TypedReturnBody(string body)
+        {
+            var name = m_functionName;
+            var callHead = "__varTempVar = CscsDirect.Result(" + name + "__direct(";
+            if (body.IndexOf(callHead, StringComparison.Ordinal) < 0)
+            {
+                return null;
+            }
+            var sb = new StringBuilder(body.Length);
+            int at = 0;
+            bool rewrote = false;
+            while (true)
+            {
+                int found = body.IndexOf(callHead, at, StringComparison.Ordinal);
+                if (found < 0)
+                {
+                    sb.Append(body, at, body.Length - at);
+                    break;
+                }
+                int argsOpen = found + callHead.Length - 1;
+                int argsClose = MatchingParenInCSharp(body, argsOpen);
+                int resultClose = argsClose < 0 ? -1 : MatchingParenInCSharp(body, body.IndexOf('(', found));
+                if (resultClose < 0 || resultClose + 1 >= body.Length || body[resultClose + 1] != ';')
+                {
+                    sb.Append(body, at, found + callHead.Length - at);
+                    at = found + callHead.Length;
+                    continue;
+                }
+                var args = body.Substring(argsOpen + 1, argsClose - argsOpen - 1);
+                var after = System.Text.RegularExpressions.Regex.Match(body.Substring(resultClose + 2),
+                    @"^\s*(?:Variable ([A-Za-z_]\w*) = __varTempVar;|return __varTempVar;)");
+                if (!after.Success)
+                {
+                    sb.Append(body, at, found + callHead.Length - at);
+                    at = found + callHead.Length;
+                    continue;
+                }
+                sb.Append(body, at, found - at);
+                sb.Append(after.Groups[1].Success ?
+                    "double " + after.Groups[1].Value + " = " + name + "__numdirect(" + args + ");" :
+                    "return " + name + "__numdirect(" + args + ");");
+                at = resultClose + 2 + after.Length;
+                rewrote = true;
+            }
+            if (!rewrote)
+            {
+                return null;
+            }
+            var text = sb.ToString();
+            const string returnHead = "return Variable.ConvertToVariable(";
+            sb.Clear();
+            at = 0;
+            while (true)
+            {
+                int found = text.IndexOf(returnHead, at, StringComparison.Ordinal);
+                if (found < 0)
+                {
+                    sb.Append(text, at, text.Length - at);
+                    break;
+                }
+                int open = found + returnHead.Length - 1;
+                int close = MatchingParenInCSharp(text, open);
+                if (close < 0)
+                {
+                    return null;
+                }
+                sb.Append(text, at, found - at).Append("return CscsDirect.Number(")
+                  .Append(text, open + 1, close - open - 1).Append(")");
+                at = close + 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Every "CscsCalls.Call(__interpreter, "NAME", ..)" in the text as a call to NAME__direct,
+        /// the arguments converted to the declared types; null when a call has another number of
+        /// arguments than declared (a default or a named one -- the interpreter binds those).
+        /// </summary>
+        string DirectSelfCalls(string text, System.Text.RegularExpressions.Regex selfCall, List<string> types)
+        {
+            var sb = new StringBuilder(text.Length);
+            int at = 0;
+            while (true)
+            {
+                var m = selfCall.Match(text, at);
+                if (!m.Success)
+                {
+                    sb.Append(text, at, text.Length - at);
+                    return sb.ToString();
+                }
+                int open = text.IndexOf('(', m.Index);
+                int close = MatchingParenInCSharp(text, open);
+                if (close < 0)
+                {
+                    return null;
+                }
+                var args = SplitCSharpArguments(text.Substring(open + 1, close - open - 1));
+                if (args.Count != types.Count + 2)
+                {
+                    return null;
+                }
+                var call = new StringBuilder("CscsDirect.Result(" + m_functionName + "__direct(__interpreter");
+                for (int i = 0; i < types.Count; i++)
+                {
+                    var value = DirectSelfCalls(args[i + 2], selfCall, types);
+                    if (value == null)
+                    {
+                        return null;
+                    }
+                    var convert = types[i] == "int" ? "Int" : types[i] == "double" ? "Num" :
+                                  types[i] == "string" ? "Text" : "Var";
+                    call.Append(", CscsDirect.").Append(convert).Append("(").Append(value.Trim()).Append(")");
+                }
+                call.Append("))");
+                sb.Append(text, at, m.Index - at).Append(call);
+                at = close + 1;
+            }
+        }
+
+        /// <summary>The '}' closing the '{' at <paramref name="open"/> in generated C#, skipping string
+        /// and character literals; -1 if there is none.</summary>
+        static int MatchingBraceInCSharp(string code, int open)
+        {
+            return MatchingInCSharp(code, open, '{', '}');
+        }
+
+        static int MatchingParenInCSharp(string code, int open)
+        {
+            return MatchingInCSharp(code, open, '(', ')');
+        }
+
+        static int MatchingInCSharp(string code, int open, char opener, char closer)
+        {
+            int depth = 0;
+            for (int i = open; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (c == '"' || c == '\'')
+                {
+                    i = SkipCSharpLiteral(code, i);
+                    continue;
+                }
+                if (c == opener) { depth++; }
+                else if (c == closer && --depth == 0) { return i; }
+            }
+            return -1;
+        }
+
+        static int SkipCSharpLiteral(string code, int start)
+        {
+            char quote = code[start];
+            for (int i = start + 1; i < code.Length; i++)
+            {
+                if (code[i] == '\\') { i++; continue; }
+                if (code[i] == quote) { return i; }
+            }
+            return code.Length;
+        }
+
+        /// <summary>The top-level, comma-separated arguments of a C# argument list.</summary>
+        static List<string> SplitCSharpArguments(string text)
+        {
+            var result = new List<string>();
+            int depth = 0, start = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '"' || c == '\'') { i = SkipCSharpLiteral(text, i); continue; }
+                if ("([{".IndexOf(c) >= 0) { depth++; }
+                else if (")]}".IndexOf(c) >= 0) { depth--; }
+                else if (c == ',' && depth == 0)
+                {
+                    result.Add(text.Substring(start, i - start));
+                    start = i + 1;
+                }
+            }
+            result.Add(text.Substring(start));
+            return result;
+        }
+
+        /// <summary>
+        /// In every generated "if (...)" and "while (...)" condition, a side of "&&" or "||" that
+        /// is a script call's result -- "CscsCalls.Call(...)" made in place, or a hoisted one read
+        /// as "__varTempVarN.AsDouble()" -- is tested as CSCS tests a value: CscsConvert.IsTrue
+        /// (IsFalse under "!"). C# has no truth value for a Variable or a double (CS0019), and
+        /// AsDouble would parse the text "5" to 5 and call it true where the interpreter says
+        /// false. Each builder that emits a condition would otherwise need this separately; done
+        /// on the finished C#, it cannot touch code that compiled, since C# rejects both shapes.
+        /// </summary>
+        static string TruthTestLogicalOperands(string csharp)
+        {
+            var sb = new StringBuilder(csharp.Length);
+            int i = 0;
+            while (i < csharp.Length)
+            {
+                int at = IndexOfConditionKeyword(csharp, i, out int open);
+                if (at < 0)
+                {
+                    sb.Append(csharp, i, csharp.Length - i);
+                    break;
+                }
+                int close = MatchingParen(csharp, open);
+                if (close < 0)
+                {
+                    sb.Append(csharp, i, csharp.Length - i);
+                    break;
+                }
+                sb.Append(csharp, i, open + 1 - i);
+                var inner = csharp.Substring(open + 1, close - open - 1);
+                // A returned or stored value is only a condition when it joins terms with
+                // "&&" or "||": "return f(n) && n > 1" -- anything else is left as it is.
+                bool isValue = string.CompareOrdinal(csharp, at, "Variable.ConvertToVariable", 0, 26) == 0;
+                bool logical = SplitTopLevelOn(inner, "&&").Count > 1 || SplitTopLevelOn(inner, "||").Count > 1;
+                sb.Append(isValue && !logical ? TruthTestLogicalOperands(inner) : TruthTestTerms(inner));
+                sb.Append(')');
+                i = close + 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>The next "if(" or "while(" (spaces allowed before the parenthesis) outside
+        /// string literals, and the position of its parenthesis.</summary>
+        static int IndexOfConditionKeyword(string text, int from, out int open)
+        {
+            open = -1;
+            bool inString = false;
+            for (int i = from; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == '"') { inString = false; }
+                    continue;
+                }
+                if (c == '"') { inString = true; continue; }
+                foreach (var keyword in new[] { "if", "while", "Variable.ConvertToVariable" })
+                {
+                    if (string.CompareOrdinal(text, i, keyword, 0, keyword.Length) != 0 ||
+                        (i > 0 && (IsNameChar(text[i - 1]) || text[i - 1] == '.')))
+                    {
+                        continue;
+                    }
+                    int j = i + keyword.Length;
+                    while (j < text.Length && text[j] == ' ') { j++; }
+                    if (j < text.Length && text[j] == '(')
+                    {
+                        open = j;
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        static string TruthTestTerms(string condition)
+        {
+            foreach (var connective in new[] { "||", "&&" })
+            {
+                var parts = SplitTopLevelOn(condition, connective);
+                if (parts.Count > 1)
+                {
+                    return string.Join(connective, parts.Select(TruthTestTerms));
+                }
+            }
+            var term = condition.Trim();
+            var lead = condition.Substring(0, condition.Length - condition.TrimStart().Length);
+            var trail = condition.Substring(condition.TrimEnd().Length);
+            bool negated = term.StartsWith("!") && !term.StartsWith("!=");
+            var core = negated ? term.Substring(1).Trim() : term;
+            if (core.Length > 1 && core[0] == '(' && FindMatchingParen(core, 0) == core.Length - 1)
+            {
+                var innerTerm = core.Substring(1, core.Length - 2);
+                var rewritten = TruthTestTerms(innerTerm);
+                return rewritten == innerTerm ? condition :
+                    lead + (negated ? "!" : "") + "(" + rewritten + ")" + trail;
+            }
+            string value = null;
+            if (core.StartsWith("CscsCalls.Call(", StringComparison.Ordinal) &&
+                FindMatchingParen(core, core.IndexOf('(')) == core.Length - 1)
+            {
+                value = core;
+            }
+            else
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(core, @"^(__varTempVar\d*)\.AsDouble\(\)$");
+                if (m.Success)
+                {
+                    value = m.Groups[1].Value;
+                }
+            }
+            if (value == null)
+            {
+                return condition;
+            }
+            return lead + "CscsConvert." + (negated ? "IsFalse(" : "IsTrue(") + value + ")" + trail;
         }
 
         public void Compile(bool scriptInCSharp = false, string outputDLL = "")
@@ -360,7 +927,10 @@ namespace SplitAndMerge
             {
                 // Capture the method on its own (no class wrapper) so several functions can
                 // be emitted into one generated file, then fall through and compile as usual.
-                AotGenerator.Collect(m_functionName, GetCSharpCode(scriptInCSharp, false, false));
+                // Never the variant with typed returns: it is proved only by compiling it, which
+                // does not happen here.
+                var collected = GetCSharpCode(scriptInCSharp, false, false);
+                AotGenerator.Collect(m_functionName, m_untypedCSharpCode ?? collected);
                 CSharpCode = null;
             }
 
@@ -384,8 +954,19 @@ namespace SplitAndMerge
 
             // RoslynCompiler appends a hash of the generated source, so the assembly name
             // is stable across runs and the compiled result can be cached.
-            Assembly compiledAssembly = RoslynCompiler.Compile(
-                CSharpCode, "CscsPrecompiled_" + m_functionName, outDll);
+            Assembly compiledAssembly;
+            try
+            {
+                compiledAssembly = CompileRepairing(outDll);
+            }
+            catch (ArgumentException) when (m_untypedCSharpCode != null)
+            {
+                // The variant with typed returns did not compile -- something returned is not a
+                // number -- so the one without them is used.
+                CSharpCode = m_untypedCSharpCode;
+                m_untypedCSharpCode = null;
+                compiledAssembly = CompileRepairing(outDll);
+            }
 
             try
             {
@@ -396,12 +977,61 @@ namespace SplitAndMerge
                 else
                 {
                     m_compiledFunc = CompileAndCache(compiledAssembly, m_functionName);
+                    Direct = DirectDelegate(compiledAssembly);
                 }
             }
             catch (Exception exc)
             {
                 throw new ArgumentException("Compile error: " + exc.Message, exc);
             }
+        }
+
+        /// <summary>
+        /// Compiles CSharpCode; on an error the interpreter can stand in for -- a comparison or an
+        /// operator C# has none of between these operands -- repairs it (RoslynCompiler.RepairOperators)
+        /// and compiles again.
+        /// </summary>
+        Assembly CompileRepairing(string outDll)
+        {
+            try
+            {
+                return RoslynCompiler.Compile(CSharpCode, "CscsPrecompiled_" + m_functionName, outDll);
+            }
+            catch (ArgumentException exc) when (RoslynCompiler.IsRepairable(exc.Message))
+            {
+                var interpreter = m_parentScript?.InterpreterInstance;
+                var repaired = RoslynCompiler.RepairOperators(CSharpCode,
+                    name => interpreter != null && interpreter.GetFunction(name) != null);
+                if (repaired == CSharpCode)
+                {
+                    throw;
+                }
+                CSharpCode = repaired;
+                return RoslynCompiler.Compile(CSharpCode, "CscsPrecompiled_" + m_functionName, outDll);
+            }
+        }
+
+        /// <summary>NAME__direct as a Func of its typed parameters, or null when there is none.</summary>
+        Delegate DirectDelegate(Assembly compiledAssembly)
+        {
+            if (DirectTypes == null || DirectTypes.Count > CscsDirect.MaxArguments)
+            {
+                return null;
+            }
+            var types = new List<Type> { typeof(Interpreter) };
+            foreach (var name in DirectTypes)
+            {
+                types.Add(name == "int" ? typeof(int) : name == "double" ? typeof(double) :
+                          name == "string" ? typeof(string) : typeof(Variable));
+            }
+            var method = compiledAssembly.GetModules()[0].GetType("SplitAndMerge." + ClassName)?
+                .GetMethod(m_functionName + "__direct", types.ToArray());
+            if (method == null)
+            {
+                return null;
+            }
+            types.Add(typeof(Variable));
+            return method.CreateDelegate(Expression.GetFuncType(types.ToArray()));
         }
 
         Func<Interpreter, List<string>, List<double>, List<int>, List<List<string>>, List<List<double>>, List<List<int>>,
@@ -590,6 +1220,20 @@ namespace SplitAndMerge
         /// text turned the "int" of a parameter declaration into "@int" and nothing compiled,
         /// so this holds only words that never appear in generated code for any other reason.
         /// </summary>
+        // Every reserved word of C#, for text that would be written into C# as an identifier.
+        static readonly HashSet<string> s_allCsKeywords = new HashSet<string>
+        {
+            "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
+            "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else",
+            "enum", "event", "explicit", "extern", "false", "finally", "fixed", "float", "for",
+            "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock",
+            "long", "namespace", "new", "null", "object", "operator", "out", "override", "params",
+            "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed", "short",
+            "sizeof", "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true",
+            "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual",
+            "void", "volatile", "while"
+        };
+
         static readonly HashSet<string> s_csKeywords = new HashSet<string>
         {
             "abstract", "as", "base", "checked", "const", "delegate", "enum", "event",
@@ -629,6 +1273,12 @@ namespace SplitAndMerge
             {
                 return "";
             }
+            // A "var" local hides a global of its name, so it is published at the function's
+            // own level: through AddCompiledLocalVariable it overwrote the global.
+            if (m_varLocals.Contains(paramName))
+            {
+                mayBeGlobal = false;
+            }
             // The name stays as the script spelt it; only the value, which is C#, is mapped.
             var setter = mayBeGlobal ? "AddCompiledLocalVariable" : "AddCompiledLocalOnlyVariable";
             return m_depth + "__interpreter." + setter + "(\"" + paramName +
@@ -642,18 +1292,21 @@ namespace SplitAndMerge
             // ConvertScript may run twice (see GetCSharpCode), so every piece of state it
             // accumulates has to start empty.
             m_newVariables.Clear();
+            m_openCatches.Clear();
             m_collectionLocals.Clear();
             m_definitionsMap.Clear();
             m_paramMap.Clear();
             m_collectionArgs.Clear();
             m_widenedIntArgs.Clear();
             m_localTypes.Clear();
-            m_argsMap = new Dictionary<string, Variable>(m_declaredArgsMap);
+            m_argsMap = new Dictionary<string, Variable>(m_declaredArgsMap, StringComparer.OrdinalIgnoreCase);
             // An int argument the body assigns to holds whatever the interpreter would put
             // there, which need not be an int: "n = n / 2" is 13.5 for 27, and "n = 3 * n + 1"
             // outgrows an int long before a double. Such an argument becomes a double local
             // started from its slot; an argument that is only read keeps the slot.
-            var assignedNames = new HashSet<string>();
+            // Case-blind: the signature arrives lowercased ('initvalue') while the body keeps
+            // the script's spelling ('initValue'), and the interpreter treats them as one name.
+            var assignedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var statement in TokenizeScript(m_cscsCode))
             {
                 var assigned = AssignedName(statement);
@@ -670,11 +1323,12 @@ namespace SplitAndMerge
             }
             // An int argument keeps its int slot only while nothing assigns to it (above), so
             // only those can seed or bound an int counter.
-            var readOnlyIntArgs = new HashSet<string>(m_declaredArgsMap
+            var readOnlyIntArgs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            readOnlyIntArgs.UnionWith(m_declaredArgsMap
                 .Where(arg => arg.Value.Type == Variable.VarType.INT && !assignedNames.Contains(arg.Key))
                 .Select(arg => arg.Key));
             m_intCounters = FindIntCounters(m_cscsCode, readOnlyIntArgs,
-                new HashSet<string>(m_declaredArgsMap.Keys));
+                new HashSet<string>(m_declaredArgsMap.Keys, StringComparer.OrdinalIgnoreCase));
             m_lastStatementReturn = false;
             m_knownExpression = false;
             m_statementPrelude = "";
@@ -826,7 +1480,7 @@ namespace SplitAndMerge
 
             m_statements = TokenizeScript(m_cscsCode);
             CollectVariableLocals(m_statements);
-            RefuseReturnInTryWithFinally(m_statements);            DeclareBlockCrossingLocals(m_statements);
+            DeclareBlockCrossingLocals(m_statements);
             CollectLocalTypes(m_statements);
             m_statementId = 0;
             while (m_statementId < m_statements.Count)
@@ -891,7 +1545,7 @@ namespace SplitAndMerge
             while (i < code.Length)
             {
                 char ch = code[i];
-                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(code, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -1005,7 +1659,7 @@ namespace SplitAndMerge
             while (i < code.Length)
             {
                 char ch = code[i];
-                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(code, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -1064,7 +1718,7 @@ namespace SplitAndMerge
             while (i < code.Length)
             {
                 char ch = code[i];
-                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(code, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -1170,17 +1824,20 @@ namespace SplitAndMerge
         /// </summary>
         string EscapeKeywordNames(string code)
         {
+            // "object" too -- a script's "object = GetObject(...)" -- though generated code writes it
+            // itself, always as the cast "(object)(": that shape is left alone below.
+            bool Escapable(string name) => s_csKeywords.Contains(name) || name == "object";
             var names = new HashSet<string>();
             foreach (var name in m_newVariables)
             {
-                if (s_csKeywords.Contains(name))
+                if (Escapable(name))
                 {
                     names.Add(name);
                 }
             }
             foreach (var name in m_paramMap.Keys)
             {
-                if (s_csKeywords.Contains(name))
+                if (Escapable(name))
                 {
                     names.Add(name);
                 }
@@ -1195,7 +1852,7 @@ namespace SplitAndMerge
             for (int i = 0; i < code.Length; i++)
             {
                 var ch = code[i];
-                if (ch == '"' && (i == 0 || code[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(code, i))
                 {
                     inQuotes = !inQuotes;
                     sb.Append(ch);
@@ -1215,6 +1872,11 @@ namespace SplitAndMerge
                 // Not one already written with an "@", and not a member: ".out" would be a
                 // field of something else, not the local.
                 bool escaped = i > 0 && (code[i - 1] == '@' || code[i - 1] == '.');
+                if (word == "object" && i > 0 && code[i - 1] == '(' &&
+                    string.CompareOrdinal(code, end, ")(", 0, 2) == 0)
+                {
+                    escaped = true;
+                }
                 sb.Append(!escaped && names.Contains(word) ? "@" + word : word);
                 i = end - 1;
             }
@@ -1289,7 +1951,7 @@ namespace SplitAndMerge
                 return typeText;
             }
             string functionName = GetFunctionName(token, out string suffix, out bool isArray).ToLower();
-            if (!suffix.Contains('.') && m_argsMap.TryGetValue(functionName, out _))
+            if (!suffix.Contains('.') && !suffix.TrimStart().StartsWith("(") && m_argsMap.TryGetValue(functionName, out _))
             {
                 string actualName = m_paramMap[functionName];
                 result = " " + actualName + ReplaceArgsInString(suffix);
@@ -1422,14 +2084,14 @@ namespace SplitAndMerge
             bool inQuotes = false;
             for (int i = 0; i < from && i < text.Length; i++)
             {
-                if (text[i] == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
             }
             for (int i = from; i < text.Length; i++)
             {
-                if (text[i] == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -1526,6 +2188,17 @@ namespace SplitAndMerge
                 return hoistedNew;
             }
 
+            // "return (b = n > 2) + b": the group is 1 or 0 in CSCS but a C# bool, and "bool + int"
+            // does not compile. Hoisted into a statement of its own, which is the order CSCS
+            // evaluates in anyway, leaving a plain name the bool-to-number rule already handles.
+            // Ahead of the compound builders: they copy a group through as it stands, and
+            // "r += (c = n > 5) * 10" then multiplied a C# bool (CS0019).
+            var boolGroup = TryHoistBoolGroupAssignment(statement, nextStatement, addNewVars);
+            if (boolGroup != null)
+            {
+                return boolGroup;
+            }
+
             // "r += x" on a local that holds a Variable goes through the interpreter's own
             // compound operator rather than C#'s "+=", which would use Variable's "+".
             var variableCompound = TryBuildVariableCompound(statement);
@@ -1541,15 +2214,6 @@ namespace SplitAndMerge
             if (memberCompound != null)
             {
                 return memberCompound;
-            }
-
-            // "return (b = n > 2) + b": the group is 1 or 0 in CSCS but a C# bool, and "bool + int"
-            // does not compile. Hoisted into a statement of its own, which is the order CSCS
-            // evaluates in anyway, leaving a plain name the bool-to-number rule already handles.
-            var boolGroup = TryHoistBoolGroupAssignment(statement, nextStatement, addNewVars);
-            if (boolGroup != null)
-            {
-                return boolGroup;
             }
 
             // "a[f(0)]" -- a call inside a subscript. The resolver builds the index itself
@@ -1804,7 +2468,7 @@ namespace SplitAndMerge
                         "var " : "double ";
                     m_newVariables.Add(tokens[0]);
                 }
-                if (!rhs.Contains(";"))
+                if (!WithoutStringContents(rhs).Contains(";"))
                 {
                     // CSCS has no boolean type: a truth value is the number 1 or 0. A local C#
                     // declared "bool" therefore cannot take part in "t += b" (double += bool)
@@ -1955,7 +2619,7 @@ namespace SplitAndMerge
                 else
                 {
                     ProcessToken(tokens, ref m_tokenId, ref result, ref newVarAdded);
-                    if (!result.Contains(";"))
+                    if (!WithoutStringContents(result).Contains(";"))
                     {
                         token = result;
                         result = "";
@@ -1991,7 +2655,8 @@ namespace SplitAndMerge
                 return true;
             }
 
-            if (!returnToken.Contains(";"))
+            // A ";" in text -- "return t + \";\"" -- is not a statement the expression carries.
+            if (!WithoutStringContents(returnToken).Contains(";"))
             {
                 converted = CreateReturnStatement(returnToken);
             }
@@ -2207,11 +2872,6 @@ namespace SplitAndMerge
             }
             sb.Append(outer + "do {\n");
             var switchValue = ReplaceArgsInString(switchExpr);
-            // A switch on something that holds a Variable -- a class field, say -- cannot use
-            // "==" against the labels, so the comparison is made explicitly by the same rule
-            // the interpreter uses.
-            bool valueIsVariable = switchValue.Contains(".GetProperty(") ||
-                                   m_variableLocals.Contains(switchExpr.Trim());
             sb.Append(outer + "  var " + valueVar + " = " + switchValue + ";\n");
             sb.Append(outer + "  bool " + matchVar + " = false;\n");
 
@@ -2224,9 +2884,11 @@ namespace SplitAndMerge
                 }
                 else
                 {
-                    var labelTest = valueIsVariable ?
-                        "Variable.SameValue(" + valueVar + ", " + ReplaceArgsInString(labels[i]) + ")" :
-                        valueVar + " == " + ReplaceArgsInString(labels[i]);
+                    // The interpreter's rule (ProcessSwitch): the same type, and then equal --
+                    // "3" is not case 3 there, where "==" (loose, as the interpreter compares
+                    // elsewhere) and SameValue matched it.
+                    var labelTest = "CscsOps.CaseMatches((object)(" + valueVar + "), (object)(" +
+                        ReplaceArgsInString(labels[i]) + "))";
                     clauses.Append(outer + "  if (" + matchVar + " || " + labelTest + ") { " +
                         matchVar + " = true;\n");
                 }
@@ -2439,7 +3101,7 @@ namespace SplitAndMerge
             for (int i = 0; i < trimmed.Length; i++)
             {
                 var ch = trimmed[i];
-                if (ch == '"' && (i == 0 || trimmed[i - 1] != '\\')) { inQuotes = !inQuotes; continue; }
+                if (ch == '"' && !IsEscapedQuote(trimmed, i)) { inQuotes = !inQuotes; continue; }
                 if (!inQuotes && ch == ':') { colon = i; break; }
             }
             if (colon < 0)
@@ -2582,6 +3244,1319 @@ namespace SplitAndMerge
         static bool IsNameChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 
         /// <summary>
+        /// The bare Math names -- "abs", "max", "round" -- that the interpreter resolves to a
+        /// script function: one defined already, or the function being translated.
+        /// </summary>
+        HashSet<string> ScriptFunctionsShadowingMath()
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var interpreter = m_parentScript?.InterpreterInstance;
+            foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(m_cscsCode ?? "", @"(?<![\w.])([A-Za-z_]\w*)\s*\("))
+            {
+                var name = m.Groups[1].Value;
+                if (string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase) ||
+                    (interpreter != null && interpreter.GetFunction(name) is CustomFunction))
+                {
+                    names.Add(name);
+                }
+            }
+            return names;
+        }
+
+        /// <summary>
+        /// A list literal in square brackets -- ["a", "b"], [[1, 2], [3]] -- as the same literal in
+        /// braces, which the interpreter builds identically (checked: text, Size, Type, elements,
+        /// nesting, empty) and the translator knows how to build. A "[" is a literal where the
+        /// interpreter reads one -- after "=", "(", ",", ":", "?", "{", or inside another literal
+        /// (not after "return", where it does not) -- and a subscript after a name, "]" or ")".
+        /// </summary>
+        static string RewriteBracketLiterals(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf('[') < 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text);
+            var literal = new Stack<bool>();
+            // Whether the literal open at each level sits inside a brace literal, where the
+            // interpreter reads a bracket literal without the function's locals.
+            var inBraceLiteral = new Stack<bool>();
+            bool inQuotes = false;
+            for (int i = 0; i < sb.Length; i++)
+            {
+                char c = sb[i];
+                if (c == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+                if (inQuotes)
+                {
+                    continue;
+                }
+                if (c == '[')
+                {
+                    int k = i - 1;
+                    while (k >= 0 && char.IsWhiteSpace(text[k])) { k--; }
+                    char before = k >= 0 ? text[k] : ';';
+                    // Not after "return": the interpreter does not read a bracket literal there
+                    // ("Couldn't find variable [...]"), and compiled code must not either.
+                    bool isLiteral = "=(,:?{".IndexOf(before) >= 0 ||
+                                     (before == '[' && literal.Count > 0 && literal.Peek());
+                    // Inside a brace literal -- {"k": [1, 2, n]} -- the interpreter reads the
+                    // bracket literal without the function's locals ("Couldn't find variable [n]"),
+                    // so there only a literal of constants is the same both ways.
+                    bool braced = before == ':' || before == '{' ||
+                                  (before == '[' && inBraceLiteral.Count > 0 && inBraceLiteral.Peek());
+                    if (isLiteral && braced && !ConstantsOnly(text, i))
+                    {
+                        isLiteral = false;
+                    }
+                    literal.Push(isLiteral);
+                    inBraceLiteral.Push(braced);
+                    if (isLiteral)
+                    {
+                        sb[i] = '{';
+                    }
+                }
+                else if (c == ']' && literal.Count > 0)
+                {
+                    inBraceLiteral.Pop();
+                    if (literal.Pop())
+                    {
+                        sb[i] = '}';
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// "for (x : a)" and "for (x of a)" as "for (x in a)": the interpreter reads all three the
+        /// same way (Interpreter.ProcessArrayFor), and the translator knows only " in ".
+        /// </summary>
+        /// <summary>
+        /// "for (v : {x, !x})": the literal a for-each walks is built in a statement of its own
+        /// first -- "__forLitN = {x, !x}; for (v : __forLitN)". Built in the header, a literal
+        /// holding a Variable did not compile, while the same literal held in a local did. The
+        /// interpreter builds it once, before the loop, as this does.
+        /// </summary>
+        static string RewriteForEachLiterals(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf("for", StringComparison.Ordinal) < 0 || text.IndexOf('{') < 0)
+            {
+                return text;
+            }
+            int temp = 0;
+            var pattern = new System.Text.RegularExpressions.Regex(
+                @"(?<=^|[;{}])(\s*)for\s*\(\s*([A-Za-z_]\w*)\s*(:|\bin\b|\bof\b)\s*\{");
+            int from = 0;
+            while (true)
+            {
+                var m = pattern.Match(text, from);
+                if (!m.Success)
+                {
+                    return text;
+                }
+                from = m.Index + m.Length;
+                if (InsideQuotes(text, m.Index))
+                {
+                    continue;
+                }
+                int open = m.Index + m.Length - 1;
+                int depth = 0;
+                int close = -1;
+                bool quoted = false;
+                for (int i = open; i < text.Length; i++)
+                {
+                    char c = text[i];
+                    if (c == '"' && !IsEscapedQuote(text, i))
+                    {
+                        quoted = !quoted;
+                    }
+                    else if (!quoted && c == '{')
+                    {
+                        depth++;
+                    }
+                    else if (!quoted && c == '}' && --depth == 0)
+                    {
+                        close = i;
+                        break;
+                    }
+                }
+                if (close < 0)
+                {
+                    continue;
+                }
+                int paren = SkipSpaces(text, close + 1);
+                if (paren >= text.Length || text[paren] != ')')
+                {
+                    continue;
+                }
+                var name = "__forLit" + (++temp);
+                var literal = text.Substring(open, close - open + 1);
+                var replacement = m.Groups[1].Value + name + "=" + literal + ";for(" + m.Groups[2].Value +
+                                  (m.Groups[3].Value == ":" ? " : " : " " + m.Groups[3].Value + " ") + name + ")";
+                text = text.Substring(0, m.Index) + replacement + text.Substring(paren + 1);
+                from = m.Index + replacement.Length;
+            }
+        }
+
+        static string RewriteForEachSeparator(string code)
+        {
+            var text = code ?? "";
+            text = System.Text.RegularExpressions.Regex.Replace(text,
+                @"(?<![\w.])for\s*\(\s*([A-Za-z_]\w*)\s*:\s*", m => InsideQuotes(text, m.Index) ? m.Value : "for(" + m.Groups[1].Value + " in ");
+            return System.Text.RegularExpressions.Regex.Replace(text,
+                @"(?<![\w.])for\s*\(\s*([A-Za-z_]\w*)\s+of\s+", m => InsideQuotes(text, m.Index) ? m.Value : "for(" + m.Groups[1].Value + " in ");
+        }
+
+        /// <summary>
+        /// "Size(x)" as "x.Size" in a loop header. The built-in takes a variable's name -- it reads the token, not a
+        /// value -- and answers GetSize() of its value: the count of an array, 0 for anything else.
+        /// "x.Size" is Variable.Size, the same count, and compiles wherever an expression does,
+        /// where the call went out as statements -- inside a for header, "for (i = 1; i <
+        /// Size(rows); i++)", that was a syntax error. Only while Size is the built-in and x is a
+        /// name, possibly subscripted, that this function or the interpreter already holds: a name
+        /// defined later keeps the call, which the interpreter resolves when it runs.
+        /// </summary>
+        string RewriteSizeCalls(string code)
+        {
+            var text = code ?? "";
+            var interpreter = m_parentScript?.InterpreterInstance;
+            if (text.IndexOf("ize", StringComparison.OrdinalIgnoreCase) < 0 || interpreter == null ||
+                interpreter.GetFunction(Constants.SIZE) is CustomFunction ||
+                interpreter.GetFunction(Constants.SIZE) == null)
+            {
+                return text;
+            }
+            var assigned = AssignedAnywhere(text);
+            return System.Text.RegularExpressions.Regex.Replace(text,
+                // A subscript may hold a quoted key -- "size(json[\"Lines\"])" -- without brackets in it.
+                @"(?<![\w.""])size\s*\(\s*([A-Za-z_]\w*)((?:\[(?:[^\[\]""]|""[^""\[\]]*"")*\])*)\s*\)",
+                m =>
+                {
+                    var root = m.Groups[1].Value;
+                    bool known = assigned.Contains(root) ||
+                                 m_declaredArgsMap.Keys.Any(arg => string.Equals(arg, root, StringComparison.OrdinalIgnoreCase)) ||
+                                 interpreter.GetVariable(root, m_parentScript) is GetVarFunction;
+                    // In a loop header whatever the name is: the call route cannot go there at all,
+                    // and a name defined later is read late (ResolveToken's member branch).
+                    // Anywhere for a name already known: "x.Size" is the same value (GetSize, the
+                    // length of text too), and the call route failed inside a joined text --
+                    // "\"<\" + (Size(x) > 1) + \">\"".
+                    return !InsideQuotes(text, m.Index) &&
+                           (known || InLoopHeader(text, m.Index) || InShortCircuitStatement(text, m.Index) ||
+                            InEqualityStatement(text, m.Index)) ?
+                        root + m.Groups[2].Value + ".Size" : m.Value;
+                },
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>Whether the position is inside the parentheses of a "for" or "while" header --
+        /// the only place the call route cannot go, since it emits statements.</summary>
+        static bool InLoopHeader(string text, int at)
+        {
+            int depth = 0;
+            for (int i = at - 1; i >= 0; i--)
+            {
+                char c = text[i];
+                if (c == ')') { depth++; }
+                else if (c == '(')
+                {
+                    if (depth == 0)
+                    {
+                        var before = text.Substring(0, i).TrimEnd();
+                        return before.EndsWith("for", StringComparison.Ordinal) ||
+                               before.EndsWith("while", StringComparison.Ordinal);
+                    }
+                    depth--;
+                }
+                else if (c == ';' && depth == 0 || c == '{' || c == '}')
+                {
+                    // A for header holds ';' of its own; keep looking only past those.
+                    if (c != ';') { return false; }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Whether the quote at the position is escaped: an odd number of backslashes
+        /// right before it. "a\\" ends with an escaped backslash and the quote closes the text; a test
+        /// of the one character before it took the quote for escaped and ran the string on.</summary>
+        static bool IsEscapedQuote(string text, int at)
+        {
+            int count = 0;
+            for (int k = at - 1; k >= 0 && text[k] == '\\'; k--)
+            {
+                count++;
+            }
+            return count % 2 == 1;
+        }
+
+        /// <summary>The text with the contents of every string literal replaced by spaces, the
+        /// quotes and every position kept.</summary>
+        static string WithoutStringContents(string text)
+        {
+            var sb = new StringBuilder(text);
+            bool inQuotes = false;
+            for (int i = 0; i < sb.Length; i++)
+            {
+                char c = sb[i];
+                if (c == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (inQuotes)
+                {
+                    sb[i] = ' ';
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Whether the statement around the position compares with "==" or "!=": the
+        /// comparison is rewritten to Variable.SameValue, whose operands are written as C#, and the
+        /// Size call route cannot go there -- "if (Size(numbers) != 3)" came out as a bare Size().</summary>
+        static bool InEqualityStatement(string text, int at)
+        {
+            int start = at, end = at;
+            while (start > 0 && ";{}".IndexOf(text[start - 1]) < 0) { start--; }
+            while (end < text.Length && ";{}".IndexOf(text[end]) < 0) { end++; }
+            var statement = WithoutStringContents(text.Substring(start, end - start));
+            return statement.Contains("==") || statement.Contains("!=");
+        }
+
+        /// <summary>Whether the statement around the position has "&&", "||" or "?": there a call
+        /// has to stay inline, which the call route of a built-in like Size cannot.</summary>
+        static bool InShortCircuitStatement(string text, int at)
+        {
+            int start = at, end = at, depth = 0;
+            while (start > 0)
+            {
+                char c = text[start - 1];
+                if (c == ')') { depth++; }
+                else if (c == '(') { depth--; }
+                else if (depth <= 0 && (c == ';' || c == '{' || c == '}')) { break; }
+                start--;
+            }
+            depth = 0;
+            while (end < text.Length)
+            {
+                char c = text[end];
+                if (c == '(') { depth++; }
+                else if (c == ')') { depth--; }
+                else if (depth <= 0 && (c == ';' || c == '{' || c == '}')) { break; }
+                end++;
+            }
+            var statement = WithoutStringContents(text.Substring(start, end - start));
+            return statement.Contains("&&") || statement.Contains("||") || statement.IndexOf('?') >= 0;
+        }
+
+        /// <summary>Whether the bracket opened at <paramref name="open"/> holds only constants --
+        /// strings, numbers, nested brackets -- and no name.</summary>
+        static bool ConstantsOnly(string text, int open)
+        {
+            int depth = 0;
+            bool inQuotes = false;
+            for (int i = open; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+                if (inQuotes)
+                {
+                    continue;
+                }
+                if (c == '[') { depth++; }
+                else if (c == ']' && --depth == 0) { return true; }
+                else if (char.IsLetter(c) || c == '_') { return false; }
+            }
+            return false;
+        }
+
+        static bool InsideQuotes(string text, int at)
+        {
+            bool inQuotes = false;
+            for (int i = 0; i < at && i < text.Length; i++)
+            {
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            return inQuotes;
+        }
+
+        static string StepValueReturns(string code)
+        {
+            return string.IsNullOrEmpty(code) || code.IndexOf("__rs", StringComparison.Ordinal) < 0 ? code :
+                System.Text.RegularExpressions.Regex.Replace(code,
+                    @"Variable\.ConvertToVariable\(\s*(__rs\d+)\s*\)", "CscsOps.StepValue($1)");
+        }
+
+        /// <summary>
+        /// "return ++x;" and "return x++;": the step as a statement of its own, and the value
+        /// returned -- "x++; return x;" and "__rsN = x; x++; return __rsN;". The return path
+        /// handed "++x" to the statement translation, which spells a step as the postfix one (right
+        /// for a statement, not for a value): "return ++x" gave 5 for x = 5, and on a global the
+        /// value was lost altogether.
+        /// </summary>
+        static string RewriteReturnStep(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf("++", StringComparison.Ordinal) < 0 && text.IndexOf("--", StringComparison.Ordinal) < 0)
+            {
+                return text;
+            }
+            int temp = 0;
+            var target = @"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\[[^\[\];""]*\])*";
+            text = System.Text.RegularExpressions.Regex.Replace(text,
+                @"(?<=^|[;{}])(\s*)return\s*(\+\+|--)\s*(" + target + @")\s*;",
+                m => InsideQuotes(text, m.Index) ? m.Value :
+                    m.Groups[1].Value + m.Groups[3].Value + m.Groups[2].Value + ";return " + m.Groups[3].Value + ";");
+            return System.Text.RegularExpressions.Regex.Replace(text,
+                @"(?<=^|[;{}])(\s*)return\s*(" + target + @")\s*(\+\+|--)\s*;",
+                m =>
+                {
+                    if (InsideQuotes(text, m.Index))
+                    {
+                        return m.Value;
+                    }
+                    var keep = "__rs" + (++temp);
+                    return m.Groups[1].Value + keep + "=" + m.Groups[2].Value + ";" + m.Groups[2].Value +
+                           m.Groups[3].Value + ";return " + keep + ";";
+                });
+        }
+
+        /// <summary>
+        /// "if (++x >= n)": the step taken out ahead of the statement -- "x++; if (x >= n)"; for
+        /// "if (x++ % 2 == 0)" the value before it too -- "__ps1=x; x++; if (__ps1 % 2 == 0)". The
+        /// interpreter runs an "if" condition once, the step first, so that is the same; C# had
+        /// "++" on a value it cannot step (CS1059, a global read by name). Only a statement that
+        /// is an "if" of its own (not "else if", not a loop), one prefix step in the condition, and
+        /// no "&&", "||" or "?" there, which may skip it.
+        /// </summary>
+        /// <summary>
+        /// A call to a script function with named arguments -- "tDef(s = \"q\", n = n + 1)" -- as
+        /// the positional call it stands for: "tDef(n + 1, \"q\")". The statement builders read
+        /// "s = " inside the parentheses as an assignment. Only where that is certainly the same
+        /// call: a named value reaches the callee as a copy (AssignFunction) and a positional one
+        /// as itself, so a value that may be a collection -- a bare name, element or member not
+        /// known to be a number or text -- keeps the call with the interpreter; so does a skipped
+        /// parameter without a default the call can spell (a number or text), and more than one
+        /// argument with a call in it, whose order the rewrite could change.
+        /// </summary>
+        string RewriteNamedArgumentCalls(string code)
+        {
+            var text = code ?? "";
+            var interpreter = m_parentScript?.InterpreterInstance;
+            if (interpreter == null || text.IndexOf('=') < 0)
+            {
+                return text;
+            }
+            var callPattern = new System.Text.RegularExpressions.Regex(@"(?<![\w.])([A-Za-z_]\w*)\s*\(");
+            int from = 0;
+            while (true)
+            {
+                var m = callPattern.Match(text, from);
+                if (!m.Success)
+                {
+                    return text;
+                }
+                from = m.Index + m.Length;
+                if (InsideQuotes(text, m.Index))
+                {
+                    continue;
+                }
+                var callee = interpreter.GetFunction(m.Groups[1].Value) as CustomFunction;
+                if (callee == null || callee.GetType() != typeof(CustomFunction) || callee.RealArgs == null)
+                {
+                    continue;
+                }
+                int open = m.Index + m.Length - 1;
+                int close = FindMatchingParen(text, open);
+                if (close < 0)
+                {
+                    continue;
+                }
+                var positional = PositionalArguments(callee, SplitTopLevelOn(text.Substring(open + 1, close - open - 1), ","));
+                if (positional == null)
+                {
+                    continue;
+                }
+                text = text.Substring(0, open + 1) + positional + text.Substring(close);
+                from = open + 1;
+            }
+        }
+
+        string PositionalArguments(CustomFunction callee, List<string> args)
+        {
+            var names = callee.RealArgs;
+            var slots = new string[names.Length];
+            bool namedSeen = false;
+            int withCalls = 0;
+            for (int i = 0; i < args.Count; i++)
+            {
+                var arg = args[i].Trim();
+                if (arg.Length == 0)
+                {
+                    return null;
+                }
+                if (arg.IndexOf('(') >= 0)
+                {
+                    withCalls++;
+                }
+                var named = System.Text.RegularExpressions.Regex.Match(arg, @"^([A-Za-z_]\w*)\s*=(?!=)\s*(.+)$",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                int index = named.Success ?
+                    Array.FindIndex(names, n => string.Equals(n, named.Groups[1].Value, StringComparison.OrdinalIgnoreCase)) : -1;
+                if (index >= 0)
+                {
+                    var value = named.Groups[2].Value.Trim();
+                    if (slots[index] != null || !IsNewValue(value))
+                    {
+                        return null;
+                    }
+                    slots[index] = value;
+                    namedSeen = true;
+                }
+                else
+                {
+                    // A positional argument after a named one is the interpreter's error.
+                    if (namedSeen || named.Success || i >= slots.Length)
+                    {
+                        return null;
+                    }
+                    slots[i] = arg;
+                }
+            }
+            if (!namedSeen || withCalls > 1)
+            {
+                return null;
+            }
+            int last = Array.FindLastIndex(slots, s => s != null);
+            for (int i = 0; i <= last; i++)
+            {
+                if (slots[i] != null)
+                {
+                    continue;
+                }
+                var byDefault = callee.DefaultArgument(i);
+                if (byDefault == null)
+                {
+                    return null;
+                }
+                if (byDefault.Type == Variable.VarType.NUMBER)
+                {
+                    slots[i] = byDefault.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                }
+                else if (byDefault.Type == Variable.VarType.STRING && byDefault.String != null)
+                {
+                    slots[i] = "\"" + byDefault.String.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return string.Join(",", slots.Take(last + 1));
+        }
+
+        static int FindMatchingBracketOrBrace(string text, int open)
+        {
+            int depth = 0;
+            bool quoted = false;
+            for (int i = open; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '"' && !IsEscapedQuote(text, i)) { quoted = !quoted; }
+                else if (!quoted && (c == '{' || c == '[')) { depth++; }
+                else if (!quoted && (c == '}' || c == ']') && --depth == 0) { return i; }
+            }
+            return -1;
+        }
+
+        // A value that is not a reference to something else: a literal, a number or text argument,
+        // or the result of an operator.
+        bool IsNewValue(string value)
+        {
+            var text = value.Trim();
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^-?\d+(\.\d+)?$") ||
+                (text.Length >= 2 && text[0] == '"' && text[text.Length - 1] == '"' && text.IndexOf('"', 1) == text.Length - 1))
+            {
+                return true;
+            }
+            // A collection literal builds a new collection: nothing else holds it.
+            if (text.Length >= 2 && (text[0] == '{' || text[0] == '[') &&
+                FindMatchingBracketOrBrace(text, 0) == text.Length - 1)
+            {
+                return true;
+            }
+            if (IsPlainName(text) && m_argsMap.TryGetValue(text, out var arg) &&
+                (arg.Type == Variable.VarType.INT || arg.Type == Variable.VarType.NUMBER || arg.Type == Variable.VarType.STRING))
+            {
+                return true;
+            }
+            var plain = WithoutStringContents(text);
+            int depth = 0;
+            for (int i = 1; i < plain.Length; i++)
+            {
+                char c = plain[i];
+                if (c == '(' || c == '[' || c == '{') { depth++; }
+                else if (c == ')' || c == ']' || c == '}') { depth--; }
+                else if (depth == 0 && "+-*/%<>=!&|".IndexOf(c) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Braces around a body of one statement -- "if (x) return 1; else return 2;",
+        /// "for (i = 0; i &lt; n; i++) r += i;", "while (k &lt; 3) k++;" -- which the interpreter runs
+        /// as the one statement (Interpreter.ProcessIf, ProcessLoopBody). The statement
+        /// builders expect blocks: without braces a "return" or "throw" in the body was not seen
+        /// as one (a string returned where a Variable is, CS0029), and a loop body was glued to
+        /// its header. An "if" body takes its "else" chain along, a loop body its own body; a
+        /// body whose end is not certain is left as it is.
+        /// </summary>
+        static string RewriteBracelessBodies(string code)
+        {
+            var text = code ?? "";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\w.])(if|for|while|else)\b"))
+            {
+                return text;
+            }
+            int from = 0;
+            for (int guard = 0; guard < 1000; guard++)
+            {
+                int bodyStart = -1, bodyEnd = -1;
+                bool quoted = false;
+                for (int i = from; i < text.Length && bodyStart < 0; i++)
+                {
+                    char c = text[i];
+                    if (c == '"' && !IsEscapedQuote(text, i))
+                    {
+                        quoted = !quoted;
+                        continue;
+                    }
+                    if (quoted || !char.IsLetter(c) || (i > 0 && (char.IsLetterOrDigit(text[i - 1]) ||
+                        text[i - 1] == '_' || text[i - 1] == '.')))
+                    {
+                        continue;
+                    }
+                    int b = BracelessBodyAt(text, i);
+                    if (b >= 0)
+                    {
+                        int e = SingleStatementEnd(text, b);
+                        if (e > b)
+                        {
+                            bodyStart = b;
+                            bodyEnd = e;
+                        }
+                    }
+                }
+                if (bodyStart < 0)
+                {
+                    return text;
+                }
+                text = text.Substring(0, bodyStart) + "{" + text.Substring(bodyStart, bodyEnd - bodyStart) + "}" +
+                       text.Substring(bodyEnd);
+                from = bodyStart + 1;
+            }
+            return text;
+        }
+
+        // The start of the body of the if, for, while or else at "at", when that body is not a
+        // block; -1 otherwise ("else if" too: the "if" is taken on its own).
+        static int BracelessBodyAt(string text, int at)
+        {
+            string word = WordAt(text, at);
+            int after = at + word.Length;
+            if (word == "else")
+            {
+                int b = SkipSpaces(text, after);
+                if (b >= text.Length || text[b] == '{' || WordAt(text, b) == "if")
+                {
+                    return -1;
+                }
+                return b;
+            }
+            if (word != "if" && word != "for" && word != "while")
+            {
+                return -1;
+            }
+            int open = SkipSpaces(text, after);
+            if (open >= text.Length || text[open] != '(')
+            {
+                return -1;
+            }
+            int close = FindMatchingParen(text, open);
+            if (close < 0)
+            {
+                return -1;
+            }
+            int body = SkipSpaces(text, close + 1);
+            // "while (...);" ending a do-while is no body.
+            if (body >= text.Length || text[body] == '{' || text[body] == ';' || text[body] == '}')
+            {
+                return -1;
+            }
+            return body;
+        }
+
+        // Where the statement starting at "at" ends (just past it), or -1 when that is not certain.
+        static int SingleStatementEnd(string text, int at)
+        {
+            at = SkipSpaces(text, at);
+            string word = WordAt(text, at);
+            if (word == "if" || word == "for" || word == "while")
+            {
+                int open = SkipSpaces(text, at + word.Length);
+                if (open >= text.Length || text[open] != '(')
+                {
+                    return -1;
+                }
+                int close = FindMatchingParen(text, open);
+                if (close < 0)
+                {
+                    return -1;
+                }
+                int end = BodyEnd(text, close + 1);
+                if (end < 0 || word != "if")
+                {
+                    return end;
+                }
+                int next = SkipSpaces(text, end);
+                if (WordAt(text, next) == "else")
+                {
+                    return BodyEnd(text, next + 4);
+                }
+                return end;
+            }
+            if (word == "do" || word == "try" || word == "switch" || word == "else")
+            {
+                return -1;
+            }
+            int depth = 0;
+            bool quoted = false;
+            for (int i = at; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '"' && !IsEscapedQuote(text, i))
+                {
+                    quoted = !quoted;
+                }
+                else if (quoted)
+                {
+                    continue;
+                }
+                else if (c == '(' || c == '[' || c == '{')
+                {
+                    depth++;
+                }
+                else if (c == ')' || c == ']' || c == '}')
+                {
+                    if (--depth < 0)
+                    {
+                        return -1;
+                    }
+                }
+                else if (c == ';' && depth == 0)
+                {
+                    return i + 1;
+                }
+            }
+            return -1;
+        }
+
+        // The end of a body starting at "at": a block through its "}", or one statement.
+        static int BodyEnd(string text, int at)
+        {
+            int b = SkipSpaces(text, at);
+            if (b < text.Length && text[b] == '{')
+            {
+                int depth = 0;
+                bool quoted = false;
+                for (int i = b; i < text.Length; i++)
+                {
+                    char c = text[i];
+                    if (c == '"' && !IsEscapedQuote(text, i))
+                    {
+                        quoted = !quoted;
+                    }
+                    else if (!quoted && c == '{')
+                    {
+                        depth++;
+                    }
+                    else if (!quoted && c == '}' && --depth == 0)
+                    {
+                        return i + 1;
+                    }
+                }
+                return -1;
+            }
+            return SingleStatementEnd(text, b);
+        }
+
+        static string WordAt(string text, int at)
+        {
+            int end = at;
+            while (end < text.Length && (char.IsLetterOrDigit(text[end]) || text[end] == '_'))
+            {
+                end++;
+            }
+            return text.Substring(at, end - at);
+        }
+
+        static int SkipSpaces(string text, int at)
+        {
+            while (at < text.Length && char.IsWhiteSpace(text[at]))
+            {
+                at++;
+            }
+            return at;
+        }
+
+        static string RewritePrefixStepInIf(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf("++", StringComparison.Ordinal) < 0 && text.IndexOf("--", StringComparison.Ordinal) < 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text.Length + 16);
+            int copied = 0;
+            int temp = 0;
+            foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(text, @"(?<=^|[;{}])\s*if\s*\("))
+            {
+                if (m.Index < copied || InsideQuotes(text, m.Index))
+                {
+                    continue;
+                }
+                int open = text.IndexOf('(', m.Index);
+                int close = FindMatchingParen(text, open);
+                if (close < 0)
+                {
+                    continue;
+                }
+                var condition = text.Substring(open + 1, close - open - 1);
+                var plain = WithoutStringContents(condition);
+                if (NeedsInlineCalls(condition))
+                {
+                    continue;
+                }
+                if (System.Text.RegularExpressions.Regex.Matches(plain, @"\+\+|--").Count != 1)
+                {
+                    continue;
+                }
+                var steps = System.Text.RegularExpressions.Regex.Matches(plain, @"(?<![\w)\]+-])(\+\+|--)\s*([A-Za-z_]\w*)(?![\w(\[.])");
+                // A postfix step -- "if (counter++ % 2 == 0)" -- tests the value from before it:
+                // that is kept in a temporary ahead of the step.
+                var postfix = System.Text.RegularExpressions.Regex.Matches(plain, @"(?<![\w.)\]])([A-Za-z_]\w*)\s*(\+\+|--)(?![\w(\[.+-])");
+                if (steps.Count + postfix.Count != 1)
+                {
+                    continue;
+                }
+                bool isPostfix = postfix.Count == 1;
+                var step = isPostfix ? postfix[0] : steps[0];
+                var name = isPostfix ? step.Groups[1].Value : step.Groups[2].Value;
+                var op = isPostfix ? step.Groups[2].Value : step.Groups[1].Value;
+                var before = isPostfix ? "__ps" + (++temp) : name;
+                var rewritten = condition.Substring(0, step.Index) + before + condition.Substring(step.Index + step.Length);
+                int statementStart = m.Index + (m.Value.Length - m.Value.TrimStart().Length);
+                sb.Append(text, copied, statementStart - copied);
+                if (isPostfix)
+                {
+                    sb.Append(before).Append('=').Append(name).Append(';');
+                }
+                sb.Append(name).Append(op).Append(';');
+                sb.Append(text, statementStart, open + 1 - statementStart);
+                sb.Append(rewritten);
+                copied = close;
+            }
+            sb.Append(text, copied, text.Length - copied);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Ends a statement at the collection literal it assigns when the script left out the
+        /// ";" -- "object = {\"success\": true}  jsonString = SerializeJson(object);". The
+        /// interpreter's statement ends with the literal; to the translator the next name ran on
+        /// into it. Only after "=" and only where a name follows straight away.
+        /// </summary>
+        static string TerminateLiteralStatements(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf("{", StringComparison.Ordinal) < 0)
+            {
+                return TerminateBeforeReturn(text);
+            }
+            var sb = new StringBuilder(text.Length + 8);
+            bool inString = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                sb.Append(c);
+                if (inString)
+                {
+                    if (c == '\\' && i + 1 < text.Length) { sb.Append(text[++i]); }
+                    else if (c == '"') { inString = false; }
+                    continue;
+                }
+                if (c == '"') { inString = true; continue; }
+                if (c != '{')
+                {
+                    continue;
+                }
+                int k = i - 1;
+                while (k >= 0 && char.IsWhiteSpace(text[k])) { k--; }
+                if (k < 0 || text[k] != '=' || (k > 0 && "=!<>".IndexOf(text[k - 1]) >= 0))
+                {
+                    continue;
+                }
+                int close = MatchingBrace(text, i);
+                if (close < 0)
+                {
+                    continue;
+                }
+                int next = close + 1;
+                while (next < text.Length && char.IsWhiteSpace(text[next])) { next++; }
+                sb.Append(text, i + 1, close - i);
+                if (next < text.Length && (char.IsLetter(text[next]) || text[next] == '_'))
+                {
+                    sb.Append(';');
+                }
+                i = close;
+            }
+            return TerminateBeforeReturn(sb.ToString());
+        }
+
+        /// <summary>
+        /// "json = SerializeJson(o)   return json;", "print(x)   Test(a, b);": a call's ")" straight
+        /// before a name ends the statement for the interpreter; the translator read the next
+        /// statement into it. Not the ")" of an "if", "while", "for" or the like, whose body
+        /// follows it.
+        /// </summary>
+        static string TerminateBeforeReturn(string text)
+        {
+            var sb = new StringBuilder(text.Length + 4);
+            int copied = 0;
+            foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(text, @"\)(\s*)(?=[A-Za-z_])"))
+            {
+                if (InsideQuotes(text, m.Index))
+                {
+                    continue;
+                }
+                int open = MatchingOpenParen(text, m.Index);
+                if (open < 0)
+                {
+                    continue;
+                }
+                int k = open - 1;
+                while (k >= 0 && char.IsWhiteSpace(text[k])) { k--; }
+                int end = k + 1;
+                while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '_')) { k--; }
+                var word = text.Substring(k + 1, end - k - 1);
+                if (word == "if" || word == "elif" || word == "while" || word == "for" || word == "foreach" ||
+                    word == "switch" || word == "catch" || word == "else")
+                {
+                    continue;
+                }
+                sb.Append(text, copied, m.Index + 1 - copied).Append(';');
+                copied = m.Index + 1;
+            }
+            sb.Append(text, copied, text.Length - copied);
+            return sb.ToString();
+        }
+
+        // The "(" matching the ")" at the position, outside string literals; -1 if none.
+        static int MatchingOpenParen(string text, int close)
+        {
+            int depth = 0;
+            for (int i = close; i >= 0; i--)
+            {
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
+                {
+                    // Skip back over a string literal.
+                    int j = i - 1;
+                    while (j >= 0 && !(text[j] == '"' && !IsEscapedQuote(text, j))) { j--; }
+                    i = j;
+                    continue;
+                }
+                if (text[i] == ')') { depth++; }
+                else if (text[i] == '(' && --depth == 0) { return i; }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// "type(x)" -- the interpreter's TypeFunction -- is spelt "Type(x)". The lower-case name is
+        /// one of Constants.RESERVED, which the translator checks case-sensitively and treats as
+        /// a keyword, so the call went out as C# (CS0103); to the interpreter, whose names are
+        /// case-blind, both spellings are the same function. A member (".type") and text are left.
+        /// </summary>
+        string RewriteTypeCalls(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf("type", StringComparison.Ordinal) < 0 ||
+                !(m_parentScript?.InterpreterInstance?.GetFunction(Constants.TYPE) is TypeFunction))
+            {
+                return text;
+            }
+            return System.Text.RegularExpressions.Regex.Replace(text, @"(?<![\w.])type(?=\s*\()",
+                m => InsideQuotes(text, m.Index) ? m.Value : "Type");
+        }
+
+        /// <summary>
+        /// Spells every mention of an argument the way the signature does. The signature
+        /// parser lowercases the names ("stepby") while the body keeps the script's spelling
+        /// ("stepBy", "StepBy"); the interpreter treats all of them as one name, and a C# local
+        /// has one spelling. Strings and members (".stepBy") are left alone.
+        /// </summary>
+        string NormalizeArgSpelling(string code)
+        {
+            var args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in m_declaredArgsMap.Keys)
+            {
+                args[name] = name;
+            }
+            var text = code ?? "";
+            if (args.Count == 0 || text.Length == 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text.Length);
+            bool inQuotes = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                }
+                if (inQuotes || !(char.IsLetter(ch) || ch == '_') ||
+                    (i > 0 && (char.IsLetterOrDigit(text[i - 1]) || text[i - 1] == '_')))
+                {
+                    sb.Append(ch);
+                    continue;
+                }
+                int end = i;
+                while (end < text.Length && (char.IsLetterOrDigit(text[end]) || text[end] == '_'))
+                {
+                    end++;
+                }
+                var word = text.Substring(i, end - i);
+                bool member = i > 0 && text[i - 1] == '.';
+                // Nor a call: "ShowView(v, showView)" with an argument "showView" calls the
+                // function, to the interpreter as here.
+                int after = end;
+                while (after < text.Length && char.IsWhiteSpace(text[after])) { after++; }
+                bool call = after < text.Length && text[after] == '(';
+                sb.Append(!member && !call && args.TryGetValue(word, out var spelled) ? spelled : word);
+                i = end - 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Moves a member call on a "variable" argument -- "s.At(1)", "s.Equals(\"x\")",
+        /// "w.Trim()" -- into a temporary ahead of the
+        /// statement: "__mcN=s.At(1);". The assignment is a shape the translator runs through
+        /// the interpreter (IsUnmappedMemberCallOnVariable), which is exact, where the call in
+        /// the middle of an expression or a condition went out as C# the Variable does not have.
+        /// Only where running it first changes nothing: a plain statement, a "return" or an
+        /// "if", with nothing ahead of the call that calls, groups, steps or short-circuits.
+        /// </summary>
+        string RewriteVariableMemberCalls(string code)
+        {
+            var variableArgs = VariableParamNames();
+            var text = code ?? "";
+            if (text.IndexOf('(') < 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text.Length + 32);
+            int start = 0;
+            int depth = 0;
+            int temp = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i <= text.Length; i++)
+            {
+                char c = i < text.Length ? text[i] : ';';
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[') { depth++; continue; }
+                if (c == ')' || c == ']') { depth--; continue; }
+                if (c == '{' && OpensBraceLiteral(text, i))
+                {
+                    int close = MatchingBrace(text, i);
+                    if (close > i)
+                    {
+                        i = close;
+                        continue;
+                    }
+                }
+                if (depth != 0 || (c != ';' && c != '{' && c != '}'))
+                {
+                    continue;
+                }
+                var statement = text.Substring(start, Math.Min(i, text.Length) - start);
+                sb.Append(MemberCallsHoisted(statement, variableArgs, ref temp) ?? statement);
+                if (i < text.Length) { sb.Append(c); }
+                start = i + 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Whether every call in the text is a Math call whose own arguments are
+        /// whole operands or Math calls in turn.</summary>
+        static bool OnlyMathCalls(string text)
+        {
+            foreach (System.Text.RegularExpressions.Match call in
+                     System.Text.RegularExpressions.Regex.Matches(text ?? "", @"([A-Za-z_][\w.]*)\s*\("))
+            {
+                if (!call.Groups[1].Value.StartsWith("Math.", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+            // A bare parenthesis (grouping) is not a call; the builder takes only whole operands.
+            int calls = System.Text.RegularExpressions.Regex.Matches(text ?? "", @"[A-Za-z_][\w.]*\s*\(").Count;
+            return calls == (text ?? "").Count(ch => ch == '(');
+        }
+
+        /// <summary>Whether the name is a function the script defines, or the one being translated.</summary>
+        bool IsScriptFunctionName(string name)
+        {
+            return string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase) ||
+                   m_parentScript?.InterpreterInstance?.GetFunction(name) is CustomFunction ||
+                   IsLateFunctionName(name);
+        }
+
+        string MemberCallsHoisted(string statement, HashSet<string> variableArgs, ref int temp)
+        {
+            var trimmed = statement.Trim();
+            if (trimmed.Length == 0 || trimmed.Contains("&&") || trimmed.Contains("||") ||
+                trimmed.Contains("++") || trimmed.Contains("--") || IndexOfTopLevelChar(trimmed, '?') >= 0)
+            {
+                return null;
+            }
+            int bodyStart = 0;
+            if (StartsWithKeyword(trimmed, Constants.IF))
+            {
+                bodyStart = trimmed.IndexOf('(');
+                if (bodyStart < 0 || FindMatchingParen(trimmed, bodyStart) != trimmed.Length - 1)
+                {
+                    return null;
+                }
+                bodyStart++;
+            }
+            else if (StartsWithKeyword(trimmed, Constants.RETURN))
+            {
+                bodyStart = Constants.RETURN.Length;
+            }
+            else
+            {
+                foreach (var keyword in new[] { Constants.WHILE, Constants.FOR, Constants.ELSE_IF, Constants.ELSE,
+                                                Constants.SWITCH, Constants.CASE, Constants.DEFAULT, Constants.CATCH,
+                                                Constants.THROW, Constants.DO, Constants.FUNCTION, Constants.CLASS,
+                                                Constants.TRY, "finally", "elif", "var" })
+                {
+                    if (StartsWithKeyword(trimmed, keyword))
+                    {
+                        return null;
+                    }
+                }
+            }
+            var hoisted = new StringBuilder();
+            var rest = new StringBuilder(trimmed.Substring(0, bodyStart));
+            int i = bodyStart;
+            bool changed = false;
+            bool inString = false;
+            while (i < trimmed.Length)
+            {
+                char c = trimmed[i];
+                if (c == '"' && !IsEscapedQuote(trimmed, i))
+                {
+                    inString = !inString;
+                }
+                if (inString || !(char.IsLetter(c) || c == '_') ||
+                    (i > 0 && (char.IsLetterOrDigit(trimmed[i - 1]) || trimmed[i - 1] == '_' || trimmed[i - 1] == '.')))
+                {
+                    // Anything ahead of a hoisted call that could run code stops the rewrite.
+                    if (!inString && c == '(')
+                    {
+                        break;
+                    }
+                    rest.Append(c);
+                    i++;
+                    continue;
+                }
+                var m = System.Text.RegularExpressions.Regex.Match(trimmed.Substring(i), @"^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(");
+                // A call to a script function -- or to this one -- first in an "if" condition, with
+                // arithmetic in its arguments: the condition reaches the translator cut at the
+                // operator ("if(f(n"), so "if (f(n - 1) > 4)" went out as a C# call to f.
+                if (!m.Success && bodyStart > 0 && StartsWithKeyword(trimmed, Constants.IF))
+                {
+                    var scriptCall = System.Text.RegularExpressions.Regex.Match(trimmed.Substring(i), @"^([A-Za-z_]\w*)\s*\(");
+                    if (scriptCall.Success && IsScriptFunctionName(scriptCall.Groups[1].Value))
+                    {
+                        int callClose = FindMatchingParen(trimmed, i + scriptCall.Length - 1);
+                        var callArgs = callClose > 0 ? trimmed.Substring(i + scriptCall.Length, callClose - i - scriptCall.Length) : "";
+                        if (callClose > 0 && callArgs.IndexOf('"') < 0 && callArgs.IndexOf('(') < 0 &&
+                            callArgs.IndexOfAny(new[] { '+', '-', '*', '/', '%' }) >= 0)
+                        {
+                            var callTemp = "__mc" + (++temp);
+                            hoisted.Append(callTemp).Append('=').Append(trimmed, i, callClose - i + 1).Append(';');
+                            rest.Append(callTemp);
+                            i = callClose + 1;
+                            changed = true;
+                            continue;
+                        }
+                    }
+                }
+                // "Math.Sin(x)" over a "variable" argument is hoisted too: its assignment is built
+                // as a call the interpreter runs (TryBuildMathOnVariable).
+                bool isMath = m.Success && m.Groups[1].Value == "Math";
+                if (isMath)
+                {
+                    int mathClose = FindMatchingParen(trimmed, i + m.Length - 1);
+                    var mathArgs = mathClose > 0 ? trimmed.Substring(i + m.Length, mathClose - i - m.Length) : "";
+                    // Flat arguments only, as TryBuildMathOnVariable takes them: a nested call keeps
+                    // the path it had ("return Math.Max(Math.Abs(n - 10), 5)" went to the
+                    // interpreter whole).
+                    isMath = mathClose > 0 && OnlyMathCalls(mathArgs) && mathArgs.IndexOf('"') < 0 &&
+                             MentionsAny(mathArgs, variableArgs);
+                }
+                if (!m.Success || (!isMath && !variableArgs.Contains(m.Groups[1].Value)))
+                {
+                    int end = i;
+                    while (end < trimmed.Length && (char.IsLetterOrDigit(trimmed[end]) || trimmed[end] == '_')) { end++; }
+                    rest.Append(trimmed, i, end - i);
+                    i = end;
+                    continue;
+                }
+                int open = i + m.Length - 1;
+                int close = FindMatchingParen(trimmed, open);
+                if (close < 0)
+                {
+                    return null;
+                }
+                var call = trimmed.Substring(i, close - i + 1);
+                var member = m.Groups[2].Value;
+                var args = trimmed.Substring(open + 1, close - open - 1);
+                bool needs = isMath || (!IsVariableMember(member) && !IsCollectionMethod(member));
+                // "x = s.At(1)" and "return s.At(1)" already take the interpreter's path whole.
+                var before = rest.ToString().Trim();
+                bool wholeValue = close == trimmed.Length - 1 &&
+                    ((before == Constants.RETURN && !isMath) || (before.EndsWith("=") && IsPlainName(before.TrimEnd('=').Trim()) &&
+                                                    !before.EndsWith("==")));
+                if (!needs || wholeValue)
+                {
+                    // The whole value already goes to the interpreter; nothing follows it.
+                    if (needs)
+                    {
+                        break;
+                    }
+                    rest.Append(call);
+                    i = close + 1;
+                    continue;
+                }
+                var name = "__mc" + (++temp);
+                hoisted.Append(name).Append('=').Append(call).Append(';');
+                rest.Append(name);
+                i = close + 1;
+                changed = true;
+            }
+            if (!changed)
+            {
+                return null;
+            }
+            rest.Append(trimmed, i, trimmed.Length - i);
+            int lead = statement.Length - statement.TrimStart().Length;
+            return statement.Substring(0, lead) + hoisted + rest;
+        }
+
+        /// <summary>
+        /// Turns "var x = v" into "x = v" and records x as a local. In the interpreter "var"
+        /// declares a local that hides a global of the same name ("var g = 7" leaves the
+        /// global g alone), which is what a translator local already is once the global
+        /// paths are told to leave the name alone (IsInterpreterVariable). Only when the
+        /// declaration is the name's first mention -- a use before it would read or write the
+        /// global -- and never for "var E = Enum", which TryBuildLocalEnum builds.
+        /// </summary>
+        string RewriteVarDeclarations(string code)
+        {
+            m_varLocals.Clear();
+            var text = code ?? "";
+            var sb = new StringBuilder(text.Length);
+            bool inQuotes = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                }
+                bool statementStart = i == 0 || ";{}".IndexOf(text[i - 1]) >= 0;
+                if (!inQuotes && statementStart && string.CompareOrdinal(text, i, "var ", 0, 4) == 0)
+                {
+                    int nameStart = i + 4;
+                    while (nameStart < text.Length && text[nameStart] == ' ')
+                    {
+                        nameStart++;
+                    }
+                    int nameEnd = nameStart;
+                    while (nameEnd < text.Length && (char.IsLetterOrDigit(text[nameEnd]) || text[nameEnd] == '_'))
+                    {
+                        nameEnd++;
+                    }
+                    var name = text.Substring(nameStart, nameEnd - nameStart);
+                    int eq = nameEnd;
+                    while (eq < text.Length && text[eq] == ' ')
+                    {
+                        eq++;
+                    }
+                    int valueStart = eq + 1;
+                    while (valueStart < text.Length && text[valueStart] == ' ')
+                    {
+                        valueStart++;
+                    }
+                    bool assigns = IsPlainName(name) && eq < text.Length && text[eq] == '=' &&
+                                   !(eq + 1 < text.Length && text[eq + 1] == '=');
+                    bool isEnum = assigns && string.CompareOrdinal(text, valueStart, "Enum", 0, 4) == 0 &&
+                                  (valueStart + 4 >= text.Length || !char.IsLetterOrDigit(text[valueStart + 4]));
+                    if (assigns && !isEnum && !m_declaredArgsMap.Keys.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase)) &&
+                        !MentionsAny(text.Substring(0, i), new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name }))
+                    {
+                        m_varLocals.Add(name);
+                        i = nameStart - 1;      // drop "var ", keep the name and the rest
+                        continue;
+                    }
+                }
+                sb.Append(ch);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// "iff(c, a, b)" as "((c)?(a):(b))". The interpreter's iff evaluates the condition and
         /// then only the branch it picks, which is what a ternary does in both CSCS and C#, so
         /// the two mean the same; the ternary compiles and iff (a statement that needs the
@@ -2663,6 +4638,147 @@ namespace SplitAndMerge
                 sb.Append(RewriteComparisonRun(code.Substring(start, i - start)));
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// "(n > 2) * 10" as "(n>2?1:0)*10": a parenthesised comparison next to arithmetic is
+        /// the number CSCS makes of it, 1 or 0, where C# has a bool (CS0019: bool * int). The
+        /// ternary's condition is the same comparison, so it keeps every rule the translator
+        /// already applies to one. Only a group holding exactly
+        /// one comparison and nothing looser ("&&", "||", "?", ",", an assignment), not a call's
+        /// parentheses, and with +, -, *, / or % (or a compound "+=" and the like) right beside it.
+        /// </summary>
+        static string RewriteComparisonsAsNumbers(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    sb.Append(c);
+                    if (c == '\\' && i + 1 < code.Length) { sb.Append(code[++i]); }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; sb.Append(c); continue; }
+                if (c != '(')
+                {
+                    sb.Append(c);
+                    continue;
+                }
+                int close = MatchingParen(code, i);
+                int prev = i - 1;
+                while (prev >= 0 && code[prev] == ' ') { prev--; }
+                int next = close + 1;
+                while (close > 0 && next < code.Length && code[next] == ' ') { next++; }
+                bool isCall = prev >= 0 && (IsNameChar(code[prev]) || code[prev] == ']' || code[prev] == ')');
+                if (isCall && IsNameChar(code[prev]))
+                {
+                    // Whitespace is stripped by now, so "return (n > 2) * 10" reads "return(n>2)*10":
+                    // a keyword before the group is not a function being called.
+                    int wordStart = prev;
+                    while (wordStart > 0 && IsNameChar(code[wordStart - 1])) { wordStart--; }
+                    var word = code.Substring(wordStart, prev - wordStart + 1);
+                    if (word == Constants.RETURN || word == "throw")
+                    {
+                        isCall = false;
+                    }
+                }
+                bool arithmeticBefore = prev >= 0 && ("+-*/%".IndexOf(code[prev]) >= 0 ||
+                    (code[prev] == '=' && prev > 0 && "+-*/%".IndexOf(code[prev - 1]) >= 0));
+                bool arithmeticAfter = close > 0 && next < code.Length && "+-*/%".IndexOf(code[next]) >= 0 &&
+                    !(next + 1 < code.Length && code[next + 1] == '=');
+                var inner = close > 0 ? code.Substring(i + 1, close - i - 1) : null;
+                if (close < 0 || isCall || !(arithmeticBefore || arithmeticAfter) || !IsSingleComparison(inner))
+                {
+                    sb.Append(c);
+                    continue;
+                }
+                sb.Append('(').Append(RewriteComparisonsAsNumbers(inner)).Append("?1:0)");
+                i = close;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Exactly one of == != &lt; &gt; &lt;= &gt;= at the top level, and no "&&", "||", "?",
+        /// ",", "===", or plain "=".</summary>
+        static bool IsSingleComparison(string text)
+        {
+            int depth = 0, comparisons = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[' || c == '{') { depth++; continue; }
+                if (c == ')' || c == ']' || c == '}') { depth--; continue; }
+                if (depth != 0)
+                {
+                    continue;
+                }
+                char next = i + 1 < text.Length ? text[i + 1] : '\0';
+                char after = i + 2 < text.Length ? text[i + 2] : '\0';
+                if (c == '?' || c == ',' || c == ':' || (c == '&' && next == '&') || (c == '|' && next == '|'))
+                {
+                    return false;
+                }
+                if ((c == '=' || c == '!') && next == '=')
+                {
+                    if (after == '=') { return false; }          // === and !==
+                    comparisons++; i++; continue;
+                }
+                if (c == '=')
+                {
+                    return false;                               // an assignment
+                }
+                if (c == '<' || c == '>')
+                {
+                    if (next == c) { return false; }            // a shift
+                    comparisons++;
+                    if (next == '=') { i++; }
+                }
+            }
+            // Not against null: in a ternary's condition "== null" is not routed through the
+            // rule that compares it as the empty text (TryRewriteStringComparison), so C# tested
+            // a reference and "(m[\"a\"] == null) * 10" answered 0 where the interpreter says 10.
+            return comparisons == 1 &&
+                   !System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\w.])null(?![\w])");
+        }
+
+        /// <summary>
+        /// "\"ab\" * 2" as "\"ab2\"": with text on either side, CSCS's "*" joins the two trimmed
+        /// texts (Parser.MergeStrings), so a text literal times an integer literal is a constant --
+        /// "ab2", or "2ab" the other way round. C# has no "*" on a string (CS0019), and inside
+        /// "s += ..." the translator's own rewrite for it was not reached. Only a plain integer
+        /// (whose text is its digits) and text without escapes, and only where no "*", "/", "%"
+        /// or "**" beside the pair could regroup it.
+        /// </summary>
+        static string RewriteTextTimesNumber(string code)
+        {
+            var pattern = new System.Text.RegularExpressions.Regex(
+                "(?<![*/%\\w.\\])\"])(?:\"([^\"\\\\]*)\"\\*(0|[1-9]\\d{0,8})|(0|[1-9]\\d{0,8})\\*\"([^\"\\\\]*)\")(?![*\\w.(\\[])");
+            for (int round = 0; round < 8; round++)
+            {
+                var next = pattern.Replace(code, m => m.Groups[2].Success ?
+                    "\"" + m.Groups[1].Value.Trim() + m.Groups[2].Value + "\"" :
+                    "\"" + m.Groups[3].Value + m.Groups[4].Value.Trim() + "\"");
+                if (next == code)
+                {
+                    break;
+                }
+                code = next;
+            }
+            return code;
         }
 
         static bool IsOperandChar(char c) =>
@@ -2764,6 +4880,263 @@ namespace SplitAndMerge
         }
 
         /// <summary>
+        /// "case 1: { t = 5; break; }" as "case 1: t = 5; break;". A case body in braces is a
+        /// block and nothing more -- a CSCS local belongs to the function, not the block -- but
+        /// the switch builder groups a case's statements up to the next label and read the
+        /// brace as a statement of its own. Only a block that runs up to the next label or to
+        /// the end of the switch.
+        /// </summary>
+        static string RewriteCaseBlocks(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf(Constants.CASE, StringComparison.Ordinal) < 0 &&
+                text.IndexOf(Constants.DEFAULT, StringComparison.Ordinal) < 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text);
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < sb.Length; i++)
+            {
+                char c = sb[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c != '{')
+                {
+                    continue;
+                }
+                int k = i - 1;
+                while (k >= 0 && char.IsWhiteSpace(sb[k])) { k--; }
+                if (k < 0 || sb[k] != ':')
+                {
+                    continue;
+                }
+                int s = k - 1;
+                while (s >= 0 && ";{}".IndexOf(sb[s]) < 0) { s--; }
+                var head = sb.ToString(s + 1, k - s - 1).TrimStart();
+                if (!StartsWithKeyword(head, Constants.CASE) && !StartsWithKeyword(head, Constants.DEFAULT))
+                {
+                    continue;
+                }
+                var current = sb.ToString();
+                int close = MatchingBrace(current, i);
+                if (close < 0)
+                {
+                    continue;
+                }
+                int after = close + 1;
+                while (after < current.Length && char.IsWhiteSpace(current[after])) { after++; }
+                var next = current.Substring(after);
+                if (!(next.StartsWith("}") || StartsWithKeyword(next, Constants.CASE) ||
+                      StartsWithKeyword(next, Constants.DEFAULT)))
+                {
+                    continue;
+                }
+                // The closing brace goes first, so the opening one's index still holds. The
+                // body's own last statement keeps its ";"; one is added when it had none.
+                var body = current.Substring(i + 1, close - i - 1).TrimEnd();
+                sb.Remove(close, 1);
+                if (body.Length > 0 && !body.EndsWith(";") && !body.EndsWith("}"))
+                {
+                    sb.Insert(close, ";");
+                }
+                sb[i] = ' ';
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// A collection literal where the statement builders do not take one. The tokenizer cuts
+        /// a statement at every brace, so "return {7, 8}" reached C# as a return followed by a
+        /// block holding "7,8;", and "a = c ? {1} : {2}" as a statement ending at the "?". Both
+        /// are rewritten into the shape that compiles -- an assignment whose whole value is the
+        /// literal: "return {..}" as "__litN={..};return __litN", and the ternary as the if/else
+        /// that evaluates only the branch it picks. A brace opens a literal after "=", "?", ":",
+        /// "(", ",", "[" or "return"; any other brace is a block.
+        /// </summary>
+        static string RewriteBraceLiterals(string code)
+        {
+            var text = code ?? "";
+            if (text.IndexOf('{') < 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text.Length + 32);
+            int start = 0;
+            int depth = 0;
+            int temp = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i <= text.Length; i++)
+            {
+                char c = i < text.Length ? text[i] : ';';
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[') { depth++; continue; }
+                if (c == ')' || c == ']') { depth--; continue; }
+                if (c == '{' && OpensBraceLiteral(text, i))
+                {
+                    int close = MatchingBrace(text, i);
+                    if (close > i)
+                    {
+                        i = close;
+                        continue;
+                    }
+                }
+                if (depth != 0 || (c != ';' && c != '{' && c != '}'))
+                {
+                    continue;
+                }
+                var statement = text.Substring(start, Math.Min(i, text.Length) - start);
+                sb.Append(BraceLiteralRewritten(statement, ref temp) ?? statement);
+                if (i < text.Length) { sb.Append(c); }
+                start = i + 1;
+            }
+            return sb.ToString();
+        }
+
+        static bool OpensBraceLiteral(string text, int at)
+        {
+            int k = at - 1;
+            while (k >= 0 && char.IsWhiteSpace(text[k])) { k--; }
+            if (k < 0)
+            {
+                return false;
+            }
+            if (text[k] == ':')
+            {
+                // "case 1: {" and "default: {" open a block.
+                int s = k - 1;
+                while (s >= 0 && ";{}".IndexOf(text[s]) < 0) { s--; }
+                var head = text.Substring(s + 1, k - s - 1).TrimStart();
+                if (StartsWithKeyword(head, Constants.CASE) || StartsWithKeyword(head, Constants.DEFAULT))
+                {
+                    return false;
+                }
+            }
+            if ("=?:(,[".IndexOf(text[k]) >= 0)
+            {
+                // Not "==" or the like: a comparison is never followed by a literal here, and
+                // "=>" does not exist in CSCS, so any "=" is an assignment's.
+                return true;
+            }
+            int end = k + 1;
+            while (k >= 0 && (char.IsLetterOrDigit(text[k]) || text[k] == '_')) { k--; }
+            var word = text.Substring(k + 1, end - k - 1);
+            return word == Constants.RETURN && (k < 0 || !(char.IsLetterOrDigit(text[k]) || text[k] == '_' || text[k] == '.'));
+        }
+
+        static int MatchingBrace(string text, int open)
+        {
+            int depth = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = open; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '{') { depth++; }
+                else if (c == '}' && --depth == 0) { return i; }
+            }
+            return -1;
+        }
+
+        static string BraceLiteralRewritten(string statement, ref int temp)
+        {
+            var trimmed = statement.Trim();
+            if (trimmed.IndexOf('{') < 0)
+            {
+                return null;
+            }
+            int lead = statement.Length - statement.TrimStart().Length;
+            var indent = statement.Substring(0, lead);
+            // "return {..}": the whole value is one literal.
+            if (trimmed.StartsWith(Constants.RETURN, StringComparison.Ordinal))
+            {
+                var value = trimmed.Substring(Constants.RETURN.Length).Trim();
+                if (value.StartsWith("{") && MatchingBrace(value, 0) == value.Length - 1)
+                {
+                    var name = "__lit" + (++temp);
+                    return indent + name + "=" + value + ";" + Constants.RETURN + " " + name;
+                }
+                return null;
+            }
+            // "v = c ? {..} : x" and its mirror: an if/else, each branch a plain assignment.
+            int eq = trimmed.IndexOf('=');
+            if (eq <= 0 || (eq + 1 < trimmed.Length && trimmed[eq + 1] == '=') ||
+                !IsPlainName(trimmed.Substring(0, eq).Trim()))
+            {
+                return null;
+            }
+            var target = trimmed.Substring(0, eq).Trim();
+            var rhs = trimmed.Substring(eq + 1).Trim();
+            int q = TopLevelIndexOutsideBraces(rhs, '?', 0);
+            if (q <= 0)
+            {
+                return null;
+            }
+            int colon = TopLevelIndexOutsideBraces(rhs, ':', q + 1);
+            if (colon < 0 || TopLevelIndexOutsideBraces(rhs, '?', q + 1) >= 0)
+            {
+                return null;
+            }
+            var condition = rhs.Substring(0, q).Trim();
+            var whenTrue = rhs.Substring(q + 1, colon - q - 1).Trim();
+            var whenFalse = rhs.Substring(colon + 1).Trim();
+            bool trueLiteral = whenTrue.StartsWith("{") && MatchingBrace(whenTrue, 0) == whenTrue.Length - 1;
+            bool falseLiteral = whenFalse.StartsWith("{") && MatchingBrace(whenFalse, 0) == whenFalse.Length - 1;
+            if (!(trueLiteral || falseLiteral) || condition.Length == 0 || whenTrue.Length == 0 ||
+                whenFalse.Length == 0 || condition.IndexOf('{') >= 0 ||
+                (!trueLiteral && whenTrue.IndexOf('{') >= 0) || (!falseLiteral && whenFalse.IndexOf('{') >= 0))
+            {
+                return null;
+            }
+            return indent + "if(" + condition + "){" + target + "=" + whenTrue + ";}else{" +
+                   target + "=" + whenFalse + ";}";
+        }
+
+        /// <summary>The first top-level <paramref name="ch"/> from <paramref name="from"/>, outside
+        /// strings, parentheses, subscripts and braces; -1 when there is none.</summary>
+        static int TopLevelIndexOutsideBraces(string text, char ch, int from)
+        {
+            int depth = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = from; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if ("([{".IndexOf(c) >= 0) { depth++; continue; }
+                if (")]}".IndexOf(c) >= 0) { depth--; continue; }
+                if (depth == 0 && c == ch) { return i; }
+            }
+            return -1;
+        }
+
+        /// <summary>
         /// "p = c ? new A(..) : new B(..);" as "if(c){p=new A(..);}else{p=new B(..);}". The
         /// translator builds an instance only as the whole right-hand side of an assignment, and
         /// handed the ternary it passed "Point(1,2):new Point(3,4)" to the interpreter's "new"
@@ -2801,6 +5174,249 @@ namespace SplitAndMerge
             }
             sb.Append(code.Substring(start));
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// "if((v=X)>5){" as "v=X;if((v)>5){". An if evaluates its condition once, and an
+        /// assignment grouped as the condition's first operand runs before anything else in it,
+        /// so the two mean the same -- and the second is an ordinary assignment, which the
+        /// local-type analysis sees. Seen only inside the condition, a number assigned there
+        /// and text assigned in the block ("cond_asg_conflict") declared the local a string
+        /// (CS0029). Only a statement that starts with "if(" -- never "else if", whose
+        /// condition may not run, nor "while", whose condition runs on every pass.
+        /// </summary>
+        static string RewriteIfAssignment(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            int start = 0;
+            bool inString = false;
+            char quote = '\0';
+            int depth = 0;
+            for (int i = 0; i <= code.Length; i++)
+            {
+                char c = i < code.Length ? code[i] : ';';
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[') { depth++; continue; }
+                if (c == ')' || c == ']') { depth--; continue; }
+                if (depth != 0 || (c != ';' && c != '{' && c != '}'))
+                {
+                    continue;
+                }
+                var statement = code.Substring(start, Math.Min(i, code.Length) - start);
+                sb.Append(IfAssignmentHoisted(statement) ?? LeadingGroupsHoisted(statement) ?? statement);
+                if (i < code.Length) { sb.Append(c); }
+                start = i + 1;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// "p=new A(new B(1,2).Sum(),\"z\")" as "__newArg1=new B(1,2);p=new A(__newArg1.Sum(),\"z\")".
+        /// The translator builds an instance only as the whole right-hand side of an
+        /// assignment, so one built inside another's arguments was refused. Hoisting it is
+        /// exact when it is the first thing the statement evaluates: only arguments that are
+        /// literals or plain names may come before it, and the statement must not be a
+        /// condition or a loop header (which may run it more than once, or not at all).
+        /// </summary>
+        static string RewriteNestedNew(string code)
+        {
+            var sb = new StringBuilder(code.Length);
+            int start = 0, depth = 0, counter = 0;
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i <= code.Length; i++)
+            {
+                char c = i < code.Length ? code[i] : ';';
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '(' || c == '[') { depth++; continue; }
+                if (c == ')' || c == ']') { depth--; continue; }
+                if (depth != 0 || (c != ';' && c != '{' && c != '}'))
+                {
+                    continue;
+                }
+                var statement = code.Substring(start, Math.Min(i, code.Length) - start);
+                sb.Append(c == ';' || i == code.Length ? NestedNewHoisted(statement, ref counter) ?? statement : statement);
+                if (i < code.Length) { sb.Append(c); }
+                start = i + 1;
+            }
+            return sb.ToString();
+        }
+
+        static string NestedNewHoisted(string statement, ref int counter)
+        {
+            foreach (var keyword in new[] { "if(", "while(", "for(", "elif(", "else", "switch(", "case", "default" })
+            {
+                if (statement.StartsWith(keyword, StringComparison.Ordinal))
+                {
+                    return null;
+                }
+            }
+            int outer = IndexOfNew(statement, 0);
+            if (outer < 0)
+            {
+                return null;
+            }
+            int open = statement.IndexOf('(', outer);
+            int close = open < 0 ? -1 : MatchingParen(statement, open);
+            if (close < 0)
+            {
+                return null;
+            }
+            // Everything the statement evaluates before the outer constructor must be free of
+            // calls: an assignment target, or "return".
+            var before = statement.Substring(0, outer);
+            if (before.IndexOf('(') >= 0)
+            {
+                return null;
+            }
+            var args = SplitTopLevel(statement.Substring(open + 1, close - open - 1), ',');
+            int offset = open + 1;
+            foreach (var arg in args)
+            {
+                int innerNew = arg.StartsWith("new ", StringComparison.Ordinal) ? 0 : -1;
+                if (innerNew == 0)
+                {
+                    int innerOpen = arg.IndexOf('(');
+                    int innerClose = innerOpen < 0 ? -1 : MatchingParen(arg, innerOpen);
+                    if (innerClose < 0 || IndexOfNew(arg, 4) >= 0)
+                    {
+                        return null;
+                    }
+                    var temp = "__newArg" + (++counter);
+                    return temp + "=" + arg.Substring(0, innerClose + 1) + ";" +
+                           statement.Substring(0, offset) + temp + statement.Substring(offset + innerClose + 1);
+                }
+                // An argument ahead of it must not run anything: a literal or a plain name.
+                if (!System.Text.RegularExpressions.Regex.IsMatch(arg, @"^(-?[\w.]+|""[^""\\]*"")$"))
+                {
+                    return null;
+                }
+                offset += arg.Length + 1;
+            }
+            return null;
+        }
+
+        /// <summary>Where "new " starts as a word, at or after the position; -1 if nowhere.</summary>
+        static int IndexOfNew(string text, int from)
+        {
+            for (int at = text.IndexOf("new ", from, StringComparison.Ordinal); at >= 0;
+                 at = text.IndexOf("new ", at + 1, StringComparison.Ordinal))
+            {
+                if (at == 0 || !IsNameChar(text[at - 1]))
+                {
+                    return at;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// "return helper((q=n*2))+q" as "q=n*2;return helper(q)+q", and "return(b=n>2)+(c=n>1)+b+c"
+        /// as "b=n>2;c=n>1;return b+c+b+c": a grouped assignment in a plain or return statement
+        /// becomes a statement of its own when nothing before it can tell the difference. CSCS
+        /// evaluates left to right, so it is exact when everything ahead of the group is free of
+        /// effects and does not read the name: no ")" there (a completed call or group), no "?",
+        /// "&&" or "||" (which may skip it), no "++" or "--", and no mention of the name.
+        /// Inside a call's arguments the translator did not carry such an assignment out
+        /// ("Math.Max((q = n * 2), 5) + q" answered 5, not 9, when q was declared for it), and
+        /// two of them in one statement put a C# bool beside "+".
+        /// </summary>
+        static string LeadingGroupsHoisted(string statement)
+        {
+            var body = statement;
+            foreach (var keyword in new[] { "if", "while", "for", "elif", "else", "switch", "case", "default",
+                                            "catch", "throw", "do", "function", "class", "try", "finally" })
+            {
+                if (body.StartsWith(keyword, StringComparison.Ordinal) &&
+                    (body.Length == keyword.Length || !IsNameChar(body[keyword.Length])))
+                {
+                    return null;
+                }
+            }
+            var hoisted = new StringBuilder();
+            while (true)
+            {
+                int at = -1;
+                bool inString = false;
+                char quote = '\0';
+                for (int i = 0; i < body.Length && at < 0; i++)
+                {
+                    char c = body[i];
+                    if (inString)
+                    {
+                        if (c == '\\') { i++; }
+                        else if (c == quote) { inString = false; }
+                        continue;
+                    }
+                    if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                    if (c == '(' && System.Text.RegularExpressions.Regex.IsMatch(
+                            body.Substring(i + 1), @"^[A-Za-z_]\w*=(?!=)"))
+                    {
+                        at = i;
+                    }
+                }
+                if (at < 0)
+                {
+                    break;
+                }
+                var before = body.Substring(0, at);
+                var m = System.Text.RegularExpressions.Regex.Match(body.Substring(at + 1), @"^([A-Za-z_]\w*)=(?!=)");
+                var name = m.Groups[1].Value;
+                int close = MatchingParen(body, at);
+                if (close < 0 || before.IndexOfAny(new[] { ')', '?' }) >= 0 || before.Contains("&&") ||
+                    before.Contains("||") || before.Contains("++") || before.Contains("--") ||
+                    System.Text.RegularExpressions.Regex.IsMatch(before, @"(?<![\w.])" + name + @"(?!\w)"))
+                {
+                    break;
+                }
+                var value = body.Substring(at + 1 + m.Length, close - at - 1 - m.Length);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    break;
+                }
+                hoisted.Append(name).Append('=').Append(value).Append(';');
+                var gap = before.Length > 0 && IsNameChar(before[before.Length - 1]) ? " " : "";
+                body = before + gap + name + body.Substring(close + 1);
+            }
+            return hoisted.Length == 0 ? null : hoisted + body;
+        }
+
+        static string IfAssignmentHoisted(string statement)
+        {
+            if (!statement.StartsWith("if((", StringComparison.Ordinal))
+            {
+                return null;
+            }
+            var m = System.Text.RegularExpressions.Regex.Match(statement, @"^if\(\(([A-Za-z_]\w*)=(?!=)");
+            if (!m.Success)
+            {
+                return null;
+            }
+            int group = 3;                                  // the "(" of "(v=...)"
+            int close = MatchingParen(statement, group);
+            if (close < 0)
+            {
+                return null;
+            }
+            var name = m.Groups[1].Value;
+            var value = statement.Substring(m.Length, close - m.Length);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+            return name + "=" + value + ";if((" + name + ")" + statement.Substring(close + 1);
         }
 
         static string TernaryNewAsIfElse(string statement)
@@ -3089,8 +5705,8 @@ namespace SplitAndMerge
             // Not forced for a counter that is also a global: the write-back this builder
             // emits sits inside the loop body, so the global ended at the last value the body
             // saw rather than the one the loop exited on -- 2 instead of 3 for "for (b = 0;
-            // b < 3; b++)". A token-level translator has nowhere to put the exit value, so a
-            // counter stays local, as it always has, and that is a known difference.
+            // b < 3; b++)". Such a counter is published from the loop's condition instead
+            // (IsGlobalCounter, CscsLate.Publish), which also runs on the way out.
             if (hasCounter && !m_newVariables.Contains(varName))
             {
                 m_newVariables.Add(varName);
@@ -3098,7 +5714,8 @@ namespace SplitAndMerge
                 // counts as definite assignment. Repeating the initialiser here went wrong
                 // whenever GetFunctionName cut it short -- at a call ("= helper") or at a
                 // member, where "i = s.Length - 1" became "double i = s", a string.
-                converted = m_depth + (m_intCounters.Contains(varName) ? "int " : "double ") +
+                converted = m_depth + (m_intCounters.Contains(varName) ? "int " :
+                                       m_variableLocals.Contains(varName) ? "Variable " : "double ") +
                             varName + ";\n";
             }
             converted += forParen < 0 ? m_depth + statement :
@@ -3123,9 +5740,18 @@ namespace SplitAndMerge
                 var forCondition = m_statements[m_statementId];
                 bool noCondition = string.IsNullOrWhiteSpace(forCondition) ||
                                    forCondition.Trim() == ";";
-                converted += noCondition ? ";" :
-                    ProcessStatement(forCondition, m_statements[m_statementId + 1], false).Trim();
-                converted += converted.EndsWith(";") ? "" : ";";
+                var conditionCode = noCondition ? "" :
+                    ProcessStatement(forCondition, m_statements[m_statementId + 1], false).Trim().TrimEnd(';').Trim();
+                // A counter named like an existing global is that global to the interpreter,
+                // which a loop inside a function writes: "for (i = 0; i < n; i++)" left a global i
+                // at 4. Published from the condition, which runs on every pass and once more on
+                // the way out, so the global ends on the value the loop exited with.
+                if (hasCounter && IsGlobalCounter(varName))
+                {
+                    conditionCode = "CscsLate.Publish(__interpreter, \"" + varName + "\", " + varName + ")" +
+                        (conditionCode.Length == 0 ? "" : " && (" + conditionCode + ")");
+                }
+                converted += conditionCode.Length == 0 ? ";" : conditionCode + ";";
                 // One statement along, not two, when the condition was left out: the
                 // tokenizer drops the empty text between the two semicolons, so "for (;;)"
                 // arrives as "for (" ";" ";" ")" "{" -- a slot shorter than a full header.
@@ -3223,7 +5849,12 @@ namespace SplitAndMerge
             // -- "k = \"z\"; ... for (k in keys)" -- then does not compile, and falls back.
             // Skipping the declaration when the name is already known was tried, but a name
             // first declared inside another block is gone by the time this one runs.
-            converted += m_depth + "var " + varName + " = " +
+            // Except where the name is a local already in scope, which CSCS rebinds: the loop
+            // leaves it holding the last element, as the interpreter does. C# refused a second
+            // declaration of it (CS0136).
+            bool rebind = m_newVariables.Contains(varName) && m_topLevelAssigned.Contains(varName) &&
+                          m_variableLocals.Contains(varName);
+            converted += m_depth + (rebind ? "" : "var ") + varName + " = " +
                 (overString ? "Variable.ConvertToVariable(" + source + "[" + indexName + "].ToString())"
                             : source + "[" + indexName + "]") + ";\n";
             m_newVariables.Add(varName);
@@ -3233,9 +5864,17 @@ namespace SplitAndMerge
             return true;
         }
 
+        // The catch variables whose blocks are still open, with the depth their block is at.
+        readonly List<KeyValuePair<string, int>> m_openCatches = new List<KeyValuePair<string, int>>();
+
         string ProcessCatch(string exceptionVar)
         {
             string varName = GetFunctionName(exceptionVar.Substring(1), out string suffix, out bool isArray);
+            // A catch inside the block of another catching into the same name -- "catch (exc) {
+            // ... try { ... } catch (exc) {} }" -- rebinds it, as the interpreter does; a second
+            // declaration in the nested scope is CS0136. Closed blocks are those deeper than here.
+            m_openCatches.RemoveAll(open => open.Value > m_depth.Length);
+            bool enclosingCatch = m_openCatches.Any(open => open.Key == varName);
 
             // The "{" is emitted here rather than arriving as its own statement, so the
             // depth has to be increased here too -- the matching "}" decreases it either way.
@@ -3250,7 +5889,12 @@ namespace SplitAndMerge
             // "System.ArgumentException: boom" and a stack trace instead of "boom".
             var caught = "__exc" + (++m_tempVarId);
             string result = "catch(Exception " + caught + ") {\n";
-            result += m_depth + "var " + varName + " = new Variable(" + caught + ".Message);\n";
+            // A local of the same name already in scope is rebound, as the interpreter does.
+            bool rebind = enclosingCatch || (m_newVariables.Contains(varName) && m_topLevelAssigned.Contains(varName) &&
+                          m_variableLocals.Contains(varName));
+            m_openCatches.Add(new KeyValuePair<string, int>(varName, m_depth.Length));
+            // Its Message is also its property "Message", as the interpreter's is (CscsConvert.Caught).
+            result += m_depth + (rebind ? "" : "var ") + varName + " = CscsConvert.Caught(" + caught + ");\n";
             m_newVariables.Add(varName);
             result += RegisterVariableString(varName, varName, false /* never a global */);
             m_statementId++;
@@ -3741,7 +6385,7 @@ namespace SplitAndMerge
                 return;
             }
 
-            if (!suffix.Contains('.') && m_argsMap.TryGetValue(functionName, out _))
+            if (!suffix.Contains('.') && !suffix.TrimStart().StartsWith("(") && m_argsMap.TryGetValue(functionName, out _))
             {
                 string actualName = m_paramMap[functionName];
                 // The widening the expression path gives an int argument next to arithmetic
@@ -3763,12 +6407,28 @@ namespace SplitAndMerge
         }
 
         string ResolveToken(string token, out bool resolved, string arguments = "",
-                            bool isCall = false, bool insideCall = false)
+                            bool isCall = false, bool insideCall = false, bool allowLate = false)
         {
             resolved = true;
             if (IsString(token) || IsNumber(token))
             {
                 return token;
+            }
+
+            // The Contains built-in inside "&&" or "||", where a call has to stay in place --
+            // "if (Contains(values, field) && values[field] != null)": it tests whether the
+            // variable its first argument names has that index or key (ContainsFunction,
+            // Variable.Exists), which is not the member "values.Contains(field)". Only with a
+            // plain name first; the call route takes anything else, outside such a statement.
+            if (isCall && m_statementInlineCalls && string.Equals(token.Trim(), "Contains", StringComparison.OrdinalIgnoreCase) &&
+                m_parentScript?.InterpreterInstance?.GetFunction("Contains") is ContainsFunction)
+            {
+                var firstArg = SplitTopLevel(arguments.Substring(0, Math.Max(0, FindMatchingParen("(" + arguments, 0) - 1)), ',');
+                if (firstArg.Count == 2 && IsPlainName(firstArg[0].Trim()))
+                {
+                    m_usesInterpreter = true;
+                    return "CscsCalls.ContainsIn";
+                }
             }
 
             string replacement;
@@ -3801,7 +6461,10 @@ namespace SplitAndMerge
                 arrayArg = ReplaceArgsInString(arrayArg);
             }
 
-            if (m_paramMap.TryGetValue(token, out replacement))
+            // Not when the name is called: a call is looked up among functions only, whatever an
+            // argument or local of the same name holds -- "ShowView(v, showView)", even "g(1)"
+            // with an argument g, calls the function g interpreted.
+            if (!isCall && m_paramMap.TryGetValue(token, out replacement))
             {
                 return replacement + arrayArg;
             }
@@ -3821,6 +6484,15 @@ namespace SplitAndMerge
                 // A local that holds a Variable has the members the interpreter exposes under
                 // those names, so the member is copied through -- mapping it to the C# string
                 // member instead produced "v.ToUpper()", which a Variable does not have.
+                // An argument declared "variable" first: "t = s.Substring(1, 5)" went out with the
+                // bare name, which only the callback path (a return) declares. First, because an
+                // argument the body assigns a Variable to -- "v = v.Substring(1)" -- is also
+                // recorded as holding one, and the local branch below then wrote "v.StartsWith"
+                // with the bare name (CS0103): an argument is never a C# local.
+                if (IsVariableMember(member) && IsVariableParam(owner, out var variableSlot))
+                {
+                    return variableSlot + "." + CanonicalVariableMember(member);
+                }
                 if (IsVariableMember(member) &&
                     (m_variableLocals.Contains(owner) || m_collectionLocals.Contains(owner)))
                 {
@@ -3866,13 +6538,17 @@ namespace SplitAndMerge
                 // out verbatim ("The name 'Colors' does not exist"). Checked first, and only
                 // for a global that really holds an enum: the runtime helper answers exactly
                 // what the interpreter does.
-                // A member of an enum declared in this function. Only the names it was declared
-                // with: anything else -- ".Type" answers NONE in the interpreter, a member's own
-                // ".Type" answers its name -- stays with the interpreter rather than reaching a
-                // C# property that would answer differently.
+                // A member of an enum declared in this function, read through the interpreter's own
+                // enum lookup (CscsEnums.Member, Variable.GetEnumProperty): a declared name, the
+                // enum's ".Type" (ENUM), or a word after a declared name -- "Local.Y.Type" is
+                // NUMBER, "Local.Y.Name" the name. Anything else stays with the interpreter.
                 if (m_enumLocals.TryGetValue(owner, out var enumMembers))
                 {
-                    if (!IsPlainName(member) || !enumMembers.Contains(member))
+                    var memberParts = member.Split('.');
+                    bool known = memberParts.All(IsPlainName) && memberParts.Length <= 2 &&
+                        (enumMembers.Contains(memberParts[0]) ||
+                         (memberParts.Length == 1 && member.Equals(Constants.OBJECT_TYPE, StringComparison.OrdinalIgnoreCase)));
+                    if (!known)
                     {
                         throw new ArgumentException("Not a declared member of the local enum: " + token);
                     }
@@ -3885,12 +6561,27 @@ namespace SplitAndMerge
                     return "CscsEnums.Member(__interpreter, \"" + owner + "\", \"" + member + "\")";
                 }
 
+                // A member of a name nothing defines yet -- "rows.Size" with rows a global the
+                // script assigns later -- is read on the value found when the code runs.
+                if (allowLate && IsVariableMember(member) && !isCall && IsLateBoundName(owner, false))
+                {
+                    m_usesInterpreter = true;
+                    return "CscsLate.Value(__interpreter, \"" + owner + "\")." + CanonicalVariableMember(member);
+                }
+                // Called -- "if (!selVolas.Contains(e))" -- on the interpreter's own Variable, as
+                // for a global known at translation (below), so "g.Add(x)" changes the global.
+                if (allowLate && IsVariableMember(member) && isCall && IsLateBoundName(owner, false))
+                {
+                    m_usesInterpreter = true;
+                    return "CscsLate.Current(__interpreter, \"" + owner + "\")." + CanonicalVariableMember(member);
+                }
+
                 // A member on a global: the read yields a Variable, which has the members
                 // the interpreter exposes under those names.
                 if (IsVariableMember(member) && IsInterpreterVariable(owner))
                 {
                     m_usesInterpreter = true;
-                    return "__interpreter.GetVariableValue(\"" + owner + "\")." + member;
+                    return "__interpreter.GetVariableValue(\"" + owner + "\")." + CanonicalVariableMember(member);
                 }
 
                 // ".Type" where the owner is a primitive: the interpreter names the CSCS
@@ -3911,6 +6602,16 @@ namespace SplitAndMerge
                     {
                         return token;
                     }
+                }
+
+                // Any other member of a collection this function holds -- "v.Count", "v.Value" -- is a
+                // property the interpreter looks up, and does not find: C#'s Variable happens to
+                // have members of those names, and copied through, "v.Count" answered 2 where the
+                // script's answer is the error.
+                if (!isCall && IsPlainName(owner) && IsPlainName(member) && m_collectionLocals.Contains(owner) &&
+                    !IsVariableMember(member) && !IsCollectionMethod(member) && !IsMappedStringMember(member))
+                {
+                    return owner + ".ReadField(\"" + member + "\")";
                 }
 
                 string mapped = null;
@@ -3960,9 +6661,229 @@ namespace SplitAndMerge
                 return "__interpreter.GetVariableValue(\"" + bareName + "\")" + arrayArg;
             }
 
+            // A name nothing in this function defines and the interpreter does not hold yet -- a
+            // global the script assigns later, "if (user == \"\")" -- is read when the code runs,
+            // by name, as the interpreted function reads it: CscsLate.Value takes the same route
+            // as the call-by-name path, and fails as the interpreter does if it is still missing.
+            // Not a name the body assigns, which is a local -- unless a read of it comes first in
+            // the text and the local is not declared yet (ReadBeforeAssigned).
+            // Only where an expression is being built (ReplaceArgsInString): the other callers
+            // classify a token, and a name they cannot resolve sends the whole statement to the
+            // interpreter as text -- slower, but it also covers "g.Size" and "g[0] += 5".
+            if (allowLate && IsLateBoundName(bareName, isCall))
+            {
+                m_usesInterpreter = true;
+                resolved = true;
+                return "CscsLate.Value(__interpreter, \"" + bareName + "\")" + arrayArg;
+            }
+
             resolved = !string.IsNullOrWhiteSpace(arrayArg) ||
                         m_newVariables.Contains(token);
             return token + arrayArg;
+        }
+
+        /// <summary>A name called as a function that nothing defines at translation -- no script
+        /// function, built-in, C# mapping or Math function -- and that is not a local or argument.</summary>
+        bool IsLateFunctionName(string name)
+        {
+            return !m_scriptInCSharp && IsPlainName(name) && !char.IsDigit(name[0]) &&
+                   !name.StartsWith("__", StringComparison.Ordinal) &&
+                   // No argument or local of the name stops it: a call is only ever looked up
+                   // among functions -- "searchTrie = ...; SearchTrie(searchTrie, t)", even "g(1)"
+                   // with an argument g, calls the function, and fails when there is none.
+                   !Constants.RESERVED.Contains(name) && !s_csKeywords.Contains(name) &&
+                   !IsMathFunction(name, out _) && string.IsNullOrEmpty(GetCSharpFunction(name, "0")) &&
+                   !InterpreterKnows(name);
+        }
+
+        /// <summary>Whether the text calls, by its bare name, a built-in the interpreter has and C#
+        /// does not: not a Math function, not one with a C# mapping, not a member ("s.Size()").</summary>
+        bool CallsInterpreterBuiltin(string text)
+        {
+            var interpreter = m_parentScript?.InterpreterInstance;
+            if (interpreter == null || m_scriptInCSharp)
+            {
+                return false;
+            }
+            foreach (System.Text.RegularExpressions.Match call in System.Text.RegularExpressions.Regex.Matches(
+                         WithoutStringContents(text), @"(?<![\w.])([A-Za-z_]\w*)\s*\("))
+            {
+                var name = call.Groups[1].Value;
+                if (Constants.RESERVED.Contains(name) || s_csKeywords.Contains(name) || IsMathFunction(name, out _) ||
+                    !string.IsNullOrEmpty(GetCSharpFunction(name, "0")) || m_newVariables.Contains(name))
+                {
+                    continue;
+                }
+                var function = interpreter.GetFunction(name);
+                if (function != null && !(function is CustomFunction))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Whether a script call appears inside another call's argument list.</summary>
+        bool NestsScriptCall(string text)
+        {
+            int open = text.IndexOf('(');
+            while (open >= 0)
+            {
+                int close = FindMatchingParen(text, open);
+                if (close < 0)
+                {
+                    return false;
+                }
+                if (MentionsScriptCall(text.Substring(open + 1, close - open - 1)))
+                {
+                    return true;
+                }
+                open = text.IndexOf('(', close + 1);
+            }
+            return false;
+        }
+
+        /// <summary>A built-in that reads its arguments as values (GetFunctionArgs) -- the string
+        /// functions, "Substring(s, 1, 2)", tokenize and type -- which CscsCalls.Call can therefore run with values
+        /// (ByName). Not one that reads a name, like Size.</summary>
+        bool IsValueBuiltin(string name)
+        {
+            return !m_scriptInCSharp && IsPlainName(name) &&
+                   (m_parentScript?.InterpreterInstance?.GetFunction(name) is StringManipulationFunction ||
+                    m_parentScript?.InterpreterInstance?.GetFunction(name) is TokenizeFunction ||
+                    m_parentScript?.InterpreterInstance?.GetFunction(name) is TypeFunction);
+        }
+
+        bool IsFunctionWithSpace(string name)
+        {
+            var interpreter = m_parentScript?.InterpreterInstance;
+            return interpreter != null && IsPlainName(name) &&
+                   interpreter.Translation.IsFunctWithSpace(Constants.ConvertName(name));
+        }
+
+        /// <summary>
+        /// Whether a name starting with "__" -- the prefix of the translator's own temporaries --
+        /// is one the script itself uses, a global like "__textView": it is in the function's
+        /// source as written, where no temporary is.
+        /// </summary>
+        bool IsScriptsOwnName(string name)
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch(WithoutStringContents(m_originalCode ?? ""),
+                @"(?<![\w.])" + System.Text.RegularExpressions.Regex.Escape(name) + @"(?!\w)");
+        }
+
+        bool IsLateBoundName(string name, bool isCall)
+        {
+            return !isCall && !m_scriptInCSharp && IsPlainName(name) && !char.IsDigit(name[0]) &&
+                   (!name.StartsWith("__", StringComparison.Ordinal) || IsScriptsOwnName(name)) &&
+                   (!m_assignedAnywhere.Contains(name) || m_readFirst.Contains(name)) &&
+                   !m_paramMap.ContainsKey(name) &&
+                   !m_newVariables.Contains(name) && !m_collectionArgs.Contains(name) &&
+                   !m_widenedIntArgs.Contains(name) && !m_enumLocals.ContainsKey(name) &&
+                   !m_declaredArgsMap.Keys.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase)) &&
+                   !Constants.RESERVED.Contains(name) && !s_csKeywords.Contains(name) &&
+                   name != Constants.TRUE && name != Constants.FALSE && name != "null" &&
+                   !IsMathFunction(name, out _) && !InterpreterKnows(name);
+        }
+
+        /// <summary>Whether the interpreter holds the name in any way -- a function, a built-in, a
+        /// variable, a class, a namespace. Those have paths of their own; only a name it knows
+        /// nothing of is left to be read when the code runs.</summary>
+        bool InterpreterKnows(string name)
+        {
+            var interpreter = m_parentScript?.InterpreterInstance;
+            if (interpreter == null)
+            {
+                return true;
+            }
+            return interpreter.GetFunction(name) != null ||
+                   interpreter.GetVariable(name, m_parentScript) != null ||
+                   interpreter.GetClass(Constants.ConvertName(name)) != null ||
+                   interpreter.NamespaceExists(name) ||
+                   string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The assigned names whose first mention in the body is a read -- "if (key == arg) {
+        /// return; } key = arg;". Until the assignment declares the C# local, such a read is of
+        /// whatever the interpreter holds under the name when the code runs: a global, which the
+        /// assignment then writes (AddGlobalOrLocalVariable writes an existing global rather
+        /// than making a local), or nothing, which is the interpreter's own error. The C# local
+        /// is not in scope there (CS0841), so the read is late-bound (IsLateBoundName) as long as
+        /// the translator has not declared the local yet (m_newVariables).
+        /// </summary>
+        static HashSet<string> ReadBeforeAssigned(string code, HashSet<string> assigned, HashSet<string> selfRead = null)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var text = WithoutStringContents(code ?? "");
+            foreach (var name in assigned)
+            {
+                var escaped = System.Text.RegularExpressions.Regex.Escape(name);
+                var options = System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                // A mention: the name on its own, not a member (".name") and not a call.
+                var mention = System.Text.RegularExpressions.Regex.Match(text,
+                    @"(?<![\w.])" + escaped + @"\b(?!\s*\()", options);
+                if (!mention.Success)
+                {
+                    continue;
+                }
+                // Only what gives the name a value without reading it: "x += 1" and "x++"
+                // read it first, and so count as a read (TryBuildGlobalCompound).
+                int firstWrite = int.MaxValue;
+                foreach (var pattern in new[] {
+                    @"(?<![\w.])(" + escaped + @")\s*=(?!=)",
+                    @"\b(?:for|foreach)\s*\(\s*(?:var\s+)?(" + escaped + @")\s*(?:\bin\b|:)",
+                    @"\bcatch\s*\(\s*(" + escaped + @")\b" })
+                {
+                    var write = System.Text.RegularExpressions.Regex.Match(text, pattern, options);
+                    if (write.Success)
+                    {
+                        firstWrite = Math.Min(firstWrite, write.Groups[1].Index);
+                    }
+                }
+                bool readEarlier = mention.Index < firstWrite;
+                // "x = !x", "q = (q + 1) % 3": the first write reads the name on its right side,
+                // before the value is stored, so the read still comes first.
+                var plain = System.Text.RegularExpressions.Regex.Match(text,
+                    @"(?<![\w.])" + escaped + @"\s*=(?!=)([^;{}]*)", options);
+                if (plain.Success && plain.Index == firstWrite &&
+                    System.Text.RegularExpressions.Regex.IsMatch(plain.Groups[1].Value,
+                        @"(?<![\w.])" + escaped + @"\b(?!\s*\()", options))
+                {
+                    names.Add(name);
+                    selfRead?.Add(name);
+                }
+                // Read before the first write, whatever that write reads. "print(x); x = !x;" is both:
+                // the self-read above has to be recorded as well, or "x = !x" still declares the
+                // local it reads (CS0841).
+                if (readEarlier)
+                {
+                    names.Add(name);
+                }
+            }
+            return names;
+        }
+
+        /// <summary>The names the body assigns (plainly or compounded), steps, loops over or
+        /// catches into.</summary>
+        static HashSet<string> AssignedAnywhere(string code)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Text in quotes is blanked first: "t=" + t is no assignment to t.
+            var text = WithoutStringContents(code ?? "");
+            foreach (var pattern in new[] {
+                @"(?<![\w.])([A-Za-z_]\w*)\s*(?:\+|-|\*|/|%|&|\||\^|<<|>>)?=(?!=)",
+                @"\b(?:for|foreach)\s*\(\s*(?:var\s+)?([A-Za-z_]\w*)\s*(?:\bin\b|:)",
+                @"\bcatch\s*\(\s*([A-Za-z_]\w*)",
+                @"(?:\+\+|--)\s*([A-Za-z_]\w*)",
+                @"(?<![\w.])([A-Za-z_]\w*)\s*(?:\+\+|--)" })
+            {
+                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text, pattern))
+                {
+                    names.Add(m.Groups[1].Value);
+                }
+            }
+            return names;
         }
 
         /// <summary>
@@ -3975,7 +6896,7 @@ namespace SplitAndMerge
             bool inQuotes = false;
             for (int i = 0; i < text.Length; i++)
             {
-                if (text[i] == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -4061,7 +6982,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 var ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -4084,7 +7005,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 var ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -4139,7 +7060,7 @@ namespace SplitAndMerge
                     continue;
                 }
                 sb.Append(IsVariableMember(member) || IsMappedStringMember(member) ?
-                    "." + CanonicalVariableMember(member) : ".GetProperty(\"" + member + "\")");
+                    "." + CanonicalVariableMember(member) : ".ReadField(\"" + member + "\")");
                 i = nameEnd - 1;
             }
             return i;
@@ -4165,11 +7086,11 @@ namespace SplitAndMerge
                 bool last = i == parts.Length - 1;
                 if (last && (IsVariableMember(part) || IsMappedStringMember(part)))
                 {
-                    built += "." + part;
+                    built += "." + CanonicalVariableMember(part);
                 }
                 else
                 {
-                    built += ".GetProperty(\"" + part + "\")";
+                    built += ".ReadField(\"" + part + "\")";
                 }
             }
             return built;
@@ -4218,6 +7139,19 @@ namespace SplitAndMerge
                 else if (text[i] == ']' && --depth == 0)
                 {
                     close = i;
+                }
+            }
+            // "e[0][0].v": further subscripts before the member. The expression path this hands
+            // over to consumes the whole chain; stopping at the first "]" refused the read.
+            while (close > 0 && close + 1 < text.Length && text[close + 1] == '[')
+            {
+                int next = close + 1;
+                int nested = 0;
+                close = -1;
+                for (int i = next; i < text.Length; i++)
+                {
+                    if (text[i] == '[') { nested++; }
+                    else if (text[i] == ']' && --nested == 0) { close = i; break; }
                 }
             }
             if (close < 0 || close + 1 >= text.Length || text[close + 1] != '.')
@@ -4316,7 +7250,9 @@ namespace SplitAndMerge
                     {
                         sb.Append(new string('\\', (backSlashes - 1) / 2));
                     }
-                    sb.Append("'\\'" + ch);
+                    // An escaped character -- "{\"a\": 1}" -- stays escaped: the text is C# string
+                    // literal content either way. It went out as '\'" and did not compile.
+                    sb.Append("\\" + ch);
                     backSlashes = 0;
                     continue;
                 }
@@ -4449,7 +7385,7 @@ namespace SplitAndMerge
                         if (elemMember.Length > 0 && !isCallMember && !IsVariableMember(elemMember) &&
                             !IsMappedStringMember(elemMember))
                         {
-                            sb.Append(".GetProperty(\"").Append(elemMember).Append("\")");
+                            sb.Append(".ReadField(\"").Append(elemMember).Append("\")");
                             i = nameEnd - 1;
                             prevSeparator = ')';
                             token = "";
@@ -4584,6 +7520,16 @@ namespace SplitAndMerge
                     prevSeparator = ')';
                     token = "";
                 }
+                else if (ch == '(' && EmptyPropertyCallOnVariable(token, argStr, i))
+                {
+                    // "v.Upper()" where v holds a Variable: the interpreter reads the property
+                    // and eats the "()" (GetCoreProperty), so the property is read and the
+                    // pair dropped -- Variable.Upper is not a method (CS1955).
+                    sb.Append(ResolveToken(token, out _));
+                    i++;
+                    prevSeparator = ')';
+                    token = "";
+                }
                 else if (IsTokenSeparator(ch))
                 {
                     if (ch == '(')
@@ -4599,7 +7545,7 @@ namespace SplitAndMerge
                     }
                     string arguments = i + 1 < argStr.Length ? argStr.Substring(i + 1) : "";
                     sb.Append(AsCscsNumberIfBool(AsDoubleNextToDivision(
-                        ResolveToken(token, out _, arguments, ch == '(', parenIsCall.Contains(true)),
+                        ResolveToken(token, out _, arguments, ch == '(', parenIsCall.Contains(true), allowLate: true),
                         token, prevSeparator, ch), token, prevSeparator, ch));
                     sb.Append(ch);
                     prevSeparator = ch;
@@ -4612,7 +7558,7 @@ namespace SplitAndMerge
             }
 
             sb.Append(AsCscsNumberIfBool(
-                AsDoubleNextToDivision(ResolveToken(token, out _), token, prevSeparator, '\0'),
+                AsDoubleNextToDivision(ResolveToken(token, out _, allowLate: true), token, prevSeparator, '\0'),
                 token, prevSeparator, '\0'));
             return sb.ToString();
         }
@@ -4782,7 +7728,7 @@ namespace SplitAndMerge
             for (int i = 0; i < expression.Length; i++)
             {
                 var ch = expression[i];
-                if (ch == '"' && (i == 0 || expression[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(expression, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -4913,6 +7859,18 @@ namespace SplitAndMerge
 
             string functionName = paramStart < 0 ? restStr : restStr.Substring(0, paramStart);
 
+            // "!(x == 3)": a group negated, not a call of a function called "!" -- which the
+            // interpreter was asked to find ("Couldn't find variable [!]").
+            if (functionName.Trim() == "!" && paramStart >= 0 && callEnd > paramStart)
+            {
+                result += "!(" + ReplaceArgsInString(restStr.Substring(paramStart + 1, callEnd - paramStart - 1)) + ")";
+                if (callEnd + 1 < restStr.Length)
+                {
+                    result += ReplaceArgsInString(restStr.Substring(callEnd + 1));
+                }
+                return;
+            }
+
             // A global carrying the parenthesis that closes the condition around it --
             // "gcount)" is the last token of "if (1 == gcount)", because the tokenizer splits
             // on "==" and leaves the ")" attached to the right-hand operand. With no "(" of
@@ -4935,6 +7893,75 @@ namespace SplitAndMerge
                     return;
                 }
             }
+            // The same shape for a name the interpreter does not hold yet -- a global the script
+            // assigns later, "if (count < total)" -- which goes to the interpreter by name, as
+            // the interpreted function would look it up when it runs. The ")" belongs to the
+            // condition; glued to the name it was lost from the condition (CS1026).
+            string closingAfterName = "";
+            if (paramStart < 0 && functionName.TrimEnd().EndsWith(")"))
+            {
+                var bareName = SplitClosingParens(functionName.Trim(), out string nameClosing);
+                // Read in place, by name (CscsLate.Value takes the route the callback took): the
+                // callback's statements went where the condition stands, which for an "elif" --
+                // "} elif (p == ps) {" -- is between the "}" and the "else if" (CS8641).
+                if (nameClosing.Length > 0 && IsLateBoundName(bareName, false))
+                {
+                    m_usesInterpreter = true;
+                    result += "CscsLate.Value(__interpreter, \"" + bareName + "\")" + nameClosing;
+                    return;
+                }
+                if (nameClosing.Length > 0 && IsPlainName(bareName) && !m_paramMap.ContainsKey(bareName) &&
+                    !m_newVariables.Contains(bareName))
+                {
+                    functionName = bareName;
+                    closingAfterName = nameClosing;
+                }
+            }
+            // "rows.Size" with rows a name nothing defines yet, where an expression is being built
+            // as statements -- a loop's condition: the member of the value found when it runs.
+            if (paramStart < 0)
+            {
+                var dotted = SplitClosingParens(functionName.Trim(), out string dottedClosing);
+                int lateDot = dotted.IndexOf('.');
+                if (lateDot > 0 && dotted.IndexOf('.', lateDot + 1) < 0)
+                {
+                    var lateOwner = dotted.Substring(0, lateDot);
+                    var lateMember = dotted.Substring(lateDot + 1);
+                    if (IsPlainName(lateMember) && IsVariableMember(lateMember) && IsLateBoundName(lateOwner, false))
+                    {
+                        m_usesInterpreter = true;
+                        result += "CscsLate.Value(__interpreter, \"" + lateOwner + "\")." +
+                                  CanonicalVariableMember(lateMember) + dottedClosing;
+                        return;
+                    }
+                }
+            }
+            // "lvs[i])" -- an element of a global, the condition's ")" glued on, as in
+            // "if (arg == lvs[i])": the name went to the interpreter as "lvs[i])". The element of
+            // the value, read by name (late when nothing holds the name yet), and the ")" back.
+            if (paramStart < 0 && functionName.TrimEnd().EndsWith(")"))
+            {
+                var element = SplitClosingParens(functionName.Trim(), out string elementClosing);
+                int bracket = element.IndexOf('[');
+                if (elementClosing.Length > 0 && bracket > 0 && element.EndsWith("]") &&
+                    FindMatchingBracket(element, bracket) == element.Length - 1)
+                {
+                    var baseName = element.Substring(0, bracket);
+                    bool known = IsPlainName(baseName) && IsInterpreterVariable(baseName) &&
+                                 m_parentScript.InterpreterInstance.GetFunction(baseName) == null;
+                    bool late = !known && IsLateBoundName(baseName, false);
+                    if (known || late)
+                    {
+                        m_usesInterpreter = true;
+                        result += "CscsLate.Element(" +
+                                  (late ? "CscsLate.Value(__interpreter, \"" : "__interpreter.GetVariableValue(\"") +
+                                  baseName + "\"), (object)(" +
+                                  ReplaceArgsInString(element.Substring(bracket + 1, element.Length - bracket - 2)) +
+                                  "))" + elementClosing;
+                        return;
+                    }
+                }
+            }
             string argsStr = "";
             string trailing = "";
             if (paramStart >= 0)
@@ -4949,6 +7976,7 @@ namespace SplitAndMerge
                 ParsingScript tmpScript = new ParsingScript(m_parentScript.InterpreterInstance, callText);
                 argsStr = Utils.PrepareArgs(Utils.GetBodyBetween(tmpScript));
             }
+            trailing = closingAfterName + trailing;
 
             string token = "";
 
@@ -5012,7 +8040,9 @@ namespace SplitAndMerge
                     afterCall = afterCall.Substring(nextClose + 1).Trim();
                     trailing = afterCall;
                 }
-                if (afterCall.StartsWith(".") && IsPlainName(afterCall.Substring(1)))
+                // "p.Kid().tag" and "p.Kid().tag.Upper": a path of members after the call. Only a
+                // single name was accepted, and a second segment reached C# verbatim (CS1061).
+                if (afterCall.StartsWith(".") && afterCall.Substring(1).Split('.').All(IsPlainName))
                 {
                     var chained = BuildMemberChain(built, afterCall.Substring(1));
                     if (chained != null)
@@ -5193,7 +8223,14 @@ namespace SplitAndMerge
             if (bracketAt > 0 && functionName.EndsWith("]"))
             {
                 var baseName = functionName.Substring(0, bracketAt).Trim();
-                if (IsPlainName(baseName) && IsInterpreterVariable(baseName) &&
+                // A global the script defines only later -- "glist[n]" -- the same way, read by
+                // name when the code runs. Through the call route the interpreter looked the
+                // whole "glist[n]" up, and could not see the compiled function's "n".
+                bool lateBase = IsPlainName(baseName) && !IsInterpreterVariable(baseName) &&
+                                IsLateBoundName(baseName, false);
+                var baseRead = lateBase ? "CscsLate.Value(__interpreter, \"" + baseName + "\")" :
+                                          "__interpreter.GetVariableValue(\"" + baseName + "\")";
+                if (IsPlainName(baseName) && (lateBase || IsInterpreterVariable(baseName)) &&
                     !m_paramMap.ContainsKey(baseName) && !m_newVariables.Contains(baseName) &&
                     !m_collectionLocals.Contains(baseName) && !m_variableLocals.Contains(baseName))
                 {
@@ -5207,27 +8244,115 @@ namespace SplitAndMerge
                             subscripts = null;
                             break;
                         }
-                        subscripts += "[" +
-                            ReplaceArgsInString(functionName.Substring(at + 1, close - at - 1)) + "]";
+                        subscripts += ", (object)(" +
+                            ReplaceArgsInString(functionName.Substring(at + 1, close - at - 1)) + ")";
                         at = close + 1;
+                    }
+                    // The element as the interpreter takes it (CscsLate.Element, ExtractArrayElement):
+                    // an index past the end is its error, where Variable's indexer answered quietly.
+                    var elementRead = subscripts == null ? null : "CscsLate.Element(" + baseRead + subscripts + ")";
+                    if (subscripts != null && at == functionName.Length && m_statementInlineCalls)
+                    {
+                        // Where "&&", "||" or "?:" decides whether it is read: in place (see below).
+                        m_usesInterpreter = true;
+                        result += ReadCallResult(elementRead, tokens, trailing);
+                        if (!string.IsNullOrEmpty(trailing))
+                        {
+                            result += ReplaceArgsInString(trailing);
+                        }
+                        return;
                     }
                     if (subscripts != null && at == functionName.Length)
                     {
                         m_usesInterpreter = true;
                         EmitCallResult(tokens,
-                            m_depth + VARIABLE_TEMP_VAR + " = __interpreter.GetVariableValue(\"" +
-                                baseName + "\")" + subscripts + ";\n",
+                            m_depth + VARIABLE_TEMP_VAR + " = " + elementRead + ";\n",
+                            trailing, ref result, ref newVarAdded);
+                        return;
+                    }
+                }
+                // "x[x.Size - 1]" on a text or untyped argument, or on a local holding text or a
+                // Variable: an index with a member or a call in it came here whole, and went to
+                // the interpreter as one name -- which could not see the argument's own member
+                // ("Couldn't find variable [x.size]"), and later answered the whole value. Read in
+                // C# instead, each index translated, the element as the interpreter takes it.
+                string ownValue = null;
+                if (IsPlainName(baseName) && m_paramMap.TryGetValue(baseName, out var mappedArg) &&
+                    m_argsMap.TryGetValue(baseName, out var argType) &&
+                    (argType.Type == Variable.VarType.STRING || argType.Type == Variable.VarType.VARIABLE))
+                {
+                    ownValue = mappedArg;
+                }
+                else if (IsPlainName(baseName) && !m_paramMap.ContainsKey(baseName) &&
+                         (m_variableLocals.Contains(baseName) || m_collectionLocals.Contains(baseName) ||
+                          (m_localTypes.TryGetValue(baseName, out var ownType) && ownType == "string")))
+                {
+                    ownValue = baseName;
+                }
+                if (ownValue != null)
+                {
+                    var ownSubscripts = "";
+                    int at = bracketAt;
+                    while (at < functionName.Length && functionName[at] == '[')
+                    {
+                        int close = FindMatchingBracket(functionName, at);
+                        if (close < 0)
+                        {
+                            ownSubscripts = null;
+                            break;
+                        }
+                        ownSubscripts += ", (object)(" +
+                            ReplaceArgsInString(functionName.Substring(at + 1, close - at - 1)) + ")";
+                        at = close + 1;
+                    }
+                    var ownRead = "CscsLate.Element(Variable.ConvertToVariable(" + ownValue + ")" + ownSubscripts + ")";
+                    if (ownSubscripts != null && at == functionName.Length && m_statementInlineCalls)
+                    {
+                        // Where "&&", "||" or "?:" decides whether it is read: in place.
+                        result += ReadCallResult(ownRead, tokens, trailing);
+                        if (!string.IsNullOrEmpty(trailing))
+                        {
+                            result += ReplaceArgsInString(trailing);
+                        }
+                        return;
+                    }
+                    if (ownSubscripts != null && at == functionName.Length)
+                    {
+                        EmitCallResult(tokens, m_depth + VARIABLE_TEMP_VAR + " = " + ownRead + ";\n",
                             trailing, ref result, ref newVarAdded);
                         return;
                     }
                 }
             }
 
+            // A name read the same way -- "i > 0 && prev < 5" -- is made where it stands too.
+            // Hoisted, it was read whether or not the operator reached it, and "prev", not
+            // assigned yet at i = 0, failed where the interpreter never looks it up.
+            // CscsLate.Value is the route the hoisted read took, by name through the interpreter.
+            var bareRead = functionName.Trim();
+            if (m_statementInlineCalls && paramStart < 0 && IsPlainName(bareRead) &&
+                !char.IsDigit(bareRead[0]) && !m_scriptInCSharp)
+            {
+                m_usesInterpreter = true;
+                result += ReadCallResult("CscsLate.Value(__interpreter, \"" + bareRead + "\")", tokens, trailing);
+                if (!string.IsNullOrEmpty(trailing))
+                {
+                    result += ReplaceArgsInString(trailing);
+                }
+                return;
+            }
+
             // Inside "&&", "||" or "?:", or a loop's condition, the call has to run where it
             // stands. Hoisted ahead of the statement it ran whether or not the operator would
             // have reached it -- "n > 5 && f(n) > 1" called f for n = 1 -- and ahead of a
             // loop only once, so "while (i < 10 && f(i) < n)" tested a stale value.
-            if (m_statementInlineCalls && paramStart >= 0 && callEnd > paramStart &&
+            // A call named like an argument or local of this function, case aside -- "ShowView(v,
+            // showView)" -- is made inline too: the call route publishes that argument under its
+            // name, and the interpreter's lookup of "ShowView" then found the value instead of the
+            // function. CscsCalls.Call looks among functions only, as a call is looked up.
+            bool shadowedCall = paramStart >= 0 && IsPlainName(functionName.Trim()) &&
+                (m_paramMap.ContainsKey(functionName.Trim()) || m_assignedAnywhere.Contains(functionName.Trim()));
+            if ((m_statementInlineCalls || shadowedCall) && paramStart >= 0 && callEnd > paramStart &&
                 TryInlineScriptCall(functionName, restStr.Substring(paramStart + 1, callEnd - paramStart - 1),
                                     out string inlineCall))
             {
@@ -5254,7 +8379,15 @@ namespace SplitAndMerge
                 sb.AppendLine(m_depth + ACTION_TEMP_VAR + " =\"\";");
             }
 
-            sb.AppendLine(GetCSCSFunction(argsStr, functionName, ch));
+            m_nameWithoutCall = paramStart < 0;
+            try
+            {
+                sb.AppendLine(GetCSCSFunction(argsStr, functionName, ch));
+            }
+            finally
+            {
+                m_nameWithoutCall = false;
+            }
 
             token = sb.ToString();
             EmitCallResult(tokens, token, trailing, ref result, ref newVarAdded);
@@ -5319,6 +8452,14 @@ namespace SplitAndMerge
                 var grouped = AsBoolExpression(term.Substring(1, term.Length - 2));
                 return grouped == null ? null : (negated ? "!" : "") + "(" + grouped + ")";
             }
+            // A script call made in place ("n > 1 && f(n)") yields a Variable, which C# cannot
+            // use as a side of "&&" (CS0019) -- tested before the operator scan below, since the
+            // call's own arguments may hold a comparison.
+            if (term.StartsWith("CscsCalls.Call(", StringComparison.Ordinal) &&
+                FindMatchingParen(term, term.IndexOf('(')) == term.Length - 1)
+            {
+                return "CscsConvert." + (negated ? "IsFalse(" : "IsTrue(") + term + ")";
+            }
             // Anything with an operator left in it already yields a bool.
             if (term.IndexOfAny(new[] { '<', '>', '=', '!', '&', '|' }) >= 0)
             {
@@ -5330,13 +8471,8 @@ namespace SplitAndMerge
             {
                 return null;
             }
-            // The numeric field, not the parsed text: the interpreter tests
-            // Convert.ToBoolean(Value), so every string is false there -- "5" included --
-            // while AsDouble() would parse it to 5 and call it true.
-            // The interpreter tests Convert.ToBoolean of the numeric field, so every string is
-            // false there -- "5" included -- while AsDouble() would parse it to 5 and call it
-            // true. And "!x" is not the opposite: it is true only for a number that is zero,
-            // so a string is false both ways round. Hence two helpers rather than a negation.
+            // The interpreter's one truth rule (Variable.IsTrue): a number unless 0, text unless
+            // empty, "0" or "false", a list unless empty -- not AsDouble(), which reads "abc" as 0.
             // The object overloads accept a string term as well as a Variable.
             return "CscsConvert." + (negated ? "IsFalse(" : "IsTrue(") + term + ")";
         }
@@ -5378,7 +8514,7 @@ namespace SplitAndMerge
             while (i < condition.Length)
             {
                 char ch = condition[i];
-                if (ch == '"' && (i == 0 || condition[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(condition, i))
                 {
                     inQuotes = !inQuotes;
                     sb.Append(ch);
@@ -5415,8 +8551,12 @@ namespace SplitAndMerge
                     // A function the interpreter knows: one a script defined, or a built-in
                     // registered in C#. A built-in's value is read as a truth value below,
                     // since "if (StrEqual(s, \"AB\"))" wants one where ".AsDouble()" gives a
-                    // number that C# will not accept as a condition.
-                    interpreter.GetFunction(name) == null)
+                    // number that C# will not accept as a condition. The function being
+                    // translated is not registered yet, and is known by its name:
+                    // "if (f(n - 1) > 4)" inside f went out as a C# call to f.
+                    (interpreter.GetFunction(name) == null &&
+                     !string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase) &&
+                     !IsLateFunctionName(name)))
                 {
                     sb.Append(name);
                     continue;
@@ -5550,7 +8690,7 @@ namespace SplitAndMerge
         /// nothing.
         /// </summary>
         static readonly HashSet<string> s_conversions =
-            new HashSet<string> { "string", "int", "long", "bool", "double" };
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "string", "int", "long", "bool", "double" };
 
         /// <summary>
         /// A conversion's argument in C#. One with a call in it -- "int(Math.Sqrt(n))" -- is an
@@ -5583,6 +8723,21 @@ namespace SplitAndMerge
             {
                 return argCall;
             }
+            // A name nothing defines yet -- "int(id)" with id a global assigned later: read when
+            // the code runs. EvaluateToken made it a call, statements in the middle of the cast.
+            if (IsLateBoundName(trimmedArg, false))
+            {
+                m_usesInterpreter = true;
+                return "CscsLate.Value(__interpreter, \"" + trimmedArg + "\")";
+            }
+            // An expression with such a name in it -- "int(duration / 500)": the expression
+            // path reads the name late; the token loop spliced a callback into the cast.
+            if (!MentionsScriptCall(unescaped) &&
+                System.Text.RegularExpressions.Regex.Matches(WithoutStringContents(unescaped), @"(?<![\w.])[A-Za-z_]\w*(?![\w(])")
+                    .Cast<System.Text.RegularExpressions.Match>().Any(word => IsLateBoundName(word.Value, false)))
+            {
+                return ReplaceArgsInString(unescaped);
+            }
             // Unescaped: with "\\\"" still in it the tokenizer never saw the literal as
             // quoted -- its quote test skips one preceded by a backslash -- and split
             // "yyyy/MM/dd" on the slashes, leaving "MM" to be read as a name of its own.
@@ -5591,31 +8746,34 @@ namespace SplitAndMerge
 
         string GetCSharpFunction(string functionName, string arguments = "")
         {
-            if (functionName == "printc")
+            // Script names are case-blind: "Double(x)" is double(x) to the interpreter.
+            functionName = functionName ?? "";
+            var lowerName = functionName.ToLowerInvariant();
+            if (lowerName == "printc")
             {
                 arguments = ReplaceArgsInString(arguments.Replace("\\\"", "\""));
                 return "Console.WriteLine(" + arguments + ");";
             }
-            else if (functionName == "string" && !string.IsNullOrWhiteSpace(arguments))
+            else if (lowerName == "string" && !string.IsNullOrWhiteSpace(arguments))
             {
                 return "CscsConvert.ToText(" + ConversionArgument(arguments) + ")";
             }
-            else if (functionName == "int" && !string.IsNullOrWhiteSpace(arguments))
+            else if (lowerName == "int" && !string.IsNullOrWhiteSpace(arguments))
             {
                 // A cast, not Convert.ToInt32: CSCS truncates toward zero -- int(3.7) is 3,
                 // int(2.5) is 2, int(-3.7) is -3 -- while Convert rounds. Going through
                 // ToDouble first keeps int("5.7") working.
                 return "(int)CscsConvert.ToNumber(" + ConversionArgument(arguments) + ")";
             }
-            else if (functionName == "long" && !string.IsNullOrWhiteSpace(arguments))
+            else if (lowerName == "long" && !string.IsNullOrWhiteSpace(arguments))
             {
                 return "(long)CscsConvert.ToNumber(" + ConversionArgument(arguments) + ")";
             }
-            else if (functionName == "bool" && !string.IsNullOrWhiteSpace(arguments))
+            else if (lowerName == "bool" && !string.IsNullOrWhiteSpace(arguments))
             {
                 return "CscsConvert.ToFlag(" + ConversionArgument(arguments) + ")";
             }
-            else if (functionName == "double" && !string.IsNullOrWhiteSpace(arguments))
+            else if (lowerName == "double" && !string.IsNullOrWhiteSpace(arguments))
             {
                 return "CscsConvert.ToNumber(" + ConversionArgument(arguments) + ")";
             }
@@ -5633,6 +8791,25 @@ namespace SplitAndMerge
         string GetCSCSFunction(string argsStr, string functionName, char ch = '(',
                                string assignTo = null)
         {
+            // The "**" rewrite is no function the interpreter knows; a callback to it would fail
+            // at run time, so the function stays interpreted instead.
+            if (string.Equals(functionName, POWER_OP, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("A power over a Variable reached the interpreter by name");
+            }
+            // A plain call with plain arguments goes straight to the function: its arguments
+            // are evaluated here, in C#, and handed to its Run -- the one an interpreted call
+            // reaches too, with the same argument frame, conversions and call-depth guard.
+            // The text route below publishes the caller's arguments, builds the argument list
+            // as a string, and has the interpreter parse it and find the function by name on
+            // every call: that is what kept a compiled recursive fib only ~4.6x faster.
+            // Not for a name read without parentheses ("if (n < total)"): that may be a variable
+            // the script defines later, which only the text route resolves.
+            if (ch == '(' && string.IsNullOrEmpty(assignTo) && !AsyncMode && !m_nameWithoutCall &&
+                IsPlainArgumentList(argsStr) && TryInlineScriptCall(functionName, argsStr, out var direct))
+            {
+                return m_depth + VARIABLE_TEMP_VAR + " = " + direct + ";\n";
+            }
             m_usesInterpreter = true;
             StringBuilder sb = new StringBuilder();
 
@@ -5649,11 +8826,25 @@ namespace SplitAndMerge
                 sb.AppendLine(m_depth + "__interpreter.AddCompiledLocalVariable(\"" + param.Key +
                     "\", new GetVarFunction(Variable.ConvertToVariable(" + param.Value + ")));");
             }
-            if (!string.IsNullOrWhiteSpace(argsStr) && argsStr.Last() == '"' && argsStr.First() == '"')
+            // The argument text goes into a C# string literal and the interpreter parses it back
+            // at run time, so it has to arrive as the script wrote it. It comes with every quote
+            // escaped (Utils.PrepareArgs) but its backslashes as they were, so a script's own
+            // escaped quote -- '{\"Result\": 1}' -- ended the literal early. Undone and escaped
+            // properly: backslashes, then quotes.
+            if (!string.IsNullOrEmpty(argsStr))
             {
-                argsStr = "\\\"" + argsStr.Substring(1, argsStr.Length - 2) + "\\\"";
+                var original = argsStr.Replace("\\\"", "\"");
+                argsStr = original.Replace("\\", "\\\\").Replace("\"", "\\\"");
             }
 
+            // The Size built-in reads a variable's name and then the ")" after it (GetToken,
+            // CheckNotEnd): given only "s", it threw "Incomplete arguments for [Size]" where the
+            // interpreted call, which sees the ")", answers. It gets the text it would see.
+            if (string.Equals(functionName, Constants.SIZE, StringComparison.OrdinalIgnoreCase) &&
+                ch == '(' && !(m_parentScript?.InterpreterInstance?.GetFunction(functionName) is CustomFunction))
+            {
+                argsStr += ")";
+            }
             sb.AppendLine(m_depth + ARGS_TEMP_VAR + " =\"" + argsStr + "\";");
             sb.AppendLine(m_depth + SCRIPT_TEMP_VAR + " = new ParsingScript(__interpreter, " + ARGS_TEMP_VAR + ", true);");
             if (!string.IsNullOrEmpty(assignTo))
@@ -5743,7 +8934,7 @@ namespace SplitAndMerge
         /// while "m.Keys" did. Anything not a member of Variable is returned untouched -- a
         /// class's own field keeps the case it was declared with.
         /// </summary>
-        static string CanonicalVariableMember(string member)
+        internal static string CanonicalVariableMember(string member)
         {
             var text = member ?? "";
             int callStart = text.IndexOf('(');
@@ -5759,9 +8950,9 @@ namespace SplitAndMerge
         static readonly Dictionary<string, string> s_variableMembers =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "size", "Size" }, { "count", "Count" }, { "keys", "Keys" },
+                { "size", "Size" }, { "keys", "Keys" },
                 { "first", "First" }, { "last", "Last" }, { "type", "Type" },
-                { "sort", "Sort" }, { "reverse", "Reverse" }, { "split", "Split" },
+                { "sort", "Sort" }, { "reverse", "Reverse" }, { "split", "Split" }, { "join", "Join" },
                 { "length", "Length" }, { "upper", "Upper" }, { "lower", "Lower" },
                 { "contains", "Contains" }, { "startswith", "StartsWith" },
                 { "endswith", "EndsWith" }, { "indexof", "IndexOf" },
@@ -5787,8 +8978,122 @@ namespace SplitAndMerge
         /// <summary>The members of that map that are properties in C#, not methods.</summary>
         static readonly HashSet<string> s_variableProperties = new HashSet<string>
         {
-            "size", "count", "keys", "first", "last", "type", "length", "upper", "lower",
+            "size", "keys", "first", "last", "type", "length", "upper", "lower",
         };
+
+        /// <summary>
+        /// Whether "owner.member" followed by "()" at <paramref name="callStart"/> is an empty
+        /// call on a property of a Variable held by a local or a "variable" argument.
+        /// </summary>
+        bool EmptyPropertyCallOnVariable(string token, string text, int callStart)
+        {
+            var trimmed = (token ?? "").Trim();
+            int dot = trimmed.IndexOf('.');
+            if (dot <= 0 || dot != trimmed.LastIndexOf('.'))
+            {
+                return false;
+            }
+            var owner = trimmed.Substring(0, dot);
+            var member = trimmed.Substring(dot + 1);
+            return IsPlainName(owner) && IsPlainName(member) && IsEmptyPropertyCall(text, callStart, member) &&
+                   (m_variableLocals.Contains(owner) || IsVariableParam(owner, out _));
+        }
+
+        /// <summary>
+        /// "Math.Sin(x)" as a call the interpreter runs -- CscsCalls.Builtin -- when the text is
+        /// exactly one Math call and an argument mentions a Variable (a "variable" argument or a
+        /// local holding one); null otherwise.
+        /// </summary>
+        string TryBuildMathOnVariable(string text)
+        {
+            var trimmed = (text ?? "").Trim();
+            var m = System.Text.RegularExpressions.Regex.Match(trimmed, @"^Math\s*\.\s*([A-Za-z_]\w*)\s*\(");
+            if (!m.Success)
+            {
+                return null;
+            }
+            int open = m.Length - 1;
+            if (FindMatchingParen(trimmed, open) != trimmed.Length - 1)
+            {
+                return null;
+            }
+            var name = "Math." + m.Groups[1].Value;
+            var interpreter = m_parentScript?.InterpreterInstance;
+            if (interpreter == null || interpreter.GetFunction(name) == null)
+            {
+                return null;
+            }
+            var argsText = trimmed.Substring(open + 1, trimmed.Length - open - 2);
+            if (!MentionsAny(argsText, VariableParamNames()) && !MentionsAny(argsText, m_variableLocals))
+            {
+                return null;
+            }
+            var args = SplitTopLevel(argsText, ',');
+            var sb = new StringBuilder("CscsCalls.Builtin(__interpreter, \"" + name + "\"");
+            foreach (var arg in args)
+            {
+                // Plain operands, or a Math call of its own -- built the same way, and run first, as
+                // the interpreter runs it. Any other call would need statements of its own.
+                if (string.IsNullOrWhiteSpace(arg) || arg.IndexOf('"') >= 0)
+                {
+                    return null;
+                }
+                if (arg.IndexOf('(') >= 0)
+                {
+                    var nested = TryBuildMathOnVariable(arg);
+                    if (nested == null)
+                    {
+                        return null;
+                    }
+                    sb.Append(", (object)(").Append(nested).Append(")");
+                    continue;
+                }
+                sb.Append(", (object)(").Append(ReplaceArgsInString(arg.Trim())).Append(")");
+            }
+            return sb.Append(")").ToString();
+        }
+
+        /// <summary>
+        /// Whether the text is exactly one call "owner.Member(..)" on a Variable held by a local
+        /// or a "variable" argument, of a member Variable has no C# counterpart for.
+        /// </summary>
+        bool IsUnmappedMemberCallOnVariable(string text)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match((text ?? "").Trim(), @"^([A-Za-z_]\w*)\s*\.\s*([A-Za-z_]\w*)\s*\(");
+            if (!m.Success)
+            {
+                return false;
+            }
+            var trimmed = text.Trim();
+            int open = m.Length - 1;
+            if (FindMatchingParen(trimmed, open) != trimmed.Length - 1)
+            {
+                return false;
+            }
+            var owner = m.Groups[1].Value;
+            var member = m.Groups[2].Value;
+            if (!(m_variableLocals.Contains(owner) || IsVariableParam(owner, out _)))
+            {
+                return false;
+            }
+            return !IsVariableMember(member) && !IsCollectionMethod(member);
+        }
+
+        HashSet<string> VariableParamNames()
+        {
+            return new HashSet<string>(m_declaredArgsMap.Where(arg => arg.Value.Type == Variable.VarType.VARIABLE)
+                .Select(arg => arg.Key), StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Whether the name is an argument declared "variable", and the slot it is read from.
+        /// </summary>
+        bool IsVariableParam(string name, out string slot)
+        {
+            slot = null;
+            return m_argsMap.TryGetValue(name, out var arg) && arg.Type == Variable.VarType.VARIABLE &&
+                   m_paramMap.TryGetValue(name, out slot) && !string.IsNullOrEmpty(slot);
+        }
 
         static bool IsVariableMember(string member)
         {
@@ -5808,7 +9113,6 @@ namespace SplitAndMerge
                 case "substring":
                 case "replace":
                 case "size":
-                case "count":
                 case "type":
                 // The collection methods Variable provides. Without these a call on a local
                 // that holds one -- "k = m.Keys; k.Sort();" -- was read as a method of a class
@@ -5817,7 +9121,8 @@ namespace SplitAndMerge
                 // them here took that away.
                 case "sort":
                 case "reverse":
-                case "split": return true;
+                case "split":
+                case "join": return true;
             }
             return false;
         }
@@ -5880,18 +9185,19 @@ namespace SplitAndMerge
                 // stopped leaving a property's "()" unconsumed (Variable.GetCoreProperty).
                 case "upper": result = target + ".ToUpper" + CallParens(callStart, call, callFollows); return true;
                 case "lower": result = target + ".ToLower" + CallParens(callStart, call, callFollows); return true;
-                // CSCS Length on a string is the character count, which is what C# Length
-                // gives. Size is deliberately not mapped: the interpreter returns 0 for it on
-                // a string, so compiling it to .Length would diverge rather than fall back.
-                case "length": result = target + ".Length" + call; return true;
+                // CSCS Length and Size on a string are the character count, which is what C#
+                // Length gives (Size was 0 on text until September 2026). An empty "()" after
+                // either is the interpreter's too (Variable.ConsumeEmptyCall).
+                case "length":
+                case "size": result = target + ".Length" + (call.Replace(" ", "") == "()" ? "" : call); return true;
                 // Replace is the one method whose CSCS and C# behaviour already agree; the
                 // rest go through CscsStringMembers, which restores the interpreter's
-                // case-insensitive default and Substring's clamping. Size is deliberately
-                // absent: the interpreter returns 0 for it on a string.
+                // case-insensitive default and Substring's clamping.
                 case "replace": result = target + ".Replace" + call; return true;
-                // Trim is AsString().Trim() in the interpreter, which is C#'s own. Only the
-                // call form: "s.Trim" without parentheses behaves differently there, and
-                // mapping it to a method group does not compile, so it falls back.
+                // Trim is AsString().Trim() in the interpreter, which is C#'s own, with or without
+                // its parentheses (the bare form took the rest of the expression until September
+                // 2026). Not every caller says whether a call follows, so the bare form's "()" is
+                // supplied by RoslynCompiler.RepairOperators (a method group used as a value).
                 case "trim": result = target + ".Trim" + call; return true;
                 case "contains": result = target + ".ContainsCscs" + call; return true;
                 case "startswith": result = target + ".StartsWithCscs" + call; return true;
@@ -5935,7 +9241,7 @@ namespace SplitAndMerge
             for (int i = 0; i < (text ?? "").Length; i++)
             {
                 char ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -5950,6 +9256,63 @@ namespace SplitAndMerge
         }
 
         /// <summary>
+        /// Arguments C# can evaluate as they stand: no "name = value" (a named argument, which
+        /// C# would read as an assignment), no collection literal in braces, and no text --
+        /// by the time a call reaches GetCSCSFunction its quotes are already escaped for the
+        /// string the text route builds, and read as C# they no longer compile.
+        /// </summary>
+        static bool IsPlainArgumentList(string argsStr)
+        {
+            var text = argsStr ?? "";
+            if (text.IndexOfAny(new[] { '"', '\'', '\\' }) >= 0)
+            {
+                return false;
+            }
+            // A script variable named like a C# keyword -- "SetValue(switch, 1)" -- cannot be
+            // written as C#; the text route names it to the interpreter instead.
+            foreach (System.Text.RegularExpressions.Match word in
+                     System.Text.RegularExpressions.Regex.Matches(text, @"(?<![\w.])[A-Za-z_]\w*(?!\s*\()"))
+            {
+                if (s_allCsKeywords.Contains(word.Value) && word.Value != "true" && word.Value != "false" &&
+                    word.Value != "null")
+                {
+                    return false;
+                }
+            }
+            bool inQuotes = false;
+            int depth = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+                if (inQuotes)
+                {
+                    continue;
+                }
+                if (ch == '{' || ch == '}')
+                {
+                    return false;
+                }
+                if (ch == '(' || ch == '[') { depth++; continue; }
+                if (ch == ')' || ch == ']') { depth--; continue; }
+                if (ch == '=' && depth == 0)
+                {
+                    char before = i > 0 ? text[i - 1] : ' ';
+                    char after = i + 1 < text.Length ? text[i + 1] : ' ';
+                    if (after != '=' && before != '=' && before != '!' && before != '<' && before != '>')
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
         /// A call to a script function as one C# expression, through CscsCalls, or false when
         /// the call cannot be written that way -- a script call inside an argument that is not
         /// itself just a call, say. Arguments are translated as expressions; one that is a
@@ -5959,11 +9322,19 @@ namespace SplitAndMerge
         {
             call = null;
             name = name.Trim();
+            // A native command -- print, copy, write, run, ... -- reads its arguments as text
+            // (Translation.IsFunctWithSpace); the text route gives it that. A script function of
+            // such a name takes values like any other since September 2026 (CustomFunction).
+            if (IsFunctionWithSpace(name) && !(m_parentScript?.InterpreterInstance?.GetFunction(name) is CustomFunction))
+            {
+                return false;
+            }
             if (!IsPlainName(name) || !MentionsScriptCall(name + "()"))
             {
                 return false;
             }
             var parts = new StringBuilder();
+            var values = new List<string>();
             foreach (var piece in SplitTopLevel(inner, ','))
             {
                 var arg = piece.Trim();
@@ -5981,11 +9352,50 @@ namespace SplitAndMerge
                         return false;
                     }
                     parts.Append(", ").Append(nested);
+                    values.Add(nested);
                     continue;
                 }
-                parts.Append(", ").Append(ReplaceArgsInString(arg));
+                // A built-in of the interpreter's in the argument -- "Substring(decimal(r / q), 0,
+                // 10)": written out as C# it is the keyword "decimal" (CS1525). The call route,
+                // which hands the arguments to the interpreter, takes it.
+                if (CallsInterpreterBuiltin(arg))
+                {
+                    return false;
+                }
+                var value = ReplaceArgsInString(arg);
+                parts.Append(", ").Append(value);
+                values.Add(value);
             }
-            m_usesInterpreter = true;
+            // Another compiled function with a typed entry point: called through it when that is
+            // still the function the name stands for at run time (CscsDirect.Call).
+            if (DirectCalls && !string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase) && !AsyncMode &&
+                m_parentScript?.InterpreterInstance?.GetFunction(name) is CustomCompiledFunction callee &&
+                callee.Precompiler?.DirectTypes is List<string> calleeTypes)
+            {
+                if (values.Count == calleeTypes.Count && values.Count <= CscsDirect.MaxArguments)
+                {
+                    var funcType = "Func<Interpreter" + string.Concat(calleeTypes.Select(t => ", " + t)) + ", Variable>";
+                    var lambdaArgs = string.Concat(Enumerable.Range(0, values.Count).Select(k => ", __dv" + k));
+                    var converted = string.Concat(Enumerable.Range(0, values.Count).Select(k =>
+                        ", CscsDirect." + (calleeTypes[k] == "int" ? "Int" : calleeTypes[k] == "double" ? "Num" :
+                                           calleeTypes[k] == "string" ? "Text" : "Var") + "(__dv" + k + ")"));
+                    call = "CscsDirect.Call(__interpreter, \"" + Constants.ConvertName(name) + "\", (" + funcType + ")null" +
+                           string.Concat(values.Select(v => ", " + v.Trim())) +
+                           ", (__dd, __di" + lambdaArgs + ") => __dd(__di" + converted + "))";
+                    return true;
+                }
+            }
+            // A built-in called with values publishes them as temporaries in the interpreter's
+            // frame, so the function is not one that can run without it.
+            if (IsValueBuiltin(name))
+            {
+                m_usesInterpreter = true;
+            }
+            // A call with values needs nothing else of the interpreter's: the callee gets its
+            // arguments as values and registers them itself, and a CSCS function cannot see its
+            // caller's locals (no dynamic scope), so the caller's locals need not be published
+            // for it -- only the text route, whose argument text names them, needs that. A call
+            // to itself may then skip the interpreter altogether (MakeDirectSelfCalls).
             call = "CscsCalls.Call(__interpreter, \"" + name + "\"" + parts + ")";
             return true;
         }
@@ -6017,7 +9427,7 @@ namespace SplitAndMerge
             for (int i = open; i < text.Length; i++)
             {
                 char ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -6096,6 +9506,14 @@ namespace SplitAndMerge
 
         bool IsKnownExpression(List<string> tokens)
         {
+            // "t = s.At(n - 1)" with s a Variable: the call has to go to the interpreter, which the
+            // known-expression path cannot do -- it declared t a double and wrote "s.At" as C#.
+            var whole = string.Concat(tokens);
+            int eqAt = tokens.Count > 1 && tokens[1] == "=" ? tokens[0].Length + 1 : 0;
+            if (IsUnmappedMemberCallOnVariable(whole.Substring(Math.Min(eqAt, whole.Length))))
+            {
+                return false;
+            }
             bool numericCandidate = false;
             for (int i = 0; i < tokens.Count; i++)
             {
@@ -6276,7 +9694,7 @@ namespace SplitAndMerge
             }
             for (int i = 1; i < text.Length - 1; i++)
             {
-                if (text[i] == '"' && text[i - 1] != '\\')
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
                 {
                     return false;
                 }
@@ -6527,7 +9945,7 @@ namespace SplitAndMerge
             for (int i = bracket; i < statement.Length; i++)
             {
                 var ch = statement[i];
-                if (ch == '"' && (i == 0 || statement[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(statement, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -6571,18 +9989,23 @@ namespace SplitAndMerge
             string compound = null;      // the operator of "a[i] op= v", null for a plain "="
             string valueExpr;
 
-            // A step is not the same as "+= 1": the interpreter steps the numeric field, so
-            // "a[0]++" over the element "5" gives 1, while "a[0] += 1" concatenates to "51".
+            // A step is not the same as "+= 1": the interpreter steps numeric text as its number,
+            // so "a[0]++" over the element "5" gives 6, while "a[0] += 1" concatenates to "51".
             bool isStep = after.StartsWith("++") || after.StartsWith("--");
             if (isStep)
             {
                 compound = after.Substring(0, 1);
                 valueExpr = "1";
             }
-            else if (after.Length > 1 && after[1] == '=' && "+-*/%".IndexOf(after[0]) >= 0)
+            else if (after.Length > 1 && after[1] == '=' && "+-*/%&|^".IndexOf(after[0]) >= 0)
             {
                 compound = after.Substring(0, 1);
                 valueExpr = after.Substring(2).Trim().TrimEnd(';');
+            }
+            else if (after.StartsWith("<<=") || after.StartsWith(">>="))
+            {
+                compound = after.Substring(0, 2);
+                valueExpr = after.Substring(3).Trim().TrimEnd(';');
             }
             else if (after[0] == '=' && !(after.Length > 1 && after[1] == '='))
             {
@@ -6639,13 +10062,13 @@ namespace SplitAndMerge
                 code += m_depth + "var " + indexTemp + " = Variable.ConvertToVariable(" +
                     ReplaceArgsInString(indexExpr) + ");\n";
                 // The element is indexed by the Variable itself rather than by AsInt(), so a
-                // map key works as well as an array position. The step itself goes through the
-                // interpreter's own compound operator, which is not "x = x + v": it dispatches
-                // on the left type and takes the right side's numeric field, so a string on
-                // the right of "+=" contributes 0 rather than concatenating.
+                // map key works as well as an array position. The step and the compound go
+                // through the interpreter's own operators (CscsOps.Compound, which steps as
+                // OperatorAssignFunction.Stepped does, and ProcessOperator): "x = x op v", with
+                // numeric text stepped as its number -- the element "5" becomes 6.
                 var element = target + "[" + indexTemp + "]";
                 var stepped = isStep ?
-                    "Variable.ConvertToVariable(" + element + ".Value " + compound + " 1)" :
+                    "CscsOps.Compound(" + element + ", \"" + compound + compound + "\", null)" :
                     "CscsConvert.Compound(" + element + ", " +
                         ReplaceArgsInString(valueExpr) + ", \"" + compound + "=\")";
                 code += m_depth + target + ".SetVariable(" + indexTemp + ", " + stepped + ");\n";
@@ -6665,7 +10088,7 @@ namespace SplitAndMerge
             for (int i = start; i < text.Length; i++)
             {
                 var ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -6751,6 +10174,14 @@ namespace SplitAndMerge
             return HoistConditionCalls(value, value, true);
         }
 
+        /// <summary>Whether the operand text mentions a "variable" argument, a local holding a
+        /// Variable, or an interpreter-run power already built.</summary>
+        bool MayHoldVariable(string operand)
+        {
+            return operand.Contains(POWER_OP) || MentionsAny(operand, VariableParamNames()) ||
+                   MentionsAny(operand, m_variableLocals);
+        }
+
         /// <summary>
         /// Rewrites "a ** b" into Math.Pow wherever it appears, or returns null when the
         /// statement has no "**". Grouped to the right, as the interpreter groups it, which
@@ -6797,7 +10228,11 @@ namespace SplitAndMerge
                 // already stripped, and a space there makes the argument resolve differently
                 // -- "Math.Pow(2, Math.Pow(3, n))" left the inner "n" undeclared while
                 // "Math.Pow(2,Math.Pow(3,n))" did not.
-                text = head + "Math.Pow(" + left + "," + right + ")" + text.Substring(rightEnd);
+                // Math.Pow for numbers, as before; the interpreter's operator where an operand may
+                // hold a Variable (a "variable" argument, a local holding one, an earlier "**"
+                // that did), which Math.Pow cannot take.
+                var power = MayHoldVariable(left) || MayHoldVariable(right) ? POWER_OP : "Math.Pow";
+                text = head + power + "(" + left + "," + right + ")" + text.Substring(rightEnd);
                 rewrote = true;
             }
             return rewrote ? text : null;
@@ -6812,7 +10247,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 char ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -7056,17 +10491,31 @@ namespace SplitAndMerge
                 op = trimmed.Substring(trimmed.Length - 1);
                 value = "1";
             }
-            if (name == null || !IsPlainName(name) || string.IsNullOrWhiteSpace(value) ||
-                !IsInterpreterVariable(name))
+            if (name == null || !IsPlainName(name) || string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+            // A global the script defines only later -- "counter++" in a handler -- is read by
+            // name when the code runs, as for a read (IsLateBoundName), and a missing one fails
+            // with the interpreter's own error for the operator.
+            bool late = !IsInterpreterVariable(name) && !m_varLocals.Contains(name) && IsLateBoundName(name, false);
+            if (!late && !IsInterpreterVariable(name))
             {
                 return null;
             }
 
             m_usesInterpreter = true;
-            var read = "__interpreter.GetVariableValue(\"" + name + "\")";
+            var read = late ?
+                "CscsLate.Existing(__interpreter, \"" + name + "\", \"" +
+                    (value == "1" && trimmed.EndsWith(op + op) ? "Variable or function [" : "Object [") +
+                    Constants.GetRealName(name) + "] doesn't exist.\")" :
+                "__interpreter.GetVariableValue(\"" + name + "\")";
+            // The interpreter's own compound (CscsOps.Compound): "g += \"!\"" on a number adds
+            // the text's numeric value, which C#'s "+" on the Variable turned into "3!".
+            var action = value == "1" && trimmed.EndsWith(op + op) ? op + op : op + "=";
             return m_depth + "__interpreter.AddGlobalOrLocalVariable(\"" + name +
-                "\", new GetVarFunction(Variable.ConvertToVariable(" + read + " " + op +
-                " (" + ReplaceArgsInString(value) + "))));\n";
+                "\", new GetVarFunction(CscsOps.Compound(" + read + ", \"" + action +
+                "\", (object)(" + ReplaceArgsInString(value) + "))));\n";
         }
 
         /// <summary>
@@ -7080,7 +10529,7 @@ namespace SplitAndMerge
             bool inQuotes = false;
             for (int i = 0; i < trimmed.Length; i++)
             {
-                if (trimmed[i] == '"' && (i == 0 || trimmed[i - 1] != '\\'))
+                if (trimmed[i] == '"' && !IsEscapedQuote(trimmed, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -7095,7 +10544,17 @@ namespace SplitAndMerge
                     return null;
                 }
                 var index = trimmed.Substring(i + 1, close - i - 1);
-                if (MentionsScriptCall(index) || MentionsConversionCall(index))
+                // The subscripted name: on an argument, a Math call in the index is hoisted as
+                // well -- the resolver takes it inline only for a local, and for an argument the
+                // token was cut at the "(" ("x[Math.Abs"), leaving a stray "]" (CS1026).
+                int nameStart = i;
+                while (nameStart > 0 && (char.IsLetterOrDigit(trimmed[nameStart - 1]) || trimmed[nameStart - 1] == '_'))
+                {
+                    nameStart--;
+                }
+                var subscripted = trimmed.Substring(nameStart, i - nameStart);
+                bool argumentWithCall = subscripted.Length > 0 && m_paramMap.ContainsKey(subscripted) && index.IndexOf('(') >= 0;
+                if (MentionsScriptCall(index) || MentionsConversionCall(index) || argumentWithCall)
                 {
                     var temp = "__idxVal" + (++m_tempVarId);
                     var rest = trimmed.Substring(0, i + 1) + temp + trimmed.Substring(close);
@@ -7116,8 +10575,13 @@ namespace SplitAndMerge
         {
             var interpreter = m_parentScript.InterpreterInstance;
             int i = 0;
+            bool inQuotes = false;
             while (i < (text ?? "").Length)
             {
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
+                {
+                    inQuotes = !inQuotes;
+                }
                 if (!char.IsLetter(text[i]) && text[i] != '_')
                 {
                     i++;
@@ -7129,10 +10593,18 @@ namespace SplitAndMerge
                     i++;
                 }
                 var name = text.Substring(start, i - start);
-                if (i < text.Length && text[i] == '(' && !m_paramMap.ContainsKey(name) &&
-                    !m_newVariables.Contains(name) && !Constants.RESERVED.Contains(name) &&
+                // The function being translated is not registered yet, so a call to itself
+                // is recognised by name.
+                // An argument or a local of the name does not matter: a call is a function's.
+                if (i < text.Length && text[i] == '(' && !Constants.RESERVED.Contains(name) &&
                     !IsMathFunction(name, out _) &&
-                    interpreter.GetFunction(name) is CustomFunction)
+                    (interpreter.GetFunction(name) is CustomFunction ||
+                     string.Equals(name, m_functionName, StringComparison.OrdinalIgnoreCase) ||
+                     // A function nothing defines yet -- defined further down the script -- is
+                     // called by name when the code runs, as the interpreter calls it. Not a
+                     // member (".fire(") and not inside a string.
+                     (!inQuotes && (start == 0 || text[start - 1] != '.') &&
+                      (IsLateFunctionName(name) || IsValueBuiltin(name)))))
                 {
                     return true;
                 }
@@ -7150,7 +10622,7 @@ namespace SplitAndMerge
             foreach (var name in new[] { "string", "int", "long", "bool", "double", "printc" })
             {
                 int at = 0;
-                while ((at = (text ?? "").IndexOf(name, at, StringComparison.Ordinal)) >= 0)
+                while ((at = (text ?? "").IndexOf(name, at, StringComparison.OrdinalIgnoreCase)) >= 0)
                 {
                     int after = at + name.Length;
                     // A whole word followed by "(": not the tail of a longer name, and not a
@@ -7169,10 +10641,8 @@ namespace SplitAndMerge
 
         /// <summary>
         /// Translates "r += value" on a local that holds a Variable into the interpreter's own
-        /// compound operator, or null when the statement is not one. C#'s "+=" would go
-        /// through Variable's "+", which concatenates when either side is a string -- but a
-        /// compound assignment is not "r = r + value": it dispatches on the left type and
-        /// takes the right side's numeric field, so "r = 5; r += \"3\"" leaves 5.
+        /// compound operator, or null when the statement is not one: "r = r op value"
+        /// (OperatorAssignFunction.ProcessOperator), so "r = 5; r += \"3\"" is "53".
         /// </summary>
         /// <summary>
         /// Translates "p.x += 5", and "p.x++" / "p.x--", into the read-apply-write the
@@ -7239,6 +10709,9 @@ namespace SplitAndMerge
             string target = null;
             string value = null;
             string action = null;
+            // "p.x++" is the interpreter's step (IncrementDecrementFunction), not "+= 1": on text
+            // the step makes a number of it, where "+=" appended "1".
+            string stepOp = null;
             foreach (var candidate in new[] { "+=", "-=", "*=", "/=", "%=" })
             {
                 int at = trimmed.IndexOf(candidate, StringComparison.Ordinal);
@@ -7257,6 +10730,7 @@ namespace SplitAndMerge
                 target = trimmed.Substring(0, trimmed.Length - 2).Trim();
                 value = "1";
                 action = trimmed.EndsWith("++") ? "+=" : "-=";
+                stepOp = trimmed.EndsWith("++") ? "++" : "--";
             }
             if (action == null || string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(target))
             {
@@ -7305,9 +10779,14 @@ namespace SplitAndMerge
                 {
                     return null;
                 }
+                if (stepOp != null)
+                {
+                    return ownerPrelude + m_depth + "CscsFields.StepField(" + elemOwner + ", \"" + field + "\", \"" +
+                           stepOp + "\", false);\n";
+                }
                 return valuePrelude + valueLine + ownerPrelude + m_depth + elemOwner +
                     ".SetProperty(\"" + field + "\", CscsConvert.Compound(" + elemOwner +
-                    ".GetProperty(\"" + field + "\").DeepClone(), " + valueTemp + ", \"" + action + "\"), null);\n";
+                    ".ReadField(\"" + field + "\").DeepClone(), " + valueTemp + ", \"" + action + "\"), null);\n";
             }
             // DeepClone before applying: GetProperty hands back the field BY REFERENCE, and for a
             // field the constructor never sets that reference is the class's own default, shared
@@ -7315,8 +10794,12 @@ namespace SplitAndMerge
             // default itself moved -- "p.tag += \"z\"" over three calls read back "tzzz", the same
             // value from all three, since the returned Variable aliased that one default too.
             // The interpreter clones for the same reason (OperatorAssignFunction.ProcessOperator).
+            if (stepOp != null)
+            {
+                return m_depth + "CscsFields.StepField(" + owner + ", \"" + field + "\", \"" + stepOp + "\", false);\n";
+            }
             return valuePrelude + m_depth + owner + ".SetProperty(\"" + field + "\", CscsConvert.Compound(" +
-                owner + ".GetProperty(\"" + field + "\").DeepClone(), " + resolved + ", \"" + action + "\"), null);\n";
+                owner + ".ReadField(\"" + field + "\").DeepClone(), " + resolved + ", \"" + action + "\"), null);\n";
         }
 
         string TryBuildVariableCompound(string statement)
@@ -7331,6 +10814,14 @@ namespace SplitAndMerge
                 }
                 var name = trimmed.Substring(0, at).Trim();
                 var value = trimmed.Substring(at + candidate.Length).Trim();
+                // A for header's step arrives with the header's ")" -- "i+=1)" -- which belongs
+                // after the call, not inside it: "Compound(i, 1), \"+=\")" did not compile.
+                var closing = "";
+                while (value.EndsWith(")") && value.Count(ch => ch == ')') > value.Count(ch => ch == '('))
+                {
+                    value = value.Substring(0, value.Length - 1).TrimEnd();
+                    closing += ")";
+                }
                 if (!IsPlainName(name) || !m_variableLocals.Contains(name) ||
                     m_paramMap.ContainsKey(name) || !m_newVariables.Contains(name) ||
                     string.IsNullOrWhiteSpace(value))
@@ -7362,7 +10853,11 @@ namespace SplitAndMerge
                     ReplaceArgsInString(value);
                 var valuePrelude = m_statementPrelude;
                 m_statementPrelude = outerPrelude;
-                return valuePrelude + m_depth + name + " = CscsConvert.Compound(" + name + ", " +
+                // In a for header (the ")" came along) the step ends the header: no ";", which
+                // ended the loop there with an empty body and ran the block once.
+                return closing.Length > 0 ?
+                    valuePrelude + name + " = CscsConvert.Compound(" + name + ", " + resolved + ", \"" + candidate + "\")" + closing :
+                    valuePrelude + m_depth + name + " = CscsConvert.Compound(" + name + ", " +
                     resolved + ", \"" + candidate + "\");\n";
             }
             return null;
@@ -7411,6 +10906,9 @@ namespace SplitAndMerge
                    index.IndexOf('=') < 0;
         }
 
+        static readonly System.Text.RegularExpressions.Regex s_leftmostChainTarget =
+            new System.Text.RegularExpressions.Regex(@"^[A-Za-z_]\w*(\s*(\.\s*[A-Za-z_]\w*|\[[^\[\]=]+\]))+$");
+
         string TryBuildChainedAssignment(string statement, string nextStatement, bool addNewVars)
         {
             var trimmed = statement.Trim().TrimEnd(';').Trim();
@@ -7419,9 +10917,15 @@ namespace SplitAndMerge
             {
                 return null;
             }
+            // The unrolling below mentions every target but the leftmost twice -- as a target and
+            // as the value of the next one out -- so those must be safe to evaluate twice. The
+            // leftmost is written once, after the value, which is also when the interpreter
+            // reads its index ("a[i] = i = 3" writes a[3]): any path of names, members and
+            // subscripts will do -- "q.kid.x", "a[0].v", "a[i++]".
             for (int i = 0; i < parts.Count - 1; i++)
             {
-                if (!IsChainTarget(parts[i].Trim()))
+                var target = parts[i].Trim();
+                if (!IsChainTarget(target) && !(i == 0 && s_leftmostChainTarget.IsMatch(target)))
                 {
                     return null;
                 }
@@ -7500,8 +11004,13 @@ namespace SplitAndMerge
                 return null;
             }
             var name = target.Substring(0, bracket).Trim();
+            // A global the script defines only later -- "volaParamsData[stock] = arg" in a
+            // handler -- is written the same way, looked up when the code runs; missing, it is a
+            // new collection of the function's own, as the interpreter makes one.
+            bool late = IsPlainName(name) && !IsInterpreterVariable(name) && IsLateBoundName(name, false) &&
+                        !m_collectionLocals.Contains(name) && !m_variableLocals.Contains(name);
             // A local of the same name wins: it is a real C# variable and needs no callback.
-            if (!IsPlainName(name) || !IsInterpreterVariable(name) ||
+            if (!IsPlainName(name) || !(late || IsInterpreterVariable(name)) ||
                 m_paramMap.ContainsKey(name) || m_newVariables.Contains(name) ||
                 m_collectionLocals.Contains(name) || m_variableLocals.Contains(name))
             {
@@ -7552,22 +11061,23 @@ namespace SplitAndMerge
                 "CscsConvert.Compound(" + holder + "[" + indexVar + "], " +
                     ReplaceArgsInString(value) + ", \"" + op + "=\")";
             return valuePrelude +
-                   m_depth + "var " + temp + " = __interpreter.GetVariableValue(\"" + name + "\");\n" +
+                   m_depth + "var " + temp + " = " + (late ? "CscsLate.OrNewCollection(__interpreter, \"" + name + "\")" :
+                       "__interpreter.GetVariableValue(\"" + name + "\")") + ";\n" +
                    m_depth + "var " + indexVar + " = Variable.ConvertToVariable(" +
                        ReplaceArgsInString(indices[indices.Count - 1]) + ");\n" +
                    m_depth + holder + ".SetVariable(" + indexVar + ", " + newValue + ");\n" +
-                   m_depth + "__interpreter.AddGlobalOrLocalVariable(\"" + name +
-                       "\", new GetVarFunction(" + temp + "));\n";
+                   m_depth + "__interpreter." + (late ? "AddCompiledLocalVariable" : "AddGlobalOrLocalVariable") +
+                       "(\"" + name + "\", new GetVarFunction(" + temp + "));\n";
         }
 
         /// <summary>
-        /// Translates "name &amp;= expr" and its |= and ^= siblings into the
+        /// Translates "name &amp;= expr" and its |=, ^=, &lt;&lt;= and &gt;&gt;= siblings into the
         /// read-modify-write they stand for, or null when the statement is not one of those.
         /// </summary>
         string TryBuildBitwiseCompound(string statement)
         {
             var trimmed = statement.Trim().TrimEnd(';').Trim();
-            foreach (var op in new[] { "&=", "|=", "^=" })   // the ones CSCS actually has
+            foreach (var op in new[] { "<<=", ">>=", "&=", "|=", "^=" })   // the ones CSCS actually has
             {
                 int at = trimmed.IndexOf(op, StringComparison.Ordinal);
                 if (at <= 0)
@@ -7583,8 +11093,10 @@ namespace SplitAndMerge
                 }
                 var target = m_paramMap.ContainsKey(name) ? m_paramMap[name] : name;
                 var binary = op.Substring(0, op.Length - 1);
-                return m_depth + target + " = (double)((int)" + target + " " + binary +
-                    " (int)(" + ReplaceArgsInString(value) + "));\n" +
+                // An int, which converts to whatever the target is: a (double) here could not go
+                // back into an int local ("y = n; y <<= 3" was CS0266).
+                return m_depth + target + " = (int)" + target + " " + binary +
+                    " (int)(" + ReplaceArgsInString(value) + ");\n" +
                     RegisterVariableString(name, target);
             }
             return null;
@@ -7648,9 +11160,8 @@ namespace SplitAndMerge
         {
             var trimmed = statement.TrimEnd().TrimEnd(';').TrimEnd().Trim();
 
-            // "p.v++" and "p.v += 2" are deliberately not built: CSCS itself rejects both
-            // ("Variable or function [p.v] doesn't exist"), so compiling them would let
-            // compiled code succeed where the language does not. Only "p.v = p.v + 1" works.
+            // Plain "=" only: "p.v++" and "p.v += 2" take the member-step and member-compound
+            // paths (CscsFields.StepField, the compound builders).
 
             var sides = SplitTopLevelOn(trimmed, "=");
             if (sides.Count != 2)
@@ -7665,6 +11176,42 @@ namespace SplitAndMerge
             }
             var owner = target.Substring(0, dot);
             var field = target.Substring(dot + 1);
+            // "p.kid[0] = n", "p.kid[\"a\"][1] = n": an element of a field's collection, set in the
+            // collection itself (AssignFunction, OperatorAssignFunction.SetElementAt): the value
+            // first, then the field, then each index; a level above the last must exist.
+            int fieldBracket = field.IndexOf('[');
+            if (fieldBracket > 0 && field.EndsWith("]") && IsPlainName(owner) && m_variableLocals.Contains(owner) &&
+                IsPlainName(field.Substring(0, fieldBracket)) && !IsVariableMember(field.Substring(0, fieldBracket)) &&
+                !string.IsNullOrWhiteSpace(sides[1]))
+            {
+                var holder = owner + ".ReadField(\"" + field.Substring(0, fieldBracket) + "\")";
+                var indices = new List<string>();
+                int at = fieldBracket;
+                while (at < field.Length && field[at] == '[')
+                {
+                    int close = FindMatchingBracket(field, at);
+                    if (close < 0)
+                    {
+                        return null;
+                    }
+                    indices.Add("Variable.ConvertToVariable(" + ReplaceArgsInString(field.Substring(at + 1, close - at - 1)) + ")");
+                    at = close + 1;
+                }
+                if (at != field.Length || indices.Count == 0)
+                {
+                    return null;
+                }
+                string builtValue;
+                var fieldValue = TryBuildArrayLiteral(sides[1].Trim(), out builtValue) ? builtValue :
+                    "Variable.ConvertToVariable(" + ReplaceArgsInString(sides[1]) + ")";
+                var fieldTemp = "__memVal" + (++m_tempVarId);
+                for (int i = 0; i < indices.Count - 1; i++)
+                {
+                    holder = "CscsConvert.ElementForWrite(" + holder + ", " + indices[i] + ")";
+                }
+                return m_depth + "var " + fieldTemp + " = " + fieldValue + ";\n" +
+                       m_depth + holder + ".SetVariable(" + indices[indices.Count - 1] + ", " + fieldTemp + ");\n";
+            }
             // "a[0].v = 9": a member of an element. Written to the live element, which the
             // interpreter has done since its own version of this was fixed; the C# as it stood
             // declared "double a[0].v=9" (CS0650). The value is worked out before the subscript,
@@ -7699,7 +11246,7 @@ namespace SplitAndMerge
                     {
                         return null;
                     }
-                    ownerExpression += ".GetProperty(\"" + segment + "\")";
+                    ownerExpression += ".ReadField(\"" + segment + "\")";
                 }
                 field = target.Substring(lastDot + 1);
             }
@@ -7743,6 +11290,44 @@ namespace SplitAndMerge
             {
                 return null;
             }
+            // "t = s.At(1)" on a Variable: a member C# does not have goes to the interpreter
+            // as a callback, which the ordinary path emits, as it does for "return s.At(1)".
+            if (IsUnmappedMemberCallOnVariable(rhs))
+            {
+                return null;
+            }
+            // A script call nested inside another's arguments -- "helper(helper(\"a\") + \"b\")" --
+            // needs the call path, which builds each call; ReplaceArgsInString here wrote the
+            // function names out as C#.
+            if (MentionsScriptCall(rhs) && NestsScriptCall(rhs))
+            {
+                return null;
+            }
+            // A string with an escaped backslash -- "C:\\dir\\" + b: ReplaceArgsInString halves
+            // backslash runs, which suits the escaped text of its other callers but not source,
+            // and "a\\" came out "a\" (CS1010). The ordinary path keeps it.
+            if (rhs.Contains("\\\\"))
+            {
+                return null;
+            }
+            // "length = size(text)": a built-in of the interpreter's, which C# does not have
+            // (CS0103). The ordinary path calls it back, as it does for "return Size(text)".
+            if (CallsInterpreterBuiltin(rhs))
+            {
+                return null;
+            }
+            // "t = Math.Sin(x)" with x a Variable: C#'s Math takes numbers, and the interpreter's
+            // own Math functions read a Variable in their own way (the numeric field, so text is
+            // 0; a truth value 1). The interpreter runs it, on the values already at hand.
+            var builtin = TryBuildMathOnVariable(rhs);
+            if (builtin != null)
+            {
+                bool wasDeclared = m_newVariables.Contains(name);
+                m_newVariables.Add(name);
+                m_usesInterpreter = true;
+                var builtinCode = m_depth + (wasDeclared ? "" : "Variable ") + name + " = " + builtin + ";\n";
+                return addNewVars ? builtinCode + RegisterVariableString(name, name) : builtinCode;
+            }
             // A compound assignment ("v += 1") leaves its operator on the left-hand side and
             // is not a plain store, so it keeps the ordinary path.
             if (!IsPlainName(sides[0].TrimEnd()) && sides[0].TrimEnd().Length != name.Length)
@@ -7760,8 +11345,26 @@ namespace SplitAndMerge
             bool declared = m_newVariables.Contains(name);
             m_newVariables.Add(name);
             string built;
-            var value = TryBuildArrayLiteral(rhs, out built) ? built :
-                "Variable.ConvertToVariable(" + ReplaceArgsInString(rhs) + ")";
+            // A member read off an element -- "pts[1].Sum()", "pts[0].fx + pts[0].fy" -- is
+            // built by the expression builder's element branch, which runs only for a known
+            // expression. Without it the member went out as C# on a Variable (CS1929, CS1061),
+            // while "r += pts[1].Sum()" and "return pts[1].Sum()" already compiled. The element
+            // is certainly a Variable here, which is what that branch assumes.
+            var knownOuter = m_knownExpression;
+            if (System.Text.RegularExpressions.Regex.IsMatch(Shape(rhs), @"\]\s*\.\s*[A-Za-z_]"))
+            {
+                m_knownExpression = true;
+            }
+            string value;
+            try
+            {
+                value = TryBuildArrayLiteral(rhs, out built) ? built :
+                    "Variable.ConvertToVariable(" + ReplaceArgsInString(rhs) + ")";
+            }
+            finally
+            {
+                m_knownExpression = knownOuter;
+            }
             var code = m_depth + (declared ? "" : "Variable ") + name + " = " + value + ";\n";
             return addNewVars ? code + RegisterVariableString(name, name) : code;
         }
@@ -7773,6 +11376,81 @@ namespace SplitAndMerge
         /// Variable with nowhere to go. A Variable holds a number or a string just as the
         /// interpreter does, so widening the local cannot change an answer.
         /// </summary>
+        /// <summary>
+        /// Locals whose type a compound or a step can change, since September 2026 when these
+        /// became "x = x op y" (OperatorAssignFunction): text stepped or compounded with a
+        /// number -- "7"++ is 8, "abc"++ is "abc1", "x" -= 1 an error --, a number with text added
+        /// -- 3 += "!" is "3!" --, a comparison's truth value compounded. A C# string, double or
+        /// bool cannot follow, so these are Variables, which hold whatever the step leaves.
+        /// </summary>
+        HashSet<string> TypeChangingLocals(List<string> statements, HashSet<string> textAssigned)
+        {
+            var result = new HashSet<string>();
+            var comparisonAssigned = new HashSet<string>();
+            var stepped = new HashSet<string>();
+            var compoundedWithNumber = new HashSet<string>();
+            var compoundedWithText = new HashSet<string>();
+            var joinedText = new HashSet<string>();
+            var stringArgs = new HashSet<string>(m_argsMap.Where(a => a.Value.Type == Variable.VarType.STRING)
+                .Select(a => a.Key), StringComparer.OrdinalIgnoreCase);
+            foreach (var statement in statements)
+            {
+                var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                var bare = WithoutStringContents(line);
+                foreach (System.Text.RegularExpressions.Match step in System.Text.RegularExpressions.Regex.Matches(bare,
+                             @"(?<![\w.])([A-Za-z_]\w*)\s*(?:\+\+|--)|(?:\+\+|--)\s*([A-Za-z_]\w*)"))
+                {
+                    stepped.Add(step.Groups[1].Success ? step.Groups[1].Value : step.Groups[2].Value);
+                }
+                var compound = System.Text.RegularExpressions.Regex.Match(line, @"^([A-Za-z_]\w*)\s*([-+*/%])=(?!=)\s*(.+)$");
+                if (compound.Success)
+                {
+                    var value = compound.Groups[3].Value.Trim();
+                    bool text = value.IndexOf('"') >= 0 || stringArgs.Contains(value) || m_stringLocals.Contains(value) ||
+                                textAssigned.Contains(value);
+                    if (text)
+                    {
+                        compoundedWithText.Add(compound.Groups[1].Value);
+                    }
+                    else
+                    {
+                        compoundedWithNumber.Add(compound.Groups[1].Value);
+                    }
+                    continue;
+                }
+                var halves = SplitTopLevelOn(line, "=");
+                if (halves.Count == 2 && IsPlainName(halves[0].Trim()))
+                {
+                    if (System.Text.RegularExpressions.Regex.IsMatch(WithoutStringContents(halves[1]), @"[<>]|==|!="))
+                    {
+                        comparisonAssigned.Add(halves[0].Trim());
+                    }
+                    // Text joined into it -- "x = s + n" -- holds text as a literal does.
+                    else if (halves[1].IndexOf('"') >= 0 || MentionsAny(halves[1], stringArgs))
+                    {
+                        joinedText.Add(halves[0].Trim());
+                    }
+                }
+            }
+            var assignedHere = new HashSet<string>(statements.Select(s => AssignedName(s)).Where(n => n != null));
+            foreach (var name in assignedHere)
+            {
+                if (m_paramMap.ContainsKey(name) || !IsPlainName(name) || IsInterpreterVariable(name))
+                {
+                    continue;
+                }
+                bool holdsText = textAssigned.Contains(name) || joinedText.Contains(name);
+                if ((holdsText && (stepped.Contains(name) || compoundedWithNumber.Contains(name))) ||
+                    (!holdsText && compoundedWithText.Contains(name)) ||
+                    (comparisonAssigned.Contains(name) &&
+                     (stepped.Contains(name) || compoundedWithNumber.Contains(name) || compoundedWithText.Contains(name))))
+                {
+                    result.Add(name);
+                }
+            }
+            return result;
+        }
+
         void CollectVariableLocals(List<string> statements)
         {
             m_variableLocals.Clear();
@@ -7805,6 +11483,26 @@ namespace SplitAndMerge
                         loopVars.Add(name);
                         m_variableLocals.Add(name);
                     }
+                }
+            }
+
+            // A "catch (e)" binds a Variable too. Recorded only for a name the function also
+            // assigns itself, where the catch rebinds that local (ProcessCatch): then its other
+            // assignments have to declare it a Variable, or the catch's value has nowhere to go.
+            var assignedAnywhere = new HashSet<string>(statements.Select(s => AssignedName(s)).Where(n => n != null));
+            foreach (var statement in statements)
+            {
+                var head = (statement ?? "").Trim();
+                if (!StartsWithKeyword(head, Constants.CATCH))
+                {
+                    continue;
+                }
+                int open = head.IndexOf('(');
+                int close = open < 0 ? -1 : FindMatchingParen(head, open);
+                var caughtName = close < 0 ? null : head.Substring(open + 1, close - open - 1).Trim();
+                if (caughtName != null && IsPlainName(caughtName) && assignedAnywhere.Contains(caughtName))
+                {
+                    m_variableLocals.Add(caughtName);
                 }
             }
 
@@ -7862,6 +11560,44 @@ namespace SplitAndMerge
                     m_stringLocals.Add(name);
                 }
             }
+            foreach (var name in TypeChangingLocals(statements, stringCandidates))
+            {
+                m_variableLocals.Add(name);
+                m_stringLocals.Remove(name);
+            }
+
+            // A "variable" argument holds whatever the caller passed -- a number, text, a
+            // collection -- so what it feeds is a Variable too, as with a loop variable:
+            // "x = n + 1", "a1 = n", "b = n * 2" were declared double and could not take it
+            // (CS0029).
+            var variableArgs = new HashSet<string>(m_argsMap
+                .Where(arg => arg.Value.Type == Variable.VarType.VARIABLE).Select(arg => arg.Key), StringComparer.OrdinalIgnoreCase);
+            // The same for a loop counter started from one -- "for (i = n; i > 0; i--)" -- whose
+            // header is no plain assignment, so the pass below never sees it.
+            foreach (var statement in statements)
+            {
+                var head = (statement ?? "").Trim();
+                if (!StartsWithKeyword(head, Constants.FOR) || variableArgs.Count == 0)
+                {
+                    continue;
+                }
+                var init = System.Text.RegularExpressions.Regex.Match(head, @"^for\s*\(\s*([A-Za-z_]\w*)\s*=(?!=)(.*)$");
+                // Only the initializer: the rest of the header is the condition and the step,
+                // and "for (i = 1; i <= n; i++)" bounded by a Variable does not start from one.
+                var initValue = init.Success ? init.Groups[2].Value : "";
+                int initEnd = initValue.IndexOf(';');
+                if (initEnd >= 0)
+                {
+                    initValue = initValue.Substring(0, initEnd);
+                }
+                // Not when the start is a script call's result, which the for header reads as a
+                // number (".AsDouble()") whatever the arguments are.
+                if (init.Success && MentionsAny(initValue, variableArgs) &&
+                    !System.Text.RegularExpressions.Regex.IsMatch(initValue.Trim(), @"^[A-Za-z_]\w*\s*\([^()]*\)$"))
+                {
+                    m_variableLocals.Add(init.Groups[1].Value);
+                }
+            }
 
             // Repeated to a fixed point: "q = p.Kid()" makes q a Variable only once p is
             // known to be one, and a chain of those can run in either order in the source.
@@ -7872,6 +11608,25 @@ namespace SplitAndMerge
             foreach (var statement in statements)
             {
                 var trimmed = (statement ?? "").Trim().TrimEnd(';').Trim();
+                // A counter started from a local that holds a Variable -- "lower = m[k]; for (x =
+                // lower; x < upper; x++)" -- holds one too; declared a double it could not take
+                // the start (CS0029). Here, not above: the local is known only once this pass has
+                // found it.
+                var forInit = System.Text.RegularExpressions.Regex.Match(trimmed, @"^for\s*\(\s*([A-Za-z_]\w*)\s*=(?!=)([^;]*)");
+                if (forInit.Success && !IsInterpreterVariable(forInit.Groups[1].Value) &&
+                    System.Text.RegularExpressions.Regex.Matches(WithoutStringContents(forInit.Groups[2].Value), @"(?<![\w.])[A-Za-z_]\w*")
+                        .Cast<System.Text.RegularExpressions.Match>().Any(word => m_variableLocals.Contains(word.Value)))
+                {
+                    grew |= m_variableLocals.Add(forInit.Groups[1].Value);
+                    continue;
+                }
+                // A for header's condition arrives as a statement of its own, and "i<=n" split
+                // on "=" read as "i = n": a counter bounded by a Variable became one.
+                int firstEq = trimmed.IndexOf('=');
+                if (firstEq > 0 && IsComparisonAt(trimmed, firstEq))
+                {
+                    continue;
+                }
                 var sides = SplitTopLevelOn(trimmed, "=");
                 if (sides.Count != 2)
                 {
@@ -7902,6 +11657,7 @@ namespace SplitAndMerge
                 if (IsPlainName(target) && !IsInterpreterVariable(target) &&
                     // "new Point(3, 4)" yields a class instance, a Variable as well.
                     (ContainsSubscript(sides[1]) || MentionsAny(sides[1], loopVars) ||
+                     MentionsAny(sides[1], variableArgs) ||
                      MentionsExternal(sides[1], defined) ||
                      StartsWithKeyword(sides[1].Trim(), "new") ||
                      // A call to a script function yields whatever it returned. Declared a
@@ -7925,79 +11681,28 @@ namespace SplitAndMerge
             }
         }
 
-        /// <summary>
-        /// Stops the translation of a function that returns from inside a "try" while it also
-        /// has a "finally". CSCS does not leave the function there: it runs the finally and
-        /// carries on with the statement after it, so
-        ///   "try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r;"
-        /// answers 99, where C#'s return leaves with 8. Nothing in C# expresses that, so the
-        /// whole function goes to the interpreter. A return outside the try is unaffected,
-        /// which is the ordinary "try/catch/finally then return" shape.
-        /// </summary>
-        static void RefuseReturnInTryWithFinally(List<string> statements)
+
+        /// <summary>The statement after a leading "case X:" or "default:" label.</summary>
+        static string WithoutCaseLabel(string statement)
         {
-            bool hasFinally = false;
-            bool returnInTry = false;
-            int depth = 0;
-            int tryDepth = -1;
-            int literalDepth = 0;
-            string previous = "";
-            foreach (var raw in statements)
+            if (!StartsWithKeyword(statement, Constants.CASE) && !StartsWithKeyword(statement, Constants.DEFAULT))
             {
-                var statement = (raw ?? "").Trim();
-                if (statement == "{")
+                return statement;
+            }
+            bool inString = false;
+            for (int i = 0; i < statement.Length; i++)
+            {
+                char c = statement[i];
+                if (c == '"' && !IsEscapedQuote(statement, i))
                 {
-                    // A brace right after "=", "(" or "," opens a literal, not a block.
-                    if (literalDepth > 0 || previous.EndsWith("=") || previous.EndsWith("(") ||
-                        previous.EndsWith(",") || previous.EndsWith(":"))
-                    {
-                        literalDepth++;
-                    }
-                    else
-                    {
-                        depth++;
-                    }
+                    inString = !inString;
                 }
-                else if (statement == "}")
+                else if (!inString && c == ':')
                 {
-                    if (literalDepth > 0)
-                    {
-                        literalDepth--;
-                    }
-                    else
-                    {
-                        depth--;
-                        if (tryDepth >= 0 && depth <= tryDepth)
-                        {
-                            tryDepth = -1;
-                        }
-                    }
-                }
-                else if (statement.Length > 0 && statement != ";")
-                {
-                    if (statement == Constants.FINALLY)
-                    {
-                        hasFinally = true;
-                    }
-                    else if (StartsWithKeyword(statement, Constants.TRY))
-                    {
-                        tryDepth = depth;
-                    }
-                    else if (tryDepth >= 0 && StartsWithKeyword(statement, Constants.RETURN))
-                    {
-                        returnInTry = true;
-                    }
-                }
-                if (statement.Length > 0 && statement != ";")
-                {
-                    previous = statement;
+                    return statement.Substring(i + 1).Trim();
                 }
             }
-            if (hasFinally && returnInTry)
-            {
-                throw new ArgumentException(
-                    "A return inside try means something else with a finally present");
-            }
+            return statement;
         }
 
         /// <summary>
@@ -8019,7 +11724,8 @@ namespace SplitAndMerge
             string previous = "";
             foreach (var raw in statements)
             {
-                var statement = (raw ?? "").Trim();
+                // "case 1:t=5" carries its label: what follows it is the statement.
+                var statement = WithoutCaseLabel((raw ?? "").Trim());
                 if (statement == "{")
                 {
                     // A brace straight after "=", "(" or "," opens a literal, not a block.
@@ -8083,11 +11789,37 @@ namespace SplitAndMerge
                 }
             }
 
+            // A "for (q in c)" or "catch (e)" over a name the function already holds rebinds that
+            // local in CSCS; C# needs the outer declaration to be in scope for an assignment,
+            // which it is for a name first assigned at the top level.
+            m_topLevelAssigned = new HashSet<string>(
+                firstPath.Where(entry => entry.Value.Count == 0).Select(entry => entry.Key));
+
+            // "x = !x" as the first write of a global: the right side reads the interpreter's x,
+            // which a C# declaration at that statement would shadow (CS0841). Declared at the top
+            // without a value, as a bound crossing name is, so every read goes to the interpreter.
+            foreach (var name in m_selfReadFirst)
+            {
+                if (!crossing.Contains(name) && firstPath.ContainsKey(name))
+                {
+                    crossing.Add(name);
+                }
+            }
             foreach (var name in crossing)
             {
+                // A name that is the interpreter's -- a global already, or one read before it is
+                // first assigned, "idx--; if (idx < 0) { idx = 5; } return idx;" -- is declared
+                // too, but without a value: every read of it then goes to the interpreter
+                // (ReadGlobalsThroughInterpreter). Started from 0, as it once was, the global was
+                // never read. Where that pass cannot take every read -- a write it cannot see
+                // published -- the unassigned local does not compile (CS0165), and the function
+                // falls back.
+                bool bound = !m_scriptInCSharp && (IsInterpreterVariable(name) || m_readFirst.Contains(name)) &&
+                             !m_varLocals.Contains(name);
                 if (loopVars.Contains(name) || m_newVariables.Contains(name) || m_paramMap.ContainsKey(name) ||
                     m_collectionArgs.Contains(name) || m_widenedIntArgs.Contains(name) ||
-                    !firstPath.ContainsKey(name) || firstPath[name].Count == 0 || IsInterpreterVariable(name))
+                    !firstPath.ContainsKey(name) || (firstPath[name].Count == 0 && !m_selfReadFirst.Contains(name)) ||
+                    (!bound && (IsInterpreterVariable(name) || m_readFirst.Contains(name))))
                 {
                     continue;
                 }
@@ -8097,7 +11829,7 @@ namespace SplitAndMerge
                 bool disagreed = false;
                 foreach (var statement in statements)
                 {
-                    var line = (statement ?? "").Trim().TrimEnd(';').Trim();
+                    var line = WithoutCaseLabel((statement ?? "").Trim()).TrimEnd(';').Trim();
                     int eq = line.IndexOf('=');
                     if (AssignedName(line) != name || eq <= 0 || "+-*/%&|^".IndexOf(line[eq - 1]) >= 0)
                     {
@@ -8123,7 +11855,11 @@ namespace SplitAndMerge
                 // "result += x" is compound -- and declaring those put a second "result" into the
                 // same method (CS0128), which aborted test.cscs's dllfunction before its first
                 // assertion. And never for a C#-form body, which declares its own locals.
-                if (disagreed && !m_scriptInCSharp)
+                // A name bound to the interpreter holds whatever the script put there -- read
+                // before this function assigns it, text is as likely as a number -- so it is a
+                // Variable, whose operators are the interpreter's: a double read "7" as 7, and
+                // "fb = fb + 1" gave 8 where the interpreter gives "71".
+                if ((disagreed || (bound && type != null)) && !m_scriptInCSharp)
                 {
                     type = "Variable";
                     m_variableLocals.Add(name);
@@ -8132,8 +11868,16 @@ namespace SplitAndMerge
                 {
                     continue;
                 }
-                m_converted.AppendLine("     " + type + " " + name + " = " +
-                    (type == "Variable" ? "null" : type == "string" ? "\"\"" : type == "bool" ? "false" : "0") + ";");
+                if (bound)
+                {
+                    m_converted.AppendLine("     " + type + " " + name + ";");
+                    m_usesInterpreter = true;
+                }
+                else
+                {
+                    m_converted.AppendLine("     " + type + " " + name + " = " +
+                        (type == "Variable" ? "null" : type == "string" ? "\"\"" : type == "bool" ? "false" : "0") + ";");
+                }
                 m_newVariables.Add(name);
                 if (type == "Variable" && !m_variableLocals.Contains(name))
                 {
@@ -8168,7 +11912,7 @@ namespace SplitAndMerge
                 {
                     if (loopVars.Contains(name) || m_newVariables.Contains(name) || m_paramMap.ContainsKey(name) ||
                         m_collectionArgs.Contains(name) || m_widenedIntArgs.Contains(name) ||
-                        IsInterpreterVariable(name))
+                        IsInterpreterVariable(name) || m_readFirst.Contains(name))
                     {
                         continue;
                     }
@@ -8247,7 +11991,7 @@ namespace SplitAndMerge
                     for (int i = 0; i < statement.Length; i++)
                     {
                         char ch = statement[i];
-                        if (ch == '"' && (i == 0 || statement[i - 1] != '\\'))
+                        if (ch == '"' && !IsEscapedQuote(statement, i))
                         {
                             inQuotes = !inQuotes;
                             continue;
@@ -8298,6 +12042,14 @@ namespace SplitAndMerge
                         }
                         var value = statement.Substring(j + 1, close - j - 1).Trim();
                         var valueType = IndexOfTopLevelChar(value, '?') >= 0 ? null : AssignedValueType(condName, value);
+                        // "while ((x = n - t) > 2)" with n a "variable" argument, or a local holding a
+                        // Variable: x holds whatever the arithmetic on it gives, a Variable. Declared
+                        // one, its later reads and writes take the Variable paths.
+                        if (valueType == "double" &&
+                            (MentionsAny(value, VariableParamNames()) || MentionsAny(value, m_variableLocals)))
+                        {
+                            valueType = VARIABLE_FED;
+                        }
                         // A truth value is fine now. It was refused while "if ((b = n > 2))" threw a
                         // NullReferenceException in the interpreter itself -- AssignFunction ate a
                         // second ")" -- and compiled code answering 1 would have differed from it.
@@ -8317,6 +12069,14 @@ namespace SplitAndMerge
                         m_paramMap.ContainsKey(name) || m_collectionArgs.Contains(name) ||
                         m_widenedIntArgs.Contains(name) || IsInterpreterVariable(name))
                     {
+                        continue;
+                    }
+                    if (entry.Value == VARIABLE_FED)
+                    {
+                        // A Variable takes any value, so the plain assignments need not agree.
+                        m_converted.AppendLine("     Variable " + name + " = Variable.EmptyInstance;");
+                        m_newVariables.Add(name);
+                        m_variableLocals.Add(name);
                         continue;
                     }
                     bool agrees = true;
@@ -8534,7 +12294,7 @@ namespace SplitAndMerge
             while (i < text.Length)
             {
                 char ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     i++;
@@ -8580,6 +12340,20 @@ namespace SplitAndMerge
         }
 
         /// <summary>
+        /// Whether the "=" at <paramref name="at"/> belongs to a comparison -- "<=", ">=", "!=" --
+        /// rather than an assignment. "<<=" and ">>=" assign.
+        /// </summary>
+        static bool IsComparisonAt(string text, int at)
+        {
+            if (at <= 0)
+            {
+                return false;
+            }
+            char before = text[at - 1];
+            return before == '!' || ((before == '<' || before == '>') && !(at >= 2 && text[at - 2] == before));
+        }
+
+        /// <summary>
         /// The name assigned by this statement, or null when it does not assign one. Covers
         /// the compound forms too, whose operator sits on the left of the "=".
         /// </summary>
@@ -8588,6 +12362,13 @@ namespace SplitAndMerge
             var trimmed = (statement ?? "").Trim().TrimEnd(';').Trim();
             int at = trimmed.IndexOf('=');
             if (at <= 0 || (at + 1 < trimmed.Length && trimmed[at + 1] == '='))
+            {
+                return null;
+            }
+            // A comparison, not an assignment: "i<=n", "i>=n", "a!=b" -- a for header's condition
+            // arrives as a statement of its own, and "i<=n" read as "i = n" made a counter bounded
+            // by a Variable a Variable itself. "<<=" and ">>=" do assign.
+            if (IsComparisonAt(trimmed, at))
             {
                 return null;
             }
@@ -8613,7 +12394,7 @@ namespace SplitAndMerge
             while (i < (text ?? "").Length)
             {
                 char ch = text[i];
-                if (ch == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (ch == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     i++;
@@ -8676,7 +12457,7 @@ namespace SplitAndMerge
             bool inQuotes = false;
             for (int i = 1; i < (text ?? "").Length; i++)
             {
-                if (text[i] == '"' && text[i - 1] != '\\')
+                if (text[i] == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -8782,13 +12563,11 @@ namespace SplitAndMerge
                 {
                     return indent + keyword + " " + rewritten + tail;
                 }                // A number as the whole condition -- "if (b)" over a double local, "if ((b = n + 2))",
-                // "while ((t = t - 1))". The interpreter tests Convert.ToBoolean of the numeric field,
-                // which for a double is exactly "!= 0"; C# has no truth value for a double at all
-                // (CS0029). Only a certain number: a bool, a Variable or an element has its own
-                // handling, and a string -- always false there -- has no "!= 0" in C#.
+                // "while ((t = t - 1))". The interpreter's truth for a number is exactly "!= 0"; C#
+                // has no truth value for a double at all (CS0029). Only a certain number: a bool, a
+                // Variable, an element or a string has its own handling.
                 // Also a number beside "!", "&&" or "||" -- "if (!b)", "if (b && n < 5)". Each
-                // clause that is certainly a number becomes "(x!=0)", or "(x==0)" under "!", which
-                // is the interpreter's own rule: "!x" is true only for a number that is zero. The
+                // clause that is certainly a number becomes "(x!=0)", or "(x==0)" under "!". The
                 // connectives and every other clause stay exactly as written.
                 if (keyword != Constants.RETURN && TryRewriteNumericTerms(rest, out var numericCondition))
                 {
@@ -8985,6 +12764,16 @@ namespace SplitAndMerge
                         rewritten = left + (op == "===" ? "==" : "!=") + right;
                         return true;
                     }
+                    // Anything else -- a mixed pair, a Variable -- is asked of the interpreter's
+                    // own strict comparison (Variable.SameValue with the operator). It used to be
+                    // left to fall back: folding a mixed pair to false is unsafe because of the
+                    // undefined cases, which the interpreter's merge handles as the script does.
+                    if (!string.IsNullOrWhiteSpace(left) && !string.IsNullOrWhiteSpace(right))
+                    {
+                        rewritten = (op == "!==" ? "!" : "") +
+                            "Variable.SameValue(" + left + "," + right + ",\"===\")";
+                        return true;
+                    }
                     return false;
                 }
 
@@ -9048,10 +12837,17 @@ namespace SplitAndMerge
                     // local, "" and an empty argument, and false for 0, {} and "gs". SameValue
                     // against "" is that comparison exactly. Before, "x == null" lost its paren and
                     // "null == x" compiled to a C# reference test that was always false -- the one
-                    // silent divergence the probe set carried. "null == null" is left alone:
-                    // SameValue answers false for a C# null where the interpreter answers 1.
+                    // silent divergence the probe set carried. "null == null" goes through the
+                    // three-argument SameValue, which turns a C# null into the interpreter's null
+                    // (the empty value) and asks its merge -- 1, as the interpreter answers; the
+                    // two-argument form answered false for a C# null.
                     bool leftNull = left == Constants.NULL;
                     bool rightNull = right == Constants.NULL;
+                    if (leftNull && rightNull)
+                    {
+                        rewritten = (op == "!=" ? "!" : "") + "Variable.SameValue(null,null,\"==\")";
+                        return true;
+                    }
                     if (leftNull != rightNull)
                     {
                         rewritten = (op == "!=" ? "!" : "") +
@@ -9157,7 +12953,7 @@ namespace SplitAndMerge
 
         bool IsInterpreterVariable(string name)
         {
-            if (m_paramMap.ContainsKey(name) || m_newVariables.Contains(name) ||
+            if (m_paramMap.ContainsKey(name) || m_newVariables.Contains(name) || m_varLocals.Contains(name) ||
                 Constants.RESERVED.Contains(name))
             {
                 return false;
@@ -9197,8 +12993,8 @@ namespace SplitAndMerge
             var inner = text.Substring(1, text.Length - 2);
             // A Variable, an element or a string is read as a truth value only when the condition
             // joins clauses: on its own it already compiles through AsCondition, and that path
-            // stays as it is. "!= 0" is wrong for those -- the interpreter tests the numeric field,
-            // so an element holding "5" is false there while AsDouble() would call it true.
+            // stays as it is. "!= 0" is wrong for those -- an element holding "abc" is true to the
+            // interpreter (Variable.IsTrue), while AsDouble() would read it as 0.
             bool joined = SplitTopLevelOn(inner, "&&").Count > 1 || SplitTopLevelOn(inner, "||").Count > 1;
             var built = RewriteNumericClauses(inner, ref any, joined);
             if (!any)
@@ -9326,11 +13122,11 @@ namespace SplitAndMerge
                 text = inner;
             }
             // "if (s.Length)" and "if (a.Size)": a number in CSCS and an int in C#, and the two
-            // agree on every type -- Variable.Size is 0 for anything but an array, exactly as the
-            // interpreter reports 0 for a string, Variable.Length is GetLength(), and a string
-            // argument arrives as a C# string whose Length is the character count. A C# condition
-            // needs a bool, so without the "!= 0" this rewrite adds it was CS0029. Anything else
-            // spelled ".Size" -- a string local, say -- has no such member in C# and falls back.
+            // agree on every type -- Variable.Size is the interpreter's own (GetSize: the element
+            // count, or the length of text), Variable.Length is GetLength(), and a string argument
+            // arrives as a C# string whose Length is the character count (".Size" on it is mapped
+            // to that). A C# condition needs a bool, so without the "!= 0" this rewrite adds it
+            // was CS0029.
             int memberDot = text.LastIndexOf('.');
             if (memberDot > 0)
             {
@@ -9527,15 +13323,18 @@ namespace SplitAndMerge
             {
                 return false;
             }
-            // A member that turns the string into a number -- "s.Length", "s.IndexOf(..)" --
-            // makes this a numeric comparison, not a string one.
+            // A member that turns the string into a number -- "s.Length", "s.Size" (the length
+            // too), "s.IndexOf(..)", "s.LastIndexOf(..)" -- makes this a numeric comparison, not a
+            // string one.
             if (dot < 0)
             {
                 return true;
             }
             var member = name.Substring(dot + 1).Trim();
             return !member.StartsWith("Length", StringComparison.OrdinalIgnoreCase) &&
-                   !member.StartsWith("IndexOf", StringComparison.OrdinalIgnoreCase);
+                   !member.StartsWith("Size", StringComparison.OrdinalIgnoreCase) &&
+                   !member.StartsWith("IndexOf", StringComparison.OrdinalIgnoreCase) &&
+                   !member.StartsWith("LastIndexOf", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -9566,7 +13365,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -9590,7 +13389,7 @@ namespace SplitAndMerge
             for (int i = question + 1; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && text[i - 1] != '\\')
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -9617,7 +13416,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -9664,7 +13463,7 @@ namespace SplitAndMerge
             for (int i = 0; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -9698,7 +13497,7 @@ namespace SplitAndMerge
             for (int i = openIndex; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -9737,7 +13536,7 @@ namespace SplitAndMerge
                 char ch = scriptText[i];
                 previous = i > 0 ? scriptText[i - 1] : previous;
 
-                if (ch == '"' && previous != '\\')
+                if (ch == '"' && !IsEscapedQuote(scriptText, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -9800,7 +13599,7 @@ namespace SplitAndMerge
             while (i < statement.Length)
             {
                 var ch = statement[i];
-                if (ch == '"' && previous != '\\')
+                if (ch == '"' && !IsEscapedQuote(statement, i))
                 {
                     inQuotes = !inQuotes;
                 }
@@ -9864,6 +13663,31 @@ namespace SplitAndMerge
             return tokens;
         }
 
+        /// <summary>System.Math's own spelling of a member written in any case; the text as it
+        /// was when System.Math has no such member.</summary>
+        static string CanonicalMathMember(string member)
+        {
+            var match = typeof(System.Math).GetMembers(BindingFlags.Public | BindingFlags.Static)
+                .Select(m => m.Name)
+                .FirstOrDefault(n => n.Equals(member, StringComparison.OrdinalIgnoreCase));
+            return match ?? member;
+        }
+
+        // The bare names the script being translated has functions for, which a bare Math name
+        // must not take over (IsMathFunction). Set for each translation, per thread.
+        [ThreadStatic] static HashSet<string> s_scriptFunctions;
+
+        // The bare names the function being translated assigns or takes as arguments, and
+        // never calls: "round = b * 2; return round + 1;" is that variable, not System.Math's
+        // method group (CS0019). One it also calls keeps the Math reading. Set per translation.
+        [ThreadStatic] static HashSet<string> s_localNames;
+
+        // What "a ** b" is rewritten to before translation; no script can name a function so.
+        const string POWER_OP = "Math.PowerOp";
+
+        // The declared type of a local first assigned inside a condition from a Variable.
+        const string VARIABLE_FED = "Variable (fed)";
+
         public static bool IsMathFunction(string name, out string corrected)
         {
             corrected = name;
@@ -9874,13 +13698,40 @@ namespace SplitAndMerge
                 // IndexOutOfRange out of the middle of translation.
                 return false;
             }
-            if (name.StartsWith("Math."))
+            if (name.StartsWith("Math.", StringComparison.OrdinalIgnoreCase))
             {
+                // The "**" operator (TryRewritePower): Math.Pow for two numbers, the interpreter's
+                // own operator otherwise -- not the Math.Pow built-in, which reads text as 0.
+                if (name.Equals(POWER_OP, StringComparison.OrdinalIgnoreCase))
+                {
+                    corrected = "CscsOps.Power";
+                    return true;
+                }
                 // CSCS spells this one Math.Ceil; C# only has Math.Ceiling, so passing the
                 // script's spelling through produced code that did not compile and sent the
                 // whole function back to the interpreter.
-                corrected = name == Constants.MATH_CEIL ? Constants.MATH_CEILING : name;
+                if (name.Equals(Constants.MATH_CEIL, StringComparison.OrdinalIgnoreCase))
+                {
+                    corrected = Constants.MATH_CEILING;
+                    return true;
+                }
+                // CSCS names are case-insensitive, so "Math.round", "Math.sqrt" and "math.Abs"
+                // are what a script may well write; C# knows only System.Math's own spelling,
+                // and the lower-case ones did not compile.
+                corrected = "Math." + CanonicalMathMember(name.Substring(5));
                 return true;
+            }
+
+            // A bare name the script defines a function for -- "function abs(x)" -- is that
+            // function, as it is to the interpreter; mapping it to System.Math answered 5 where
+            // the script's abs gave 95. Only a bare name: "Math.Abs" is always the built-in.
+            if (s_scriptFunctions != null && s_scriptFunctions.Contains(name))
+            {
+                return false;
+            }
+            if (s_localNames != null && s_localNames.Contains(name))
+            {
+                return false;
             }
 
             string candidate = name[0].ToString().ToUpperInvariant() + name.Substring(1).ToLower();
@@ -9931,7 +13782,7 @@ namespace SplitAndMerge
             for (int i = openIndex; i < text.Length; i++)
             {
                 char current = text[i];
-                if (current == '"' && (i == 0 || text[i - 1] != '\\'))
+                if (current == '"' && !IsEscapedQuote(text, i))
                 {
                     inQuotes = !inQuotes;
                     continue;
@@ -9972,7 +13823,7 @@ namespace SplitAndMerge
                 {
                     return i;
                 }
-                if (current == '"' && prev != '\\')
+                if (current == '"' && !IsEscapedQuote(token, i))
                 {
                     inQuotes = !inQuotes;
                 }

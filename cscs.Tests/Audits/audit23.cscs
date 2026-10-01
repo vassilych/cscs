@@ -1,0 +1,535 @@
+class Box { v = 0; tag = ""; items = {}; l = {5, 6}; m = {"k": 1}; g = {{1, 2}}; Box(a, b) { v = a; tag = b; items = {}; l = {5, 6}; m = {"k": 1}; g = {{1, 2}}; } function Get() { return v; } function Tag() { return tag; } function Bump() { v++; return v; } function Add(x) { items.Add(x); return items.Size; } }
+auDiffs = 0; auCompiled = 0; auTotal = 0;
+cfunction ck1(variable x) { b = new Box(x, "t"); b.v++; return b.v; }
+function ik1(x) { b = new Box(x, "t"); b.v++; return b.v; }
+auTotal++; auCompiled += is_precompiled("ck1"); if (!is_precompiled("ck1")) { print("FALLBACK 1: b = new Box(x, 't'); b.v++; return b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 1 b = new Box(x, 't'); b.v++; return b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck2(variable x) { b = new Box(x, "t"); b.v += "!"; return b.v; }
+function ik2(x) { b = new Box(x, "t"); b.v += "!"; return b.v; }
+auTotal++; auCompiled += is_precompiled("ck2"); if (!is_precompiled("ck2")) { print("FALLBACK 2: b = new Box(x, 't'); b.v += '!'; return b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 2 b = new Box(x, 't'); b.v += '!'; return b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck3(variable x) { b = new Box(x, "t"); b.tag++; return b.tag; }
+function ik3(x) { b = new Box(x, "t"); b.tag++; return b.tag; }
+auTotal++; auCompiled += is_precompiled("ck3"); if (!is_precompiled("ck3")) { print("FALLBACK 3: b = new Box(x, 't'); b.tag++; return b.tag;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 3 b = new Box(x, 't'); b.tag++; return b.tag; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck4(variable x) { b = new Box(x, "t"); b.tag = x; b.tag += 1; return b.tag; }
+function ik4(x) { b = new Box(x, "t"); b.tag = x; b.tag += 1; return b.tag; }
+auTotal++; auCompiled += is_precompiled("ck4"); if (!is_precompiled("ck4")) { print("FALLBACK 4: b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 4 b = new Box(x, 't'); b.tag = x; b.tag += 1; return b.tag; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck5(variable x) { b = new Box(x, "t"); if (b.v) { return "t"; } return "f"; }
+function ik5(x) { b = new Box(x, "t"); if (b.v) { return "t"; } return "f"; }
+auTotal++; auCompiled += is_precompiled("ck5"); if (!is_precompiled("ck5")) { print("FALLBACK 5: b = new Box(x, 't'); if (b.v) { return 't'; } return 'f';"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 5 b = new Box(x, 't'); if (b.v) { return 't'; } return 'f'; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck6(variable x) { b = new Box(x, "t"); return b.v ? b.tag : "none"; }
+function ik6(x) { b = new Box(x, "t"); return b.v ? b.tag : "none"; }
+auTotal++; auCompiled += is_precompiled("ck6"); if (!is_precompiled("ck6")) { print("FALLBACK 6: b = new Box(x, 't'); return b.v ? b.tag : 'none';"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 6 b = new Box(x, 't'); return b.v ? b.tag : 'none'; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck7(variable x) { b = new Box(x, "t"); return !b.v; }
+function ik7(x) { b = new Box(x, "t"); return !b.v; }
+auTotal++; auCompiled += is_precompiled("ck7"); if (!is_precompiled("ck7")) { print("FALLBACK 7: b = new Box(x, 't'); return !b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 7 b = new Box(x, 't'); return !b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck8(variable x) { b = new Box(x, "t"); return b.v && b.tag; }
+function ik8(x) { b = new Box(x, "t"); return b.v && b.tag; }
+auTotal++; auCompiled += is_precompiled("ck8"); if (!is_precompiled("ck8")) { print("FALLBACK 8: b = new Box(x, 't'); return b.v && b.tag;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 8 b = new Box(x, 't'); return b.v && b.tag; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck9(variable x) { b = new Box(x, "t"); return b.Bump() + "|" + b.v; }
+function ik9(x) { b = new Box(x, "t"); return b.Bump() + "|" + b.v; }
+auTotal++; auCompiled += is_precompiled("ck9"); if (!is_precompiled("ck9")) { print("FALLBACK 9: b = new Box(x, 't'); return b.Bump() + '|' + b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 9 b = new Box(x, 't'); return b.Bump() + '|' + b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck10(variable x) { b = new Box(x, "t"); y = b.Get(); y++; return y + "|" + b.v; }
+function ik10(x) { b = new Box(x, "t"); y = b.Get(); y++; return y + "|" + b.v; }
+auTotal++; auCompiled += is_precompiled("ck10"); if (!is_precompiled("ck10")) { print("FALLBACK 10: b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 10 b = new Box(x, 't'); y = b.Get(); y++; return y + '|' + b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck11(variable x) { b = new Box(x, "t"); b.Add(x); b.Add(x); return b.items; }
+function ik11(x) { b = new Box(x, "t"); b.Add(x); b.Add(x); return b.items; }
+auTotal++; auCompiled += is_precompiled("ck11"); if (!is_precompiled("ck11")) { print("FALLBACK 11: b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 11 b = new Box(x, 't'); b.Add(x); b.Add(x); return b.items; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck12(variable x) { b = new Box(x, "t"); return b.v.Size + "|" + b.tag.Size; }
+function ik12(x) { b = new Box(x, "t"); return b.v.Size + "|" + b.tag.Size; }
+auTotal++; auCompiled += is_precompiled("ck12"); if (!is_precompiled("ck12")) { print("FALLBACK 12: b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 12 b = new Box(x, 't'); return b.v.Size + '|' + b.tag.Size; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck13(variable x) { b = new Box(x, "t"); b.v = b.w = x; return b.v; }
+function ik13(x) { b = new Box(x, "t"); b.v = b.w = x; return b.v; }
+auTotal++; auCompiled += is_precompiled("ck13"); if (!is_precompiled("ck13")) { print("FALLBACK 13: b = new Box(x, 't'); b.v = b.w = x; return b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 13 b = new Box(x, 't'); b.v = b.w = x; return b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck14(variable x) { l = {new Box(x, "a"), new Box(1, "b")}; l[0].v += 1; return l[0].v + "|" + l[1].tag; }
+function ik14(x) { l = {new Box(x, "a"), new Box(1, "b")}; l[0].v += 1; return l[0].v + "|" + l[1].tag; }
+auTotal++; auCompiled += is_precompiled("ck14"); if (!is_precompiled("ck14")) { print("FALLBACK 14: l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 14 l = {new Box(x, 'a'), new Box(1, 'b')}; l[0].v += 1; return l[0].v + '|' + l[1].tag; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck15(variable x) { b = new Box(x, "t"); r = ""; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; }
+function ik15(x) { b = new Box(x, "t"); r = ""; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; }
+auTotal++; auCompiled += is_precompiled("ck15"); if (!is_precompiled("ck15")) { print("FALLBACK 15: b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 15 b = new Box(x, 't'); r = ''; for (i = 0; i < 2; i++) { r += b.Tag() + b.v; } return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck16(variable x) { b = new Box(x, "t"); b.v *= 2; return b.v; }
+function ik16(x) { b = new Box(x, "t"); b.v *= 2; return b.v; }
+auTotal++; auCompiled += is_precompiled("ck16"); if (!is_precompiled("ck16")) { print("FALLBACK 16: b = new Box(x, 't'); b.v *= 2; return b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck16({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik16({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 16 b = new Box(x, 't'); b.v *= 2; return b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck17(variable x) { b = new Box(x, "t"); return (b.v << 1) + "|" + (b.v % 2); }
+function ik17(x) { b = new Box(x, "t"); return (b.v << 1) + "|" + (b.v % 2); }
+auTotal++; auCompiled += is_precompiled("ck17"); if (!is_precompiled("ck17")) { print("FALLBACK 17: b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2);"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck17({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik17({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 17 b = new Box(x, 't'); return (b.v << 1) + '|' + (b.v % 2); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck18(variable x) { b = new Box(x, "t"); try { b.v -= "q"; } catch (e) { return "E"; } return b.v; }
+function ik18(x) { b = new Box(x, "t"); try { b.v -= "q"; } catch (e) { return "E"; } return b.v; }
+auTotal++; auCompiled += is_precompiled("ck18"); if (!is_precompiled("ck18")) { print("FALLBACK 18: b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck18({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik18({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 18 b = new Box(x, 't'); try { b.v -= 'q'; } catch (e) { return 'E'; } return b.v; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck19(variable x) { b = new Box(x, "t"); return b.l[1] + b.m["k"] + b.g[0][1]; }
+function ik19(x) { b = new Box(x, "t"); return b.l[1] + b.m["k"] + b.g[0][1]; }
+auTotal++; auCompiled += is_precompiled("ck19"); if (!is_precompiled("ck19")) { print("FALLBACK 19: b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1];"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck19({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik19({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 19 b = new Box(x, 't'); return b.l[1] + b.m['k'] + b.g[0][1]; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck20(variable x) { b = new Box(x, "t"); b.l[0] = x; return b.l[0] + "|" + b.l; }
+function ik20(x) { b = new Box(x, "t"); b.l[0] = x; return b.l[0] + "|" + b.l; }
+auTotal++; auCompiled += is_precompiled("ck20"); if (!is_precompiled("ck20")) { print("FALLBACK 20: b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck20({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik20({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 20 b = new Box(x, 't'); b.l[0] = x; return b.l[0] + '|' + b.l; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck21(variable x) { b = new Box(x, "t"); if (b.l[0] > 1 && b.m["k"]) { return b.g[0][b.l.Size - 1]; } return 0; }
+function ik21(x) { b = new Box(x, "t"); if (b.l[0] > 1 && b.m["k"]) { return b.g[0][b.l.Size - 1]; } return 0; }
+auTotal++; auCompiled += is_precompiled("ck21"); if (!is_precompiled("ck21")) { print("FALLBACK 21: b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck21({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik21({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 21 b = new Box(x, 't'); if (b.l[0] > 1 && b.m['k']) { return b.g[0][b.l.Size - 1]; } return 0; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck22(variable x) { b = new Box(x, "t"); b.m["k"] += x; return b.m["k"]; }
+function ik22(x) { b = new Box(x, "t"); b.m["k"] += x; return b.m["k"]; }
+auTotal++; auCompiled += is_precompiled("ck22"); if (!is_precompiled("ck22")) { print("FALLBACK 22: b = new Box(x, 't'); b.m['k'] += x; return b.m['k'];"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck22({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik22({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 22 b = new Box(x, 't'); b.m['k'] += x; return b.m['k']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck23(variable x) { b = new Box(x, "t"); b.l[1]++; return b.l[1]; }
+function ik23(x) { b = new Box(x, "t"); b.l[1]++; return b.l[1]; }
+auTotal++; auCompiled += is_precompiled("ck23"); if (!is_precompiled("ck23")) { print("FALLBACK 23: b = new Box(x, 't'); b.l[1]++; return b.l[1];"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck23({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik23({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 23 b = new Box(x, 't'); b.l[1]++; return b.l[1]; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck24(variable x) { b = new Box(x, "t"); return b.tag[0] + b.l[b.l.Size - 1]; }
+function ik24(x) { b = new Box(x, "t"); return b.tag[0] + b.l[b.l.Size - 1]; }
+auTotal++; auCompiled += is_precompiled("ck24"); if (!is_precompiled("ck24")) { print("FALLBACK 24: b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1];"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck24({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik24({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 24 b = new Box(x, 't'); return b.tag[0] + b.l[b.l.Size - 1]; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck25(variable x) { b = new Box(x, "t"); ++b.l[1]; y = --b.g[0][1]; return b.l + "|" + b.g + "|" + y; }
+function ik25(x) { b = new Box(x, "t"); ++b.l[1]; y = --b.g[0][1]; return b.l + "|" + b.g + "|" + y; }
+auTotal++; auCompiled += is_precompiled("ck25"); if (!is_precompiled("ck25")) { print("FALLBACK 25: b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck25({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik25({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 25 b = new Box(x, 't'); ++b.l[1]; y = --b.g[0][1]; return b.l + '|' + b.g + '|' + y; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck26(variable x) { b = new Box(x, "t"); b.m["q"] = x; b.l[3] = x; return b.m + "|" + b.l; }
+function ik26(x) { b = new Box(x, "t"); b.m["q"] = x; b.l[3] = x; return b.m + "|" + b.l; }
+auTotal++; auCompiled += is_precompiled("ck26"); if (!is_precompiled("ck26")) { print("FALLBACK 26: b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck26({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik26({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 26 b = new Box(x, 't'); b.m['q'] = x; b.l[3] = x; return b.m + '|' + b.l; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck27(variable x) { b = new Box(x, "t"); y = b.l[0]++; return y + "|" + b.l; }
+function ik27(x) { b = new Box(x, "t"); y = b.l[0]++; return y + "|" + b.l; }
+auTotal++; auCompiled += is_precompiled("ck27"); if (!is_precompiled("ck27")) { print("FALLBACK 27: b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck27({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik27({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 27 b = new Box(x, 't'); y = b.l[0]++; return y + '|' + b.l; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction ck28(variable x) { b = new Box(x, "t"); b.g[0][0] += x; return b.g; }
+function ik28(x) { b = new Box(x, "t"); b.g[0][0] += x; return b.g; }
+auTotal++; auCompiled += is_precompiled("ck28"); if (!is_precompiled("ck28")) { print("FALLBACK 28: b = new Box(x, 't'); b.g[0][0] += x; return b.g;"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on '7' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28({1}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28({1}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on {1} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + ck28({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ik28({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { auDiffs++; print("DIFF 28 b = new Box(x, 't'); b.g[0][0] += x; return b.g; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT23 DONE compiled " + auCompiled + " of " + auTotal + ", diffs " + auDiffs);

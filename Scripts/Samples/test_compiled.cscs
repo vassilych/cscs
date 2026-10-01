@@ -1349,7 +1349,7 @@ function truthyNormal(n) {
   return t + n;
 }
 Test(truthyCompiled(0), truthyNormal(0));
-Test(truthyCompiled(0), 11);
+Test(truthyCompiled(0), 12);
 
 Print("Testing loops from arguments and global collections...");
 // The loop initialiser is ordinary code: emitting it verbatim left the argument name in it
@@ -2460,8 +2460,8 @@ function mixedOpsNormal(n) {
 Test(mixedOpsCompiled(0), mixedOpsNormal(0));
 Test(mixedOpsCompiled(0), "53|1|0");
 
-// Every string is false, and "!x" is true only for a number that is zero -- so a string is
-// false both ways round.
+// The one truth rule: text is true unless empty, "0" or "false", and "!x" is its opposite.
+// (Until September 2026 every string was false, and "!" of text was the text.)
 cfunction double truthyCompiled(int n) {
   vals = {"5", 0, 1};
   r = 0;
@@ -2481,11 +2481,11 @@ function truthyNormal(n) {
   return r;
 }
 Test(truthyCompiled(0), truthyNormal(0));
-Test(truthyCompiled(0), 1100);
+Test(truthyCompiled(0), 1101);
 
-// A string is false as a whole condition, not only beside another clause -- and "!s" is false
-// as well, because "!x" is true only for a number that is zero. The two tests are a pair, not
-// one negated. The assignment in "if ((t = s + \"y\"))" still runs; only the condition is false.
+// Text as a whole condition and beside another clause, and "!s" as its opposite -- by the
+// one truth rule, "5" and "ab" are true and "" is false. The assignment in
+// "if ((t = s + \"y\"))" runs, and its text is the condition.
 cfunction string strCondCompiled(string s) {
   r = 0;
   if (s) { r += 1; }
@@ -2511,9 +2511,9 @@ function strCondNormal(s) {
   return r + "|" + t;
 }
 Test(strCondCompiled("5"), strCondNormal("5"));
-Test(strCondCompiled("5"), "100000|5y");
+Test(strCondCompiled("5"), "101101|5y");
 Test(strCondCompiled(""), strCondNormal(""));
-Test(strCondCompiled(""), "100000|y");
+Test(strCondCompiled(""), "101110|y");
 Test(strCondCompiled("ab"), strCondNormal("ab"));
 
 // An assignment inside a return: "return(b=n*2)+b" is shaped like a call to a function named
@@ -2880,23 +2880,24 @@ function methodThrowNormal(n) {
 Test(methodThrowCompiled(-2), methodThrowNormal(-2));
 Test(methodThrowCompiled(-2), "caught negative: -2|7");
 
-// A compound assignment is not "x = x + v": it dispatches on the left type and takes the
-// right side's numeric field, so a string on the right contributes 0. A step is different
-// again: it steps the numeric field, so "5"++ is 1 while "5" += 1 concatenates to "51".
+// A compound assignment is "x = x op v", and a step is "x = x + 1" with numeric text read
+// as its number: 5 += "3" is "53", "5"++ is 6, "5" += 1 is "51", and "5" -= 3 is the same
+// error as "5" - 3. (Until September 2026 the right side's numeric field was taken instead.)
 cfunction string compoundCompiled(int n) {
   src = {"3"};
   acc = 5;
   acc += src[0];
   one = {5, "3"};
   one[0] += one[1];
-  two = {"5", 3};
-  two[0] -= two[1];
   three = {"5"};
   three[0]++;
   four = {"5"};
   four[0] += 1;
-  return string(acc) + "|" + string(one[0]) + "|" + string(two[0]) + "|" +
-         string(three[0]) + "|" + string(four[0]);
+  two = {"5", 3};
+  err = "";
+  try { two[0] -= two[1]; } catch (e) { err = "err"; }
+  return string(acc) + "|" + string(one[0]) + "|" + string(three[0]) + "|" +
+         string(four[0]) + "|" + err;
 }
 function compoundNormal(n) {
   src = {"3"};
@@ -2904,17 +2905,18 @@ function compoundNormal(n) {
   acc += src[0];
   one = {5, "3"};
   one[0] += one[1];
-  two = {"5", 3};
-  two[0] -= two[1];
   three = {"5"};
   three[0]++;
   four = {"5"};
   four[0] += 1;
-  return string(acc) + "|" + string(one[0]) + "|" + string(two[0]) + "|" +
-         string(three[0]) + "|" + string(four[0]);
+  two = {"5", 3};
+  err = "";
+  try { two[0] -= two[1]; } catch (e) { err = "err"; }
+  return string(acc) + "|" + string(one[0]) + "|" + string(three[0]) + "|" +
+         string(four[0]) + "|" + err;
 }
 Test(compoundCompiled(0), compoundNormal(0));
-Test(compoundCompiled(0), "5|5|5|1|51");
+Test(compoundCompiled(0), "53|53|6|51|err");
 
 // ".Size" is the element count of a collection and 0 for anything else.
 cfunction string sizeCompiled(int n) {
@@ -2978,8 +2980,8 @@ function mapLitCallNormal(n) {
 Test(mapLitCallCompiled(2), mapLitCallNormal(2));
 Test(mapLitCallCompiled(2), 6);
 
-// "++" and "--" on a local holding a Variable step its numeric field, so the element "7"
-// becomes 1 rather than 8 -- the same rule unary minus follows.
+// "++" and "--" on a local holding a Variable step as the interpreter does: the element "7"
+// is numeric text, and becomes 8. (Until September 2026 it became 1, from its numeric field.)
 cfunction double stepVarCompiled(int n) {
   counts2 = {5, "7"};
   a3 = counts2[0];
@@ -3001,7 +3003,7 @@ function stepVarNormal(n) {
   return a3 * 100 + b3 * 10 + c4;
 }
 Test(stepVarCompiled(0), stepVarNormal(0));
-Test(stepVarCompiled(0), 614);
+Test(stepVarCompiled(0), 684);
 cfunction double seedCallCompiled(int n) {
   t2 = tripleIt(n);
   while (t2 < 10) { t2++; }
@@ -3874,13 +3876,12 @@ function alwaysThrows(x) { throw "boom" + x; }
 cfunction string catchesInterpreted(int n) { try { alwaysThrows(n); } catch (e) { return "caught:" + e; } return "none"; }
 Test(catchesInterpreted(3), "caught:boom3");
 
-// A return inside try means something else when a finally is present: CSCS runs the finally
-// and carries on after it, so this answers 99 rather than 8. Such a function is left to the
-// interpreter, and the two must still agree.
+// A return inside try stands when a finally is present: the finally runs, and the function
+// returns 8. (Until September 2026 CSCS carried on after the finally and answered 99.)
 cfunction int returnsInTry(int n) { r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r; }
 function returnsInTryNormal(n) { r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r; }
 Test(returnsInTry(4), returnsInTryNormal(4));
-Test(returnsInTry(4), 99);
+Test(returnsInTry(4), 8);
 
 // An argument declared "variable": a field on it, not only a method. The classes are declared
 // here -- test.cscs has no Point of its own.
@@ -4336,11 +4337,12 @@ function enumInTextInterp(n) { return "c=" + Shades.Light; }
 Test(enumInTextCompiled(0), enumInTextInterp(0));
 Test(enumInTextCompiled(0), "c=2");
 
-// The type of an enum member is the member's own name, not NUMBER.
+// The type of an enum member is the type of its value, NUMBER. (Until September 2026 it was
+// the member's own name, which ".Name" still gives.)
 cfunction string enumTypeCompiled(int n) { return Shades.Mid.Type; }
 function enumTypeInterp(n) { return Shades.Mid.Type; }
 Test(enumTypeCompiled(0), enumTypeInterp(0));
-Test(enumTypeCompiled(0), "Mid");
+Test(enumTypeCompiled(0), "NUMBER");
 
 Print("Testing compiled: a Variable-valued expression compared with a number...");
 // Variable had comparison operators against a number but no equality ones at all, so
@@ -4382,12 +4384,12 @@ Test(enumLtNumCompiled(0), 1);
 
 
 // Joining two collections with "+" yields their *text*, not a merged collection: the
-// interpreter answers "[1, 2][3]", whose Type is STRING, Length 9 and Size 0. Assigning
+// interpreter answers "[1, 2][3]", whose Type is STRING and Size, like Length, 9. Assigning
 // that to a local used to fall back (the local was declared double); it compiles now.
 cfunction int collJoinSizeCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c.Size + n; }
 function collJoinSizeInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c.Size + n; }
 Test(collJoinSizeCompiled(0), collJoinSizeInterp(0));
-Test(collJoinSizeCompiled(0), 0);
+Test(collJoinSizeCompiled(0), 9);
 
 cfunction int collJoinLenCompiled(int n) { a = {1, 2}; b = {3}; c = a + b; return c.Length + n; }
 function collJoinLenInterp(n) { a = {1, 2}; b = {3}; c = a + b; return c.Length + n; }
@@ -4969,11 +4971,32 @@ function tierLoopInterp(n) { var Tier = Enum {Low, Mid, High}; t = 0; for (i = 0
 Test(tierLoopCompiled(3), tierLoopInterp(3));
 Test(tierLoopCompiled(3), 6);
 
-// Anything but a declared member stays with the interpreter: the enum's own .Type answers NONE.
+// The enum's own .Type is ENUM (it was NONE), and a local enum's compiles through the
+// interpreter's enum lookup like its members.
 cfunction tierTypeCompiled(int n) { var Tier = Enum {Low, Mid, High}; return Tier.Type; }
 function tierTypeInterp(n) { var Tier = Enum {Low, Mid, High}; return Tier.Type; }
 Test(tierTypeCompiled(0), tierTypeInterp(0));
-Test(tierTypeCompiled(0), "NONE");
+Test(tierTypeCompiled(0), "ENUM");
+cfunction tierMemberCompiled(int n) { var Tier = Enum {Low, Mid, High}; return Tier.Mid.Type + "|" + Tier.Mid.Name; }
+function tierMemberInterp(n) { var Tier = Enum {Low, Mid, High}; return Tier.Mid.Type + "|" + Tier.Mid.Name; }
+Test(tierMemberCompiled(0), tierMemberInterp(0));
+Test(tierMemberCompiled(0), "NUMBER|Mid");
+Test(is_precompiled("tierTypeCompiled") + is_precompiled("tierMemberCompiled"), 2);
+// An enum value's name, and a method of a field's collection through the path.
+cfunction enumNameCompiled(int n) { return Shades.ToString(n) + "|" + Shades.ToString(Shades.Mid); }
+function enumNameInterp(n) { return Shades.ToString(n) + "|" + Shades.ToString(Shades.Mid); }
+Test(enumNameCompiled(2), enumNameInterp(2));
+Test(enumNameCompiled(2), "Light|Mid");
+Test(is_precompiled("enumNameCompiled"), 1);
+class FldBox {
+  items = {};
+  FldBox() { }
+}
+cfunction fieldAddCompiled(int n) { b = new FldBox(); b.items.Add(n); b.items.Add("z"); return b.items.Join("-") + "|" + b.items.Size; }
+function fieldAddInterp(n) { b = new FldBox(); b.items.Add(n); b.items.Add("z"); return b.items.Join("-") + "|" + b.items.Size; }
+Test(fieldAddCompiled(4), fieldAddInterp(4));
+Test(fieldAddCompiled(4), "4-z|2");
+Test(is_precompiled("fieldAddCompiled"), 1);
 
 // A truth value assigned inside a condition. The interpreter used to throw on "if ((b = n > 2))",
 // so the precompiler left it alone; with that fixed it compiles as a bool local, read as 1 or 0.
@@ -5076,17 +5099,648 @@ function truthyNotElemInterp(n) { a = {0, 3}; if (!a[0] && n > 1) { return 1; } 
 Test(truthyNotElemCompiled(2), truthyNotElemInterp(2));
 Test(truthyNotElemCompiled(2), 1);
 
-// Text is false in a condition, "5" included.
+// Text is true in a condition unless empty, "0" or "false".
 cfunction truthyStrCompiled(string s, int n) { if (s && n > 1) { return 1; } return 0; }
 function truthyStrInterp(s, n) { if (s && n > 1) { return 1; } return 0; }
 Test(truthyStrCompiled("x", 2), truthyStrInterp("x", 2));
 Test(truthyStrCompiled("5", 2), truthyStrInterp("5", 2));
-Test(truthyStrCompiled("x", 2), 0);
+Test(truthyStrCompiled("x", 2), 1);
+Test(truthyStrCompiled("", 2), truthyStrInterp("", 2));
+Test(truthyStrCompiled("false", 2), 0);
 
 cfunction truthyVarCompiled(int n) { v = mathHelper(n); if (v && n > 1) { return 1; } return 0; }
 function truthyVarInterp(n) { v = mathHelper(n); if (v && n > 1) { return 1; } return 0; }
 Test(truthyVarCompiled(2), truthyVarInterp(2));
 Test(truthyVarCompiled(2), 1);
+
+// A bare Math name the script defines a function for is the script's function, compiled or not.
+function sign(x) { return x + 100; }
+cfunction shadowCompiled(int n) { return sign(n) * 2 + Math.Sign(n); }
+function shadowInterp(n) { return sign(n) * 2 + Math.Sign(n); }
+Test(shadowCompiled(-5), shadowInterp(-5));
+Test(shadowCompiled(-5), 189);
+
+// Operators applied by the interpreter where C# has none for the operands.
+cfunction bitVarCompiled(variable n) { return (n | 4) ^ 1; }
+function bitVarInterp(n) { return (n | 4) ^ 1; }
+Test(bitVarCompiled(3), bitVarInterp(3));
+cfunction powVarCompiled(variable n) { return 1 + n ** 2 + 2 ** 3 ** n; }
+function powVarInterp(n) { return 1 + n ** 2 + 2 ** 3 ** n; }
+Test(powVarCompiled(2), powVarInterp(2));
+Test(powVarCompiled(2), 517);
+cfunction textOrderCompiled(variable w) { if (w.Upper > "AA") { return 1; } return 0; }
+function textOrderInterp(w) { if (w.Upper > "AA") { return 1; } return 0; }
+Test(textOrderCompiled("ab"), textOrderInterp("ab"));
+Test(textOrderCompiled("A"), textOrderInterp("A"));
+
+// Math over untyped values runs the interpreter's own Math functions.
+cfunction mathVarCompiled(variable x) { return Math.Sqrt(x) + Math.Max(1, Math.Min(x, 5)); }
+function mathVarInterp(x) { return Math.Sqrt(x) + Math.Max(1, Math.Min(x, 5)); }
+Test(mathVarCompiled(16), mathVarInterp(16));
+Test(mathVarCompiled("16"), mathVarInterp("16"));
+
+// A global truth value as a whole condition.
+flagOn = 1;
+cfunction flagCompiled(int n) { if (flagOn) { return n; } return 0; }
+function flagInterp(n) { if (flagOn) { return n; } return 0; }
+Test(flagCompiled(7), flagInterp(7));
+
+// Collection literals returned whole, var locals, braced case bodies.
+cfunction litWholeCompiled(int n) { if (n > 0) { return {n, 2}; } return {3}; }
+function litWholeInterp(n) { if (n > 0) { return {n, 2}; } return {3}; }
+litC1 = litWholeCompiled(5); litC2 = litWholeCompiled(0); litI1 = litWholeInterp(5); litI2 = litWholeInterp(0);
+Test(litC1[0] * 10 + litC2[0], litI1[0] * 10 + litI2[0]);
+Test(litC1.Size + litC2.Size, 3);
+varShadowG = 1;
+cfunction varShadowCompiled(int n) { var varShadowG = 7; varShadowG++; return varShadowG + n; }
+Test(varShadowCompiled(1), 9);
+Test(varShadowG, 1);
+cfunction caseBlockCompiled(int n) { switch (n) { case 1: { t = 5; break; } default: { t = 6; } } return t; }
+Test(caseBlockCompiled(1) * 10 + caseBlockCompiled(2), 56);
+
+// Typed direct calls between compiled functions and into themselves.
+cfunction double dcSq(double x) { return x * x; }
+cfunction double dcSumSq(int n) { t = 0.0; for (i = 0; i < n; i++) { t += dcSq(i); } return t; }
+function dcSumSqI(n) { t = 0.0; for (i = 0; i < n; i++) { t += dcSq(i); } return t; }
+Test(dcSumSq(10), dcSumSqI(10));
+Test(dcSumSq(10), 285);
+cfunction double dcGcd(int a, int b) { if (b == 0) { return a; } return dcGcd(b, a % b); }
+Test(dcGcd(84, 36), 12);
+cfunction double dcHalf(int n) { if (n <= 0) { return 0; } return n + dcHalf(n / 2); }
+Test(dcHalf(7), 11);
+cfunction dcText(string s, int n) { if (n == 0) { return s; } return dcText(s + "x", n - 1); }
+Test(dcText("a", 3), "axxx");
+cfunction dcVar(variable v, int n) { if (n == 0) { return v; } return dcVar(v + 1, n - 1); }
+Test(dcVar("a", 2), "a11");
+// Redefined after the caller was compiled: the caller calls what the name stands for now.
+cfunction double dcInner(double x) { return x * 2; }
+cfunction double dcOuter(int n) { return dcInner(n) + 1; }
+Test(dcOuter(5), 11);
+function dcInner(x) { return x + 1000; }
+Test(dcOuter(5), 1006);
+cfunction double dcInner(int x) { return x * 3; }
+Test(dcOuter(5), 16);
+
+// Typed returns: numbers all the way through, or Variables where anything else is returned.
+cfunction trFib(int n) { if (n < 2) { return n; } return trFib(n - 1) + trFib(n - 2); }
+Test(trFib(20), 6765);
+cfunction trEnd(int n) { if (n == 0) { return "end"; } return trEnd(n - 1); }
+Test(trEnd(3), "end");
+cfunction trJoin(int n) { if (n == 0) { return 0; } return trJoin(n - 1) + "x"; }
+Test(trJoin(3), "0xxx");
+cfunction trThird(double x) { if (x < 1) { return x; } return trThird(x / 3) + 1; }
+function trThirdI(x) { if (x < 1) { return x; } return trThirdI(x / 3) + 1; }
+Test(trThird(100), trThirdI(100));
+cfunction trCond(int n) { if (n == 0) { return 5; } if (trCond(n - 1) > 4) { return 7; } return 1; }
+Test(trCond(2), 7);
+
+// Names nothing defined when the function was compiled -- globals the script assigns later,
+// a function defined later -- are looked up when the code runs, as the interpreter does.
+cfunction lateCond(int n) { cnt = 1; if (cnt < lateTotal) { return 1; } return 0; }
+cfunction lateText(int n) { if (lateUser == "") { return 1; } return 2; }
+cfunction lateMath(int n) { t = lateScale * 2; return t + n; }
+cfunction lateCall(int n) { x = lateHelper(n); return x + 1; }
+function lateCondI(n) { cnt = 1; if (cnt < lateTotal) { return 1; } return 0; }
+lateErrC = ""; lateErrI = "";
+try { lateCond(1); } catch (e) { lateErrC = "" + e; }
+try { lateCondI(1); } catch (e) { lateErrI = "" + e; }
+Test(lateErrC.Contains("lateTotal"), true);
+Test(lateErrI.Contains("lateTotal"), true);
+lateTotal = 5; lateUser = ""; lateScale = 7;
+function lateHelper(q) { return q * 10; }
+Test(lateCond(1), 1);
+Test(lateText(0), 1);
+Test(lateMath(1), 15);
+Test(lateCall(2), 21);
+lateTotal = 0;
+Test(lateCond(1), 0);
+Test(is_precompiled("lateCond") + is_precompiled("lateText") + is_precompiled("lateMath") + is_precompiled("lateCall"), 4);
+
+// Calls to a function defined further down the script: made by name when the code runs.
+cfunction laterUse1(int n) { return laterDef(n) + 1; }
+cfunction laterUse2(int n) { if (laterDef(n - 1) > 5) { return 1; } return 0; }
+cfunction laterUse3(int n) { t = 0; for (i = 0; i < n; i++) { t += laterDef(i); } return t; }
+// Before its definition runs the interpreted twin says the same (the console host registers a
+// file's functions up front, other hosts do not -- either way the two agree).
+function laterUseI(n) { return laterDef(n) + 1; }
+laterC = ""; laterI = "";
+try { laterC = "" + laterUse1(1); } catch (e) { laterC = "err"; }
+try { laterI = "" + laterUseI(1); } catch (e) { laterI = "err"; }
+Test(laterC, laterI);
+function laterDef(q) { return q * 10; }
+Test(laterUse1(1), 11);
+Test(laterUse2(3), 1);
+Test(laterUse3(3), 30);
+Test(is_precompiled("laterUse1") + is_precompiled("laterUse2") + is_precompiled("laterUse3"), 3);
+
+// Math functions CSCS has and System.Math does not run as the interpreter's own. Random, so
+// checked by range rather than against an interpreted twin.
+cfunction rndBelow(int n) { x = Math.Random(n); return x >= 0 && x < n; }
+cfunction rndParity(int n) { if (Math.Round(Math.Random() * 100) % 2 == 0) { return 1; } return 1; }
+Test(rndBelow(10), 1);
+Test(rndParity(0), 1);
+Test(is_precompiled("rndBelow") + is_precompiled("rndParity"), 2);
+// The string built-ins are called with values.
+cfunction substrFirst(variable v) { if (Substring(v, 0, 1) == "-") { return 1; } return 0; }
+function substrFirstI(v) { if (Substring(v, 0, 1) == "-") { return 1; } return 0; }
+Test(substrFirst("-5"), substrFirstI("-5"));
+Test(substrFirst("5"), substrFirstI("5"));
+Test(is_precompiled("substrFirst"), 1);
+
+// A global assigned later, read in a loop header, as a member, and inside a conversion.
+cfunction lateRowsSum(int n) { t = 0; for (i = 0; i < Size(lateRows); i++) { t += lateRows[i]; } return t + n; }
+function lateRowsSumI(n) { t = 0; for (i = 0; i < Size(lateRows); i++) { t += lateRows[i]; } return t + n; }
+cfunction lateRowsCount(int n) { return lateRows.Size + n; }
+cfunction lateIdInt(int n) { return int(lateId) + n; }
+function lateIdIntI(n) { return int(lateId) + n; }
+lateRows = {1, 2, 3}; lateId = "41.7";
+Test(lateRowsSum(1), lateRowsSumI(1));
+Test(lateRowsCount(1), 4);
+Test(lateIdInt(1), lateIdIntI(1));
+Test(is_precompiled("lateRowsSum") + is_precompiled("lateRowsCount") + is_precompiled("lateIdInt"), 3);
+
+// Script names are case-blind: Double(x) is double(x), String(x) is string(x).
+cfunction convCase(variable s) { return Double(s) + Int(s) + String(3); }
+function convCaseI(s) { return Double(s) + Int(s) + String(3); }
+Test(convCase("2.5"), convCaseI("2.5"));
+Test(is_precompiled("convCase"), 1);
+
+// Reverse on text, and Sort's value; a missing property is an error both ways.
+cfunction revText(variable s) { v = s; v.Reverse(); return v; }
+Test(revText("abc"), "cba");
+cfunction sortBack(int n) { a = {3, 1, 2}; return a.Sort(); }
+sb = sortBack(0);
+Test(sb[0] * 100 + sb[1] * 10 + sb[2], 123);
+cfunction missingField(int n) { v = {1, 2}; return v.Count; }
+function missingFieldI(n) { v = {1, 2}; return v.Count; }
+mfC = ""; mfI = "";
+try { mfC = missingField(0); } catch (e) { mfC = "err"; }
+try { mfI = missingFieldI(0); } catch (e) { mfI = "err"; }
+Test(mfC, mfI);
+
+// Operators on untyped arguments behave as interpreted: == compares values, not references;
+// && and || give an operand's value; a list is true; ! leaves text and lists as they are.
+cfunction veqArgs(variable x, variable y) { r = x == y; return r; }
+function veqArgsI(x, y) { r = x == y; return r; }
+Test(veqArgs(3, 3), veqArgsI(3, 3));
+Test(veqArgs("abc", "abc"), veqArgsI("abc", "abc"));
+Test(veqArgs("abc", 3), veqArgsI("abc", 3));
+cfunction vorValue(variable x, variable y) { r = x || y; return r; }
+function vorValueI(x, y) { r = x || y; return r; }
+Test(vorValue(3, 0), vorValueI(3, 0));
+Test(vorValue(0, 7), vorValueI(0, 7));
+cfunction vandValue(variable x, variable y) { r = x && y; return r; }
+function vandValueI(x, y) { r = x && y; return r; }
+Test(vandValue(2, 5), vandValueI(2, 5));
+cfunction truthList(variable x) { if (x) { return 1; } return 2; }
+function truthListI(x) { if (x) { return 1; } return 2; }
+Test(truthList({1, 2}), truthListI({1, 2}));
+Test(truthList({}), truthListI({}));
+cfunction notText(variable x) { r = !x; return r; }
+function notTextI(x) { r = !x; return r; }
+Test(notText("abc"), notTextI("abc"));
+Test(notText(0), notTextI(0));
+Test(is_precompiled("veqArgs") + is_precompiled("vorValue") + is_precompiled("vandValue") + is_precompiled("truthList") + is_precompiled("notText"), 5);
+
+// A global read before the function assigns it, defined only after the function: the read is of
+// the global, and the assignment writes it, as interpreted. Missing, it is the same error.
+cfunction rbaToggle(variable a) { if (rbaKey == a && rbaKey != "") { return "same"; } rbaKey = a; return "set"; }
+function rbaToggleI(a) { if (rbaKeyI == a && rbaKeyI != "") { return "same"; } rbaKeyI = a; return "set"; }
+rbaKey = "x"; rbaKeyI = "x";
+Test(rbaToggle("y") + rbaKey, rbaToggleI("y") + rbaKeyI);
+Test(rbaToggle("y") + rbaKey, rbaToggleI("y") + rbaKeyI);
+cfunction rbaTab(variable a) { newtab = int(a); if (newtab == rbaCur) { return 0; } rbaCur = newtab; return 1; }
+rbaCur = 1;
+Test(rbaTab("2") * 10 + rbaCur, 12);
+Test(rbaTab("2") * 10 + rbaCur, 2);
+cfunction rbaMissing(variable a) { if (rbaNowhere == a) { return "same"; } rbaNowhere = a; return "set"; }
+function rbaMissingI(a) { if (rbaNowhereI == a) { return "same"; } rbaNowhereI = a; return "set"; }
+rbC = ""; rbI = "";
+try { rbC = rbaMissing(1); } catch (e) { rbC = "err"; }
+try { rbI = rbaMissingI(1); } catch (e) { rbI = "err"; }
+Test(rbC, rbI);
+// A name read on the right of "&&" is read only when the left is true: "prev" does not exist
+// yet on the first pass.
+cfunction rbaLoop(int n) { s = ""; for (i = 0; i < n; i++) { if (i > 0 && prev < 5) { s += prev; } prev = i * 2; } return s; }
+function rbaLoopI(n) { s = ""; for (i = 0; i < n; i++) { if (i > 0 && prev < 5) { s += prev; } prev = i * 2; } return s; }
+Test(rbaLoop(4), rbaLoopI(4));
+rbaArr = {1, 2};
+cfunction rbaElem(int n) { if (n < 2 && rbaArr[n] > 0) { return 1; } return 0; }
+function rbaElemI(n) { if (n < 2 && rbaArr[n] > 0) { return 1; } return 0; }
+Test(rbaElem(5), rbaElemI(5));
+Test(rbaElem(1), rbaElemI(1));
+Test(is_precompiled("rbaToggle") + is_precompiled("rbaTab") + is_precompiled("rbaMissing") + is_precompiled("rbaLoop") + is_precompiled("rbaElem"), 5);
+
+// "g++" and "g += v" on a global the script defines later, and on one it already has: the
+// interpreter's own operator -- text adds as 0 to a number -- and its error when missing.
+cfunction lcCnt(int n) { if (lcCount % 2 == 0) { r = "even"; } else { r = "odd"; } lcCount++; return r + lcCount; }
+function lcCntI(n) { if (lcCountI % 2 == 0) { r = "even"; } else { r = "odd"; } lcCountI++; return r + lcCountI; }
+lcCount = 0; lcCountI = 0;
+Test(lcCnt(0), lcCntI(0));
+Test(lcCnt(0), lcCntI(0));
+cfunction lcAdd(int n) { lcTot += n; lcTot += "!"; return lcTot; }
+function lcAddI(n) { lcTotI += n; lcTotI += "!"; return lcTotI; }
+lcA = ""; lcB = "";
+try { lcA = lcAdd(2); } catch (e) { lcA = "err"; }
+try { lcB = lcAddI(2); } catch (e) { lcB = "err"; }
+Test(lcA, lcB);
+lcTot = 1; lcTotI = 1;
+Test(lcAdd(2), lcAddI(2));
+lcTot = "a"; lcTotI = "a";
+Test(lcAdd(2), lcAddI(2));
+lcKnown = 1;
+cfunction lcKnownAdd(int n) { lcKnown += "!"; lcKnown -= n; return lcKnown; }
+function lcKnownAddI(n) { lcKnownI += "!"; lcKnownI -= n; return lcKnownI; }
+lcKnownI = 1;
+// "1!" - 3 is an error on both sides.
+lcA = ""; lcB = "";
+try { lcA = lcKnownAdd(3); } catch (e) { lcA = "err"; }
+try { lcB = lcKnownAddI(3); } catch (e) { lcB = "err"; }
+Test(lcA, lcB);
+Test(lcA, "err");
+cfunction lcStep(int n) { lcMiss++; return lcMiss; }
+function lcStepI(n) { lcMissI++; return lcMissI; }
+lcA = ""; lcB = "";
+try { lcA = lcStep(0); } catch (e) { lcA = "err"; }
+try { lcB = lcStepI(0); } catch (e) { lcB = "err"; }
+Test(lcA, lcB);
+// Read first, then assigned in a block and read after it: the global's, not a local from 0.
+cfunction lcWrap(int n) { lcIdx--; if (lcIdx < 0) { lcIdx = 5; } return lcIdx; }
+function lcWrapI(n) { lcIdxI--; if (lcIdxI < 0) { lcIdxI = 5; } return lcIdxI; }
+lcIdx = 0; lcIdxI = 0;
+Test(lcWrap(0), lcWrapI(0));
+Test(lcWrap(0), lcWrapI(0));
+Test(lcIdx, lcIdxI);
+Test(is_precompiled("lcCnt") + is_precompiled("lcAdd") + is_precompiled("lcKnownAdd") + is_precompiled("lcStep"), 4);
+
+// A local or argument named like a Math function is that variable, not System.Math's.
+cfunction mnRound(int n) { round = n * 2; return round + 1; }
+function mnRoundI(n) { round = n * 2; return round + 1; }
+Test(mnRound(3), mnRoundI(3));
+cfunction mnMax(int n) { max = 0; for (i = 0; i < n; i++) { if (i > max) { max = i; } } return max; }
+function mnMaxI(n) { max = 0; for (i = 0; i < n; i++) { if (i > max) { max = i; } } return max; }
+Test(mnMax(5), mnMaxI(5));
+cfunction mnAbs(double abs) { return abs * 2 + Math.Abs(-abs); }
+function mnAbsI(abs) { return abs * 2 + Math.Abs(-abs); }
+Test(mnAbs(3), mnAbsI(3));
+Test(is_precompiled("mnRound") + is_precompiled("mnMax") + is_precompiled("mnAbs"), 3);
+
+// A global the function assigns and then a script function changes: read again, it is the
+// changed value, not the one the compiled code last assigned.
+stG = 0; stGI = 0;
+function stBump() { stG = stG + 10; }
+function stBumpI() { stGI = stGI + 10; }
+cfunction stRead(int n) { stG = n; stBump(); stG = stG + 1; stG += 1; stG++; return stG; }
+function stReadI(n) { stGI = n; stBumpI(); stGI = stGI + 1; stGI += 1; stGI++; return stGI; }
+Test(stRead(1), stReadI(1));
+Test(stG, stGI);
+stText = ""; stTextI = "";
+function stAppend() { stText = stText + "x"; }
+function stAppendI() { stTextI = stTextI + "x"; }
+cfunction stLoop(int n) { stText = "a"; for (k = 0; k < n; k++) { stAppend(); } return stText; }
+function stLoopI(n) { stTextI = "a"; for (k = 0; k < n; k++) { stAppendI(); } return stTextI; }
+Test(stLoop(3), stLoopI(3));
+stFlag = false; stFlagI = false;
+function stSet() { stFlag = true; }
+function stSetI() { stFlagI = true; }
+cfunction stCond(int n) { stFlag = false; stSet(); if (stFlag) { return "yes"; } return "no"; }
+function stCondI(n) { stFlagI = false; stSetI(); if (stFlagI) { return "yes"; } return "no"; }
+Test(stCond(0), stCondI(0));
+// A loop counter named like a global writes the global, ending on the value the loop exits with.
+stI = 100; stII = 100;
+cfunction stCount(int n) { s = 0; for (stI = 0; stI < n; stI++) { s += stI; } return s; }
+function stCountI(n) { s = 0; for (stII = 0; stII < n; stII++) { s += stII; } return s; }
+Test(stCount(4), stCountI(4));
+Test(stI, stII);
+cfunction stBreak(int n) { s = 0; for (stI = 0; stI < n; stI++) { if (stI == 2) { break; } s += stI; } return s; }
+function stBreakI(n) { s = 0; for (stII = 0; stII < n; stII++) { if (stII == 2) { break; } s += stII; } return s; }
+Test(stBreak(4), stBreakI(4));
+Test(stI, stII);
+Test(is_precompiled("stRead") + is_precompiled("stLoop") + is_precompiled("stCond") + is_precompiled("stCount") + is_precompiled("stBreak"), 5);
+
+// A global read first and assigned in blocks, then read after them: every read is the
+// interpreter's, including after a script call changed it.
+function crPrep() { crRun = 7; }
+function crPrepI() { crRunI = 7; }
+cfunction crQuiz(variable arg) { if (!crRun) { crRun = 1; crPrep(); } else { crRun = 0; } return crRun; }
+function crQuizI(arg) { if (!crRunI) { crRunI = 1; crPrepI(); } else { crRunI = 0; } return crRunI; }
+crRun = 0; crRunI = 0;
+Test(crQuiz(1), crQuizI(1));
+Test(crQuiz(1), crQuizI(1));
+cfunction crTab(variable arg) { newTab = int(arg); if (newTab == crCur) { return "same"; } if (crRunTab >= 0 && newTab != crRunTab) { crCur = crRunTab; return "run" + crCur; } crCur = newTab; return "set" + crCur; }
+function crTabI(arg) { newTab = int(arg); if (newTab == crCurI) { return "same"; } if (crRunTab >= 0 && newTab != crRunTab) { crCurI = crRunTab; return "run" + crCurI; } crCurI = newTab; return "set" + crCurI; }
+crCur = 1; crCurI = 1; crRunTab = -1;
+Test(crTab("2"), crTabI("2"));
+Test(crTab("2"), crTabI("2"));
+crRunTab = 5;
+Test(crTab("3"), crTabI("3"));
+Test(crCur, crCurI);
+Test(is_precompiled("crQuiz") + is_precompiled("crTab") + is_precompiled("lcWrap"), 3);
+
+// "size(x)" in any case into a local; "g[k] = v" and "g.Contains(x)" on a global defined
+// later; "k = c ? a : b" with a Variable condition -- a number decides, anything else fails.
+cfunction szLow(variable text) { length = size(text); if (length < 3) { return 15; } return 10; }
+function szLowI(text) { length = size(text); if (length < 3) { return 15; } return 10; }
+Test(szLow({1, 2, 3, 4}), szLowI({1, 2, 3, 4}));
+Test(szLow("abcd"), szLowI("abcd"));
+cfunction leWrite(variable k, variable v) { leMap[k] = v; return leMap; }
+function leWriteI(k, v) { leMapI[k] = v; return leMapI; }
+Test(leWrite("a", 5), leWriteI("a", 5));
+Test(leWrite(2, 5), leWriteI(2, 5));
+cfunction leKey(variable v) { leGlob[leK] = v; return Size(leGlob); }
+function leKeyI(v) { leGlobI[leK] = v; return Size(leGlobI); }
+leGlob = {}; leGlobI = {}; leK = "x";
+Test(leKey(5), leKeyI(5));
+leK = "y";
+Test(leKey(6), leKeyI(6));
+Test(leGlob, leGlobI);
+cfunction lmHas(variable e) { if (!lmSel.Contains(e)) { return "no"; } return "yes"; }
+function lmHasI(e) { if (!lmSelI.Contains(e)) { return "no"; } return "yes"; }
+cfunction lmAdd(variable e) { lmList.Add(e); return lmList.Size; }
+function lmAddI(e) { lmListI.Add(e); return lmListI.Size; }
+lmSel = {"a", "b"}; lmSelI = {"a", "b"}; lmList = {}; lmListI = {};
+Test(lmHas("a"), lmHasI("a"));
+Test(lmHas("z"), lmHasI("z"));
+Test(lmAdd("a"), lmAddI("a"));
+Test(lmAdd("b"), lmAddI("b"));
+Test(lmList, lmListI);
+cfunction tvAsg(variable e) { key = e ? "a" : "b"; return key; }
+function tvAsgI(e) { key = e ? "a" : "b"; return key; }
+Test(tvAsg(1), tvAsgI(1));
+Test(tvAsg(0), tvAsgI(0));
+tvA = ""; tvB = "";
+try { tvA = tvAsg("x"); } catch (e) { tvA = "err"; }
+try { tvB = tvAsgI("x"); } catch (e) { tvB = "err"; }
+Test(tvA, tvB);
+Test(is_precompiled("szLow") + is_precompiled("leWrite") + is_precompiled("leKey") + is_precompiled("lmHas") + is_precompiled("lmAdd") + is_precompiled("tvAsg"), 6);
+
+// "type(x)" is the interpreter's type function, not a reserved word.
+cfunction tyIs(variable b) { if (type(b, true) == "NUMBER") { return 1; } return 0; }
+function tyIsI(b) { if (type(b, true) == "NUMBER") { return 1; } return 0; }
+Test(tyIs(5), tyIsI(5));
+Test(tyIs("a"), tyIsI("a"));
+Test(tyIs({1}), tyIsI({1}));
+// A global whose first write reads it -- "x = !x", "q = (q + 1) % 3", "t = t + 1" -- whatever
+// the script left in it: a number, text, text that looks like a number.
+cfunction srNot(variable s) { srA = !srA; return srA; }
+function srNotI(s) { srAI = !srAI; return srAI; }
+cfunction srInc(variable s) { srB = srB + 1; return srB; }
+function srIncI(s) { srBI = srBI + 1; return srBI; }
+cfunction srMod(variable s) { srC = (srC + 1) % 3; return srC; }
+function srModI(s) { srCI = (srCI + 1) % 3; return srCI; }
+for (srV : {0, 1, 5, 2.5, "a", "7"}) {
+  srA = srV; srAI = srV; srB = srV; srBI = srV;
+  Test(srNot(1), srNotI(1));
+  Test(srInc(1), srIncI(1));
+  Test(srA, srAI);
+  Test(srB, srBI);
+}
+srC = 1; srCI = 1;
+Test(srMod(1), srModI(1));
+Test(srMod(1), srModI(1));
+srMissA = ""; srMissB = "";
+cfunction srMiss(variable s) { srNone = srNone + 1; return srNone; }
+function srMissI(s) { srNoneI = srNoneI + 1; return srNoneI; }
+try { srMissA = srMiss(1); } catch (e) { srMissA = "err"; }
+try { srMissB = srMissI(1); } catch (e) { srMissB = "err"; }
+Test(srMissA, srMissB);
+Test(is_precompiled("tyIs") + is_precompiled("srNot") + is_precompiled("srInc") + is_precompiled("srMod") + is_precompiled("srMiss"), 5);
+
+// "?:" with a Variable condition inside a larger value: a number decides; anything else is the
+// interpreter's error there, in a call argument as in a concatenation.
+function tcShow(a, b) { return a + "|" + b; }
+cfunction tcCall(variable e) { return tcShow("m", e ? 2 : 5); }
+function tcCallI(e) { return tcShow("m", e ? 2 : 5); }
+cfunction tcCat(variable e) { k = "<" + (e ? "a" : "b") + ">"; return k; }
+function tcCatI(e) { k = "<" + (e ? "a" : "b") + ">"; return k; }
+for (tcV : {1, 0, 2.5, "x", {1}}) {
+  tcA = ""; tcB = ""; tcC = ""; tcD = "";
+  try { tcA = tcCall(tcV); } catch (e) { tcA = "err"; }
+  try { tcB = tcCallI(tcV); } catch (e) { tcB = "err"; }
+  try { tcC = tcCat(tcV); } catch (e) { tcC = "err"; }
+  try { tcD = tcCatI(tcV); } catch (e) { tcD = "err"; }
+  Test(tcA, tcB);
+  Test(tcC, tcD);
+}
+Test(is_precompiled("tcCall") + is_precompiled("tcCat"), 2);
+
+// Globals defined after the function: an element in a condition ("arg == lvs[i]", the
+// condition's ")" glued to it), a conversion of an expression on one ("int(dur / 500)"), and an
+// element inside "&&" -- read only when reached, with the interpreter's error past the end.
+cfunction glFind(variable arg) { lv = 0; for (i = 0; i < glLvs.size; i++) { if (arg == glLvs[i]) { lv = i; break; } } return lv; }
+function glFindI(arg) { lv = 0; for (i = 0; i < glLvs.size; i++) { if (arg == glLvs[i]) { lv = i; break; } } return lv; }
+cfunction glConv(variable arg) { k = int(glDur / 500); return k; }
+function glConvI(arg) { k = int(glDur / 500); return k; }
+cfunction glAnd(int n) { if (n > 0 && glList[n] == "b") { return "yes"; } return "no"; }
+function glAndI(n) { if (n > 0 && glList[n] == "b") { return "yes"; } return "no"; }
+glLvs = {"a", "b", "c"}; glDur = 1234; glList = {"a", "b"};
+Test(glFind("b"), glFindI("b"));
+Test(glFind("z"), glFindI("z"));
+Test(glConv(0), glConvI(0));
+Test(glAnd(1), glAndI(1));
+Test(glAnd(0), glAndI(0));
+glA = ""; glB = "";
+try { glA = glAnd(5); } catch (e) { glA = "err"; }
+try { glB = glAndI(5); } catch (e) { glB = "err"; }
+Test(glA, glB);
+glDur = "abc"; glA = ""; glB = "";
+try { glA = glConv(0); } catch (e) { glA = "err"; }
+try { glB = glConvI(0); } catch (e) { glB = "err"; }
+Test(glA, glB);
+Test(is_precompiled("glFind") + is_precompiled("glConv") + is_precompiled("glAnd"), 3);
+
+// "ex.Message" on a catch variable is the message, as the variable itself is. And a global
+// read before "x = !x" toggles it.
+cfunction exMsg(int n) { try { throw "boom"; } catch (ex) { return "[" + ex.Message + "]"; } }
+function exMsgI(n) { try { throw "boom"; } catch (ex) { return "[" + ex.Message + "]"; } }
+exA = ""; exB = "";
+try { exA = exMsg(0); } catch (e) { exA = "" + e; }
+try { exB = exMsgI(0); } catch (e) { exB = "" + e; }
+Test(exA, exB);
+Test(exA, "[boom]");
+function exShow(x) { exLast = x; }
+cfunction exToggle(variable arg) { exShow("mode " + exMode + "," + arg); exMode = !exMode; return exMode; }
+function exToggleI(arg) { exShow("mode " + exModeI + "," + arg); exModeI = !exModeI; return exModeI; }
+exMode = 0; exModeI = 0;
+Test(exToggle(1), exToggleI(1));
+Test(exToggle(1), exToggleI(1));
+Test(is_precompiled("exMsg") + is_precompiled("exToggle"), 2);
+
+// "elif" comparing with a global defined later: read in place, not as statements between the
+// "}" and the "else if".
+cfunction elLate(variable p) { r = 0; if (p == elPa) { r = 1; } elif (p == elPs) { r = 2; } else { r = 3; } return r; }
+function elLateI(p) { r = 0; if (p == elPa) { r = 1; } elif (p == elPs) { r = 2; } else { r = 3; } return r; }
+elPa = "A"; elPs = "S";
+Test(elLate("A"), elLateI("A"));
+Test(elLate("S"), elLateI("S"));
+Test(elLate("x"), elLateI("x"));
+// A string ending in an escaped backslash: "C:\\dir\\" + name.
+cfunction bsPath(variable b) { p = "C:\\dir\\" + b + "\\x"; return p; }
+function bsPathI(b) { p = "C:\\dir\\" + b + "\\x"; return p; }
+Test(bsPath("f"), bsPathI("f"));
+Test(is_precompiled("elLate") + is_precompiled("bsPath"), 2);
+
+// A call to a function whose name matches an argument's but for case calls the function, as
+// interpreted -- compiled or not.
+function ncShow(a, b) { return "called:" + a + b; }
+cfunction ncClash(variable ncshow = 1) { return ncShow("x", ncshow); }
+function ncClashI(ncshow = 1) { return ncShow("x", ncshow); }
+Test(ncClash(), ncClashI());
+Test(ncClash(0), ncClashI(0));
+Test(is_precompiled("ncClash"), 1);
+// A call is looked up among functions only: an argument or local of the same name, even spelt
+// the same, does not stand in for it.
+function ncG(a) { return "fn:" + a; }
+cfunction ncArg(variable ncG) { return ncG(1); }
+function ncArgI(ncG) { return ncG(1); }
+Test(ncArg(7), ncArgI(7));
+cfunction ncLocal(variable q) { ncG = 5; return ncG(2) + ncG; }
+function ncLocalI(q) { ncG = 5; return ncG(2) + ncG; }
+Test(ncLocal(0), ncLocalI(0));
+cfunction ncMissing(variable ncH) { return ncH(3); }
+function ncMissingI(ncH) { return ncH(3); }
+ncA = ""; ncB = "";
+try { ncA = ncMissing(1); } catch (e) { ncA = "err"; }
+try { ncB = ncMissingI(1); } catch (e) { ncB = "err"; }
+Test(ncA, ncB);
+Test(is_precompiled("ncArg") + is_precompiled("ncLocal") + is_precompiled("ncMissing"), 3);
+
+// "if (++g >= n)" on a global: the step first, then the test, once -- as interpreted.
+cfunction psBusy(variable n) { if (++psIdx >= psOpts.size) { psIdx = 0; } return psOpts[psIdx]; }
+function psBusyI(n) { if (++psIdxI >= psOpts.size) { psIdxI = 0; } return psOpts[psIdxI]; }
+psOpts = {"x", "y", "z"}; psIdx = 0; psIdxI = 0;
+Test(psBusy(0), psBusyI(0));
+Test(psBusy(0), psBusyI(0));
+Test(psBusy(0), psBusyI(0));
+Test(psIdx, psIdxI);
+// A call to a function defined later, next to a local spelt like it but for case.
+cfunction lcTrie(variable x) { lcTrieFn = "trie"; r = LcTrieFn(lcTrieFn, x); return r; }
+function lcTrieI(x) { lcTrieFn = "trie"; r = LcTrieFn(lcTrieFn, x); return r; }
+function LcTrieFn(t, x) { return "later:" + t + x; }
+Test(lcTrie(1), lcTrieI(1));
+Test(is_precompiled("psBusy") + is_precompiled("lcTrie"), 2);
+
+// A global of the script's named with the "__" the translator's temporaries start with.
+cfunction usView(variable r) { if (r == 1) { t = __usView + "!"; } else { t = "none"; } return t; }
+function usViewI(r) { if (r == 1) { t = __usView + "!"; } else { t = "none"; } return t; }
+__usView = "view";
+Test(usView(1), usViewI(1));
+Test(usView(2), usViewI(2));
+Test(is_precompiled("usView"), 1);
+
+// "if (g++ % 2 == 0)" on a global: the test sees the value from before the step.
+cfunction pfBanner(variable n) { if (pfCnt++ % 2 == 0) { r = "even"; } else { r = "odd"; } return r + pfCnt; }
+function pfBannerI(n) { if (pfCntI++ % 2 == 0) { r = "even"; } else { r = "odd"; } return r + pfCntI; }
+pfCnt = 0; pfCntI = 0;
+Test(pfBanner(0), pfBannerI(0));
+Test(pfBanner(0), pfBannerI(0));
+Test(pfBanner(0), pfBannerI(0));
+Test(is_precompiled("pfBanner"), 1);
+
+// An element read off a value that is not a collection, or past the end, and a compound on
+// such an element: the interpreter's error, as interpreted.
+cfunction erFirst(variable x) { r = x[0]; return r; }
+function erFirstI(x) { r = x[0]; return r; }
+cfunction erAdd(variable x) { x[1] += 7; return x; }
+function erAddI(x) { x[1] += 7; return x; }
+// Each call gets a list of its own: "x[1] += 7" changes the caller's list, interpreted as well.
+for (erK : {0, 1, 2, 3}) {
+  erA = ""; erB = ""; erC = ""; erD = "";
+  if (erK == 0) { erV1 = 3; erV2 = 3; } elif (erK == 1) { erV1 = "abc"; erV2 = "abc"; }
+  elif (erK == 2) { erV1 = {}; erV2 = {}; } else { erV1 = {1, 2}; erV2 = {1, 2}; }
+  try { erA = "" + erFirst(erV1); } catch (e) { erA = "err"; }
+  try { erB = "" + erFirstI(erV2); } catch (e) { erB = "err"; }
+  try { erC = "" + erAdd(erV1); } catch (e) { erC = "err"; }
+  try { erD = "" + erAddI(erV2); } catch (e) { erD = "err"; }
+  Test(erA, erB);
+  Test(erC, erD);
+}
+Test(is_precompiled("erFirst") + is_precompiled("erAdd"), 2);
+
+// A local copied from a global and then compounded leaves the global as it was: the compound
+// works on a copy, as interpreted.
+alG = 3; alGI = 3;
+cfunction alCopy(int n) { L = alG; L += 1; return L; }
+function alCopyI(n) { L = alGI; L += 1; return L; }
+Test(alCopy(0), alCopyI(0));
+Test(alG, alGI);
+alG = {1, 2}; alGI = {1, 2};
+Test(alCopy(0), alCopyI(0));
+Test(alG, alGI);
+Test(is_precompiled("alCopy"), 1);
+
+// The Contains built-in inside "&&": whether the named variable has the index or key.
+cfunction ciVrfy(variable field, variable fallback) { if (Contains(ciVals, field) && ciVals[field] != null) { return ciVals[field]; } else { return fallback; } }
+function ciVrfyI(field, fallback) { if (Contains(ciVals, field) && ciVals[field] != null) { return ciVals[field]; } else { return fallback; } }
+ciVals = {}; ciVals["a"] = 5;
+Test(ciVrfy("a", "fb"), ciVrfyI("a", "fb"));
+Test(ciVrfy("zz", "fb"), ciVrfyI("zz", "fb"));
+cfunction ciIdx(variable l, variable i) { if (i >= 0 && Contains(l, i)) { return "has"; } return "no"; }
+function ciIdxI(l, i) { if (i >= 0 && Contains(l, i)) { return "has"; } return "no"; }
+Test(ciIdx({1, 2}, 1), ciIdxI({1, 2}, 1));
+Test(ciIdx({1, 2}, 5), ciIdxI({1, 2}, 5));
+Test(ciIdx("abc", 0), ciIdxI("abc", 0));
+Test(is_precompiled("ciVrfy") + is_precompiled("ciIdx"), 2);
+
+// A step on a global behind "&&": taken only when reached, in place.
+cfunction spAd(variable arg) { if (!spPaid && arg == 1 && ++spCnt % 3 == 0) { return "show" + spCnt; } return "no" + spCnt; }
+function spAdI(arg) { if (!spPaidI && arg == 1 && ++spCntI % 3 == 0) { return "show" + spCntI; } return "no" + spCntI; }
+cfunction spPost(variable arg) { if (arg == 1 && spP++ > 1) { return "big" + spP; } return "small" + spP; }
+function spPostI(arg) { if (arg == 1 && spPI++ > 1) { return "big" + spPI; } return "small" + spPI; }
+spPaid = 0; spPaidI = 0; spCnt = 0; spCntI = 0; spP = 0; spPI = 0;
+for (spV : {1, 1, 0, 1, 1}) { Test(spAd(spV), spAdI(spV)); Test(spPost(spV), spPostI(spV)); }
+Test(is_precompiled("spAd") + is_precompiled("spPost"), 2);
+
+// "return ++g" and "return g++" on a global: the value and the step, as interpreted.
+rsG = 5; rsGI = 5;
+cfunction rsPre(int n) { return ++rsG; }
+function rsPreI(n) { return ++rsGI; }
+cfunction rsPost(int n) { return rsG++; }
+function rsPostI(n) { return rsGI++; }
+Test(rsPre(0), rsPreI(0));
+Test(rsPost(0), rsPostI(0));
+Test(rsG, rsGI);
+rsG = "7"; rsGI = "7";
+Test(rsPost(0), rsPostI(0));
+Test(rsG, rsGI);
+Test(is_precompiled("rsPre") + is_precompiled("rsPost"), 2);
+Test(is_precompiled("revText") + is_precompiled("sortBack"), 2);
+
+Print("Testing compiled: the semantics settled in September 2026...");
+// Shifts: both sides truncated to int, between + - and the comparisons.
+cfunction smShift(int n) { x = 1.5 + n; y = n; y <<= 3; a = {n, 2}; a[0] <<= 1; return (n << 2) + "|" + (x << 1) + "|" + y + "|" + (a[0] << a[1]) + "|" + (-8 >> 1) + "|" + (1 << 2 + 1); }
+function smShiftI(n) { x = 1.5 + n; y = n; y <<= 3; a = {n, 2}; a[0] <<= 1; return (n << 2) + "|" + (x << 1) + "|" + y + "|" + (a[0] << a[1]) + "|" + (-8 >> 1) + "|" + (1 << 2 + 1); }
+Test(smShift(3), smShiftI(3));
+Test(smShift(3), "12|8|24|24|-4|8");
+// A return inside try stands when a finally follows; a try needs no catch.
+cfunction smFin(int n) { r = 0; try { if (n > 5) { throw "big"; } return n * 2; } catch (e) { return "c:" + e.Message; } finally { r = 99; } return r; }
+function smFinI(n) { r = 0; try { if (n > 5) { throw "big"; } return n * 2; } catch (e) { return "c:" + e.Message; } finally { r = 99; } return r; }
+Test(smFin(4), smFinI(4));
+Test(smFin(4), 8);
+Test(smFin(9), smFinI(9));
+Test(smFin(9), "c:big");
+smFinRan = 0; smFinRanI = 0;
+cfunction smFinOnly(int n) { try { return n; } finally { smFinRan = 1; } }
+function smFinOnlyI(n) { try { return n; } finally { smFinRanI = 1; } }
+Test(smFinOnly(7), smFinOnlyI(7));
+Test(smFinRan, smFinRanI);
+Test(smFinRan, 1);
+// The truth rule, && and || as 1 or 0, "!" of text.
+cfunction smTruth(string s) { t = ""; if (s) { t += "t"; } if (!s) { t += "n"; } t += (s ? "a" : "b"); t += (s && 5); t += (s || 0); return t; }
+function smTruthI(s) { t = ""; if (s) { t += "t"; } if (!s) { t += "n"; } t += (s ? "a" : "b"); t += (s && 5); t += (s || 0); return t; }
+Test(smTruth("abc"), smTruthI("abc"));
+Test(smTruth("abc"), "ta11");
+Test(smTruth("0"), smTruthI("0"));
+Test(smTruth("0"), "nb00");
+Test(is_precompiled("smShift") + is_precompiled("smFin") + is_precompiled("smFinOnly") + is_precompiled("smTruth"), 4);
+// Text's Size, a bare Trim, a command-named script function, chains onto a deeper target.
+function tail(x) { return x; }
+cfunction smMore(string s) { a = {s, 2}; a[0] = a[1] = s.Size; return "[" + s.Trim + "]" + s.Size() + tail(!s) + tail(a[0] + 1); }
+function smMoreI(s) { a = {s, 2}; a[0] = a[1] = s.Size; return "[" + s.Trim + "]" + s.Size() + tail(!s) + tail(a[0] + 1); }
+Test(smMore(" ab "), smMoreI(" ab "));
+Test(smMore(" ab "), "[ab]405");
+Test(smMore(""), smMoreI(""));
+Test(is_precompiled("smMore"), 1);
 
 testSummary("test_compiled.cscs");
 

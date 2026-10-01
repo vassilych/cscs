@@ -1,0 +1,120 @@
+class Point { x = 0; y = 0; Point(a, b) { x = a; y = b; } }
+rsD = 0; RG = 0; RGI = 0;
+cfunction rsc0(variable n) { x = n; return ++x; }
+function rsi0(n) { x = n; return ++x; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc0(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi0(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return ++x; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc0")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc0(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi0(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return ++x; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc0")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc0("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi0("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return ++x; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc0")); }
+if (!is_precompiled("rsc0")) { print("FALLBACK x = n; return ++x;"); }
+cfunction rsc1(variable n) { x = n; return x++; }
+function rsi1(n) { x = n; return x++; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc1(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi1(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x++; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc1")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x++; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc1")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc1("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi1("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x++; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc1")); }
+if (!is_precompiled("rsc1")) { print("FALLBACK x = n; return x++;"); }
+cfunction rsc2(variable n) { x = n; return --x; }
+function rsi2(n) { x = n; return --x; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc2(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi2(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return --x; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc2")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return --x; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc2")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc2("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi2("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return --x; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc2")); }
+if (!is_precompiled("rsc2")) { print("FALLBACK x = n; return --x;"); }
+cfunction rsc3(variable n) { x = n; return x--; }
+function rsi3(n) { x = n; return x--; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc3(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi3(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x--; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc3")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x--; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc3")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc3("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi3("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF x = n; return x--; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc3")); }
+if (!is_precompiled("rsc3")) { print("FALLBACK x = n; return x--;"); }
+cfunction rsc4(variable n) { return ++RG; }
+function rsi4(n) { return ++RGI; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc4(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi4(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return ++RG; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc4")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return ++RG; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc4")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc4("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi4("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return ++RG; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc4")); }
+if (!is_precompiled("rsc4")) { print("FALLBACK return ++RG;"); }
+cfunction rsc5(variable n) { return RG++; }
+function rsi5(n) { return RGI++; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc5(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi5(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return RG++; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc5")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return RG++; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc5")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc5("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi5("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return RG++; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc5")); }
+if (!is_precompiled("rsc5")) { print("FALLBACK return RG++;"); }
+cfunction rsc6(variable n) { return --RG; }
+function rsi6(n) { return --RGI; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc6(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi6(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return --RG; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc6")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return --RG; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc6")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc6("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi6("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF return --RG; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc6")); }
+if (!is_precompiled("rsc6")) { print("FALLBACK return --RG;"); }
+cfunction rsc7(variable n) { p = new Point(n, 2); return ++p.x; }
+function rsi7(n) { p = new Point(n, 2); return ++p.x; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc7(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi7(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return ++p.x; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc7")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return ++p.x; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc7")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc7("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi7("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return ++p.x; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc7")); }
+if (!is_precompiled("rsc7")) { print("FALLBACK p = new Point(n, 2); return ++p.x;"); }
+cfunction rsc8(variable n) { p = new Point(n, 2); return p.x++; }
+function rsi8(n) { p = new Point(n, 2); return p.x++; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc8(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi8(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return p.x++; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc8")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return p.x++; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc8")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc8("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi8("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return p.x++; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc8")); }
+if (!is_precompiled("rsc8")) { print("FALLBACK p = new Point(n, 2); return p.x++;"); }
+cfunction rsc9(variable n) { p = new Point(n, 2); return --p.x; }
+function rsi9(n) { p = new Point(n, 2); return --p.x; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc9(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi9(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return --p.x; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc9")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return --p.x; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc9")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc9("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi9("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF p = new Point(n, 2); return --p.x; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc9")); }
+if (!is_precompiled("rsc9")) { print("FALLBACK p = new Point(n, 2); return --p.x;"); }
+cfunction rsc10(variable n) { a = {n, 2}; return ++a[0]; }
+function rsi10(n) { a = {n, 2}; return ++a[0]; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc10(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi10(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return ++a[0]; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc10")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return ++a[0]; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc10")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc10("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi10("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return ++a[0]; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc10")); }
+if (!is_precompiled("rsc10")) { print("FALLBACK a = {n, 2}; return ++a[0];"); }
+cfunction rsc11(variable n) { a = {n, 2}; return a[1]--; }
+function rsi11(n) { a = {n, 2}; return a[1]--; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc11(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi11(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return a[1]--; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc11")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return a[1]--; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc11")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc11("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi11("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF a = {n, 2}; return a[1]--; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc11")); }
+if (!is_precompiled("rsc11")) { print("FALLBACK a = {n, 2}; return a[1]--;"); }
+cfunction rsc12(variable n) { s = "t" + n; return ++s; }
+function rsi12(n) { s = "t" + n; return ++s; }
+RG = 5; RGI = 5; a1 = ""; a2 = ""; try { a1 = "" + rsc12(5); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi12(5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF s = 't' + n; return ++s; on 5 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc12")); }
+RG = 0; RGI = 0; a1 = ""; a2 = ""; try { a1 = "" + rsc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF s = 't' + n; return ++s; on 0 -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc12")); }
+RG = "7"; RGI = "7"; a1 = ""; a2 = ""; try { a1 = "" + rsc12("7"); } catch (e) { a1 = "ERR"; } try { a2 = "" + rsi12("7"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + RG) != ("" + RGI)) { rsD++; print("DIFF s = 't' + n; return ++s; on '7' -> [" + a1 + "] vs [" + a2 + "] RG=" + RG + "/" + RGI + " pre=" + is_precompiled("rsc12")); }
+if (!is_precompiled("rsc12")) { print("FALLBACK s = 't' + n; return ++s;"); }
+print("RS DONE diffs " + rsD);

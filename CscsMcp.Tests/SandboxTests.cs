@@ -219,18 +219,16 @@ public class SandboxTests
     [TestMethod]
     public async Task Explain_ReportsWhyAFunctionFallsBack()
     {
-        // An object built inside another constructor's arguments is left to the interpreter.
-        // (A chained comparison played this role until it started compiling.)
-        var outcome = await Explain(
-            "class Box { w = 0; Box(x) { w = x; } function Area() { return w * w; } }\n" +
-            "cfunction double boxOfArea(int n) { b = new Box(new Box(n).Area()); return b.w; }\n" +
-            "print(boxOfArea(3));");
+        // A caught error's Stack is the interpreter's chain of calls, which compiled code keeps no
+        // record of, so the translator refuses it rather than change the answer. (A chained
+        // comparison, a nested "new", then a shift played this role until each started compiling.)
+        var outcome = await Explain("cfunction string where(int n) { try { throw \"bad \" + n; } catch (e) { return e.Stack; } }\nprint(where(3));");
 
         Assert.IsTrue(outcome.Ok, outcome.Error);
-        Assert.AreEqual("9", outcome.Output.Trim());
+        StringAssert.Contains(outcome.Output, "where()");
         var entry = outcome.Precompile!.Single();
         Assert.IsFalse(entry.Compiles);
-        StringAssert.Contains(entry.Reason ?? "", "class instance");
+        StringAssert.Contains(entry.Reason ?? "", "Stack");
     }
 
     /// <summary>

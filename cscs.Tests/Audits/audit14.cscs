@@ -1,0 +1,131 @@
+rcDiffs = 0; rcCompiled = 0; rcTotal = 0;
+cfunction rc1(variable x, int n) { if (n <= 0) { return x; } return rc1(x + 1, n - 1); }
+function ri1(x, n) { if (n <= 0) { return x; } return ri1(x + 1, n - 1); }
+rcTotal++; rcCompiled += is_precompiled("rc1");
+a1 = ""; a2 = ""; try { a1 = "" + rc1(3, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri1(3, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + 1, n - 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc1(0, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri1(0, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + 1, n - 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc1(-2, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri1(-2, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + 1, n - 1); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc1(10, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri1(10, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + 1, n - 1); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc2(variable x, int n) { if (n <= 0) { return x; } return rc2(x + "!", n - 1); }
+function ri2(x, n) { if (n <= 0) { return x; } return ri2(x + "!", n - 1); }
+rcTotal++; rcCompiled += is_precompiled("rc2");
+a1 = ""; a2 = ""; try { a1 = "" + rc2(3, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri2(3, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + '!', n - 1) on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc2(0, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri2(0, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + '!', n - 1) on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc2(-2, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri2(-2, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + '!', n - 1) on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc2(10, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri2(10, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n <= 0) { return x; } return R(x + '!', n - 1) on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc3(int n) { if (n <= 1) { return n; } return rc3(n - 1) + rc3(n - 2); }
+function ri3(n) { if (n <= 1) { return n; } return ri3(n - 1) + ri3(n - 2); }
+rcTotal++; rcCompiled += is_precompiled("rc3");
+a1 = ""; a2 = ""; try { a1 = "" + rc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 1) { return n; } return R(n - 1) + R(n -  on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 1) { return n; } return R(n - 1) + R(n -  on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc3(-2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri3(-2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 1) { return n; } return R(n - 1) + R(n -  on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc3(10); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri3(10); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 1) { return n; } return R(n - 1) + R(n -  on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc4(double d) { if (d < 1) { return d; } return rc4(d / 2); }
+function ri4(d) { if (d < 1) { return d; } return ri4(d / 2); }
+rcTotal++; rcCompiled += is_precompiled("rc4");
+a1 = ""; a2 = ""; try { a1 = "" + rc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (double d) if (d < 1) { return d; } return R(d / 2); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (double d) if (d < 1) { return d; } return R(d / 2); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (double d) if (d < 1) { return d; } return R(d / 2); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc4(-2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri4(-2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (double d) if (d < 1) { return d; } return R(d / 2); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc4(10); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri4(10); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (double d) if (d < 1) { return d; } return R(d / 2); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc5(string s) { if (Size(s) > 5 || s.Length > 5) { return s; } return rc5(s + "x"); }
+function ri5(s) { if (Size(s) > 5 || s.Length > 5) { return s; } return ri5(s + "x"); }
+rcTotal++; rcCompiled += is_precompiled("rc5");
+a1 = ""; a2 = ""; try { a1 = "" + rc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (string s) if (Size(s) > 5 || s.Length > 5) { return s; } ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (string s) if (Size(s) > 5 || s.Length > 5) { return s; } ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc6(int a, int b) { if (b == 0) { return a; } return rc6(b, a % b); }
+function ri6(a, b) { if (b == 0) { return a; } return ri6(b, a % b); }
+rcTotal++; rcCompiled += is_precompiled("rc6");
+a1 = ""; a2 = ""; try { a1 = "" + rc6(3, 4); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri6(3, 4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int a, int b) if (b == 0) { return a; } return R(b, a % b); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc6(0, 4); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri6(0, 4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int a, int b) if (b == 0) { return a; } return R(b, a % b); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc6(-2, 4); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri6(-2, 4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int a, int b) if (b == 0) { return a; } return R(b, a % b); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc6(10, 4); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri6(10, 4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int a, int b) if (b == 0) { return a; } return R(b, a % b); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc7(variable x) { if (x <= 0) { return "done"; } return rc7(x - 1) + ""; }
+function ri7(x) { if (x <= 0) { return "done"; } return ri7(x - 1) + ""; }
+rcTotal++; rcCompiled += is_precompiled("rc7");
+a1 = ""; a2 = ""; try { a1 = "" + rc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7({1, 2}); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7({1, 2}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on {1, 2} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7(-2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7(-2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc7(10); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri7(10); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x) if (x <= 0) { return 'done'; } return R(x - 1) + ' on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc8(variable x, int n) { if (n == 0) { return {}; } r = rc8(x, n - 1); r.Add(x); return r; }
+function ri8(x, n) { if (n == 0) { return {}; } r = ri8(x, n - 1); r.Add(x); return r; }
+rcTotal++; rcCompiled += is_precompiled("rc8");
+a1 = ""; a2 = ""; try { a1 = "" + rc8(3, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri8(3, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n == 0) { return {}; } r = R(x, n - 1); r.Add( on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc8(0, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri8(0, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n == 0) { return {}; } r = R(x, n - 1); r.Add( on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc8(-2, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri8(-2, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n == 0) { return {}; } r = R(x, n - 1); r.Add( on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc8(10, 3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri8(10, 3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) if (n == 0) { return {}; } r = R(x, n - 1); r.Add( on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc9(int n) { if (n > 3) { throw "deep" + n; } return rc9(n + 1); }
+function ri9(n) { if (n > 3) { throw "deep" + n; } return ri9(n + 1); }
+rcTotal++; rcCompiled += is_precompiled("rc9");
+a1 = ""; a2 = ""; try { a1 = "" + rc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n > 3) { throw 'deep' + n; } return R(n + 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n > 3) { throw 'deep' + n; } return R(n + 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc9(-2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri9(-2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n > 3) { throw 'deep' + n; } return R(n + 1); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc9(10); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri9(10); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n > 3) { throw 'deep' + n; } return R(n + 1); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc10(variable x, int n) { return n <= 0 ? x : rc10(x * 2, n - 1); }
+function ri10(x, n) { return n <= 0 ? x : ri10(x * 2, n - 1); }
+rcTotal++; rcCompiled += is_precompiled("rc10");
+a1 = ""; a2 = ""; try { a1 = "" + rc10(3, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri10(3, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) return n <= 0 ? x : R(x * 2, n - 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc10(0, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri10(0, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) return n <= 0 ? x : R(x * 2, n - 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc10(-2, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri10(-2, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) return n <= 0 ? x : R(x * 2, n - 1); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc10(10, 2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri10(10, 2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (variable x, int n) return n <= 0 ? x : R(x * 2, n - 1); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction rc11(int n) { if (n <= 0) { return 0; } return 1 + rh11c(n - 1); }
+function ri11(n) { if (n <= 0) { return 0; } return 1 + rh11i(n - 1); }
+function rh11c(n) { return rc11(n); }
+function rh11i(n) { return ri11(n); }
+rcTotal++; rcCompiled += is_precompiled("rc11");
+a1 = ""; a2 = ""; try { a1 = "" + rc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 0) { return 0; } return 1 + RH(n - 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 0) { return 0; } return 1 + RH(n - 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc11(-2); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri11(-2); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 0) { return 0; } return 1 + RH(n - 1); on -2 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + rc11(10); } catch (e) { a1 = "ERR"; } try { a2 = "" + ri11(10); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { rcDiffs++; print("DIFF (int n) if (n <= 0) { return 0; } return 1 + RH(n - 1); on 10 -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT14 DONE compiled " + rcCompiled + " of " + rcTotal + ", diffs " + rcDiffs);

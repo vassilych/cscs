@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Audits/*.cscs" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../cscs/cscs.csproj" />
     <ProjectReference Include="../Modules/CSCS.Math/CSCS.Math.csproj" />
   </ItemGroup>

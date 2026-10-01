@@ -1,0 +1,426 @@
+class AgShape { name = ""; AgShape(n) { name = n; } function Describe() { return name + " area " + Area(); } }
+class AgCircle : AgShape { r = 0; AgCircle(radius) { name = "circle"; r = radius; } function Area() { return Math.Round(Math.PI * r * r, 2); } }
+class AgCounter { count = 0; function Inc(k) { count += k; return count; } }
+agDiffs = 0; agCompiled = 0; agTotal = 0; agMissing = "";
+cfunction agc1(variable x) { c = new AgCircle(x); return c.Describe(); }
+function agi1(x) { c = new AgCircle(x); return c.Describe(); }
+agTotal++; agCompiled += is_precompiled("agc1"); if (!is_precompiled("agc1")) { agMissing += "c = new AgCircle(x); return c.Describe(); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc1(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi1(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCircle(x); return c.Describe(); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc2(variable x) { c = new AgCounter(); c.Inc(x); return c.Inc(1); }
+function agi2(x) { c = new AgCounter(); c.Inc(x); return c.Inc(1); }
+agTotal++; agCompiled += is_precompiled("agc2"); if (!is_precompiled("agc2")) { agMissing += "c = new AgCounter(); c.Inc(x); return c.Inc(1); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc2(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi2(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.Inc(x); return c.Inc(1); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc3(variable x) { l = {new AgCounter(), new AgCounter()}; l[1].count += x; return l[1].count; }
+function agi3(x) { l = {new AgCounter(), new AgCounter()}; l[1].count += x; return l[1].count; }
+agTotal++; agCompiled += is_precompiled("agc3"); if (!is_precompiled("agc3")) { agMissing += "l = {new AgCounter(), new AgCounter()}; l[1].count += x; return l[1].c | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc3(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi3(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF l = {new AgCounter(), new AgCounter()}; l[1].count += x; ret on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc4(variable x) { c = new AgCounter(); c.count = x; return c.count + 1; }
+function agi4(x) { c = new AgCounter(); c.count = x; return c.count + 1; }
+agTotal++; agCompiled += is_precompiled("agc4"); if (!is_precompiled("agc4")) { agMissing += "c = new AgCounter(); c.count = x; return c.count + 1; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc4(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi4(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF c = new AgCounter(); c.count = x; return c.count + 1; on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc5(variable x) { r = ""; switch (x) { case 1: case 3: r = "small"; break; case "abc": r = "text"; default: r += "dflt"; } return r; }
+function agi5(x) { r = ""; switch (x) { case 1: case 3: r = "small"; break; case "abc": r = "text"; default: r += "dflt"; } return r; }
+agTotal++; agCompiled += is_precompiled("agc5"); if (!is_precompiled("agc5")) { agMissing += "r = ''; switch (x) { case 1: case 3: r = 'small'; break; case 'abc': r | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc5(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi5(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 1: case 3: r = 'small'; break; cas on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc6(variable x) { r = ""; switch (x) { case 0: r += "a"; case 3: r += "b"; break; case "5": r += "c"; } return r; }
+function agi6(x) { r = ""; switch (x) { case 0: r += "a"; case 3: r += "b"; break; case "5": r += "c"; } return r; }
+agTotal++; agCompiled += is_precompiled("agc6"); if (!is_precompiled("agc6")) { agMissing += "r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; break; case ' | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc6(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi6(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = ''; switch (x) { case 0: r += 'a'; case 3: r += 'b'; bre on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc7(variable x) { return Math.Pow(x, 2); }
+function agi7(x) { return Math.Pow(x, 2); }
+agTotal++; agCompiled += is_precompiled("agc7"); if (!is_precompiled("agc7")) { agMissing += "return Math.Pow(x, 2); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc7(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi7(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Pow(x, 2); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc8(variable x) { return Math.Abs(x); }
+function agi8(x) { return Math.Abs(x); }
+agTotal++; agCompiled += is_precompiled("agc8"); if (!is_precompiled("agc8")) { agMissing += "return Math.Abs(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc8(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi8(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Abs(x); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc9(variable x) { return Math.Max(x, 1); }
+function agi9(x) { return Math.Max(x, 1); }
+agTotal++; agCompiled += is_precompiled("agc9"); if (!is_precompiled("agc9")) { agMissing += "return Math.Max(x, 1); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc9(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi9(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Max(x, 1); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc10(variable x) { return Math.Floor(x); }
+function agi10(x) { return Math.Floor(x); }
+agTotal++; agCompiled += is_precompiled("agc10"); if (!is_precompiled("agc10")) { agMissing += "return Math.Floor(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc10(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi10(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Floor(x); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc11(variable x) { return Math.Round(x, 1); }
+function agi11(x) { return Math.Round(x, 1); }
+agTotal++; agCompiled += is_precompiled("agc11"); if (!is_precompiled("agc11")) { agMissing += "return Math.Round(x, 1); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc11(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi11(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Round(x, 1); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc12(variable x) { return Math.Sqrt(x); }
+function agi12(x) { return Math.Sqrt(x); }
+agTotal++; agCompiled += is_precompiled("agc12"); if (!is_precompiled("agc12")) { agMissing += "return Math.Sqrt(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc12(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi12(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Sqrt(x); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc13(variable x) { return Math.Min(x, x); }
+function agi13(x) { return Math.Min(x, x); }
+agTotal++; agCompiled += is_precompiled("agc13"); if (!is_precompiled("agc13")) { agMissing += "return Math.Min(x, x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc13(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi13(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return Math.Min(x, x); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc14(variable x) { return int(x) + 1; }
+function agi14(x) { return int(x) + 1; }
+agTotal++; agCompiled += is_precompiled("agc14"); if (!is_precompiled("agc14")) { agMissing += "return int(x) + 1; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc14(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi14(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return int(x) + 1; on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc15(variable x) { return double(x) * 2; }
+function agi15(x) { return double(x) * 2; }
+agTotal++; agCompiled += is_precompiled("agc15"); if (!is_precompiled("agc15")) { agMissing += "return double(x) * 2; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc15(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi15(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return double(x) * 2; on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc16(variable x) { return string(x) + "!"; }
+function agi16(x) { return string(x) + "!"; }
+agTotal++; agCompiled += is_precompiled("agc16"); if (!is_precompiled("agc16")) { agMissing += "return string(x) + '!'; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc16(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc16(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi16(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return string(x) + '!'; on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc17(variable x) { d = GetVariableFromJson("{\"k\": [1, 2]}"); return d["k"][1] + x; }
+function agi17(x) { d = GetVariableFromJson("{\"k\": [1, 2]}"); return d["k"][1] + x; }
+agTotal++; agCompiled += is_precompiled("agc17"); if (!is_precompiled("agc17")) { agMissing += "d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] + x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc17(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc17(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi17(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF d = GetVariableFromJson('{\'k\': [1, 2]}'); return d['k'][1] on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc18(variable x) { return regex("(\\d+)", "a" + x + "b"); }
+function agi18(x) { return regex("(\\d+)", "a" + x + "b"); }
+agTotal++; agCompiled += is_precompiled("agc18"); if (!is_precompiled("agc18")) { agMissing += "return regex('(\\d+)', 'a' + x + 'b'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc18(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc18(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi18(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF return regex('(\\d+)', 'a' + x + 'b'); on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc19(variable x) { r = x % 2 == 0 ? "even" : "odd"; return r; }
+function agi19(x) { r = x % 2 == 0 ? "even" : "odd"; return r; }
+agTotal++; agCompiled += is_precompiled("agc19"); if (!is_precompiled("agc19")) { agMissing += "r = x % 2 == 0 ? 'even' : 'odd'; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc19(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc19(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi19(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF r = x % 2 == 0 ? 'even' : 'odd'; return r; on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction agc20(variable x) { try { if (x < 0) { throw "neg:" + x; } return Math.Sqrt(x); } catch (e) { return "c:" + e; } }
+function agi20(x) { try { if (x < 0) { throw "neg:" + x; } return Math.Sqrt(x); } catch (e) { return "c:" + e; } }
+agTotal++; agCompiled += is_precompiled("agc20"); if (!is_precompiled("agc20")) { agMissing += "try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x); } catch (e | "; }
+a1 = ""; a2 = ""; try { a1 = "" + agc20(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + agc20(-7); } catch (e) { a1 = "ERR"; } try { a2 = "" + agi20(-7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { agDiffs++; print("DIFF try { if (x < 0) { throw 'neg:' + x; } return Math.Sqrt(x);  on -7 -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT16 DONE compiled " + agCompiled + " of " + agTotal + ", diffs " + agDiffs);
+print("NOT COMPILED: " + agMissing);

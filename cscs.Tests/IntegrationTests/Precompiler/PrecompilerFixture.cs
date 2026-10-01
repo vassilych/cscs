@@ -221,23 +221,20 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             // The translator covers a subset of CSCS. A construct outside that subset must
             // not kill the script: the function is registered as an ordinary interpreted
             // one, and the reason is recorded rather than swallowed.
-            // "===" between a string and a number is the stable example, and unlike the ones
-            // before it this is a fallback by design rather than a gap: the strict form is
-            // false when the types differ, but folding it to a constant is unsafe because of
-            // the undefined cases, so it stays interpreted. try/catch, switch, "**", "===" on
-            // numbers and class fields each played this role until they started compiling.
+            // A caught exception's Stack is the example, and a fallback by design rather than a
+            // gap: it is the interpreter's chain of calls at the throw, which compiled code keeps
+            // no record of. try/catch, switch, "**", "===" on numbers, class fields, "===" between
+            // a string and a number, and then a shift each played this role until they started
+            // compiling.
             SplitAndMerge.Precompiler.ClearFallbacks();
             var result = Process(@"
-                cfunction double tricky(string a) {
-                  if (a === 5) {
-                    return 0;
-                  }
-                  return 512;
+                cfunction string tricky(int a) {
+                  try { throw ""bad "" + a; } catch (e) { return e.Stack; }
                 }
-                tricky(""5"");");
+                tricky(3);");
 
             AssertNoCscsException();
-            Assert.AreEqual(512.0, result.AsDouble(), 1e-9,
+            StringAssert.Contains(result.AsString(), "tricky()",
                 "the fallback should still produce the interpreted result");
             Assert.IsTrue(SplitAndMerge.Precompiler.DidFallBack("tricky"),
                 "an untranslatable cfunction should be recorded as a fallback");
@@ -309,6 +306,122 @@ namespace cscs.Tests.IntegrationTests.Precompiler
                 AotGenerator.Collecting = false;
                 AotGenerator.Clear();
             }
+        }
+
+        [TestMethod]
+        public void Direct_Self_Calls_Only_Where_Nothing_Else_Needs_The_Interpreter()
+        {
+            SplitAndMerge.PrecompileExplainer.Enabled = true;
+            try
+            {
+                Process(@"
+                    function dscHelper(q) { return q * 3; }
+                    cfunction double dscPure(int n) { if (n < 2) { return n; } return dscPure(n - 1) + dscPure(n - 2); }
+                    cfunction double dscCallback(int n) { if (n == 0) { return dscHelper(1); } return dscCallback(n - 1) + 1; }
+                    cfunction double dscTextRoute(int n) { if (n == 0) { return dscHelper(""a""); } return dscTextRoute(n - 1); }
+                    cfunction double dscDefault(int n, int step = 1) { if (n <= 0) { return 0; } return 1 + dscDefault(n - step); }
+                    cfunction double dscGlobal(int n) { if (n == 0) { return dscGlobalValue; } return dscGlobal(n - 1); }
+                    1;");
+            }
+            finally
+            {
+                SplitAndMerge.PrecompileExplainer.Enabled = false;
+            }
+            AssertNoCscsException();
+
+            string Code(string name) =>
+                SplitAndMerge.PrecompileExplainer.Reports.Last(r => r.FunctionName == name).CSharpCode ?? "";
+
+            // Every value dscPure returns is a number, so its calls to itself are typed both ways.
+            StringAssert.Contains(Code("dscPure"), "dscPure__numdirect(__interpreter, CscsDirect.Int(");
+            StringAssert.Contains(Code("dscPure"), "public static double dscPure__numbody(");
+            Assert.IsFalse(Code("dscPure").Contains("CscsCalls.Call"));
+            // A call with values to a script function needs no frame of the caller's -- a CSCS
+            // function cannot see its caller's locals -- so it stays an ordinary call and the
+            // recursion around it is still direct.
+            StringAssert.Contains(Code("dscCallback"), "dscCallback__direct(__interpreter, CscsDirect.Int(");
+            StringAssert.Contains(Code("dscCallback"), "CscsCalls.Call(__interpreter, \"dscHelper\"");
+            // The text route names the caller's values, a default is bound by the interpreter, a
+            // global is read from it: the frames matter.
+            Assert.IsFalse(Code("dscTextRoute").Contains("__direct"));
+            Assert.IsFalse(Code("dscDefault").Contains("__direct"));
+            Assert.IsFalse(Code("dscGlobal").Contains("__direct"));
+        }
+
+        [TestMethod]
+        public void Direct_Recursion_Stops_Where_The_Interpreter_Stops()
+        {
+            var saved = SplitAndMerge.InterpreterSecurity.MaxCallDepth;
+            SplitAndMerge.InterpreterSecurity.MaxCallDepth = 100;
+            try
+            {
+                Process(@"
+                    cfunction double depthC(int n) { if (n == 0) { return 0; } return 1 + depthC(n - 1); }
+                    function depthI(n) { if (n == 0) { return 0; } return 1 + depthI(n - 1); }
+                    1;");
+                for (int n = 90; n <= 110; n++)
+                {
+                    var compiled = Process("try { r = depthC(" + n + "); } catch (e) { r = \"err:\" + e; } r;").AsString();
+                    var interpreted = Process("try { r = depthI(" + n + "); } catch (e) { r = \"err:\" + e; } r;").AsString();
+                    Assert.AreEqual(interpreted, compiled, "depth " + n);
+                }
+                var deep = Process("try { r = depthC(5000); } catch (e) { r = \"err:\" + e; } r;").AsString();
+                StringAssert.Contains(deep, "Recursion too deep");
+            }
+            finally
+            {
+                SplitAndMerge.InterpreterSecurity.MaxCallDepth = saved;
+            }
+            AssertNoCscsException();
+        }
+
+        /// <summary>
+        /// Every operator, in a value and in a condition, and every truth test, compiled and
+        /// interpreted over each kind of value an untyped argument can hold. This matrix is what
+        /// found "x == y" comparing references, "&&"/"||" giving 1 or 0 where the interpreter gives
+        /// the left value, lists being false in a condition, and "!text" giving 0 -- none of which
+        /// the construct fixture, written one shape at a time, had covered.
+        /// </summary>
+        [TestMethod]
+        public void Operators_And_Truth_Agree_With_The_Interpreter_For_Every_Kind_Of_Value()
+        {
+            var values = new[] { "3", "\"abc\"", "\"5\"", "{1, 2}", "0", "2.5" };
+            var binary = new[] { "+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "&&", "||", "===", "!==", "**" };
+            var conditional = new[] { "<", ">", "==", "!=", "&&", "||", "===", "!==" };
+            var unary = new[] {
+                "if (x) { return \"T\"; } return \"F\";",
+                "if (!x) { return \"T\"; } return \"F\";",
+                "r = !x; return r;",
+                "return x ? \"T\" : \"F\";",
+            };
+            var script = new System.Text.StringBuilder("opDiffs = \"\";\n");
+            int k = 0;
+            void Case(string signatureArgs, string callArgs, string body, string label)
+            {
+                k++;
+                script.Append("cfunction opc" + k + "(" + signatureArgs + ") { " + body + " }\n");
+                script.Append("function opi" + k + "(" + signatureArgs.Replace("variable ", "") + ") { " + body + " }\n");
+                script.Append("try { c = \"\" + opc" + k + "(" + callArgs + "); } catch (e) { c = \"ERR\"; }\n");
+                script.Append("try { i = \"\" + opi" + k + "(" + callArgs + "); } catch (e) { i = \"ERR\"; }\n");
+                script.Append("if (c != i) { opDiffs += \"" + label.Replace("\"", "'") + " -> \" + c + \" vs \" + i + \"; \"; }\n");
+            }
+            foreach (var op in binary)
+                foreach (var a in values)
+                    foreach (var bv in values)
+                        Case("variable x, variable y", a + ", " + bv, "r = x " + op + " y; return r;", a + " " + op + " " + bv);
+            foreach (var op in conditional)
+                foreach (var a in values)
+                    foreach (var bv in values)
+                        Case("variable x, variable y", a + ", " + bv,
+                             "if (x " + op + " y) { return \"T\"; } return \"F\";", "if " + a + " " + op + " " + bv);
+            foreach (var body in unary)
+                foreach (var a in values)
+                    Case("variable x", a, body, body + " on " + a);
+            script.Append("opDiffs;");
+
+            var result = Process(script.ToString());
+            AssertNoCscsException();
+            Assert.AreEqual("", result.AsString(), "compiled and interpreted disagree: " + result.AsString());
         }
 
         void AssertNoCscsException()

@@ -6,6 +6,19 @@ compiled delegate instead of interpreting. This document covers how that works a
 [Compiling Scripts to Get Compiled-Language Performance](https://www.codemag.com/Article/2001071/Compiling-Scripts-to-Get-Compiled-Language-Performance);
 what follows is what changed.
 
+**Where it stands (September 2026).** The coverage fixture compiles 1310 of its 1315 constructs;
+1 falls back to the interpreter by design (`var` after a read of the same name), and none gives a
+different result compiled. Measured on real code re-declared as `cfunction`s: all 468 of this
+repository's functions, all 488 with untyped arguments, and 554
+of 566 from the author's other CSCS projects (mobile, MAUI and web) -- of the 12 left there, 8 are
+an artifact of loading all those projects together, 3 a host-defined keyword (`dloc`), and one a
+caught exception's `Stack`. Generated differential audits -- about 720 shapes of operators, members, built-ins, statements,
+calls, control flow, globals, recursion, steps and truth values over up to fourteen kinds of value
+-- run with no difference between compiled and interpreted. At the end of September 2026 the
+interpreter itself changed in several places (one truth rule, `&&`/`||` as 1 or 0, compounds as
+`x = x op y`, `finally`, shifts, typed parameters, text indexing; see the last section), and the
+compiled side was brought to the same answers. The sections below say how each part got there.
+
 ## The compiler backend is Roslyn, not CodeDom
 
 `Precompiler.Compile()` used `CSharpCodeProvider.CompileAssemblyFromSource` from
@@ -1057,8 +1070,8 @@ backend works at all, that compiled and interpreted results agree, that compile 
 reported with detail, and that the AOT registry short-circuits code generation.
 
 `Scripts/Samples/test_compiled.cscs` and `Scripts/Samples/test.cscs` are the broader
-regression: 987 assertions in test_compiled.cscs and 626 in test.cscs. Run them with a
-second argument so the debugger server stays off:
+regression: 1259 assertions in test_compiled.cscs and 715 in test.cscs (September 2026). Run
+them with a second argument so the debugger server stays off:
 
 ```bash
 dotnet run --project CscsScript/CscsScript.csproj -- Scripts/Samples/test_compiled.cscs nodebugger
@@ -1068,16 +1081,23 @@ dotnet run --project CscsScript/CscsScript.csproj -- Scripts/Samples/test.cscs n
 The two together are the script-level regression suite. `test_compiled.cscs` holds every
 `cfunction` case -- each written twice where it can be, once compiled and once interpreted,
 with the two results compared -- and `test.cscs` keeps the tests of the language itself and
-declares no `cfunction` at all. A clean run is 987 assertions in test_compiled.cscs and 626 in
-test.cscs, 1613 together, with no
-"ERROR. Test failed" and a "Finished." at the end of each.
+declares no `cfunction` at all. A clean run is 1259 assertions in test_compiled.cscs and 715 in
+test.cscs, 1974 together, with no "ERROR. Test failed" and a "Finished." at the end of each.
 
 Each file ends by printing its own totals, so the count no longer has to be grepped:
 
 ```
-test_compiled.cscs: 534 OK, 0 Failed, 534 total.
-test.cscs: 534 OK, 0 Failed, 534 total.
+test_compiled.cscs: 1259 OK, 0 Failed, 1259 total.
+test.cscs: 715 OK, 0 Failed, 715 total.
 ```
+
+The coverage fixture (`PrecompilerCoverageFixture.cs`) translates every construct it lists as a
+`cfunction`, runs it next to the same body interpreted, and fails on any difference ("broken") or
+on a listed construct that stops compiling. Its report ends with the running total, e.g.
+`compiled=1310  fallback=1  broken=0  total=1315`.
+
+The per-round "Coverage after this round" lines further down are a history: each records the
+fixture at the end of that round.
 
 `test()` in `Scripts/Samples/functions.cscs` keeps the counts and prints the summary
 (`testSummary`). A failing test throws by default, which `Scripts/Samples/stepin_tests.cscs`
@@ -1296,6 +1316,15 @@ stays the reference the coverage fixture compares against.
   refused. Nested iffs and iff inside arithmetic compile.
 - **`p = c ? new A(..) : new B(..);`** (`RewriteTernaryNew`) becomes the `if`/`else` it means.
   The translator builds an instance only as the whole right-hand side of an assignment.
+- **`if ((v = X) > 5)`** (`RewriteIfAssignment`) becomes `v = X; if ((v) > 5)` -- exact for an
+  `if` (its condition runs once, and the grouped assignment is its first operand), never for
+  `else if` or `while`. Seen only inside the condition, a number assigned there and text assigned
+  in the block declared the local a string (CS0029); as a plain statement it is one of the
+  local's assignments, and disagreeing ones already make it a `Variable`.
+- **`new A(new B(..).Sum(), ..)`** (`RewriteNestedNew`) hoists the inner instance into a
+  temporary (`__newArgN = new B(..);`) ahead of the statement. Exact only when nothing before it
+  runs anything -- an assignment target or `return`, then arguments that are literals or plain
+  names -- and never in a condition or loop header.
 - **`continue` inside a `switch`** is no longer refused: the switch's `do { } while (false)`
   wrapper would capture it, so `RedirectContinue` turns each one that belongs to the loop around
   the switch into `{ __swContN = true; break; }`, and `if (__swContN) { continue; }` follows the
@@ -1316,11 +1345,1246 @@ inside text, so `switch (n) { case 1: switch (m) { ... default: t += 50; } break
 name such as `cases` could be taken for a label too. It now matches only a whole word at the
 switch's own level, outside quotes. test.cscs pins it (`swNested`, `swText`, `swLoopContinue`).
 
-Coverage after this round: 913 of 933 constructs compile, 20 fall back, 0 diverge (it was 882
-of 906). The playground's language guide used `1 < n < 10` as its fallback example; it uses an
-object built inside another constructor's arguments now.
+Coverage after this round: 926 of 944 constructs compile, 18 fall back, 0 diverge (it was 882
+of 906). The playground's language guide used `1 < n < 10` as its fallback example, then a nested
+`new`; both compile now, and it shows `n << 2`, a refusal by design.
+
+### Measured against real code, and what that found
+
+The fixture's constructs are written to exercise the translator; the scripts in `Scripts/` were
+written to be used. A probe harness (explain mode, one definition at a time) translated every
+`cfunction` in them with its real signature -- 468, nearly all in `test_compiled.cscs`, with the
+globals they read defined first: **460 compile**. Of the 8 left, 4 are fallbacks kept on
+purpose (`===` across types, `return` inside `try` with a `finally`, `Tier.Type`,
+`Math.Max((q = n * 2), 5) + q`) and 4 are open: bool arithmetic (`(c = n > 5) * 10`), a
+comparison with `null` inside arithmetic, a member chained off a call (`head.Kid().tag.Upper`),
+and `&&` whose left side is a call returning a number. (Every plain `function` in the scripts, re-declared as a
+`cfunction` with `variable` parameters, compiles 341 times out of 488; that number mostly
+measures how much a script leans on untyped values, and is not a target.)
+
+Two shapes it found, both fixed:
+
+- **A member read off an element as a new local's first value** -- `r = pts[1].Sum()`,
+  `r = mp["k"].Sum()`, `r = pts[0].x + pts[0].y`. The element branch of the expression builder,
+  which turns these into `Variable.CallMethod(pts[1], "Sum")` and `pts[0].GetProperty("x")`,
+  runs only for a known expression, and `TryBuildVariableLocalAssignment` did not ask for one:
+  the member went out as C# on a `Variable` (CS1929, CS1061), while `r += pts[1].Sum()` and
+  `return pts[1].Sum()` compiled. It sets the flag for a value that reads a member off a
+  subscript. `elemwrite_assign_read_keep` compiles since.
+- **`for (q in c)` and `catch (e)` over a local the function already holds.** CSCS rebinds it --
+  after the loop `q` holds the last element, after the catch `e` holds the message -- and C#
+  refused the second declaration (CS0136). The loop and the catch now assign instead of
+  declaring when the name was first assigned at the function's top level (so its declaration is
+  in scope; a name first declared in another block is not, which is why "skip the declaration
+  when the name is known" failed when it was tried before), and a `catch` variable the function
+  also assigns elsewhere is a `Variable` local, as a loop variable already was.
+
+Coverage after this round: 937 of 954 constructs compile, 17 fall back, 0 diverge.
+
+### Truth values, comparisons as numbers, and member paths (September 2026)
+
+Four of the real-code gaps above, three of them closed:
+
+- **A script call's result beside `&&` / `||`** -- `n > 1 && helper(n)`, `helper(n) || n > 1`,
+  `return helper(n) && n > 1`. The call yields a `Variable` (or, hoisted, a `__varTempVarN`
+  read with `.AsDouble()`), and C# has no truth value for either (CS0019). Each builder that
+  emits a condition would need its own fix, so `TruthTestLogicalOperands` runs once over the
+  finished C#: in every `if (...)` / `while (...)`, and in a `Variable.ConvertToVariable(...)`
+  that joins terms with `&&` or `||`, such a term becomes `CscsConvert.IsTrue(...)` (`IsFalse`
+  under `!`) -- the interpreter's test, where `AsDouble` would have called the text "5" true.
+  It cannot touch code that compiled: C# rejects both shapes.
+- **`r += (c = n > 5) * 10`**: the bool-group hoist (`TryHoistBoolGroupAssignment`) ran after
+  the compound builders, which copied the group through as a C# bool. It runs before them now.
+- **A comparison used as a number** -- `(n > 2) * 10`, `"v=" + (n > 2)`, `t += (n != 1)`,
+  `c += (i % 3 == 0)`. `RewriteComparisonsAsNumbers` turns a parenthesised single comparison
+  beside arithmetic into `(n>2?1:0)`, the number CSCS makes of it; whitespace is gone by then,
+  so `return(` and `throw(` are keywords, not calls. **Not against `null`**: the first version
+  compiled `(m["a"] == null) * 10` to 0 where the interpreter says 10 -- inside a ternary's
+  condition `== null` is a C# reference test, not the empty-text rule -- and the fixture caught
+  it (`cmpnum_null_keep` stays interpreted).
+- **A member path after a method call** -- `p.Kid().tag.Upper`, `.Length`, `.kid.v`. The chain
+  builder accepted one member after the call; a second went out verbatim (CS1061). It takes a
+  path now, and the last segment is spelt as Variable spells it (`upper` -> `Upper`).
+
+Coverage after this round: 955 of 973 constructs compile, 18 fall back (one of them the null
+guard above), 0 diverge; 463 of the scripts' 468 `cfunction`s compile.
+
+### A Variable against text: repaired from Roslyn's own diagnostics (September 2026)
+
+`if (request == "stock")` on a `variable` argument, `m["k"] == "abc"`, `p.tag != "t"`, `"b" < s`:
+C# has no `==` or `<` between a Variable and a string or a bool (CS0019). An operator on
+Variable is **not** the fix -- a `(Variable, string)` overload would capture every `x == null`
+in the interpreter itself (see "Known limit" above) -- and neither is patching each builder
+that emits a comparison. Instead, when a compile fails with CS0019,
+`RoslynCompiler.RepairOperators` asks Roslyn which expressions they are: for each CS0019 whose
+span is a comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`) with a Variable operand, per the
+semantic model, the expression becomes `CscsOps.Compare(__interpreter, left, "op", right)`, and
+the code is compiled again (up to four rounds, for nested cases). `CscsOps.Compare` hands both
+values to `Parser.MergePair`, a thin entry into `MergeCells` -- the interpreter's own
+operator, so its answer is the script's by construction; a C# null becomes CSCS's null (the
+empty value) and a C# bool the number 1 or 0. `Precompiler.Compile` and explain mode both
+repair; only code that failed to compile is ever touched. The fixture pins number-versus-text
+(`5 == "5"` is 1, `5 == "5.0"` is 0), text ordering, `!=` under `elif`, map elements, fields and
+characters of a string.
+
+**Locals fed by a `variable` argument** are Variables too: `x = n + 1`, `a1 = n`, `y = n * 3`,
+and a loop counter started from one (`for (i = n; i > 0; i--)`). `CollectVariableLocals` seeds
+its fixed point with those arguments, as it does with loop variables; such a counter is
+declared `Variable`. A `variable` argument can hold text, and the fixture passes text as well as
+numbers: `"3" + 5` is `"35"`, `"ab" * 3` is `"ab3"`, exactly as interpreted.
+
+Coverage after this round: 974 of 992 constructs compile, 18 fall back, 0 diverge. The scripts'
+own 468 `cfunction`s: 463. Their 488 plain functions re-declared with `variable` parameters:
+367 (341 before the last three rounds).
+
+### Strict comparison through the interpreter, and Math in any case (September 2026)
+
+- **`===` / `!==` beyond two strings or two numbers** -- `s === 5`, a `variable` argument, a
+  map element -- used to be refused: folding a mixed pair to `false` is unsafe because of the
+  undefined cases. It now compiles to `Variable.SameValue(left, right, "===")`, an overload that
+  hands both values to `Parser.MergePair`, the interpreter's own merge, so the undefined cases
+  are the interpreter's too. (Kept under the `SameValue` name, which the translator already
+  treats specially: its arguments stay Variables.) `strict_mixed` and `strict_elem_keep`, kept
+  on purpose until now, compile and agree; the fixture adds same-type and mixed pairs both ways
+  round. The fallback test's stable example moves on again, to `n << 2`.
+- **`Math.round`, `Math.sqrt`, `Math.abs`, `math.Pow`**: CSCS names are case-insensitive, and
+  the translator passed the script's spelling to C#. `CanonicalMathMember` looks the member up
+  in System.Math ignoring case.
+- **Not done, on purpose: a Variable passed to a Math function.** The interpreter's Math
+  functions disagree on text -- `Math.Sqrt` reads the raw numeric field, `Math.Round` parses the
+  text with `AsDouble`, and both hand back the argument's own Variable, so a text argument stays
+  text-typed -- so no single C# conversion can reproduce them for a value whose type is only
+  known at run time.
+
+Coverage after this round: 983 of 999 constructs compile, 16 fall back, 0 diverge. The scripts'
+468 `cfunction`s: 464 -- the four left are `return` inside `try` with a `finally`, `Tier.Type`,
+`Math.Max((q = n * 2), 5) + q` (all kept on purpose) and the `null`-in-arithmetic guard.
+
+### Hoisting, folding, and five kept cases compiled (September 2026)
+
+- **A grouped assignment evaluated first in a plain or `return` statement** --
+  `helper((q = n * 2)) + q`, `Math.Max((q = n * 2), 5) + q`, `(b = n > 2) + (c = n > 1) + b + c`
+  -- becomes a statement of its own (`LeadingGroupsHoisted`, beside the `if` form). Exact because
+  CSCS evaluates left to right and nothing ahead of the group may observe it: no `)` (a completed
+  call or group), no `?`, `&&`, `||`, `++`, `--`, and no read of the name. `grpasg_in_call_keep`,
+  `retasg_call_keep` and `boolgrp_twice_keep` compile; `t + (t = 5) + t` and
+  `helper(q) + (q = 5) + q` are left to the other paths, and agree.
+- **Text times an integer literal** is folded: `"ab" * 2` is `"ab2"`, `2 * " ab "` is `"2ab"`
+  (MergeStrings joins the trimmed texts) -- `RewriteTextTimesNumber`, only where no `*`, `/`, `%`
+  or `**` beside the pair could regroup it, so `4 * "ab" * 2` stays interpreted. `str_mult_loop`
+  compiles.
+- **`e[0][0].v`**: `ElementMethodCallFollows` skips further subscripts before the member, as the
+  expression path it hands over to already did. `elemwrite_nested_read_keep` compiles.
+- **`null == null`** is `Variable.SameValue(null, null, "==")` -- the three-argument form maps a C#
+  null to the interpreter's, and answers 1 as the interpreter does. `nullcmp_both_keep` compiles.
+
+Coverage after this round: 1000 of 1011 constructs compile, 11 fall back, 0 diverge. The scripts'
+468 `cfunction`s: 465 -- the three left are `return` inside `try` with a `finally`, `Tier.Type`
+(both kept on purpose) and the `null`-in-arithmetic guard.
+
+### Untyped arguments, `var`, and argument spelling (September 2026)
+
+Measured by re-declaring the scripts' 488 plain functions as `cfunction`s with every argument
+`variable` -- the untyped code a script writer gets by just adding the `c`. That probe went from
+379 to 393; the 468 real `cfunction`s stayed at 465, and none that compiled before stopped.
+
+- **Argument names in any case.** The signature parser lowercases the names (`stepby`) while the
+  body keeps the script's spelling (`stepBy`, `StepBy`), and the interpreter takes them as one
+  name. The translator's argument maps are case-blind now, and `NormalizeArgSpelling` spells
+  every mention of an argument as the signature does (not inside strings, not after a `.`), so
+  the C# local has one spelling. Before, `r[0] = initValue`, `x = initValue + 1` and a
+  reassigned `stepBy` were CS0103/CS0841.
+- **A default keeps its case.** `cfunction h(string s = "HeLLo")` answered `hello`: the whole
+  argument, default included, was lowercased (`Utils.GetCompiledFunctionSignature`). An
+  interpreter-side bug, fixed there; a plain function always kept `HeLLo`.
+- **`var x = v`** declares a local that hides a global of the same name; the global is left
+  alone. `RewriteVarDeclarations` drops the `var` and records the name, which keeps it out of
+  every global path (`IsInterpreterVariable`) and publishes it for callbacks at the function's
+  own level (`AddCompiledLocalOnlyVariable` -- through `AddCompiledLocalVariable` the callback
+  write-back overwrote the global, which the fixture caught as a divergence). Only when the
+  declaration is the name's first mention -- `t = gcount; var gcount = 2` still reads the global
+  first and falls back -- and never for `var E = Enum {...}`, which has its own builder.
+- **Members of a `variable` argument.** `t = s.Substring(1, 3)`, `s.Replace(..)` went out with the
+  bare name, which only the callback path declares; they now take the Variable-member mapping a
+  local holding a Variable already had. An empty call on a property -- `s.Upper()`, `a.Size()`,
+  `v.Length()` -- drops the `()` as the interpreter does (`GetCoreProperty`); `.Upper()` on a
+  Variable was CS1955.
+- **A loop counter bounded by a `variable` argument stays a number.** A `for` header's condition
+  reaches the widening pass as a statement of its own, and `i<=n` split on `=` read as `i = n`,
+  so `for (i = 1; i <= n; i++)` made `i` a Variable that `i = 1` could not initialise (CS0029).
+  `IsComparisonAt` now tells `<=`, `>=`, `!=` from an assignment there and in `AssignedName`.
+  The start-from-an-argument rule also looked at the whole header instead of the initializer,
+  and no longer widens a counter started from a plain call, which the header reads as a number.
+  A text bound -- `n` = `"3"` -- agrees with the interpreter.
+
+Left: an assignment inside a condition whose value is a `variable` argument
+(`while ((x = n - t) > 2)`, `while ((t = t - 1))`) and Math functions over one; both fall back
+with the right answer. Compiling the first would mean trusting Variable's C# arithmetic to match
+the interpreter's, which nothing checks yet.
+
+Coverage after this round: 1027 of 1039 constructs compile, 12 fall back, 0 diverge.
+
+### Collection literals, member calls on untyped arguments, braced cases (September 2026)
+
+The untyped probe now defines the globals the scripts' functions read (as the real-code probe
+always did), so what is left in it is the translator's: 423 of 488 with them, 438 after this
+round. The 468 real `cfunction`s stay at 465.
+
+- **A collection literal as a whole return value or a ternary branch.** The tokenizer cuts a
+  statement at every brace, so `return {7, 8, 9}` reached C# as a return and then a block
+  holding `7,8,9;`, and `a = n > 0 ? {1, 2} : {4}` as a statement ending at the `?`.
+  `RewriteBraceLiterals` rewrites them into shapes that compile: `__litN={..};return __litN`, and
+  the if/else that runs only the branch the ternary picks (as `RewriteTernaryNew` does for
+  `new`). A brace is a literal after `=`, `?`, `:` (not a `case` label), `(`, `,`, `[` or
+  `return`.
+- **Member calls on a `variable` argument that Variable has no C# member for** -- `s.At(1)`,
+  `s.Equals("x", "no_case")`, `w.Trim()` -- go to the interpreter, which is exact: every one of
+  those reads its arguments by parsing script text, so no values-based helper could match it.
+  As a whole assigned value the ordinary callback path already did this, once the Variable-local
+  builder stepped aside (`IsUnmappedMemberCallOnVariable`); inside an expression or an `if`,
+  `RewriteVariableMemberCalls` first moves the call into `__mcN=..;` ahead of the statement.
+  That is exact only where nothing before the call can run code, so it applies to plain,
+  `return` and `if` statements with no `(`, `&&`, `||`, `?`, `++` or `--` ahead of the call.
+  (Widening `HoistConditionCalls` to member calls instead cost fourteen constructs once before.)
+- **`Substring` with Variable positions** -- `s.Substring(n - 1, n + 1)` with `n` untyped -- has
+  `Variable` overloads that read the positions through `Utils.GetSafeInt`, as the interpreter
+  does; a text position `"2"` agrees.
+- **Braced case bodies and locals first assigned in a case.** `case 1: { t = 5; break; }` is
+  `case 1: t = 5; break;` (`RewriteCaseBlocks`, only when the block runs to the next label or the
+  end of the switch). A local first assigned inside a case was never declared for the function
+  (CS0103): the label reaches the block analysis glued to the statement (`case 1:t=5`), so it
+  saw no assignment. `WithoutCaseLabel` strips it there and in the typing pass.
+
+Left: a member call on a *local* that holds a Variable (`v = s; v.At(1)`) -- the local's kind is
+only known after the source passes have run; the truth value of an untyped argument in `&&`
+(`if (s && n > 1)`); `word.Upper > "AA"`. `Scripts/Samples/stepin_tests.cscs` line 75 is missing
+a `;` after `print(..)`, which the interpreter tolerates and the translator does not (it falls
+back).
+
+Coverage after this round: 1053 of 1065 constructs compile, 12 fall back, 0 diverge.
+
+### Math over untyped values, and truth values repaired from Roslyn (September 2026)
+
+Untyped probe 438 -> 457 of 488; the 468 real `cfunction`s stay at 465, none lost.
+
+- **Math over a Variable runs the interpreter's own Math function.** Kept interpreted until now,
+  because each built-in reads a Variable its own way (`Sqrt` takes the numeric field, so
+  `Math.Sqrt("16")` is 0; a truth value is 1) and C#'s `Math` takes numbers. The built-ins parse
+  their arguments from script text, so `CscsCalls.Builtin` publishes cloned values under
+  temporary names at the function's own level and runs the call the way every interpreter
+  callback runs; the answer is the interpreter's by construction. The interpreter hands a
+  built-in copies of its arguments (checked: `y = Math.Sin(x)` leaves `x` alone), which the
+  clones preserve. Built as the whole value of an assignment (`TryBuildMathOnVariable`), and
+  hoisted there from inside an expression, a `return` or an `if` by the member-call hoist --
+  flat arguments only: `Math.Max(Math.Abs(n - 10), 5)` keeps the path it had.
+- **A Variable where C# wants a bool** -- `if (flag)` on a global, `s && n > 1`, `!v` -- is
+  repaired after the fact from Roslyn's own diagnostics, as comparisons already were
+  (`RepairOperators`): CS0029 on an `if`/`while`/`do`/`for` condition and CS0019 on an `&&`/`||`
+  operand become `CscsConvert.IsTrue(..)`, CS0023 on `!` becomes `CscsConvert.IsFalse(..)` --
+  the truth value every other term of a condition already gets: a number that is not 0, never
+  text. `if (gcount)` did not compile even in a fully typed function before.
+
+Coverage after this round: 1076 of 1090 constructs compile, 14 fall back, 0 diverge.
+
+### A Math name the script owns, and operators C# lacks (September 2026)
+
+- **Fixed a silent divergence.** A bare Math name -- `abs(n)`, `max(a, b)`, `round(x)` -- was
+  mapped to `System.Math` through reflection even where the script defines a function of that
+  name, which the interpreter calls. With `function abs(x) { return x + 100; }`, `abs(-5)` was
+  95 interpreted and 5 compiled. The names the script has functions for (or the function being
+  translated) are now recorded when translation starts and `IsMathFunction` declines them, so the
+  call goes to the script's function. A bare Math name with no such function still maps to
+  `System.Math` -- the interpreter has none of those names built in, so there compiled code does
+  what the interpreted one cannot, as it always has. `test_compiled.cscs` pins it.
+- **Operators C# has no overload for** are applied by the interpreter, repaired from Roslyn's
+  diagnostics like comparisons: `(n | 4) ^ 1` and the other arithmetic and bitwise operators on a
+  Variable (`CscsOps.Apply`, i.e. `Parser.MergeCells`), never with a C# `bool` operand, which may
+  be C#'s own reference test of a Variable against null -- the old `null` divergence. Text
+  ordered against text (`w.Upper > "AA"`) takes the comparison repair; text against a Variable
+  (`best.CompareCscs(w)`) compares the `AsString()` forms, as the interpreter does.
+- **`**` over a Variable.** `TryRewritePower` emits `Math.Pow` as before when neither operand can
+  hold a Variable, and otherwise a marker the Math mapping turns into `CscsOps.Power`: `Math.Pow`
+  for two numbers, the interpreter's merge for anything else (`"3" ** 2` throws the interpreter's
+  own "Can't process operation [**] on strings"). Not the `Math.Pow` built-in, which reads text
+  as 0. A callback by that name is refused at translation, so a path that would send it to the
+  interpreter by name falls back instead of failing at run time.
+- **Nested Math over a Variable** -- `Math.Max(1, Math.Min(n, 5))` -- is nested
+  `CscsCalls.Builtin` calls, innermost first, as the interpreter runs them.
+
+Untyped probe 457 -> 465 of 488; real `cfunction`s 465 of 468; `test_compiled.cscs` 1002.
+Coverage after this round: 1088 of 1102 constructs compile, 13 fall back, 0 diverge (one more
+construct, `"3" ** 2`, throws the same error both ways and has no value to compare).
+
+### The untyped probe, finished (September 2026)
+
+- **Math over any Variable**, not only an untyped argument -- `b = n > 1; Math.Max(b, 5)`, a loop
+  element, a map element: Roslyn's CS1503 on a `System.Math` call with a Variable argument is
+  repaired into `CscsCalls.Builtin`, the interpreter's own function (checked to exist before it
+  is written; never with a C# `bool` argument).
+- **A local first assigned inside a condition from a Variable** -- `while ((x = n - t) > 2)`,
+  `if ((y = n * 2) > 5)`, `while ((t = t - 1))` -- is declared a Variable, and its reads and
+  writes take the Variable paths. Text values included.
+- **`e.type != "NUMBER"` on an untyped argument** compares the VarType's name, which is the text
+  the interpreter's `.type` answers (checked for numbers, text, arrays and maps).
+  `garr.size` on a global takes the member's canonical spelling.
+- **Text members given an untyped argument** -- `w.StartsWith(p)`, `w.IndexOf(p)`,
+  `w.Replace(p, "-")`, and the same on a typed string -- read it as text, as `GetSafeString`
+  does. `t = s.At(n - 1)` is no longer taken for a known expression.
+
+The untyped probe stands at 479 of 488. The nine left: three calls to `GetVariableFromJSON` and
+one to `WebRequest` (a module the probe does not load), a default-argument list the probe
+generator mangled, the missing `;` in `stepin_tests.cscs`, and the three kept on purpose --
+`return` inside `try` with a `finally`, `Tier.Type`, the `null`-in-arithmetic guard -- which are
+also the three of the 468 real `cfunction`s that do not compile.
+
+Coverage after this round: 1108 of 1121 constructs compile, 12 fall back, 0 diverge.
+
+### Calls with values, not text
+
+A call from compiled code to a CSCS function -- another `cfunction`, a plain function, or itself
+-- used to go through text: publish the caller's arguments to the interpreter, build the
+argument list as a string (`"n-1"`), have the interpreter parse it and find the function by
+name. `GetCSCSFunction` now evaluates plain arguments in C# and calls the function's `Run`
+through `CscsCalls.Call`, which the inline form in `&&`/`?:`/loop conditions already used. `Run`
+is the one an interpreted call reaches too, so the argument frame, `PrepareArgs`' conversions
+and the call-depth guard are unchanged. The function being translated is recognised by name,
+since it is not registered yet. Text arguments (their quotes are already escaped for the text
+route by then), named arguments and collection literals keep the text route. Recursive `fib`,
+Release build, M1 Pro: `fib(20)` 90 ms -> 27 ms (the interpreter takes about 400), `fib(30)`
+10.2 s -> 2.2 s. What remains per call is `RegisterArguments`, `PrepareArgs` and the
+`Variable` boxing; a typed direct call between compiled functions would remove those too.
+
+### Typed direct calls (September 2026)
+
+The next step "Calls with values" named. A compiled function whose body needs nothing of the
+interpreter's and whose arguments are all scalars (`int`, `double`, `string`, `variable`) is split
+in three by `MakeDirectSelfCalls`: the entry point the interpreter calls keeps its signature and
+only unpacks the argument lists; `NAME__body` is the body with typed parameters; `NAME__direct`
+counts the depth and calls the body. After compiling, `NAME__direct` is kept as a typed delegate
+(`Precompiler.Direct`).
+
+- **A call to itself** goes to `NAME__direct` with the arguments converted as `PrepareArgs` converts
+  them (`CscsDirect.Int/Num/Text/Var`: a double truncates to an int, anything else through the
+  interpreter's own `AsInt`/`AsDouble`/`AsString`).
+- **A call to another compiled function** is `CscsDirect.Call(__interpreter, "name", (Func<..>)null,
+  args, (d, i, ..) => d(i, converted args))`. The name is looked up on every call, as the
+  interpreter looks it up -- a function redefined since, as a script function or a compiled one
+  with other types, is what runs (pinned in `test_compiled.cscs`) -- and only when it is a
+  compiled function with a typed entry point of exactly that type does the typed path run; any
+  other gets the interpreter's call with the values as they were. The lookup is a plain
+  dictionary read of the registered function (`Interpreter.GetRegisteredFunction`, the name
+  converted at translation), not `GetFunction`, whose `NewInstance` copies the function.
+- **A call with values no longer turns on the write-back.** The write-back publishes the caller's
+  locals so the interpreter can read them by name; a function called with values gets its
+  arguments as values, and a CSCS function cannot see its caller's locals (checked: interpreted
+  and compiled alike say "Couldn't find variable"), so only the text route, whose argument text
+  names them, needs it. Before, a loop calling another function republished its counter and
+  accumulator on every pass.
+- **Depth.** A direct call pushes no stack level, so `CscsDirect` counts its own and adds
+  `Interpreter.CallDepth`: `InterpreterSecurity.MaxCallDepth` stops at the same call with the same
+  "Recursion too deep" error (the fixture walks the boundary compiled and interpreted), instead of
+  the process stack overflowing -- which is what the sandbox's limit exists to prevent.
+- Not direct: a call that leaves an argument to a default or names one (the interpreter binds
+  those), more than six arguments, collection arguments (read from the interpreter's frame), async
+  mode, class methods. `Precompiler.DirectCalls = false` turns all of it off.
+
+Release build, M1 Pro, same build with and without `DirectCalls` (the machine was loaded, so
+absolute times vary by about 20%):
+
+| | interpreter's call | direct |
+|---|---:|---:|
+| `fib(30)`, compiled, recursive | 2131 ms | 346 ms |
+| 1M calls from one compiled function to another | 755 ms | 150 ms |
+| 1M calls, each a recursive `gcd` | 4311 ms | 228 ms |
+
+The interpreted `fib(20)` takes about 380 ms; compiled, 4 ms. What is left per call is the
+`Variable` boxing of the result and the arithmetic on it; a typed return would remove that.
+
+### Typed returns (September 2026)
+
+The Variable around every result was what remained per call. For a function that calls itself,
+`TypedReturnBody` builds a twin of the body that returns a C# `double`:
+
+- a call to itself held in a temporary -- `__varTempVar = CscsDirect.Result(NAME__direct(..));
+  Variable x = __varTempVar;` -- becomes `double x = NAME__numdirect(..);`, and one returned at
+  once becomes `return NAME__numdirect(..);`;
+- every `return Variable.ConvertToVariable(E);` becomes `return CscsDirect.Number(E);`, and
+  `Number` takes a `double` or an `int` only.
+
+**The C# compiler is the proof.** If anything returned is text, a truth value or a Variable, the
+twin does not compile, and `Precompiler.Compile` (and explain mode) use the code without typed
+returns, kept aside for that (`UntypedCSharpCode`); the function still compiles, only untyped.
+A double where a Variable was is the same number in arithmetic, comparisons, truth tests and
+anything handed on as an object, but C# writes a double into text its own way, so a twin that
+joins a number to text or interpolates one (`RoslynCompiler.JoinsNumberToText`, on the semantic
+model) is not used either. Temporaries that now hold doubles still answer `.AsDouble()` and
+`.AsString()` (the interpreter's formatting) through `CscsNumberMembers`. The entry points build
+their Variable from the double -- for a number, the Variable the untyped body returned -- and the
+ahead-of-time generator is always given the untyped code, since nothing compiles it there.
+
+Only calls to itself: a call to another function looks the name up on every call, and whatever
+it stands for then may return text; a function that needs nothing of the interpreter cannot
+redefine itself while it runs.
+
+Also fixed on the way: a call to a script function -- or to itself -- first in an `if`
+condition with arithmetic in its arguments (`if (f(n - 1) > 4)`) went out as a C# call to `f`;
+the condition reaches the translator cut at the operator. It is hoisted ahead of the `if` now,
+under the same rules as the member-call hoist.
+
+`fib(30)`, compiled, Release: 2131 ms through the interpreter's call, 346 ms with direct calls,
+**60 ms** with typed returns; `fib(20)` 1 ms (interpreted, about 390 ms).
+
+### Names defined later, measured on outside scripts (September 2026)
+
+The repository's own scripts were used up as probe material, so the probe was pointed at the
+CSCS code in the author's other projects -- the mobile apps, the MAUI and web projects: 566
+functions, re-declared as `cfunction`s with untyped arguments. The probe now initialises the
+interpreter as the coverage fixture does (`InitStandalone`), and its generator splits arguments
+at the top level (a default of `{1, 2, 3}` was cut at its commas). 252 compiled at first, 358
+now; the scripts' own 468 stay at 465 and the untyped probe at 479, nothing lost.
+
+Most of what those scripts do not compile is names nothing defined when the function was
+translated: globals the app assigns later (in an init function, say), functions defined further
+down the file, and built-ins of platforms the probe does not load. The interpreted function looks
+all of those up when it runs; compiled code now does the same.
+
+- **A name read** that the function never assigns anywhere -- not a local, not an argument, not
+  anything the interpreter holds as a function, variable, class or namespace
+  (`InterpreterKnows`) -- becomes `CscsLate.Value(__interpreter, "name")`, which resolves it the
+  way every call-by-name callback does and fails with the interpreter's own "Couldn't find
+  variable". Only while an expression is being built (`ReplaceArgsInString`): elsewhere a name
+  that cannot be resolved still sends the statement to the interpreter as text, which is what
+  covers `g.Size` and `g[0] += 5` -- allowing it there cost three constructs that compiled.
+  Never a name the body assigns: that is a local even where a read of it comes first.
+- **The same name ending a condition** -- `if (count < total)` -- reached the call path with the
+  condition's `)` glued to it, which was lost from the condition (CS1026). The `)` is put back.
+  A name without parentheses keeps the text route, which resolves variables as well as functions.
+- **A call to a function nothing defines yet** is a script call (`IsLateFunctionName`, not a
+  member, not in a string), made by name when the code runs. `CscsCalls.Call` throws the
+  interpreter's "Couldn't find function" for a name still missing, and runs a built-in the way
+  a callback does -- numbers and text copied, a collection by reference, as the interpreter
+  hands them over.
+- **Found on the way:** a script call nested in another's arguments with text in them --
+  `x = helper(helper("a") + "b")` -- never compiled, even for known functions: the Variable-local
+  builder wrote the names out as C#; it now leaves such values to the call path. A script
+  variable named like a C# keyword (`SetValue(switch, 1)`) keeps the text route.
+
+`test_compiled.cscs` pins each shape, compiled and interpreted, before and after the global or
+function exists. The console host registers a file's functions before running it, so there a
+function defined further down already exists at the first call; the two agree either way.
+
+Left in the outside scripts: web handlers whose generated C# has a syntax error (68, not yet
+examined), text-route escaping of a single-quoted string holding double quotes, `Math.Random`
+(System.Math has none; the interpreter's could be called), an empty argument (`f(a,,b)`), and
+names a function both reads and assigns while a global of that name is meant.
+
+### Web handlers: loop headers, for-each spelling, escaped quotes (September 2026)
+
+The 68 outside functions with C# syntax errors were mostly web handlers, and three causes covered
+most of them. Outside probe 358 -> 375 of 566; nothing lost anywhere.
+
+- **`Size(x)` in a loop header** -- `for (i = 1; i < Size(rows); i++)`, 68 of the headers. The
+  built-in went the call route, which is statements, and they landed inside the `for (...)`.
+  `Size` reads a variable's *name* (GetToken), not a value, so running it by name with values
+  would have been wrong; what it answers is GetSize() of that variable's value -- an array's
+  count, 0 for anything else -- which is exactly `Variable.Size`. In a loop header, for a name
+  this function or the interpreter holds, `Size(x)` is rewritten to `x.Size`
+  (`RewriteSizeCalls`); elsewhere the call route stays, since `.Size` does not exist on a local
+  the translator keeps as C# text.
+- **The call route itself was wrong for `Size`**: given the argument text `"s"`, the built-in
+  reads the name and then looks for the ")" it expects after it, and threw "Incomplete
+  arguments for [Size]" where the interpreted call answered -- a divergence no construct had
+  covered. It now gets `"s)"`, the text it sees when interpreted.
+- **`for (x : a)` and `for (x of a)`** are `for (x in a)` to the interpreter
+  (`ProcessArrayFor`); the translator knew only ` in ` and emitted the header verbatim.
+  `RewriteForEachSeparator`.
+- **An escaped character inside text** -- `"{\"a\": 1}"` -- went through `ReplaceArgsInString`
+  as `'\'"`, which is not C#. Only on paths that resolve a value in that loop (a Variable
+  accumulating HTML in a for-each, in the handlers); plain string locals never took it. It stays
+  `\"` now.
+
+Coverage after this round: 1137 of 1150 constructs compile, 12 fall back, 0 diverge.
+
+Left in the outside scripts, by count: a global both read and assigned by functions
+(`quizType`, 40 errors), the function form `Substring(s, a, b)` (32), a for-each variable read
+outside its loop (`row`, 16), temporaries used undeclared (24), and names from modules the probe
+does not load.
+
+### Text that looks like an assignment, Math.Random, the string built-ins (September 2026)
+
+Outside probe 375 -> 395 of 566; nothing lost.
+
+- **`"quizType=" + quizType`** made quizType a local: the scan for names the body assigns
+  (`AssignedAnywhere`) read the text inside the quotes. A global the function only reads was
+  then never read late, and every use of it went out bare (40 errors in one app). String
+  contents are blanked before the scan.
+- **`Math.Random`** -- and any other Math function CSCS has and System.Math does not -- is
+  repaired from Roslyn's CS0117 into the interpreter's own function (`CscsCalls.Builtin`), after
+  checking it exists. With at most one argument `Math.Random` answers a number (with two, a
+  list), so there its result is read as the double the code around a Math call expects.
+  Random, so pinned in `test_compiled.cscs` by range and by being compiled, not in the
+  differential fixture -- two runs never agree, interpreted or not.
+- **The string built-ins** -- `Substring(s, 0, 1)`, `StrReplace`, the twelve modes of
+  `StringManipulationFunction` -- read their arguments as values (GetFunctionArgs), so a call to
+  one is made with values (`CscsCalls.Call` -> `ByName`) like a script call, where it went out as
+  bare C#. By type, not by name: a built-in that reads a *name*, as Size does, must never be
+  given a temporary's. Such a call publishes temporaries in the interpreter's frame, so the
+  function counts as using the interpreter and is never split for direct calls.
+
+Coverage after this round: 1140 of 1153 constructs compile, 12 fall back, 0 diverge.
+
+### Late names in loop headers, bracket literals, and two interpreter quirks respected (September 2026)
+
+Outside probe 395 -> 418 of 566; nothing lost anywhere.
+
+- **A name defined later, as a member or in a loop header** -- `for (i = 0; i < Size(rows); i++)`,
+  `rows.Size`, `int(id)` with `rows` and `id` globals the app assigns later. `Size(x)` in a loop
+  header is `x.Size` whatever x is now (the call route cannot go there at all), and a Variable
+  member of a late name reads the value found when the code runs, in the expression builder and
+  in the call path a loop condition takes. A late name inside a conversion is read late too.
+- **List literals in square brackets** -- `["GK_GL_DATUM", "Date"]` -- are the same literal in
+  braces (checked: text, Size, Type, elements, nesting, empty), rewritten wherever the
+  interpreter reads one: after `=`, `(`, `,`, `:`, `?`, `{`, or inside another. Two interpreter
+  quirks bound it, each found by a differential construct:
+  - not after `return`: the interpreter does not read a bracket literal there ("Couldn't find
+    variable [...]"), and compiled code must fail the same way rather than succeed;
+  - inside a brace literal -- `{"k": [1, 2, n]}` -- the interpreter reads the bracket literal
+    without the function's locals ("Couldn't find variable [n]"), so there only a literal of
+    constants is rewritten.
+- **Not compiled, on purpose:** a Variable as the condition of `?:`. With text there the
+  interpreter answers the branch alone and drops the text around it --
+  `"<td>" + ("x" ? "edit" : "new") + "</td>"` is `new` -- which no truth test in C# reproduces,
+  and whether the Variable holds text is known only when it runs. A first repair of it compiled,
+  and the fixture caught the divergence; it was taken out, and `tern_text_cond_keep` /
+  `tern_var_cond_keep` guard it.
+- Also not compiled: an element write into a global that does not exist yet (the interpreter then
+  creates a local array), and a function that both reads and assigns a name meant as a global
+  that does not exist at translation. Both would need a choice made on every access at run time.
+
+Coverage after this round: 1145 of 1161 constructs compile, 14 fall back, 0 diverge.
+
+### Text-route escaping, conversion names in any case (September 2026)
+
+Outside probe 418 -> 422 of 566; nothing lost.
+
+- **Text handed to the interpreter by name keeps its escapes.** The text route writes the call's
+  argument text into a C# string literal, and the interpreter parses it back at run time.
+  `Utils.PrepareArgs` escapes every quote but leaves backslashes alone, so a script's own
+  `\"` -- `Response(headers, "{\"Result\" : \"Success\"}", 200)` in the web handlers --
+  became `\\"`, which ends the literal early. The quote escaping is undone (it is exactly
+  reversible) and the literal is escaped properly, backslashes first. A path such as
+  `"C:\\dir"` now reaches the interpreter as the script wrote it, not with its escape eaten.
+- **`Double(x)`, `Int(x)`, `String(x)`** are `double(x)`, `int(x)`, `string(x)` to the
+  interpreter (names are case-blind); the conversion mapping matched only the lower-case
+  spelling.
+- **Not compiled, on purpose:** `Contains(a, x)` inside `&&` / `||`. Like `Size`, the built-in
+  reads a variable's name, so it cannot be called with values, and `a.Contains(x)` answers
+  differently from it. Outside `&&` / `||` it keeps compiling through the call route.
+
+What the outside scripts still do not compile is now mostly what should not be compiled, or
+cannot be seen by the probe: functions of platforms and modules the probe does not load, a
+global a function both reads and assigns before it exists, an element write into a global that
+does not exist yet, a Variable condition of `?:`, a function passed as an argument and called.
+
+Coverage after this round: 1148 of 1164 constructs compile, 14 fall back, 0 diverge.
+
+### Size inside "&&" / "||", tokenize (September 2026)
+
+Outside probe 422 -> 431 of 566; nothing lost.
+
+- **`Size(x)` in a statement with `&&`, `||` or `?`** -- `if ((r == null) || (Size(r) < 2))` --
+  is `x.Size` too, as in a loop header: there the call has to stay inline, and the Size
+  built-in's call route cannot (`InShortCircuitStatement`). Elsewhere the call route stays.
+- **`tokenize(line, ",")`** reads its arguments as values (TokenizeFunction, GetFunctionArgs), so
+  it joins the string built-ins that are called with values.
+
+Coverage after this round: 1151 of 1167 constructs compile, 14 fall back, 0 diverge.
+
+### Differential audits: operators, conditions, truth (September 2026)
+
+The construct fixture is written one shape at a time, so it only catches a divergence someone
+thought to write down. This round generated the shapes instead: every binary operator, in a value
+(`r = x op y`) and in a condition (`if (x op y)`), plus `if (x)`, `if (!x)`, `r = !x` and `x ? :`,
+over every kind of value an untyped argument holds -- a number, zero, a fraction, text, text that
+looks like a number, a list -- each compiled and interpreted side by side. Four silent
+divergences came out, all compiling without a single error:
+
+- **`x == y` and `x != y` on two Variables compared references.** C# accepts `==` between two
+  objects, so no error ever reached the repair: `3 == 3` answered 0. `FixVariableEquality` now
+  runs on every translation (after the other post-passes, on the typed and the untyped code) and
+  turns each such comparison into `CscsOps.Compare`, the interpreter's own `MergeCells`.
+- **`&&` and `||` on Variables gave 1 or 0.** The interpreter gives an operand: `3 || 0` is 3,
+  `2 && 5` is 5. The CS0019 repair now calls `CscsOps.And` / `CscsOps.Or`, which evaluate the
+  right side only when the interpreter would (a lambda) and return what it returns.
+- **A list was false in a condition.** The interpreter tests `Convert.ToBoolean(Value)`, which is
+  true for a list -- even an empty one. `CscsOps.IsTrue(Variable)` is
+  now `Value != 0` for every type, the same test, and `IsFalse` its complement for numbers only.
+- **`!` on text or a list gave 0.** The interpreter negates numbers and hands everything else back
+  unchanged, so `!"abc"` is `"abc"`. The CS0023 repair now calls `CscsOps.Not` for a Variable
+  operand and writes `((x) == 0)` for a numeric one.
+
+The matrix stays as a unit test (`Operators_And_Truth_Agree_With_The_Interpreter_For_Every_Kind_Of_Value`,
+about 1,300 function pairs, half a minute), so the next operator change is checked against every
+kind of value, not just the ones the fixture happens to name. Member reads got the same
+treatment (126 shapes: `Size`, `Length`, `Count`, `Reverse`, `Sort`, a missing property) and
+found `Reverse()` doing nothing to text, `Sort()` returning nothing, `.Count` answering where the
+interpreter throws, and a missing property reading as empty instead of an error -- fixed in the
+previous round.
+
+### Globals read before they are assigned; reads under "&&" (September 2026)
+
+Event handlers keep state in globals the script sets up elsewhere: `if (key == arg) { return; }
+key = arg;`, `if (counter % 4 == 0) {...} counter++;`, `categoryIndex--`. Inside a function the
+interpreter reads such a name from the global and an assignment writes the global when one
+exists and no local does (`AddGlobalOrLocalVariable`). Compiled code already wrote it
+(`AddCompiledLocalVariable`); the read was the problem when the global did not exist yet at
+translation -- the name was assigned in the body, so it was a C# local, used before its
+declaration (CS0841).
+
+- **Read before the first assignment** (`ReadBeforeAssigned`): a name whose first mention in the
+  body is a read -- "x++" and "x += v" count as reads, they read first -- is read by name
+  (`CscsLate.Value`) until the translator has declared the C# local. The first assignment then
+  declares it and writes the global as before.
+- **`x++`, `x += v` on such a name** read it through `CscsLate.Existing`, which throws the
+  interpreter's own message when it is missing ("Variable or function [x] doesn't exist." for a
+  step, "Object [x] doesn't exist." for a compound), and write it back as a known global's are.
+- **Compound operators on globals now run the interpreter's operator** (`CscsOps.Compound`,
+  `OperatorAssignFunction.ProcessOperator`): C#'s `+` on the Variable made `g += "!"` on 3 into
+  "3!", where the interpreter adds the text's numeric value and keeps 3. This was already so for
+  globals known at translation.
+- **Found on the way, both silent:**
+  - A name read on the right of `&&`, `||` or `?:` -- `if (i > 0 && prev < 5)` -- was hoisted
+    ahead of the statement and read whether or not the left side let it be. With `prev` assigned
+    only later in the loop, the first pass threw where the interpreter never looks it up. Now read
+    in place, as calls there already were; a subscripted global (`g[n]`) too.
+  - The pass that declares block-crossing locals at the top of the function
+    (`DeclareBlockCrossingLocals`) took `idx--; if (idx < 0) { idx = 5; } return idx;` for a local
+    started at 0: the global was never read or written, and the function even qualified as a
+    pure direct call. A name read before it is assigned is skipped there; that function now falls
+    back (the read after the block is out of the C# local's scope). Six outside functions that
+    "compiled" before did so only this way -- `if (!quizRunning)` tested a fresh 0 and always
+    started the quiz -- and now fall back.
+- **A local or argument named like a Math function** -- `round = n * 2`, `max = i`, an argument
+  `abs` -- is that variable, as it is to the interpreter; it came out as System.Math's method
+  group (CS0019). A name the function also calls keeps the Math reading.
+
+### Globals changed behind the compiled code's back (September 2026)
+
+A compiled function keeps a global it assigns in a C# local and publishes each assignment to the
+interpreter (`AddCompiledLocalVariable`). Reads then used the local -- stale as soon as a script
+function the body calls changed the global: `g = 1; bump(); return g;` answered 1 where the
+interpreter answers what bump() left. Nothing failed; this predates the session's work.
+
+- **`ReadGlobalsThroughInterpreter`** (a Roslyn pass, after translation, only where the function
+  calls back at all): a local standing for an interpreter variable -- a global when the function
+  was translated, or a name read before it is assigned (`GlobalBoundNames`) -- is read with
+  `CscsLate.Current`, the interpreter's value. Only for a local every write of which is a
+  statement followed by its publish, so the two agree unless a callback intervened; otherwise the
+  name is left alone. `g += x` and `g++` are spelt out to read the current value too. Typed reads
+  for double, int, bool, string and Variable locals.
+- **A `for` counter named like an existing global** is that global to the interpreter, which a
+  loop inside a function writes: `for (i = 0; i < n; i++)` left a global `i` at its old value.
+  It is published from the loop's condition (`CscsLate.Publish`), which runs on every pass and on
+  the way out, so the global ends where the loop did -- after a `break` too. A counter with no
+  global of its name is untouched and stays in its own level.
+- **A global assigned inside blocks and read after them** -- `if (!quizRunning) { quizRunning = 1;
+  } else { quizRunning = 0; } show_quiz(quizRunning);` -- is declared at the top of the function
+  without a value (`DeclareBlockCrossingLocals`), for a global known at translation or a name read
+  before it is assigned. Every read then goes to the interpreter through the pass above; where the
+  pass cannot take them all, the unassigned local does not compile (CS0165) and the function falls
+  back -- never a local started from 0.
+
+### Built-ins into locals, late collections, assigned "?:" on a Variable (September 2026)
+
+- **A built-in call assigned to a local that holds a Variable** -- `length = size(text)`,
+  `n = Size(a)` -- was written out as C# (`Size(__p0)`, CS0103), where `return Size(text)` already
+  called it back. The Variable-local builder now leaves a value with an interpreter built-in in it
+  (`CallsInterpreterBuiltin`) to the ordinary path.
+- **`g[k] = v` on a global the script defines later** -- `volaParamsData[stock] = arg` in a
+  handler -- goes through the global-element builder too: the collection is the interpreter's when
+  the code runs, or a new one of the function's own where there is none (`CscsLate.OrNewCollection`
+  -- the interpreter's assignment makes one; `[, , 5]` for index 2), written back with
+  `AddCompiledLocalVariable` so a missing name becomes a local, not a global.
+- **A member call on such a global** -- `if (!selVolas.Contains(e))`, `g.Add(x)` -- is made on the
+  interpreter's own Variable (`CscsLate.Current`), as for a global known at translation, so a
+  mutating member changes the global.
+- **`key = cond ? a : b` with a Variable condition**, the ternary being the whole value assigned:
+  the interpreter decides on a number only and fails on anything else ("Couldn't find variable
+  []"); `CscsOps.TernaryCondition` does the same. Elsewhere -- returned, or inside a larger
+  expression -- the interpreter's answers for text are its own (a returned `e ? "a" : "b"` gives
+  `e` back), and the ternary is still not repaired.
+
+### type(), and globals whose first write reads them (September 2026)
+
+- **`type(x)`** -- the interpreter's `TypeFunction` -- went out as C# (CS0103): its lower-case name
+  is one of `Constants.RESERVED`, which the translator checks case-sensitively and treats as a
+  keyword. It is spelt `Type(x)` before translation (`RewriteTypeCalls`; the interpreter's names
+  are case-blind) and joins the built-ins called with values (`IsValueBuiltin`), so that
+  `type(b) == "NUMBER"` is compared as text (`SameValue`) rather than as a truth value.
+- **`x = !x`, `q = (q + 1) % 3`, `t = t + 1` as the first write of a global**: the right side reads
+  the interpreter's value, but the declaration at that statement shadowed it (CS0841).
+  `ReadBeforeAssigned` counts such a write as a read, and the name is declared at the top without
+  a value, as a bound block-crossing name is, so every read goes to the interpreter.
+- **Bound names are declared as Variables**, not by their assignments' type: read before the
+  function assigns them, they hold whatever the script left there. A `double` read the text "7"
+  as 7, and `t = t + 1` gave 8 where the interpreter gives "71"; a Variable takes the
+  interpreter's own operators.
+
+### Semicolons in text, reassigned "variable" arguments, Size in comparisons (September 2026)
+
+- **A `;` inside a string in a `return`** -- `return t + "});";`, the HTML a web handler builds --
+  was taken for the end of a statement the translated expression carried, and the value was
+  emitted as a statement of its own (CS1002). The three checks that looked for a `;` in the
+  translated text now ignore string contents (`WithoutStringContents`).
+- **A member call on a `variable` argument the body reassigns** -- `while (v.StartsWith("0")) { v =
+  v.Substring(1); }` -- went out with the bare name (CS0103): the assignment records the argument
+  as holding a Variable, and the branch for such locals ran before the one for arguments. The
+  argument's branch now comes first; an argument is never a C# local.
+- **A number, text or truth value assigned to a `variable` argument** -- `v = 5` -- did not
+  convert into its Variable slot (CS0029); the repair wraps it in `Variable.ConvertToVariable`.
+- **`Size(x)` in a statement comparing with `==` or `!=`** is `x.Size` there too
+  (`InEqualityStatement`): the comparison becomes `Variable.SameValue`, whose operands are written
+  as C#, where the call route cannot go. Where `x.Size` does not fit the local's type, the
+  function falls back, as before.
+- Left alone: the `Contains(name, x)` built-in inside `&&`/`||`. It reads its first argument as
+  a name; `name.Contains(x)` answers differently, and a helper would have to survive the
+  translator's text routes too.
+
+### "?:" on a Variable inside larger values; longer repair chains (September 2026)
+
+- Measured, for a `?:` whose condition is text or a list: the interpreter fails in a call
+  argument (`f(m, c ? 2 : 5)`, also when the call is returned), in a concatenation that is
+  assigned (`k = "<" + (c ? a : b) + ">"`), in an element write, and when the value is the whole
+  assigned value; it answers something of its own in a direct `return` (`b`) and in a compound
+  `+=` (the text after the parenthesis). The repair now covers the failing contexts
+  (`IsTernaryErrorContext`, with `CscsOps.TernaryCondition`: a number decides, anything else is
+  the error) and still leaves the other two to the interpreter.
+- `RepairOperators` runs up to eight rounds instead of four: each round rewrites the outermost
+  targets, so `!hack && !purchased && stock != "" && !allowed.Contains(stock)` on late globals
+  needed six.
+
+### Late globals in conversions, conditions and elements (September 2026)
+
+- **A conversion of an expression on a global defined later** -- `int(duration / 500)`,
+  `Double(_FREESPACE_ / 1024)` -- spliced an interpreter callback into the cast (CS1026). Such an
+  argument now goes through the expression builder, which reads the name late
+  (`ConversionArgument`).
+- **An element of a global in a condition, the condition's `)` glued to it** -- `if (arg ==
+  lvs[i])` -- went to the interpreter under the name `lvs[i])`. The element is read from the
+  value, known or late, and the `)` given back.
+- **`g[i]` on a global defined later** takes the global-element branch too, and inside `&&`,
+  `||` or `?:` is read in place. Through the call route the interpreter looked up the whole
+  `glist[n]` and could not see the compiled function's `n`.
+- **Global elements are read as the interpreter reads them** (`CscsLate.Element`,
+  `Utils.ExtractArrayElement`): by position or key, and an index past the end is its "Unknown
+  index" error, where Variable's C# indexer answered quietly -- `n > 0 && glist[5] == "b"` gave
+  "no" instead of failing, also for globals known at translation.
+
+### "object" as a name, literals without ";", ex.Message, nested catches (September 2026)
+
+- **A script variable called `object`** -- a C# keyword -- is written `@object`, as `out` and the
+  others already were (`EscapeKeywordNames`). It had been left out because generated code
+  writes `object` itself; it only ever does so as the cast `(object)(`, which is left alone.
+- **A collection literal assigned without its `;`** -- `object = {"success": true}  jsonString =
+  SerializeJson(object);` -- ends its statement at the `}` for the interpreter; the next name
+  ran on into it for the translator. `TerminateLiteralStatements` puts the `;` in, after `=`
+  and only where a name follows.
+- **`ex.Message` on a catch variable**, which holds the message text: a property the Variable has
+  no member for, read and not called, is read as the interpreter reads a property (`ReadField`,
+  repair of CS1061) -- here its error, "Object [message] doesn't exist." `ReadField`'s message
+  now carries the name lower-cased, as the interpreter's usually does (it is not consistent:
+  some paths keep the script's spelling).
+- **A `catch (exc)` nested in the block of another `catch (exc)`** rebinds the variable, as the
+  interpreter does (it holds the inner message afterwards); declared again it was CS0136.
+- **A global read before `x = !x`** -- `print("mode " + findMode); findMode = !findMode;` --
+  is declared up front like the self-read case: being read earlier kept it out of that set.
+
+### Escaped backslashes in text; late names in "elif" (September 2026)
+
+- **A string ending in an escaped backslash** -- `"htmx_DaisyUI\\" + page`, `"C:\\dir\\" + name` --
+  was read by every scanner of the translator as a string that goes on: each tested only the one
+  character before a quote for a backslash, and `\\"` has one. The 44 places now ask
+  `IsEscapedQuote`, which counts the backslashes: an odd number escapes the quote.
+- **The Variable-local builder leaves such a value to the ordinary path**: `ReplaceArgsInString`
+  halves backslash runs -- right for the escaped text its other callers hand it, wrong for source
+  -- and `"a\\"` came out `"a\"`.
+- **A global defined later, compared in an `elif`** -- `} elif (productId == productIdSpeech) {` --
+  arrived with the condition's `)` glued to it and went through the callback route, whose
+  statements landed between the `}` and the `else if` (CS8641). A late name there is now read in
+  place (`CscsLate.Value`, the same lookup).
+
+### Join, counters from Variables, text into string locals (September 2026)
+
+- **`list.Join(sep)`** has a C# twin on Variable, as Split has: the elements' text with the
+  separator between them, " " by default, and a value that is not a collection gives its own
+  text (the interpreter's GetCorePropertyValue). C# had bound the call to an unrelated `Join`.
+- **A `for` counter started from a local that holds a Variable** -- `lower = m[k]; for (x =
+  lower; x < upper; x++)` -- is a Variable too (it was a double, CS0029). Decided in the fixed-point
+  pass, where the local is known.
+- **Text joined with a Variable, stored into a string local** -- `alert = "<p>" + v["name"] +
+  "</p>"` -- is read as its text: the interpreter's result of such a join is text whatever the
+  element holds. Only for a "+" chain with a string among its operands.
+- A call to a function named like an argument -- `ShowView(v, showView)` -- first stayed with
+  the interpreter; see the next section for how it compiles now.
+
+### Late calls beside a same-named local; "if (++g ...)" (September 2026)
+
+- **A call to a function defined later whose name matches a local's but for case** --
+  `searchTrie = GetTrie(...); results = SearchTrie(searchTrie, text)` -- is a late call
+  (`CscsCalls.Call`): the interpreter looks a call up among functions only, and fails with
+  "Couldn't find function" when there is none, as `CscsCalls.Call` does. A local spelt exactly
+  the same still excludes it, and so does an argument (see the previous section).
+- **A prefix step in an `if` condition** -- `if (++busyIndex >= busyOptions.size)` -- is taken out
+  ahead of the statement (`RewritePrefixStepInIf`: `busyIndex++; if (busyIndex >= ...)`), which is
+  the order the interpreter runs them in. Only a statement that is an `if` of its own, with one
+  prefix step and no `&&`, `||` or `?` in the condition. A postfix step (`counter++ % 2 == 0`)
+  keeps the value from before it in a temporary (`__ps1=counter; counter++; if (__ps1 % 2 == 0)`);
+  on a missing global its error is the read's ("Couldn't find variable") rather than the step's.
+  One behind `&&` stays with the interpreter.
+
+### JSON handlers: a missing ";" before return, built-ins in call arguments (September 2026)
+
+- **A call statement without its `;` before `return`** -- `json = SerializeJson(o)   return json;`
+  -- ends at the `)` for the interpreter; the translator read the `return` into it
+  (`TerminateBeforeReturn`). The same for any statement that follows straight on -- `print(x)
+  Test(a, b);`. Not the `)` of an `if`, `while`, `for` and the like.
+- **An interpreter built-in inside a script call's arguments** -- `Substring(decimal(r / q), 0,
+  10)` -- made the inline call write the built-in out as C#, here the keyword `decimal` (CS1525).
+  The inline call now declines such an argument, and the call route, which hands the arguments
+  to the interpreter, takes it.
+- **`size(json["Lines"])`** -- a quoted key in the subscript -- is `json["Lines"].Size` too where
+  the call route cannot go (a loop header); the rewrite had refused any quote in a subscript.
+
+### Script names starting with "__" (September 2026)
+
+- A global the script names with the translator's own prefix -- `__textView` -- was never read
+  late: every "__" name was taken for a temporary. One that is in the function's source as
+  written (`IsScriptsOwnName`) is the script's; a temporary never is.
+
+### A second differential audit: built-ins, members, results in text and conditions (September 2026)
+
+Generated again rather than written: 53 built-ins, members, conversions and operator results --
+`x.Contains("a")`, `x.Join()`, `Size(x)`, `bool(x)`, `decimal(x)`, `x == 3`, `x + "!"`, ... -- each
+returned, assigned, tested in an `if`, joined into text and passed to a call, over nine kinds of
+value (3, 0, 2.5, "abc", "5", "", a list, an empty list, a list of text). 246 of 265 compile;
+three silent divergences came out, now fixed:
+
+- **A C# bool joined into text** printed "True"/"False": `"<" + s.Contains("a") + ">"`, and the
+  same for StartsWith, EndsWith and `bool(x)`. The interpreter's truth values are the numbers 1
+  and 0. `NumbersForBoolsInText` runs on every translation, next to `FixVariableEquality`.
+- **`bool(x)`** followed Variable.AsBool, which takes only "true"; the interpreter's
+  ToBoolFunction reads the text with Utils.ConvertToBool, so `bool("5")` is 1 (`CscsConvert.ToFlag`).
+- **Text made by an operation, tested as a condition** -- `if (x + "!")`, or stored and then
+  tested -- was false for x = 3, where the interpreter says true: its merge writes the text into
+  the left operand's cell and leaves that cell's number underneath, which is what the truth test
+  reads. Variable's C# operators built a fresh Variable of the text instead. For anything but two
+  numbers they now merge as the interpreter does (`Parser.MergePair`), which also gives its errors.
+
+### A third audit: statements (September 2026)
+
+41 statement shapes -- compound assignments and steps on locals and on a `variable` argument,
+element reads and writes, Add/Insert/Remove/RemoveAt/Sort/Reverse, map writes, loops over a value,
+text built up, comparisons stored -- over the same nine kinds of value. All 40 that terminate
+compile (two loops bounded by the value run for ever on text in both versions). Two divergences,
+both through Variable's C# members rather than the interpreter's, fixed in one pass
+(`InterpreterCompoundsAndElements`, on every translation):
+
+- **`x += e` and the other compounds on a Variable** -- a `variable` argument above all -- used
+  Variable's "+": `x += "!"` on 3 gave "3!" where the interpreter keeps 3, `x *= 3` on text
+  appended "3", `x += 1` on a list joined it. Now `CscsOps.Compound`, the interpreter's compound
+  operator on a copy (locals already took that path).
+- **`v[i]` read off a Variable** used its C# indexer, which answers an empty value for text, a
+  number or an index past the end; the interpreter's element read fails there. Now
+  `CscsLate.Element` (`Utils.ExtractArrayElement`), which also makes `x[1] += 7` on a non-list
+  fail as interpreted instead of turning it into a list.
+
+The three audit scripts (`audit5`, `audit6`, `audit7`: 305 shapes) now run without a difference.
+
+### Audits of calls and of control flow (September 2026)
+
+- **Calls between functions** (`audit8`: typed `int`/`double`/`string`/`variable` callees, a
+  default argument, two arguments, a function defined later, nested calls; returned, assigned
+  and compared, over eleven kinds of value): 41 of 42 compile, no difference.
+- **Control flow** (`audit9`: switch on values, try/throw with values, break and continue,
+  nested loops over a value, do/while, elif chains, nested ternaries, negated groups): two
+  divergences, fixed.
+  - **`switch` compared loosely**: text "3" matched `case 3`. The interpreter's rule
+    (`ProcessSwitch`) is the same type and then equal; `CscsOps.CaseMatches` applies it to every
+    label.
+  - **`!(x == 3)`**, a negated group reaching the call route, was taken for a call of a
+    function named "!" ("Couldn't find variable [!]"). It is a negation.
+- Left as it was decided before: a bare Math name the interpreter has no function for --
+  `sqrt(x)`, `abs(x)` -- is System.Math compiled and "Couldn't find function" interpreted.
+
+### Audits of maps and classes, numbers in text, globals (September 2026)
+
+- **Maps, the string built-ins in function form, Tokenize, classes** (`audit10`, 27 shapes):
+  all compile, no difference.
+- **Numbers in text** (`audit11`: fractions, 1e20, 1e-7, negatives, division by zero, Round,
+  powers): no difference. A `cfunction` argument declared `int` truncates what it is given --
+  its own contract; an interpreted function has no typed arguments to compare with.
+- **Globals** (`audit12`, `audit13`: read, assigned, compounded, stepped, element-written,
+  changed by a callback, loop counters, copied into a local and changed there): one divergence.
+  `L = G; L += 1` changed the global: the local held the global's Variable, and the compound for
+  locals (`CscsConvert.Compound`) worked on it in place. It works on a copy now, as the
+  interpreter's compound does; every caller stores the result.
+- **Recursion** (`audit14`: self-calls on variable, int, double and string arguments, typed
+  numeric bodies, recursion that builds a list, throws, or goes through a helper) and **typed
+  callers of typed callees** (`audit15`: double to int, string to int, int to string, ... on the
+  direct-call path): no difference.
+
+### A call is a function's, whatever else has its name (September 2026)
+
+Measured: the interpreter looks a call up among functions only. `ShowView(v, showView)` with an
+argument `showView` calls ShowView; `g(1)` with an argument or local named exactly `g` calls the
+function g; `h(3)` with only an argument `h` fails with "Couldn't find function". The translator
+took such a name for the argument or local in five places (`MentionsScriptCall`,
+`IsLateFunctionName`, `ResolveToken`, the call route's two argument branches, and the argument
+respelling), and no longer does when the name is called. The call is also made inline
+(`CscsCalls.Call`): through the callback route the argument was published under its name, and
+the interpreter's lookup of that name found the value instead of the function -- the divergence
+an earlier, partial attempt produced.
+
+### Shapes the audits showed falling back (September 2026)
+
+- **A member's truth value in arithmetic** -- `s.Contains("a") + 1`: the number 1 or 0 to the
+  interpreter. A bool a call returns is turned into it; a comparison's bool is still refused,
+  as it may be C#'s reference test against null.
+- **Arithmetic on numbers as a whole condition** -- `if (x.Size * 2)`, `if (int(x) + 1)`: the
+  merge of two numbers is a number, true when it is not 0. Only a computed value: a member's
+  own number in a condition has answers of its own (`if (x.IndexOf("b"))` is true even at 0), and
+  text in a condition likewise, so those stay with the interpreter.
+
+### The Contains built-in inside "&&" (September 2026)
+
+`Contains(values, field)` -- the built-in, not the member -- tests whether the variable its first
+argument names has that index or key (ContainsFunction: `Variable.Exists(field, notEmpty)`);
+`values.Contains(field)` tests for an element's value, a different question. Inside `&&` or `||`
+the call cannot take the callback route, and it had been left to the interpreter. The name now
+resolves there to `CscsCalls.ContainsIn`, which does the built-in's test on the value, when the
+first argument is a plain name. Outside such a statement the callback route still takes it.
+
+### A step on a global behind "&&" (September 2026)
+
+`if (!adsPurchased && arg == 1 && ++adCounter % 3 == 0)`: the step runs only when the operators
+reach it, so it cannot be taken out ahead of the statement, and on a global read by name C# has
+no variable to step (CS1059). That error is repaired into `CscsLate.Step`, which steps the
+variable as the interpreter does (IncrementDecrementFunction): a copy's number stepped and
+written back, the value after the step for `++x` and before it for `x++`, and a missing name its
+error ("Variable or function [x] doesn't exist").
+
+### The language guide's features, audited (September 2026)
+
+`audit16`: the features CscsMcp's language guide teaches, inside compiled functions over nine
+kinds of value -- class inheritance and methods, objects in collections (`l[1].count += x`),
+switch with fall-through, Math functions on anything, conversions, JSON, regex, throw and catch:
+all 20 compile, no difference. What the outside probe still leaves to the interpreter is a
+host-defined `dloc` declaration (not in this interpreter), a `?:` inside `+=` (whose interpreted
+result drops the text around the parentheses), and the probe's `init` clash.
+
+### Two of the fixture's fallbacks (September 2026)
+
+- **`++p.x` on an object's field** (`memcomp_pre_keep`): the CS1059 repair steps a field too --
+  `CscsFields.StepField`, the interpreter's member step: a copy of the field stepped and set back
+  on the object, the value after the step for a prefix and before it for a postfix, a missing
+  field ReadField's error.
+- **Text in arithmetic with a number** (`fold_chain`: `4 * "ab" * 2` is "4ab2") goes to the
+  interpreter's merge as a Variable operand already did (`CscsOps.Apply`): its result, and its
+  error for "-", "/" and "%" on text.
+
+### "return ++x" and steps on text (September 2026)
+
+Making `++p.x` compile exposed an older, silent divergence: the return path handed `++x` to the
+statement translation, which spells a step as the postfix one -- right for a statement, not for a
+value. `return ++x` gave 5 for x = 5 (the interpreter 6), and on a global the returned value was
+lost altogether (`return ++g` and `return g++` returned an empty value).
+
+- `RewriteReturnStep`: `return ++X;` is `X++; return X;` and `return X++;` is `__rsN = X; X++;
+  return __rsN;`, for a local, a global, a field or an element.
+- The interpreter's postfix step returns the number underneath the old value -- for text its
+  numeric field, not the text (IncrementDecrementFunction); `CscsOps.StepValue` returns that.
+- **`p.x++` as a statement** used the field's "+= 1", which on text appends "1"; the step makes a
+  number of it. It is `CscsFields.StepField` now, in both member-step shapes.
+
+### The interpreter's quirks fixed, and compiled code brought along (end of September 2026)
+
+Once real code stopped finding new shapes, the remaining differences were the interpreter's own
+oddities, which compiled code had been copying or refusing. Most were fixed in the interpreter,
+each pinned in `test.cscs`, and the compiled side then made to give the same answers:
+
+- **One truth rule** (`Variable.IsTrue`): a number is true unless 0 (or NaN); text unless it is
+  empty, `"0"` or `"false"` in any case; a list or map unless empty; null never. `if`, `while`,
+  `for`, `?:`, `!`, `&&` and `||` all use it. Before, a condition read the numeric field, so all
+  text was false (except text an operation had left a number under) and an empty list was true.
+  `CscsConvert.IsTrue`/`IsFalse` and `CscsOps.Not` call it; the `?:` guards that treated text as
+  the interpreter's error (`CscsOps.TernaryCondition`, `IsTernaryErrorContext`) are gone, and a
+  text or Variable condition of `?:` is repaired like any other (CS0029).
+- **`&&` and `||` are always 1 or 0** (`3 || 0` was 3). `CscsOps.And`/`Or` likewise.
+- **Compounds are `x = x op y`** (`OperatorAssignFunction.ProcessOperator` through
+  `Parser.MergePair`): `5 += "3"` is "53" and `"5" -= 3` is the error `"5" - 3` is. **Steps**
+  (`OperatorAssignFunction.Stepped`) read numeric text as its number (`"7"++` is 8) and are
+  `x + 1` otherwise; a postfix step returns the old value itself. `Variable`'s C# `++`/`--`,
+  `CscsLate.Step`, `CscsFields.StepField`, `CscsOps.Compound`, `CscsOps.StepValue` and the
+  element step (`CscsOps.Compound(element, "++", null)`) all go through it.
+- **`finally`**: a `return` in `try` or `catch` stands, and `finally` overrides it only by
+  returning, breaking or continuing itself; `try` needs no `catch`; an error nobody catches passes
+  on after `finally`. That is C#'s own behaviour, so `RefuseReturnInTryWithFinally` is gone and
+  those functions compile (a `return` inside `finally` is CS0157, and falls back).
+- **`if`/`else` without braces** run a single statement, `else if` chains included.
+- **`?:` on a list literal** (`{} ? a : b`), and **nested ternaries** in either branch --
+  `x ? (x ? 1 : 2) : 3` with x false gave 2, and an unparenthesized one in the true branch lost
+  the rest of the statement.
+- **Shifts** `<<`, `>>`, `<<=`, `>>=`: both sides truncated to int, between `+ -` and the
+  comparisons, as in C#. They compile; a double or Variable operand goes through `CscsOps.Apply`
+  (CS0019), and `<<=`/`>>=`, `&=`/`|=`/`^=` on elements through the element compound.
+- **Typed parameters in plain functions** (`function f(int n, string s = "d")`) convert as a
+  `cfunction`'s do.
+- **Text**: `s[i]` is the character; `Size` of text is its length and `Size("abc")` takes a
+  value; iterating a literal list gives its elements with `:`, `in` or `of`.
+- **Bare Math names** (`Sqrt`, `Round`, `Pow`, ...) are registered alongside `Math.*`.
+- **A script function named like a command** (`show`, `copy`, `run`, ...) receives values, not
+  its arguments' text; only the native commands keep the text.
+- **The catch variable** is still the message text, and answers `e.Message` and `e.Stack`. The
+  compiled side binds it with `CscsConvert.Caught`; `e.Stack` is the interpreter's call chain at
+  the throw, which compiled code has no record of, so a function reading it falls back. That is
+  the fixture's and the playground guide's fallback example now, instead of `<<`.
+- `for (;;)` keeps looping: an empty condition is true, not the empty value's truth.
+
+Found along the way and fixed in the translator: a string argument's `.Size` (and `.LastIndexOf`)
+beside `&&` was taken for text and compared with `CompareCscs`, which then failed as a missing
+member. `audit19` covers the new rules: 50 shapes over fourteen values, no difference.
+
+### What the new semantics let compile, and four more interpreter bugs (end of September 2026)
+
+The fixture's kept constructs were mostly kept because of quirks that are gone now:
+
+- **Command-named script functions** (`show(x)` with a script `show`) compile: the refusals in
+  `GetCSCSFunction` and `TryInlineScriptCall` stay only for native commands.
+- **`s.Size`** on a string argument is `.Length` (with or without `()`); a leftover `.Length()` is
+  repaired (CS1955). **`s.Trim`** without parentheses is repaired from Roslyn's method-group errors
+  (CS0428, CS0019, CS1503) -- mapping it in `MapStringMember` doubled the parentheses for a caller
+  that appends the script's own. `IsStringOperand` counts `.Size` and `.LastIndexOf` as numbers.
+- **Chained assignment onto a deeper target** -- `q.kid.x = q.v = 5`, `a[0].v = p.x = 3`,
+  `a[i++] = a[0] = 7`: the unrolling mentions every target but the leftmost twice, so only the
+  leftmost may be any path; it is written once, after the value, which is also when the
+  interpreter reads its index (`a[i] = i = 3` writes `a[3]`).
+- **`?:` with a Variable branch and a text, number, bool or null branch** (CS0173): the other branch
+  as a Variable. This was the real-code `gk_generateLineForm` shape.
+- **A number or a type as a whole condition** -- `if (x.IndexOf("b"))`, `if (int(x))`,
+  `if (x.Type)`: `CscsConvert.IsTrue`. A `.AsDouble()` the translator put on a Variable there is
+  dropped first, or text would be tested as 0.
+- **`Size(x)`** becomes `x.Size` for any name already known, not only in loop headers and
+  short-circuit statements.
+- **Text indexing** in compiled code: `s[i]` on a C# string goes through `CscsLate.Element`
+  (`InterpreterCompoundsAndElements`), the interpreter's character as text -- C#'s `char` was
+  added to text as its code.
+- **A subscript whose index reads a member** -- `x[x.Size - 1]` on an argument or a local -- is read
+  in C# (each index through `ReplaceArgsInString`); handed to the interpreter as one name it could
+  not see the member, and after the fix below answered the whole value.
+
+Interpreter bugs found on the way, each pinned in `test.cscs`:
+
+- A bare `s.Trim`, `l.Sort`, `l.Reverse` or `l.DeepCopy` read the rest of the expression as its
+  arguments and dropped it (`"[" + s.Trim + "]"` was `"[a "`); only an argument list of its own is
+  read now (`Variable.GetArgs`).
+- After the true branch of a `?:` in parentheses, a following `+` was joined by the ternary itself,
+  numerically for a number branch: `"<" + (c ? 7 : "x") + ">"` was `"<7"`. The enclosing expression
+  takes it now, as after the other branch.
+- `GetTempScript` did not carry `Compiled`, so a part of a script compiled code runs (an index)
+  could not see the compiled function's locals.
+- Subscripts inside subscripts: `GetArrayIndices` took the next `]` rather than the matching one
+  (`g[0][g[0].Size - 1]` failed), the token reader stopped a subscript at an inner `]` when `]`
+  also ended the expression (`g[1][g[0][0]] = 9` wrote the key "[1, 2]"), and a member after a
+  subscript stayed on the variable's shared function (`x = g["k"][g["k"].Size - 1]` left the next
+  plain `g` answering `g.Size`).
+
+`audit20` (25 shapes over the same values: text indexing, Size and Trim, mixed `?:` branches,
+command-named calls, chains) has no difference.
+
+### Typed locals, and fields' collections (end of September 2026)
+
+The real-code probes had nothing left to find (every unprobed `.cscs` on disk is a copy of a
+probed one), so three more generated audits looked where C#'s static types meet CSCS's dynamic
+ones:
+
+- `audit21` -- typed arguments feeding locals that compounds and steps change. Two silent
+  divergences: a local copied from an `int` argument was a C# `int` (`var x = __p0`), so `x /= 0`
+  threw DivideByZeroException (the interpreter: NaN or infinity), `x *= n` overflowed
+  (1410065408 for 10^10), and `-2 % 2` was 0 (the interpreter's double: -0); and `n % 0` on ints
+  threw. `RoslynCompiler.WidenIntArithmetic` declares such a local `double` and computes `%`
+  between ints in doubles; loop counters proven to stay integers are declared `int` explicitly
+  and keep it. Then 13 fallbacks, all locals whose type a compound or step changes (text stepped
+  or multiplied, a number with text added, a comparison compounded, text joined into it):
+  `TypeChangingLocals` declares those Variables. 30 of 30 compile.
+- `audit22` -- `list<int>`, `list<string>`, `map<string,int>` arguments: 32 of 32, no difference.
+- `audit23` -- class instances under the new rules, and fields holding collections. Compiled:
+  an element of a field's collection written (`p.kid[0] = n`, `TryBuildFieldAssignment`), and
+  compounded or stepped (CS0200 repaired: `SetVariable` into the field's own collection,
+  `CscsFields.StepElement`). 28 of 28.
+
+Interpreter bugs found there, each pinned in `test.cscs`:
+
+- `b.l[1]` (a subscript on a field) threw NullReferenceException: the field was looked up under
+  the whole name `l[1]` (`Variable.GetProperty`). And `b.l[b.l.Size - 1]` split the member path at
+  the dot inside the index (`TopLevelDot`).
+- `b.l[0] = 9` did nothing, silently; `b.l[0] += 5` and `b.l[1]++` threw "Object [b.l] doesn't
+  exist"; `++b.l[1]` stepped the whole list into the text "[1, 2]1". All go through
+  `OperatorAssignFunction.TryResolveMemberElement` / `SetElementAt` now, and a prefix step reads
+  its subscripts.
+- `p.kid = {...}` also registered a variable called `p.kid` holding a copy, which a later
+  `p.kid["a"]` read first -- so after `p.kid["a"] += 4` it still read 1. Not registered any more.
+
+Two language decisions followed, both made in the interpreter:
+
+- A field the class body initializes is each instance's own copy (`ClassInstance` deep-copies
+  the defaults): `items = {}` was one list shared by every instance, so `b1.Add(x)` showed up
+  in `b2` and in every instance made later.
+- An enum's `.Type` is `ENUM` (it was `NONE`: `Constants.TypeToString` had no entry), and a
+  member's `.Type` is its value's, `NUMBER` (it was the member's name, which `.Name` still
+  gives). A local enum's `.Type` and `Member.Type` now compile, through the interpreter's own
+  enum lookup (`CscsEnums.Member`); the fixture's `lenum_type_keep` is no longer a fallback.
+
+Pinning these in `test.cscs` turned up a bug in the console host's preprocessing
+(`Utils.GetSubscript`, which hoists declarations before the script runs): `class` is not one of
+its tokens, so a class body was read a statement at a time, up to each `;`. After
+`SmShared() { }` there is no `;` before `function Put(x) {...}`, so the keyword went by as text
+and the method's `return` was extracted as a top-level statement -- "Unbalanced curly braces"
+before the script ran at all; where the keyword was found, the method was hoisted out of its
+class as a global function. A class or namespace body is now skipped whole.
+
+Two older interpreter bugs found alongside, both present at HEAD, fixed after:
+
+- `obj.items.Add(x)` threw "Expecting 1 arguments but got 0 in add": the member path read the
+  field `items` first, and a class instance's property took the call's "(x)" for its own. A
+  segment the path goes on from takes no arguments now (`Variable.GetProperty`, `intermediate`).
+- `Colors.ToString(2)` answered 1 rather than "Blue": the lower-cased name was compared with
+  `TO_STRING` ("string", the conversion's name), so it fell through to the membership test.
+  Compiled code, which calls it by name with the argument list as its own script, then failed
+  with "Object [tostring] doesn't exist"; such a script starting at 0 is a call too now, as
+  `Variable.GetArgs` already has it. A local enum's `ToString(n)` stays with the interpreter.
+
+### Control flow, and three more interpreter bugs (end of September 2026)
+
+`audit24` -- control flow over nine kinds of value: text and lists as loop conditions, bodies
+without braces, `break`/`continue`/`return` inside `try`/`finally` in a loop, `switch` on text.
+It first hung, and the hang led to three interpreter bugs:
+
+- **A loop body without braces** -- `for (i = 0; i < 3; i++) r += i;`, `while (k < 3) k++;` --
+  was read as a block, so the rest of the script ran as the loop's body, over and over. The
+  body is one statement now, an `if` with its `else` chain included (`ProcessLoopBody`,
+  `SkipLoopBody`), as for a braceless `if`.
+- **`0 || r.Size < 2 && 0` hung the parser.** Before `&&`/`||` the left operand is merged early
+  (`UpdateIfBool`), and that took the whole list, `0 ||` included; `Merge` then waited for a
+  cell it could merge the looser `||` with, for ever. Only the cells that bind at least as
+  tightly as the `&&` are merged now.
+- **That early merge also dropped the operand:** `1 < 2 && 5` was 5, `1 > 2 || 7` was 7 (the
+  rule is 1 or 0). And a false `&&` skipped the whole rest of the expression, so `0 && x || 1`
+  was 0; it skips its own right side only, up to an `||` at the same level (`OrAtSameLevel`).
+
+Compiled side: `RewriteBracelessBodies` puts braces around bodies of one statement before
+translation, so a `return` or `throw` in one is seen as one; `RewriteForEachLiterals` builds a
+literal a for-each walks in a statement of its own (`for (c : {x, !x})` did not compile); a for
+step compounding a Variable counter keeps the header's `)` outside the call and has no `;` of its
+own (with one, the fixture caught the loop ending at the header and its block running once); a
+Math call in a
+subscript of an argument is hoisted like a script call (`s[Math.Abs(-1)]`). `audit24`: 17 of 17,
+no difference.
+
+`audit25` -- compiled code calling script functions with typed parameters, defaults, named
+arguments, command names, recursion over text: 13 of 14, no difference. The one left is a call
+with named arguments, `f(s = "q", n = x)`. In the interpreter that also created `s` and `n` as
+variables of the caller; since then a named argument -- `name = value` as a whole argument, at the
+called script function's own level, `name` one of its parameters -- only names the parameter
+(`ParsingScript.NamedArgDepth`/`ArgStart`, `AssignFunction.IsNamedArgument`). An assignment in
+parentheses (`helper((q = n * 2)) + q`) or to a name that is no parameter still assigns. And named
+arguments matched their parameter case-sensitively, so `f(smNs = 1)` for a parameter `smNs` was
+taken by position (`CustomFunction.ArgMap` is case-blind now). Compiled code turns such a call into
+the positional call it stands for (`RewriteNamedArgumentCalls`) where that is certainly the same: a
+named value reaches the callee as a copy and a positional one as itself, so only values that are no
+reference qualify (literals, number or text arguments, operator results, collection literals); a
+skipped parameter needs a default the call can spell, and at most one argument may hold a call.
+Anything else stays with the interpreter.
+
+### The audits in the repository, async parity, and the scripts that use CSCS (September 2026)
+
+The generated audits live in `cscs.Tests/Audits` now (README there), with `semantics.cscs` -- the
+rules pinned in test.cscs -- beside them. `AuditFixture` runs each through `Interpreter.Process` and
+`Interpreter.ProcessAsync`; they take a few minutes, so they run when asked:
+`CSCS_RUN_AUDITS=1 dotnet test cscs.Tests/cscs.Tests.csproj --filter TestCategory=Audit` (42 tests).
+The async run found one gap: `AssignAsync` did not write an element of a member's collection
+(`b.l[0] = x` did nothing asynchronously).
+
+To see what the September semantics change in real use, every CSCS script of the author's projects
+(mobile, MAUI, web, the debugger, this repository: 65 files) was run under the interpreter at HEAD
+and the current one, output compared. Most stop at a host function the console lacks
+(`InitSyncfusion`, `ReadConfig`, `CreateEndpoint`) -- identically in both. The mobile unit-test suite
+(`mobile/scripting/Resources/unitTests.cscs`, 137 checks) was run with its four host calls stubbed:
+the same 133 passes and the same 3 failures in both, and one output difference -- `++b[5][3][5][1]`
+on an element never set is 1 now, NaN before (a step on nothing is 0 + 1). `ooSamples.cscs` got
+further: `Math.Round(data["1. open"], 2)` had split its member path at the dot inside the string.
+
+The console host (`CscsConsoleApp`) fetches a shared script at startup; it waited out the
+interpreter's 15-second HttpClient timeout on every run whenever the server did not answer. It
+has 3 seconds now (`CSCS_SHARED_SCRIPT_TIMEOUT`), and `CSCS_SHARED_SCRIPT=0` skips it.
+Found there: `NameExists(q) + 5` and `"a" + NameExists(q) + "b"` failed with "Couldn't find
+variable []" -- NameExists left its own ")" behind; it takes it now.
+
+### Review fixes, and what the new semantics cost (end of September 2026)
+
+A review of the whole change found three interpreter bugs, fixed and pinned in test.cscs:
+`do x++; while (x < 3);` hung (a braceless `do` body went to `ProcessBlock`); a `return` inside
+`finally` lost to an exception the `try` did not catch; and a list literal as the first operand
+dropped the rest of the expression (`{1} || 0` was `[1]`) -- `Utils.ListOperand` binds the literal
+to a name no script can spell and evaluates the rest as the parser would. Also: the async
+for-each over an `IEnumerable` ran its body synchronously, and the reflection lookup in
+`Variable.CopyValueFrom` and the named-argument set in `CustomFunction` are made once, not per use.
+
+Benchmarking then found compiled calls far slower than "Typed direct calls" had measured: 1M
+calls from one compiled function to another took 1220 ms, not 150. Two causes, neither in the
+calls themselves:
+
+- **Compounds.** `x op= y` became `x = x op y` through `Parser.MergePair` and
+  `Variable.CopyValueFrom`: two clones, a `ParsingScript`, and a copy of every field of `Variable`
+  by reflection -- about 1.2 µs, where `t = t + x` took 30 ns. `OperatorAssignFunction.TryInPlace`
+  now does arithmetic on two numbers, and `+=` joining text on, in place; `MergePair`'s cell is a
+  `MemberwiseClone` of the left side with only the value and the action changed, so that is exactly
+  what the copy gave. Not for a subclass of `Variable`, nor a cell marked `IsReturn` (which
+  `MergeCells` leaves alone). test.cscs pins `x += y` against `x = x + y` (and `-= *= /= %=`)
+  over numbers, numeric text, text and empty text, types included. This is the interpreter's
+  own `x += y` too.
+- **Every `Variable` made four empty dictionaries** (for maps and properties): 85 ns of which 64.
+  They are made on first use now. `Clone` and `DeepClone` make them first, so a clone shares them
+  with its original exactly as before.
+
+Release build, Apple M1 Pro, `pstime` (CPU ms), best of three:
+
+| | interpreted | compiled, before | compiled, now |
+|---|---:|---:|---:|
+| numeric loop, 100k | 1,600 | 0-1 | 0-1 |
+| int loop, 100k (`t += i % 7`) | 775 | 3 | 2-3 |
+| `fib(20)` | 390 | 0-2 | 0-1 |
+| `fib(30)` | -- | 21 | 20 |
+| 100k calls compiled to compiled | 1,460 | 127 | 15 |
+| 1M calls compiled to compiled | -- | 1,214 | 107 |
+| 1M recursive `gcd` calls | -- | 1,350 | 242 |
+| 100k calls with a text argument | 1,590 | 125 | 14 |
+| 100k with a local whose type changes | 1,330 | 265 | 39 |
+
+The 10M int loop takes 270 ms because `%` is a double's here, as the interpreter's is; a loop
+without it (`t += i`) runs 10M in 15 ms. Calls with text arguments already went direct; like the
+type-changing local, they were slow only for the compound.
+
+The interpreter against HEAD, same machine and script: numeric loop 1,790 vs 1,799 ms, int loop
+763 vs 730, `fib(20)` 395 vs 359, 100k calls 1,450 vs 1,380, 20k `s += "a"` 156 vs 161. The rest
+of the difference is spread across the parser's new checks (the ternary, `&&`/`||` at the same
+level), not one place: `g + 1` evaluates about 8% slower.
 
 ## Known limits
+
+- A global the function assigns and keeps in a typed local (a number, say) is read back from the
+  interpreter after a callback (`ReadGlobalsThroughInterpreter`), but converted to the local's
+  type: a callback that stores text there gives 0 where the interpreter gives the text. Names
+  read before they are assigned are Variables and not affected.
 
 - A loop counter that shares its name with a global stays local in compiled code, while the
   interpreted form leaves the global at the value the loop exited on. The write-back sits

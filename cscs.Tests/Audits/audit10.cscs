@@ -1,0 +1,571 @@
+class AuPt { x = 0; y = 0; function AuPt(a, b) { x = a; y = b; } function sum() { return x + y; } }
+mDiffs = 0; mCompiled = 0; mTotal = 0; mMissing = "";
+cfunction mpc1(variable x) { m = {}; m["k"] = x; return m["k"]; }
+function mpi1(x) { m = {}; m["k"] = x; return m["k"]; }
+mTotal++; mCompiled += is_precompiled("mpc1"); if (!is_precompiled("mpc1")) { mMissing += "m = {}; m['k'] = x; return m['k']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc1("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi1("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc2(variable x) { m = {}; m[x] = 1; return m.Keys; }
+function mpi2(x) { m = {}; m[x] = 1; return m.Keys; }
+mTotal++; mCompiled += is_precompiled("mpc2"); if (!is_precompiled("mpc2")) { mMissing += "m = {}; m[x] = 1; return m.Keys; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc2("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi2("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m[x] = 1; return m.Keys; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc3(variable x) { m = {}; m["a"] = x; m["b"] = 2; return m.Size; }
+function mpi3(x) { m = {}; m["a"] = x; m["b"] = 2; return m.Size; }
+mTotal++; mCompiled += is_precompiled("mpc3"); if (!is_precompiled("mpc3")) { mMissing += "m = {}; m['a'] = x; m['b'] = 2; return m.Size; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc3("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi3("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['b'] = 2; return m.Size; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc4(variable x) { m = {"a": x}; return m.Contains("a"); }
+function mpi4(x) { m = {"a": x}; return m.Contains("a"); }
+mTotal++; mCompiled += is_precompiled("mpc4"); if (!is_precompiled("mpc4")) { mMissing += "m = {'a': x}; return m.Contains('a'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc4("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi4("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': x}; return m.Contains('a'); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc5(variable x) { m = {"a": 1}; return m.Contains(x); }
+function mpi5(x) { m = {"a": 1}; return m.Contains(x); }
+mTotal++; mCompiled += is_precompiled("mpc5"); if (!is_precompiled("mpc5")) { mMissing += "m = {'a': 1}; return m.Contains(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc5("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi5("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': 1}; return m.Contains(x); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc6(variable x) { m = {"a": {"b": x}}; return m["a"]["b"]; }
+function mpi6(x) { m = {"a": {"b": x}}; return m["a"]["b"]; }
+mTotal++; mCompiled += is_precompiled("mpc6"); if (!is_precompiled("mpc6")) { mMissing += "m = {'a': {'b': x}}; return m['a']['b']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc6("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi6("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {'a': {'b': x}}; return m['a']['b']; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc7(variable x) { m = {}; m["a"] = x; m["a"] += 1; return m["a"]; }
+function mpi7(x) { m = {}; m["a"] = x; m["a"] += 1; return m["a"]; }
+mTotal++; mCompiled += is_precompiled("mpc7"); if (!is_precompiled("mpc7")) { mMissing += "m = {}; m['a'] = x; m['a'] += 1; return m['a']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc7("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi7("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['a'] = x; m['a'] += 1; return m['a']; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc8(variable x) { m = {}; m["l"] = {}; m["l"].Add(x); return m["l"]; }
+function mpi8(x) { m = {}; m["l"] = {}; m["l"].Add(x); return m["l"]; }
+mTotal++; mCompiled += is_precompiled("mpc8"); if (!is_precompiled("mpc8")) { mMissing += "m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc8("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi8("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF m = {}; m['l'] = {}; m['l'].Add(x); return m['l']; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc9(variable x) { return StrContains(x, "a"); }
+function mpi9(x) { return StrContains(x, "a"); }
+mTotal++; mCompiled += is_precompiled("mpc9"); if (!is_precompiled("mpc9")) { mMissing += "return StrContains(x, 'a'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc9("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi9("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrContains(x, 'a'); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc10(variable x) { return StrUpper(x); }
+function mpi10(x) { return StrUpper(x); }
+mTotal++; mCompiled += is_precompiled("mpc10"); if (!is_precompiled("mpc10")) { mMissing += "return StrUpper(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc10("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi10("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrUpper(x); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc11(variable x) { return StrReplace(x, "a", "z"); }
+function mpi11(x) { return StrReplace(x, "a", "z"); }
+mTotal++; mCompiled += is_precompiled("mpc11"); if (!is_precompiled("mpc11")) { mMissing += "return StrReplace(x, 'a', 'z'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc11("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi11("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrReplace(x, 'a', 'z'); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc12(variable x) { return StrIndexOf(x, "b"); }
+function mpi12(x) { return StrIndexOf(x, "b"); }
+mTotal++; mCompiled += is_precompiled("mpc12"); if (!is_precompiled("mpc12")) { mMissing += "return StrIndexOf(x, 'b'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc12("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi12("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrIndexOf(x, 'b'); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc13(variable x) { return StrTrim(x); }
+function mpi13(x) { return StrTrim(x); }
+mTotal++; mCompiled += is_precompiled("mpc13"); if (!is_precompiled("mpc13")) { mMissing += "return StrTrim(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc13("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi13("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrTrim(x); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc14(variable x) { return StrStartsWith(x, "a"); }
+function mpi14(x) { return StrStartsWith(x, "a"); }
+mTotal++; mCompiled += is_precompiled("mpc14"); if (!is_precompiled("mpc14")) { mMissing += "return StrStartsWith(x, 'a'); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc14("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi14("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return StrStartsWith(x, 'a'); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc15(variable x) { return Substring(x, 1); }
+function mpi15(x) { return Substring(x, 1); }
+mTotal++; mCompiled += is_precompiled("mpc15"); if (!is_precompiled("mpc15")) { mMissing += "return Substring(x, 1); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc15("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi15("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Substring(x, 1); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc16(variable x) { return Tokenize(x, ","); }
+function mpi16(x) { return Tokenize(x, ","); }
+mTotal++; mCompiled += is_precompiled("mpc16"); if (!is_precompiled("mpc16")) { mMissing += "return Tokenize(x, ','); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc16("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi16("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF return Tokenize(x, ','); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc17(variable x) { r = Tokenize(x, ","); return r.Size; }
+function mpi17(x) { r = Tokenize(x, ","); return r.Size; }
+mTotal++; mCompiled += is_precompiled("mpc17"); if (!is_precompiled("mpc17")) { mMissing += "r = Tokenize(x, ','); return r.Size; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc17("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi17("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = Tokenize(x, ','); return r.Size; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc18(variable x) { p = new AuPt(x, 1); return p.sum(); }
+function mpi18(x) { p = new AuPt(x, 1); return p.sum(); }
+mTotal++; mCompiled += is_precompiled("mpc18"); if (!is_precompiled("mpc18")) { mMissing += "p = new AuPt(x, 1); return p.sum(); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc18("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi18("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, 1); return p.sum(); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc19(variable x) { p = new AuPt(1, 2); p.x = x; return p.x; }
+function mpi19(x) { p = new AuPt(1, 2); p.x = x; return p.x; }
+mTotal++; mCompiled += is_precompiled("mpc19"); if (!is_precompiled("mpc19")) { mMissing += "p = new AuPt(1, 2); p.x = x; return p.x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc19("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi19("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.x = x; return p.x; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc20(variable x) { p = new AuPt(x, x); return p.y; }
+function mpi20(x) { p = new AuPt(x, x); return p.y; }
+mTotal++; mCompiled += is_precompiled("mpc20"); if (!is_precompiled("mpc20")) { mMissing += "p = new AuPt(x, x); return p.y; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc20("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi20("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(x, x); return p.y; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc21(variable x) { p = new AuPt(1, 2); p.y += x; return p.y; }
+function mpi21(x) { p = new AuPt(1, 2); p.y += x; return p.y; }
+mTotal++; mCompiled += is_precompiled("mpc21"); if (!is_precompiled("mpc21")) { mMissing += "p = new AuPt(1, 2); p.y += x; return p.y; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc21("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi21("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF p = new AuPt(1, 2); p.y += x; return p.y; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc22(variable x) { l = {}; l.Add(x); l.Add(x); return l.Size; }
+function mpi22(x) { l = {}; l.Add(x); l.Add(x); return l.Size; }
+mTotal++; mCompiled += is_precompiled("mpc22"); if (!is_precompiled("mpc22")) { mMissing += "l = {}; l.Add(x); l.Add(x); return l.Size; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc22("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi22("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {}; l.Add(x); l.Add(x); return l.Size; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc23(variable x) { l = {1, 2}; l.Insert(1, x); return l; }
+function mpi23(x) { l = {1, 2}; l.Insert(1, x); return l; }
+mTotal++; mCompiled += is_precompiled("mpc23"); if (!is_precompiled("mpc23")) { mMissing += "l = {1, 2}; l.Insert(1, x); return l; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc23("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi23("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, 2}; l.Insert(1, x); return l; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc24(variable x) { l = {x, 1}; l.Sort(); return l; }
+function mpi24(x) { l = {x, 1}; l.Sort(); return l; }
+mTotal++; mCompiled += is_precompiled("mpc24"); if (!is_precompiled("mpc24")) { mMissing += "l = {x, 1}; l.Sort(); return l; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc24("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi24("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {x, 1}; l.Sort(); return l; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc25(variable x) { l = {1, x}; return l.IndexOf(x); }
+function mpi25(x) { l = {1, x}; return l.IndexOf(x); }
+mTotal++; mCompiled += is_precompiled("mpc25"); if (!is_precompiled("mpc25")) { mMissing += "l = {1, x}; return l.IndexOf(x); | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc25("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi25("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = {1, x}; return l.IndexOf(x); on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc26(variable x) { l = [x, 2]; return l[0]; }
+function mpi26(x) { l = [x, 2]; return l[0]; }
+mTotal++; mCompiled += is_precompiled("mpc26"); if (!is_precompiled("mpc26")) { mMissing += "l = [x, 2]; return l[0]; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc26("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi26("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF l = [x, 2]; return l[0]; on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction mpc27(variable x) { r = {}; r["n"] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r["n"]; }
+function mpi27(x) { r = {}; r["n"] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r["n"]; }
+mTotal++; mCompiled += is_precompiled("mpc27"); if (!is_precompiled("mpc27")) { mMissing += "r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + mpc27("a,b"); } catch (e) { a1 = "ERR"; } try { a2 = "" + mpi27("a,b"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { mDiffs++; print("DIFF r = {}; r['n'] = x; for (k : r.Keys) { r[k] = r[k] + 1; } return r['n' on 'a,b' -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT10 DONE compiled " + mCompiled + " of " + mTotal + ", diffs " + mDiffs);
+print("NOT COMPILED: " + mMissing);

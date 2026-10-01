@@ -1,0 +1,83 @@
+G = 0; GI = 0;
+alDiffs = 0;
+cfunction alc1(int n) { L = G; L.Add(4); return G; }
+function ali1(n) { L = GI; L.Add(4); return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Add(4); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc1")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Add(4); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc1")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Add(4); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc1")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Add(4); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc1")); }
+cfunction alc2(int n) { L = G; L[0] = 9; return G; }
+function ali2(n) { L = GI; L[0] = 9; return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L[0] = 9; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc2")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L[0] = 9; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc2")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L[0] = 9; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc2")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L[0] = 9; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc2")); }
+cfunction alc3(int n) { L = G; L.Sort(); return G; }
+function ali3(n) { L = GI; L.Sort(); return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Sort(); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc3")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Sort(); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc3")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Sort(); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc3")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Sort(); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc3")); }
+cfunction alc4(int n) { L = G; L = L + 1; return G; }
+function ali4(n) { L = GI; L = L + 1; return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L = L + 1; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc4")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L = L + 1; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc4")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L = L + 1; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc4")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L = L + 1; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc4")); }
+cfunction alc5(int n) { L = G; L++; return G; }
+function ali5(n) { L = GI; L++; return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L++; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc5")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L++; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc5")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L++; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc5")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L++; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc5")); }
+cfunction alc6(int n) { L = G; L *= 2; return G; }
+function ali6(n) { L = GI; L *= 2; return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L *= 2; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc6")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L *= 2; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc6")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L *= 2; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc6")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L *= 2; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc6")); }
+cfunction alc7(int n) { L = G; L.RemoveAt(0); return G; }
+function ali7(n) { L = GI; L.RemoveAt(0); return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.RemoveAt(0); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc7")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.RemoveAt(0); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc7")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.RemoveAt(0); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc7")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.RemoveAt(0); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc7")); }
+cfunction alc8(int n) { L = G; L.Reverse(); return G; }
+function ali8(n) { L = GI; L.Reverse(); return GI; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + alc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Reverse(); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc8")); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + alc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Reverse(); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc8")); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + alc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Reverse(); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc8")); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + alc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + ali8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { alDiffs++; print("DIFF L = G; L.Reverse(); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI + " pre=" + is_precompiled("alc8")); }
+print("ALIAS DONE diffs " + alDiffs);

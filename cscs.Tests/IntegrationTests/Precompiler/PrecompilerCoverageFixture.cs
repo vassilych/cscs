@@ -416,20 +416,19 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("mix_zero_str", "(int n)",     "(n)", "c1={0,\"\"}; r = c1[0] > c1[1]; return string(r);", "(0)"),
             // A comparison rendered as text is 1 or 0, not True or False.
             new Construct("bool_text",    "(int n)",     "(n)", "c1={3}; r = c1[0] > 1; return string(r);", "(0)"),
-            // Every string is false, and "!x" is true only for a number that is zero -- so a
-            // string is false both ways round.
+            // The one truth rule: text is true unless empty, "0" or "false"; "!x" is its opposite.
             new Construct("truthy_str",   "(int n)",     "(n)", "c1={\"5\"}; if (c1[0]) { return 1; } return 0;", "(0)"),
             new Construct("truthy_notstr","(int n)",     "(n)", "c1={\"5\"}; if (!c1[0]) { return 1; } return 0;", "(0)"),
             new Construct("truthy_notnum","(int n)",     "(n)", "c1={0}; if (!c1[0]) { return 1; } return 0;", "(0)"),
-            // A compound assignment is not "x = x + v": it dispatches on the left type and
-            // takes the right side's numeric field, so a string on the right contributes 0.
+            // A compound assignment is "x = x op v": 5 += "3" is "53", and "5" -= 3 is the error
+            // "5" - 3 is.
             new Construct("cmp_asg_str",  "(int n)",     "(n)", "r = 5; c1={\"3\"}; r += c1[0]; return string(r);", "(0)"),
             new Construct("cmp_elem_str", "(int n)",     "(n)", "c1={5,\"3\"}; c1[0] += c1[1]; return string(c1[0]);", "(0)"),
-            new Construct("cmp_elem_sub", "(int n)",     "(n)", "c1={\"5\",3}; c1[0] -= c1[1]; return string(c1[0]);", "(0)"),
-            // A step is not "+= 1": it steps the numeric field, so "5"++ is 1 and not "51".
+            new Construct("cmp_elem_sub", "(int n)",     "(n)", "c1={\"5\",3}; try { c1[0] -= c1[1]; } catch (e) { return \"err\"; } return string(c1[0]);", "(0)"),
+            // A step is not "+= 1": numeric text steps as its number, so "5"++ is 6 and not "51".
             new Construct("step_elem_str","(int n)",     "(n)", "c1={\"5\"}; c1[0]++; return string(c1[0]);", "(0)"),
             new Construct("plus_elem_str","(int n)",     "(n)", "c1={\"5\"}; c1[0] += 1; return string(c1[0]);", "(0)"),
-            // ".Size" is the element count of a collection and 0 for anything else.
+            // ".Size" is the element count of a collection, the length of text, and 0 for a number.
             new Construct("size_scalar",  "(int n)",     "(n)", "c1={5}; r = c1[0].Size; return string(r);", "(0)"),
             new Construct("size_coll",    "(int n)",     "(n)", "c1={1,2,3}; r = c1.Size; return string(r);", "(0)"),
             // A CSCS call in a "for" initialiser runs once, ahead of the loop.
@@ -960,9 +959,23 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("local_map_to_fn", "(int n)", "(n)", "m = {\"a\": 2}; return mapVal(m, \"a\") + n;", "(0)"),
             new Construct("local_arr_mutated_by_fn", "(int n)", "(n)", "a = {1, 2}; addToEnd(a); return a.Size + n;", "(0)"),
 
-            // Left interpreted, deliberately: the interpreter implements no shift, so "3 << 2" is 0
-            // there, where C#'s shift gives 12. Compiling it would answer differently.
+            // Shifts, as the interpreter has them since September 2026: both sides truncated to
+            // int, binding between + - and the comparisons. A double or an element goes through
+            // the interpreter's own operator (CscsOps.Apply), as do the compounds.
             new Construct("bit_shift", "(int n)", "(n)", "return n << 2;", "(3)"),
+            new Construct("shift_double", "(int n)", "(n)", "x = 1.5 + n; return (x << 1) + (-8 >> 1) + (1 << 2 + 1);", "(3)"),
+            new Construct("shift_compound", "(int n)", "(n)", "y = n; y <<= 3; z = 100.9; z >>= 2; return y + z;", "(3)"),
+            new Construct("shift_elem", "(int n)", "(n)", "a = {n, 2}; a[0] <<= 1; return (a[0] << a[1]) + a[0];", "(3)"),
+            new Construct("bitcmp_elem", "(int n)", "(n)", "a = {n, 5}; a[0] &= 6; a[1] ^= n; return a[0] * 10 + a[1];", "(3)"),
+
+            // A return inside try stands when a finally follows, as in C#: the finally runs and
+            // the function returns. A try needs no catch, and an error it does not catch passes on
+            // after the finally.
+            new Construct("try_ret_finally", "(int n)", "(n)", "r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r;", "(4)"),
+            new Construct("try_finally_only", "(int n)", "(n)", "try { return n; } finally { n = 0; }", "(7)"),
+            new Construct("try_catch_ret_fin", "(int n)", "(n)", "try { if (n > 1) { throw \"big\"; } return \"ok\"; } catch (e) { return \"c:\" + e; } finally { n = 0; } return \"after\";", "(3)"),
+            // The caught value is the message, and answers .Message too.
+            new Construct("catch_message", "(int n)", "(n)", "try { throw \"boom\" + n; } catch (ex) { return ex.Message + \"|\" + ex; }", "(2)"),
 
             // Left interpreted: iff is a statement in the interpreter and needs the script around it.
             // Called back with only its arguments it threw "Couldn't skip expression".
@@ -1071,7 +1084,7 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("strcond_not", "(string s)", "(s)", "if (!s) { return 1; } return 0;", "(\"5\")"),
             new Construct("strcond_not_str", "(string s)", "(s)", "if (!s && 1 == 1) { return 1; } return 0;", "(\"5\")"),
             new Construct("strcond_not_join", "(int n)", "(n)", "vals = {\"5\", 0}; r = 0; if (!vals[0] && n == 0) { r += 10; } if (!vals[1] && n == 0) { r += 100; } return r;", "(0)"),
-            // Kept on the interpreter: ".Length" is a number there, but a C# int in a condition.
+            // Once kept on the interpreter (".Length" is a number there, a C# int in a condition); compiles now.
             new Construct("strcond_len_keep", "(string s)", "(s)", "if (s.Length) { return 1; } return 0;", "(\"ab\")"),
 
             // An assignment inside a return. Whitespace is stripped by the time the declaration scan
@@ -1130,7 +1143,8 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("mem_str_false", "(int n)", "(n)", "q = new Named(1, \"t\"); if (q.tag) { return 1; } return 0;", "(0)"),
             new Construct("mem_num", "(int n)", "(n)", "q = new Named(7, \"t\"); if (q.v) { return 1; } return 0;", "(0)"),
             new Construct("mem_while", "(int n)", "(n)", "p = new Point(0, 3); t = 0; while (p.y) { t += 1; p.y = p.y - 1; } return t;", "(0)"),
-            // Kept on the interpreter: a C# string has no Size member at all.
+            // ".Size" on a string argument is its length (the interpreter's since September 2026),
+            // spelled ".Length" in C#. The name is from when it was kept on the interpreter.
             new Construct("str_size_keep", "(string s)", "(s)", "if (s.Size) { return 1; } return 0;", "(\"ab\")"),
             // A property written as a call. The mapping adds no parentheses of its own -- the script's
             // own are copied through -- and it is safe to compile only since the interpreter stopped
@@ -1140,6 +1154,9 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("upper_call_chain", "(string s)", "(s)", "return s.Upper().Trim();", "(\" ab \")"),
             new Construct("lower_call", "(string s)", "(s)", "return s.Lower();", "(\"AB\")"),
             new Construct("trim_prop_keep", "(string s)", "(s)", "return s.Trim;", "(\" a \")"),
+            // The bare property inside a larger value (it took the rest of the expression until
+            // September 2026), and Length/Size with and without "()".
+            new Construct("str_members_expr", "(string s)", "(s)", "return \"[\" + s.Trim + \"]\" + s.Size + s.Length() + s.Size();", "(\" ab \")"),
             // A method on a collection element. The expression builder has always built these, but only
             // for a KNOWN expression: "return a[0].Sum() + a[1].Sum();" qualified and the lone
             // "return a[1].Sum();" did not, so the call went out as C# ".Sum()" on a Variable (CS1929).
@@ -1179,8 +1196,10 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("chain_map_varkey", "(int n)", "(n)", "m = {}; k = \"z\"; m[k] = m[\"y\"] = 4; return m[k] + m[\"y\"];", "(0)"),
             new Construct("chain_four", "(int n)", "(n)", "a = {1,2,3}; a[0] = a[1] = a[2] = 6; return a[0] + a[1] + a[2];", "(0)"),
             new Construct("chain_global", "(int n)", "(n)", "garr[0] = garr[1] = 8; return garr[0] + garr[1];", "(0)"),
-            // Kept: the index runs twice in the unrolling -- once as a target, once as the value beside
-            // it -- so one that can change something is left alone. A member target is left alone too.
+            // The unrolling ("Y = v; X = Y;") mentions every target but the leftmost twice, so only
+            // the leftmost may have an index that changes something, or a deeper owner: it is
+            // written once, after the value, when the interpreter reads its index too. (The names
+            // are from when these were kept on the interpreter.)
             new Construct("chain_inc_index_keep", "(int n)", "(n)", "a = {1,2,3}; i = 0; a[i++] = a[0] = 7; return a[0] + i;", "(0)"),
             new Construct("chain_member", "(int n)", "(n)", "p = new Point(1,2); p.x = p.y = 5; return p.x + p.y;", "(0)"),
             new Construct("chain_member_value", "(int n)", "(n)", "p = new Point(1,2); v = p.y = 6; return v + p.y;", "(0)"),
@@ -1189,8 +1208,59 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("chain_three_members", "(int n)", "(n)", "p = new Point(1,2); q = new Point(3,4); p.x = p.y = q.x = 6; return p.x + p.y + q.x;", "(0)"),
             new Construct("chain_str_member", "(int n)", "(n)", "q = new Named(1, \"t\"); v = q.tag = \"z\"; return v + q.tag;", "(0)"),
             new Construct("chain_member_loop", "(int n)", "(n)", "p = new Point(0,0); t = 0; for (i = 1; i < 3; i++) { p.x = p.y = i; t += p.x + p.y; } return t;", "(0)"),
-            // Kept: the owner has to be a name the unrolling can mention twice without re-running it,
-            // so a deeper member ("q.kid.x") and a member of an element ("a[0].v") stay interpreted.
+            // A subscript whose index reads the value's own member, on an argument or a local:
+            // read in C# (CscsLate.Element), not handed to the interpreter as one name, which
+            // could not see the member and then answered the whole value. Inside "&&" and "?:" too.
+            new Construct("sub_own_member", "(string s)", "(s)", "return s[s.Size - 1] + s[0];", "(\"abc\")"),
+            new Construct("sub_var_member", "(variable x)", "(x)", "return x[x.Size - 1];", "({4, 5})"),
+            new Construct("sub_own_in_and", "(string s)", "(s)", "if (s.Size > 0 && s[s.Size - 1] == \"c\") { return 1; } return 0;", "(\"abc\")"),
+            new Construct("sub_own_ternary", "(variable x)", "(x)", "return x.Size > 0 ? x[x.Size - 1] : \"none\";", "(\"abc\")"),
+            new Construct("sub_nested_index", "(int n)", "(n)", "g = {{1, 2}, {3, 4}}; return g[1][g[0][n]] + g[0][g[0].Size - 1];", "(0)"),
+            // Text indexed by character, as text: C#'s char was added as its code.
+            new Construct("text_index_loop", "(string s)", "(s)", "r = \"\"; for (i = s.Size - 1; i >= 0; i--) { r += s[i]; } return r;", "(\"abc\")"),
+            // A Variable and text as the two branches of "?:" (CS0173), and a number branch
+            // followed by more text.
+            new Construct("tern_mixed_types", "(variable x)", "(x)", "return \"<\" + (x ? x : \"none\") + \">\" + (x ? 7 : x) + \"!\";", "(5)"),
+            // Size(x) on a known name anywhere, joined into text too.
+            new Construct("size_in_text", "(variable x)", "(x)", "return \"<\" + (Size(x) > 1) + \">\";", "({1, 2})"),
+            // A number or a type name as a whole condition: the one truth rule.
+            new Construct("cond_indexof", "(variable x)", "(x)", "if (x.IndexOf(\"q\")) { return 1; } return 0;", "(\"abc\")"),
+            new Construct("cond_type", "(variable x)", "(x)", "if (x.Type) { return 1; } return 0;", "(5)"),
+            // A local copied from an int argument is a double, as every CSCS number is: "/= 0" is
+            // NaN or infinity, not DivideByZeroException; "*=" does not overflow; -2 % 2 is -0.
+            new Construct("int_local_div0", "(int n)", "(n)", "x = n; x /= 0; return x;", "(0)"),
+            new Construct("int_local_mul", "(int n)", "(n)", "x = n; x *= n; return x;", "(100000)"),
+            new Construct("int_mod_zero", "(int n)", "(n)", "x = -n; return (x % 2) + \"|\" + (n % 0);", "(2)"),
+            // A local whose type a compound or a step changes is a Variable (TypeChangingLocals).
+            new Construct("text_local_step", "(string s)", "(s)", "x = s; x++; y = s; y--; return x + \"|\" + y;", "(\"7\")"),
+            new Construct("text_local_times", "(string s)", "(s)", "x = s; x *= 2; return x;", "(\"ab\")"),
+            new Construct("num_local_text", "(int n)", "(n)", "x = n; x += \"!\"; return x;", "(3)"),
+            new Construct("bool_local_compound", "(int n)", "(n)", "r = n > 1; r += 1; return r;", "(3)"),
+            new Construct("text_join_step", "(string s)", "(s)", "x = s + 1; x++; return x;", "(\"4\")"),
+            // An element of a field's collection, read, written, compounded and stepped (CS0200:
+            // SetVariable into the field's own collection; CscsFields.StepElement for a step).
+            new Construct("field_elem_read", "(int n)", "(n)", "p = new Named(1, \"t\"); p.kid = {5, 6}; return p.kid[p.kid.Size - 1] + n;", "(0)"),
+            new Construct("field_elem_write", "(int n)", "(n)", "p = new Named(1, \"t\"); p.kid = {5, 6}; p.kid[0] = n; p.kid[3] = 1; return p.kid;", "(4)"),
+            new Construct("field_elem_compound", "(int n)", "(n)", "p = new Named(1, \"t\"); p.kid = {\"a\": 1}; p.kid[\"a\"] += n; return p.kid[\"a\"];", "(4)"),
+            new Construct("field_elem_step", "(int n)", "(n)", "p = new Named(1, \"t\"); p.kid = {5, 6}; p.kid[1]++; y = --p.kid[0]; return y + \"|\" + p.kid;", "(0)"),
+            // Bodies without braces (RewriteBracelessBodies): an if with its else chain, a loop.
+            new Construct("braceless_if_ret", "(variable x)", "(x)", "if (x) return \"t\"; else if (x == 0) return \"zero\"; else return \"f\";", "(\"abc\")"),
+            new Construct("braceless_for", "(int n)", "(n)", "r = 0; for (i = 0; i < n; i++) r += i; return r;", "(4)"),
+            new Construct("braceless_while", "(int n)", "(n)", "k = 0; while (k < n) k++; return k;", "(3)"),
+            new Construct("braceless_for_if", "(int n)", "(n)", "t = 0; for (i = 0; i < n; i++) if (i == 3) t += 100; else t += i; return t;", "(5)"),
+            new Construct("braceless_throw", "(variable x)", "(x)", "try { if (x) throw \"boom\" + x; return \"none\"; } catch (e) { return e.Message; }", "(2)"),
+            // A literal walked by a for-each is built first (RewriteForEachLiterals); a for step
+            // compounding a Variable counter keeps the header's ")" outside the call.
+            new Construct("foreach_var_literal", "(variable x)", "(x)", "r = \"\"; for (c : {x, !x, x ? 1 : 2}) { r += c + \",\"; } return r;", "(5)"),
+            new Construct("for_var_step", "(variable x)", "(x)", "c = 0; for (i = x ? 1 : 0; i < 3; i += 1) { c++; } return c;", "(1)"),
+            // Subscripts on arguments with a Math call in the index.
+            new Construct("arg_index_math", "(string s)", "(s)", "return s[Math.Abs(-1)] + s[Math.Min(0, 2)];", "(\"abc\")"),
+            // A call with named arguments, as the positional call it stands for (RewriteNamedArgumentCalls),
+            // where that is certainly the same call: values that are no reference, defaults it can spell.
+            new Construct("named_call_lits", "(int n)", "(n)", "return strHelper(q = n) + helper(q = n + 1);", "(2)"),
+            new Construct("named_call_expr", "(int n)", "(n)", "return mapVal(k = \"a\", mp = {\"a\": n * 2});", "(3)"),
+            new Construct("chain_late_index", "(int n)", "(n)", "a = {10,20,30,40}; i = n; a[i] = i = 3; return a[3] + a[0] + i;", "(0)"),
+            new Construct("chain_obj_index", "(int n)", "(n)", "b = {new Named(1, \"a\"), new Named(2, \"b\")}; j = n; b[j].v = j = 1; return b[0].v * 10 + b[1].v;", "(0)"),
             new Construct("chain_deep_keep", "(int n)", "(n)", "q = new Named(1, \"t\"); q.kid = new Point(1,2); q.kid.x = q.v = 5; return q.v;", "(0)"),
             new Construct("chain_elem_member_keep", "(int n)", "(n)", "a = {new Named(1, \"t\")}; p = new Point(1,2); a[0].v = p.x = 3; return p.x;", "(0)"),
             // A compound assignment to a member, and the increment forms. C# has neither for a member of
@@ -1229,8 +1299,9 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("elemwrite_dec", "(int n)", "(n)", "a = {new Named(5, \"t\")}; a[0].v--; return a[0].v;", "(0)"),
             new Construct("elemwrite_comp_map", "(int n)", "(n)", "m = {}; m[\"k\"] = new Named(5, \"t\"); m[\"k\"].v *= 2; return m[\"k\"].v;", "(0)"),
             new Construct("elemwrite_loop", "(int n)", "(n)", "a = {new Named(0, \"t\"), new Named(0, \"u\")}; for (i = 0; i < 2; i++) { a[i].v += i + 1; a[i].v++; } return a[0].v + a[1].v;", "(0)"),
-            // Kept: the WRITE compiles, but a read in the same function does not yet -- a nested
-            // element member ("e[0][0].v") and an element member assigned to a local ("r = a[0].v").
+            // Kept: the WRITE compiles, but a read in the same function did not -- a nested
+            // element member ("e[0][0].v") still does not; an element member assigned to a local
+            // ("r = a[0].v") compiles since September 2026.
             new Construct("elemwrite_nested_read_keep", "(int n)", "(n)", "e = {{new Named(7, \"t\")}}; e[0][0].v = 3; return e[0][0].v;", "(0)"),
             new Construct("elemwrite_assign_read_keep", "(int n)", "(n)", "a = {new Named(1, \"t\")}; r = a[0].v; a[0].v += 5; return r + \"|\" + a[0].v;", "(0)"),
             // A switch with consecutive case labels. They arrive on one line, so the second label was
@@ -1479,7 +1550,10 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("lenum_concat", "(int n)", "(n)", "var Local = Enum {X, Y}; return \"v=\" + Local.Y;", "(0)"),
             new Construct("lenum_two", "(int n)", "(n)", "var A = Enum {P, Q}; var B = Enum {R, S, T}; return A.Q * 10 + B.T;", "(0)"),
             new Construct("lenum_neg", "(int n)", "(n)", "var Local = Enum {X, Y}; return -Local.Y;", "(0)"),
+            // The enum's own .Type (ENUM) and a member's (NUMBER), through the interpreter's enum
+            // lookup. The name is from when .Type was kept on the interpreter (it answered NONE).
             new Construct("lenum_type_keep", "(int n)", "(n)", "var Local = Enum {X, Y}; return Local.Type;", "(0)"),
+            new Construct("lenum_member_type", "(int n)", "(n)", "var Local = Enum {X, Y}; return Local.Y.Type + Local.Y.Name + Local.Y;", "(0)"),
             // An exception crossing between compiled and interpreted code, each way, and an instance
             // handed to an interpreted function.
             new Construct("catch_interp_throw", "(int n)", "(n)", "try { throwsAlways(n); } catch (e) { return \"caught:\" + e; } return \"none\";", "(3)"),
@@ -1552,6 +1626,402 @@ namespace cscs.Tests.IntegrationTests.Precompiler
             new Construct("sw_loop_in_case", "(int n)", "(n)", "t = 0; for (i = 0; i < 3; i++) { switch (i) { case 1: for (j = 0; j < 3; j++) { t += 10; } break; default: t += 1; } } return t;", "(0)"),
             new Construct("sw_while_in_case", "(int n)", "(n)", "t = 0; switch (n) { case 1: k = 0; while (k < 3) { k++; t += k; } break; default: t = -1; } return t;", "(1)"),
             new Construct("sw_label_text", "(int n)", "(n)", "s = \"\"; switch (n) { case 1: s = \"case 2: no\"; break; case 2: s = \"two\"; break; default: s = \"d\"; } return s;", "(2)"),
+            new Construct("ifasg_num_then_str", "(int n)", "(n)", "if ((v = n * 2) > 5) { v = \"big\"; } return v;", "(1)"),
+            new Construct("ifasg_str_then_num", "(string s)", "(s)", "if ((v = s + \"!\") == \"a!\") { v = 7; } return v;", "(\"a\")"),
+            new Construct("ifasg_bool_used", "(int n)", "(n)", "t = 0; if ((b = n > 2)) { t = 10; } return b + t;", "(3)"),
+            new Construct("ifasg_else", "(int n)", "(n)", "if ((v = n - 1) > 0) { v = \"pos\"; } else { v = v * 10; } return v;", "(0)"),
+            new Construct("new_in_new_second", "(int n)", "(n)", "p = new Named(n, new Point(n, 1).Sum()); return p.tag;", "(4)"),
+            new Construct("new_in_new_return", "(int n)", "(n)", "return new Point(new Point(n, 2).Sum(), 1).Sum();", "(3)"),
+            new Construct("new_in_new_twice", "(int n)", "(n)", "p = new Named(new Point(1,2).Sum(), \"a\"); q = new Named(new Point(3,4).Sum(), \"b\"); return p.v + q.v;", "(0)"),
+            new Construct("call_self_fib", "(int n)", "(n)", "if (n < 2) { return n; } return SELF(n - 1) + SELF(n - 2);", "(12)"),
+            new Construct("call_self_acc", "(int n)", "(n)", "if (n <= 0) { return 0; } return n + SELF(n - 1);", "(40)"),
+            new Construct("call_helper_loop", "(int n)", "(n)", "t = 0; for (i = 0; i < n; i++) { t += helper(i); } return t;", "(5)"),
+            new Construct("call_nested_args", "(int n)", "(n)", "return helper(helper(n) + 1);", "(2)"),
+            new Construct("elem_method_decl", "(int n)", "(n)", "pts = {new Point(1, 2), new Point(3, 4)}; r = pts[1].Sum(); return r + n;", "(0)"),
+            new Construct("elem_method_map", "(int n)", "(n)", "mp = {\"k\" : new Point(2, 3)}; r = mp[\"k\"].Sum(); return r + n;", "(1)"),
+            new Construct("elem_field_decl", "(int n)", "(n)", "pts = {new Point(1, 2)}; r = pts[0].x + pts[0].y; return r;", "(0)"),
+            new Construct("elem_field_str", "(int n)", "(n)", "ws = {new Named(1, \"ab\")}; t = ws[0].tag + \"!\"; return t;", "(0)"),
+            new Construct("rebind_foreach", "(int n)", "(n)", "q = \"z\"; c = {\"a\", \"b\"}; r = \"\"; for (q in c) { r += q; } return r + \"|\" + q;", "(0)"),
+            new Construct("rebind_foreach_nested", "(int n)", "(n)", "q = \"z\"; c = {\"a\", \"b\"}; r = \"\"; for (q in c) { for (q in c) { r += q; } r += \"-\"; } return r + q;", "(0)"),
+            new Construct("rebind_catch", "(int n)", "(n)", "e = \"pre\"; t = 0; try { throw \"x\"; } catch (e) { t += 1; } return string(t) + \"|\" + e;", "(0)"),
+            new Construct("rebind_catch_loop", "(int n)", "(n)", "e = \"pre\"; t = 0; for (i = 0; i < 2; i++) { try { throw \"x\" + i; } catch (e) { t += 1; } } return string(t) + \"|\" + e;", "(0)"),
+            new Construct("rebind_sibling_loops", "(int n)", "(n)", "c = {\"a\", \"b\"}; r = \"\"; for (k in c) { r += k; } for (k in c) { r += k; } return r;", "(0)"),
+            new Construct("rebind_catch_unused", "(int n)", "(n)", "t = 0; try { throw \"x\"; } catch (e) { t = 5; } return t;", "(0)"),
+            new Construct("logic_call_right", "(int n)", "(n)", "if (n > 1 && helper(n)) { return 1; } return 0;", "(2)"),
+            new Construct("logic_call_left_or", "(int n)", "(n)", "if (helper(n) || n > 1) { return 1; } return 0;", "(0)"),
+            new Construct("logic_call_not", "(int n)", "(n)", "if (!helper(n) && n == 0) { return 1; } return 0;", "(0)"),
+            new Construct("logic_call_return", "(int n)", "(n)", "return helper(n) && n > 1;", "(2)"),
+            new Construct("logic_call_text", "(int n)", "(n)", "if (strHelper(n) && n >= 0) { return 1; } return 0;", "(1)"),
+            new Construct("logic_call_while", "(int n)", "(n)", "t = 0; while (t < 5 && helper(n)) { t++; } return t;", "(1)"),
+            new Construct("logic_call_hoisted", "(double n)", "(n)", "if (helper(n) && helper(n + 1) > 0) { return 1; } return 0;", "(0)"),
+            new Construct("boolgrp_compound", "(int n)", "(n)", "r = 1; r += (c = n > 5) * 10; return r + c;", "(7)"),
+            new Construct("boolgrp_compound2", "(int n)", "(n)", "r = (b = n > 2) + b; r += (c = n > 5) * 10; return r;", "(3)"),
+            new Construct("cmpnum_mul", "(int n)", "(n)", "return (n > 2) * 10;", "(3)"),
+            new Construct("cmpnum_sum", "(int n)", "(n)", "r = (n > 2) * 10 + (n > 5); return r;", "(6)"),
+            new Construct("cmpnum_null_keep", "(int n)", "(n)", "m = {\"a\": null, \"b\": 0}; return (m[\"a\"] == null) * 10 + (m[\"b\"] == null);", "(0)"),
+            new Construct("cmpnum_text", "(string s)", "(s)", "return (s == \"x\") + 1;", "(\"x\")"),
+            new Construct("cmpnum_text_join", "(int n)", "(n)", "return \"v=\" + (n > 2);", "(3)"),
+            new Construct("cmpnum_compound", "(int n)", "(n)", "t = 5; t += (n != 1); t -= (n < 0); return t;", "(4)"),
+            new Construct("cmpnum_loop", "(int n)", "(n)", "c = 0; for (i = 0; i < 10; i++) { c += (i % 3 == 0); } return c;", "(0)"),
+            new Construct("cmpnum_neg", "(int n)", "(n)", "return 10 - (n >= 2) * 3;", "(2)"),
+            new Construct("methchain_path", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"bc\"); return p.Kid().tag.Upper + n;", "(0)"),
+            new Construct("methchain_path_len", "(int n)", "(n)", "p = new Named(1, \"a\"); p.kid = new Named(2, \"bcd\"); return p.Kid().tag.Length + n;", "(1)"),
+            new Construct("vcmp_arg_eq", "(variable s)", "(s)", "if (s == \"stock\") { return 1; } return 0;", "(\"stock\")"),
+            new Construct("vcmp_arg_eq_false", "(variable s)", "(s)", "if (s == \"stock\") { return 1; } return 0;", "(\"bond\")"),
+            new Construct("vcmp_arg_ne_elif", "(variable s)", "(s)", "if (s == \"yes\") { return 1; } elif (s != \"no\") { return 2; } return 3;", "(\"maybe\")"),
+            new Construct("vcmp_num_vs_text", "(variable x)", "(x)", "if (x == \"5\") { return 1; } return 0;", "(5)"),
+            new Construct("vcmp_num_vs_text2", "(variable x)", "(x)", "if (x == \"5.0\") { return 1; } return 0;", "(5)"),
+            new Construct("vcmp_text_order", "(variable s)", "(s)", "if (\"b\" < s) { return 1; } return 0;", "(\"c\")"),
+            new Construct("vcmp_text_order2", "(variable s)", "(s)", "if (s >= \"b\") { return 1; } return 0;", "(\"a\")"),
+            new Construct("vcmp_return", "(variable x)", "(x)", "return x == \"5\";", "(\"5\")"),
+            new Construct("vcmp_map_elem", "(int n)", "(n)", "m = {\"k\": \"abc\"}; if (m[\"k\"] == \"abc\") { return 1 + n; } return 0;", "(0)"),
+            new Construct("vcmp_field", "(int n)", "(n)", "p = new Named(1, \"t\"); if (p.tag != \"t\") { return 1; } return 2 + n;", "(0)"),
+            new Construct("vcmp_loop_count", "(variable s)", "(s)", "c = 0; for (ch in s) { if (ch == \"a\") { c++; } } return c;", "(\"banana\")"),
+            new Construct("varfed_num", "(variable n)", "(n)", "a1 = n; a2 = 5; return a1 + a2;", "(3)"),
+            new Construct("varfed_text", "(variable n)", "(n)", "a1 = n; a2 = 5; return a1 + a2;", "(\"3\")"),
+            new Construct("varfed_join", "(variable s)", "(s)", "t = s + \"!\"; return t.Length;", "(\"ab\")"),
+            new Construct("varfed_type_num", "(variable n)", "(n)", "x = n + 1; return x.Type;", "(2)"),
+            new Construct("varfed_type_text", "(variable n)", "(n)", "x = n + 1; return x.Type;", "(\"a\")"),
+            new Construct("varfed_mul_text", "(variable n)", "(n)", "y = n * 3; return y;", "(\"ab\")"),
+            new Construct("varfed_try", "(variable n)", "(n)", "try { a1 = n; } catch (e) { } a2 = 5; return a1 + a2;", "(4)"),
+            new Construct("varfed_counter", "(variable n)", "(n)", "t = 0; for (i = n; i > 0; i--) { t += i; } return t;", "(4)"),
+            new Construct("strict_var_num", "(variable n)", "(n)", "if (n === 5) { return 1; } if (n !== 5) { return 2; } return 0;", "(5)"),
+            new Construct("strict_var_text_num", "(variable n)", "(n)", "if (n === 5) { return 1; } if (n !== 5) { return 2; } return 0;", "(\"5\")"),
+            new Construct("strict_var_text", "(variable s)", "(s)", "if (s === \"a\") { return 1; } return 0;", "(\"a\")"),
+            new Construct("strict_str_num", "(string s)", "(s)", "if (s === 5) { return 1; } return 0;", "(\"5\")"),
+            new Construct("strict_elem_text_num", "(int n)", "(n)", "m = {\"k\": \"5\"}; if (m[\"k\"] === 5) { return 1; } return 2 + n;", "(0)"),
+            new Construct("strict_elem_num_text", "(int n)", "(n)", "m = {\"k\": 5}; if (m[\"k\"] !== \"5\") { return 1; } return 2 + n;", "(0)"),
+            new Construct("strict_elem_same", "(int n)", "(n)", "m = {\"k\": 5}; if (m[\"k\"] === 5) { return 1 + n; } return 0;", "(0)"),
+            new Construct("hoist_call_arg", "(int n)", "(n)", "return helper((q = n * 2)) + q;", "(4)"),
+            new Construct("hoist_math_arg", "(int n)", "(n)", "return Math.Max((q = n * 2), 5) + q;", "(2)"),
+            new Construct("hoist_two_bools", "(int n)", "(n)", "return (b = n > 2) + (c = n > 1) + b + c;", "(3)"),
+            new Construct("hoist_stmt", "(int n)", "(n)", "r = helper((q = n + 1)) * q; return r;", "(2)"),
+            new Construct("hoist_name_read_first", "(int n)", "(n)", "t = 1; return t + (t = 5) + t;", "(0)"),
+            new Construct("hoist_call_first", "(int n)", "(n)", "q = 1; return helper(q) + (q = 5) + q;", "(0)"),
+            new Construct("fold_text_num", "(int n)", "(n)", "s = \"\"; for (i = 0; i < n; i++) { s += \"ab\" * 2; } return s;", "(3)"),
+            new Construct("fold_num_text", "(int n)", "(n)", "return 2 * \" ab \";", "(0)"),
+            new Construct("fold_in_join", "(int n)", "(n)", "return \"x\" + \"ab\" * 3 + n;", "(1)"),
+            new Construct("fold_chain", "(int n)", "(n)", "return 4 * \"ab\" * 2;", "(0)"),
+            new Construct("nested_elem_member", "(int n)", "(n)", "e = {{new Named(7, \"t\")}}; e[0][0].v = 3; return e[0][0].v + n;", "(1)"),
+            new Construct("null_eq_null_ne", "(int n)", "(n)", "if (null != null) { return 1; } return 2;", "(0)"),
+            // "var" declares a local, even where a global has the name: the global is left alone,
+            // which the call checks by reading it back afterwards. Compiled by dropping the "var"
+            // and keeping every global path away from the name -- unless the name is used before
+            // its declaration, where the earlier use still means the global.
+            new Construct("var_local", "(int n)", "(n)", "var t = 5; t++; return t + n;", "(1)"),
+            new Construct("var_shadow_global", "(int n)", "(n)", "var gcount = 7; gcount++; return gcount + n;", "(1) * 100 + gcount"),
+            new Construct("var_shadow_callback", "(int n)", "(n)", "var gcount = 7; return helper(gcount) + n;", "(0) * 100 + gcount"),
+            new Construct("var_shadow_print", "(int n)", "(n)", "var gcount = 3; s = \"v\" + gcount; return s + callsBack(n);", "(1)"),
+            new Construct("var_after_use_keep", "(int n)", "(n)", "t = gcount; var gcount = 2; return t + gcount + n;", "(0) * 100 + gcount"),
+            new Construct("var_in_loop", "(int n)", "(n)", "t = 0; for (i = 0; i < n; i++) { var q = i * 2; t += q; } return t;", "(4)"),
+            new Construct("var_string", "(int n)", "(n)", "var s2 = \"ab\"; s2 += \"c\"; return s2 + n;", "(1)"),
+            new Construct("var_enum_kept", "(int n)", "(n)", "var Local = Enum {X, Y}; return Local.Y + n;", "(1)"),
+            // Argument names are lowercased by the signature parser while the body keeps its own
+            // spelling; the interpreter treats them as one name, so the translator does too.
+            new Construct("arg_camel", "(int n, int stepBy)", "(n, stepBy)", "x = stepBy + 1; r = {}; r[0] = stepBy; return x + r[0] + n;", "(1, 2)"),
+            new Construct("arg_camel_var", "(variable n, variable initValue)", "(n, initValue)", "r = {}; for (i = 0; i < n; i++) { r[i] = initValue; } return r.Size * 10 + r[0];", "(3, 4)"),
+            new Construct("arg_camel_assign", "(int n, int stepBy)", "(n, stepBy)", "stepBy = stepBy * 2; return StepBy + n;", "(1, 5)"),
+            new Construct("arg_camel_str", "(string firstName)", "(firstName)", "t = FirstName + \"!\"; return t + firstName.Length;", "(\"Ann\")"),
+            new Construct("arg_camel_loop", "(int n, int maxCount)", "(n, maxCount)", "t = 0; for (i = 0; i < MaxCount; i++) { t += maxcount; } return t + n;", "(1, 3)"),
+            new Construct("arg_camel_member_kept", "(int n)", "(n)", "p = new Point(n, 2); return p.x + p.X;", "(4)"),
+            // A default keeps its case: the signature parser lowercased the whole argument.
+            new Construct("arg_default_case", "(string s = \"HeLLo\")", "(s = \"HeLLo\")", "return s;", "()"),
+            // A member call on an argument declared "variable", as on a local holding a Variable.
+            new Construct("varg_substring", "(variable s)", "(s)", "t = s.Substring(1, 3); c = t.Replace(\"b\", \"-\"); return c;", "(\"abcbd\")"),
+            new Construct("varg_substring_num", "(variable s)", "(s)", "t = s.Substring(1, 2); return t;", "(12345)"),
+            new Construct("varg_upper_call", "(variable s)", "(s)", "t = s.Upper(); return t + s.Lower();", "(\"aB\")"),
+            new Construct("vlocal_upper_call", "(variable s)", "(s)", "v = s; return v.Upper();", "(\"ab\")"),
+            new Construct("varg_size_call", "(variable a)", "(a)", "t = a.Size(); return t;", "({1, 2, 3})"),
+            new Construct("varg_length_call", "(variable s)", "(s)", "t = s.Length(); return t + 1;", "(\"abc\")"),
+            // A counter bounded by a "variable" argument stays a number: the header's condition
+            // "i<=n" was read as the assignment "i = n", which made the counter a Variable.
+            new Construct("vloop_bound", "(variable n)", "(n)", "t = 0; for (i = 1; i <= n; i++) { t += i * i; } return t;", "(4)"),
+            new Construct("vloop_bound_ne", "(variable n)", "(n)", "t = 0; for (i = 0; i != n; i++) { t++; } return t;", "(3)"),
+            new Construct("vloop_bound_ge", "(variable n)", "(n)", "t = 0; for (i = 10; i >= n; i--) { t++; } return t;", "(7)"),
+            new Construct("vloop_bound_text", "(variable n)", "(n)", "t = 0; for (i = 1; i <= n; i++) { t++; } return t;", "(\"3\")"),
+            new Construct("vloop_call_start", "(variable n)", "(n)", "t = 0; for (i = helper(n); i < 10; i++) { t++; } return t;", "(2)"),
+            new Construct("vloop_start_arg", "(variable n)", "(n)", "t = 0; for (i = n; i > 0; i--) { t += i; } return t;", "(4)"),
+            new Construct("vloop_total_real", "(variable n)", "(n)", "total = 0.0; for (i = 1; i <= n; i++) { total += i * i; } return total;", "(3)"),
+            // A collection literal as a whole return value, or as a ternary's branch. The tokenizer
+            // cut both at the brace; they become "__litN = {..}; return __litN" and an if/else.
+            new Construct("lit_return", "(int n)", "(n)", "return {7, n};", "(2)"),
+            new Construct("lit_return_empty_args", "()", "()", "return {7, 8, 9};", "()"),
+            new Construct("lit_return_map", "(int n)", "(n)", "return {\"a\": n, \"b\": 2};", "(2)"),
+            new Construct("lit_return_in_block", "(int n)", "(n)", "if (n > 0) { return {1, 2}; } return {3};", "(1)"),
+            new Construct("lit_return_nested", "(int n)", "(n)", "return {{1, 2}, {3, n}};", "(4)"),
+            new Construct("lit_return_text", "(int n)", "(n)", "return {\"x\", \"y\" + n};", "(1)"),
+            new Construct("lit_tern", "(int n)", "(n)", "a = n > 0 ? {1, 2, 3} : {4}; b = n > 5 ? {7} : {8, 9}; return a.Size * 10 + b.Size + a[0] + n;", "(1)"),
+            new Construct("lit_tern_call", "(int n)", "(n)", "a = n > 0 ? {1, 2, 3} : build(); return a.Size + a[0] + n;", "(0)"),
+            new Construct("lit_tern_map", "(int n)", "(n)", "m = n > 0 ? {\"a\": 1} : {\"b\": 2}; return m.Keys[0];", "(1)"),
+            new Construct("lit_case_block_keep", "(int n)", "(n)", "t = 0; switch (n) { case 1: { t = 5; break; } default: { t = 6; } } return t;", "(1)"),
+            // A case body in braces is a plain block, and a local first assigned inside a case is
+            // declared for the whole function, as one first assigned inside an "if" is.
+            new Construct("sw_case_braced", "(int n)", "(n)", "switch (n) { case 1: { t = 5; break; } default: { t = 6; } } return t;", "(1)"),
+            new Construct("sw_case_braced_nested", "(int n)", "(n)", "t = 0; switch (n) { case 1: { t = 5; if (n > 0) { t++; } break; } case 2: t = 9; break; default: { t = 6; } } return t;", "(1)"),
+            new Construct("sw_first_assign", "(int n)", "(n)", "switch (n) { case 1: t = 5; break; default: t = 6; } return t;", "(2)"),
+            new Construct("sw_first_assign_text", "(string s)", "(s)", "switch (s) { case \"a\": { r = \"x\"; break; } default: { r = \"y\"; } } return r + s;", "(\"a\")"),
+            new Construct("sw_first_assign_mixed", "(int n)", "(n)", "switch (n) { case 1: t = \"one\"; break; default: t = 6; } return t;", "(1)"),
+            // A member call on a "variable" argument that Variable has no C# member for goes to the
+            // interpreter, hoisted into a temporary where it sits inside an expression or a test.
+            new Construct("vmem_at_expr", "(variable s)", "(s)", "return s.Upper + s.At(1) + s.Length;", "(\"abc\")"),
+            new Construct("vmem_at_assign", "(variable s)", "(s)", "t = s.At(1); return t + s;", "(\"abc\")"),
+            new Construct("vmem_equals", "(variable s)", "(s)", "if (s.Equals(\"ABCD\")) { return 1; } if (s.Equals(\"ABCD\", \"no_case\")) { return 2; } return 0;", "(\"abcd\")"),
+            new Construct("vmem_trim_cmp", "(variable s)", "(s)", "if (s.Trim() == \"ab\") { return 1; } return 0;", "(\" ab \")"),
+            new Construct("vmem_at_num", "(variable s)", "(s)", "return s.At(1) + s.Length;", "(12345)"),
+            new Construct("vmem_at_list", "(variable s)", "(s)", "t = s.At(1); return t;", "({4, 5, 6})"),
+            new Construct("vmem_call_first", "(variable s)", "(s)", "return helper(1) + s.At(0);", "(\"z\")"),
+            // Substring positions that are Variables are read as the interpreter reads them.
+            new Construct("vmem_substr_var", "(variable s, variable n)", "(s, n)", "return s.Substring(n - 1, n + 1);", "(\"abcdef\", 2)"),
+            new Construct("vmem_substr_var1", "(variable s, variable n)", "(s, n)", "t = s.Substring(n - 1); return t;", "(\"abcdef\", 3)"),
+            new Construct("vmem_substr_text_pos", "(variable s, variable n)", "(s, n)", "return s.Substring(n);", "(\"abcdef\", \"2\")"),
+            new Construct("vmem_substr_past_end", "(variable s, variable n)", "(s, n)", "return s.Substring(n, 10);", "(\"abcdef\", 2)"),
+            // Math over an untyped value runs the interpreter's own Math function on the value
+            // (CscsCalls.Builtin): each reads a Variable its own way -- text is 0, a truth value 1.
+            new Construct("vmath_ratio", "(variable x)", "(x)", "return Math.Sin(x) / Math.Cos(x);", "(1)"),
+            new Construct("vmath_text", "(variable x)", "(x)", "return Math.Sqrt(x) + Math.Abs(x);", "(\"16\")"),
+            new Construct("vmath_bool", "(variable x)", "(x)", "return Math.Round(x) + Math.Floor(x);", "(true)"),
+            new Construct("vmath_round_digits", "(variable x, variable k)", "(x, k)", "return Math.Round(x, k + 1);", "(1.23456, 1)"),
+            new Construct("vmath_assign", "(variable x)", "(x)", "t = Math.Pow(x, 2); return t + x;", "(3)"),
+            new Construct("vmath_arg_unchanged", "(variable x)", "(x)", "y = Math.Sin(x); return x + y;", "(1)"),
+            new Construct("vmath_in_if", "(variable x)", "(x)", "if (Math.Abs(x) > 2) { return 1; } return 0;", "(-3)"),
+            new Construct("vmath_max_mixed", "(variable a, variable b)", "(a, b)", "return Math.Max(a, b);", "(3, \"7\")"),
+            new Construct("vmath_nested_keep", "(variable x)", "(x)", "return Math.Sqrt(Math.Abs(x));", "(-16)"),
+            new Construct("vmath_elem", "(int n)", "(n)", "a = {1.5, -2}; t = 0; for (v in a) { t += Math.Abs(v); } return t + n;", "(0)"),
+            new Construct("vmath_text_num", "(variable x)", "(x)", "return Math.Floor(x) + 1;", "(\"2.5\")"),
+            // A Variable as a truth value where C# wants a bool -- a whole condition, an operand of
+            // "&&" / "||", under "!" -- repaired from Roslyn's diagnostics into the interpreter's
+            // truth value (CscsConvert.IsTrue / IsFalse): a number that is not 0; text never.
+            new Construct("truth_glob_num", "(int n)", "(n)", "if (gcount) { return 1; } return 0;", "(0)"),
+            new Construct("truth_glob_str", "(int n)", "(n)", "if (gstr) { return 1; } return 0;", "(0)"),
+            new Construct("truth_glob_not", "(int n)", "(n)", "if (!gcount) { return 1; } return 2;", "(0)"),
+            new Construct("truth_glob_not_str", "(int n)", "(n)", "if (!gstr) { return 1; } return 2;", "(0)"),
+            new Construct("truth_glob_while", "(int n)", "(n)", "t = 0; while (gcount && t < 3) { t++; } return t;", "(0)"),
+            new Construct("truth_glob_elif", "(int n)", "(n)", "if (n > 5) { return 1; } elif (gcount) { return 2; } return 3;", "(0)"),
+            new Construct("truth_var_and_text", "(variable s, variable n)", "(s, n)", "if (s && n > 1) { return 1; } return 0;", "(\"x\", 2)"),
+            new Construct("truth_var_and_digit", "(variable s, variable n)", "(s, n)", "if (s && n > 1) { return 1; } return 0;", "(\"5\", 2)"),
+            new Construct("truth_var_and_num", "(variable s, variable n)", "(s, n)", "if (s && n > 1) { return 1; } return 0;", "(1, 2)"),
+            new Construct("truth_var_or_zero", "(variable s, variable n)", "(s, n)", "if (s || n > 5) { return 1; } return 0;", "(0, 2)"),
+            new Construct("truth_member_and", "(variable s)", "(s)", "if (s.Length > 2 && s.StartsWith(\"ab\")) { return 1; } return 0;", "(\"abc\")"),
+            new Construct("truth_member_and_false", "(variable s)", "(s)", "if (s.Length > 2 && s.StartsWith(\"ab\")) { return 1; } return 0;", "(\"xbc\")"),
+            new Construct("truth_not_var_digit", "(variable s)", "(s)", "if (!s) { return 1; } return 2;", "(\"5\")"),
+            new Construct("truth_not_var_zero", "(variable s)", "(s)", "if (!s) { return 1; } return 2;", "(0)"),
+            // A bare Math name the script has its own function for is that function, as it is to
+            // the interpreter ("sign" is defined in the preamble to answer x + 100).
+            new Construct("shadow_math_name", "(int n)", "(n)", "return sign(n);", "(-5)"),
+            new Construct("shadow_math_name_expr", "(int n)", "(n)", "return sign(n) * 2 + Math.Sign(n);", "(-5)"),
+            new Construct("bare_math_kept", "(int n)", "(n)", "return Math.Abs(n) + Math.Max(n, 3);", "(-5)"),
+            // Operators C# has no overload for between these operands, applied by the interpreter:
+            // bitwise on a Variable, text ordered against text, "**" over a Variable.
+            new Construct("vop_bitwise", "(variable n)", "(n)", "return (n | 4) ^ 1;", "(3)"),
+            new Construct("vop_text_order", "(variable w)", "(w)", "if (w.Upper > \"AA\") { return 1; } return 0;", "(\"ab\")"),
+            new Construct("vop_text_vs_var", "(variable w)", "(w)", "best = \"melon\"; if (w > best) { return 1; } if (w == best) { return 0; } return -1;", "(\"pear\")"),
+            new Construct("vop_text_vs_num", "(variable w)", "(w)", "best = \"melon\"; if (w > best) { return 1; } return -1;", "(5)"),
+            new Construct("vop_power", "(variable n)", "(n)", "return 1 + n ** 2 + 2 ** 3 ** n;", "(2)"),
+            new Construct("vop_power_text", "(variable n)", "(n)", "return n ** 2;", "(\"3\")"),
+            new Construct("vop_power_typed", "(int n)", "(n)", "return n ** 2 + 2 ** 3 ** 2;", "(3)"),
+            new Construct("vmath_nested", "(variable n)", "(n)", "return Math.Max(1, Math.Min(n, 5)) + Math.Round(Math.Sqrt(n), 2);", "(7)"),
+            new Construct("vmath_nested_text", "(variable n)", "(n)", "return Math.Max(1, Math.Min(n, 5));", "(\"3\")"),
+            // A local first assigned inside a condition from a Variable is declared a Variable.
+            new Construct("vcond_asg_while", "(variable n)", "(n)", "t = 0; while ((x = n - t) > 2) { t++; } return t * 10 + x;", "(6)"),
+            new Construct("vcond_asg_if", "(variable n)", "(n)", "if ((y = n * 2) > 5) { return y; } return 0;", "(4)"),
+            new Construct("vcond_asg_pair", "(variable n)", "(n)", "if ((x = n + 1) > 2 && (z = x * 2) > 5) { return z; } return 0;", "(3)"),
+            new Construct("vcond_asg_elif", "(variable n)", "(n)", "if (n > 10) { return 1; } elif ((y = n * 3) > 5) { return y; } return 0;", "(2)"),
+            new Construct("vcond_asg_text", "(variable s)", "(s)", "if ((t = s + \"!\") == \"a!\") { return 1; } return 0;", "(\"a\")"),
+            new Construct("vcond_asg_text_num", "(variable n)", "(n)", "if ((y = n * 2) > 5) { return y; } return 0;", "(\"4\")"),
+            new Construct("vcond_asg_truth", "(variable n)", "(n)", "t = n; while ((t = t - 1)) { } return t;", "(3)"),
+            // Math over a Variable that is not an argument: repaired from CS1503 into the
+            // interpreter's own Math function.
+            new Construct("vmath_local", "(variable n)", "(n)", "b = n > 1; return Math.Max(b, 5) + Math.Abs(b);", "(2)"),
+            new Construct("vmath_elem_local", "(int n)", "(n)", "a = {\"4\", -2}; t = 0; for (v in a) { t += Math.Abs(v); } return t + n;", "(0)"),
+            new Construct("vmath_map_elem", "(int n)", "(n)", "m = {\"a\": 2.5}; return Math.Round(m[\"a\"]) + Math.Pow(m[\"a\"], 2);", "(0)"),
+            // ".type" of an untyped argument against text; a lowercase member of a global; text
+            // members given an untyped argument; "s.At(n - 1)" with arithmetic in the argument.
+            new Construct("vtype_ne_text", "(variable e)", "(e)", "if (e.type != \"NUMBER\") { return 1; } return 0;", "(\"x\")"),
+            new Construct("vtype_eq_num", "(variable e)", "(e)", "if (e.type == \"NUMBER\") { return 1; } return 0;", "(4)"),
+            new Construct("vtype_array", "(variable e)", "(e)", "if (e.Type == \"ARRAY\") { return e.Size; } return 0;", "({1, 2})"),
+            new Construct("glob_lower_member", "(int n)", "(n)", "return garr.size + garr.Size + gstr.length + n;", "(0)"),
+            new Construct("vtext_arg_starts", "(variable w, variable p)", "(w, p)", "if (w.StartsWith(p)) { return 1; } if (w.EndsWith(p)) { return 2; } return 0;", "(\"abc\", \"c\")"),
+            new Construct("vtext_arg_num", "(variable w, variable p)", "(w, p)", "return w.IndexOf(p) + w.Replace(p, \"-\");", "(\"a1b1\", 1)"),
+            new Construct("vtext_scan", "(variable text, variable prefix)", "(text, prefix)", "words = text.Split(\" \"); hits = 0; for (i = 0; i < words.Size; i++) { if (words[i].StartsWith(prefix)) { hits += 1; } } return hits;", "(\"ab ac bd\", \"a\")"),
+            new Construct("str_starts_var", "(string w, variable p)", "(w, p)", "if (w.StartsWith(p)) { return 1; } return 0;", "(\"abc\", \"ab\")"),
+            new Construct("vmem_at_expr_arg", "(variable s, variable n)", "(s, n)", "t = s.At(n - 1); return t;", "(\"abc\", 2)"),
+            // A function calling itself with nothing else of the interpreter's in its body calls its
+            // own typed body directly (MakeDirectSelfCalls). Each shape a call can take, each
+            // argument type, and the cases that keep the interpreter's call.
+            new Construct("dsc_text", "(string s, int n)", "(s, n)", "if (n == 0) { return s; } return SELF(s + \"x\", n - 1);", "(\"a\", 3)"),
+            new Construct("dsc_double", "(double x, int n)", "(x, n)", "if (n == 0) { return x; } return SELF(x / 2, n - 1);", "(10, 3)"),
+            new Construct("dsc_variable", "(variable v, int n)", "(v, n)", "if (n == 0) { return v; } return SELF(v + 1, n - 1);", "(\"a\", 2)"),
+            new Construct("dsc_default_keep", "(int n, int step = 1)", "(n, step = 1)", "if (n <= 0) { return 0; } return 1 + SELF(n - step);", "(5)"),
+            new Construct("dsc_throw", "(int n)", "(n)", "try { if (n == 0) { throw \"bottom\"; } return SELF(n - 1); } catch (e) { return \"caught:\" + e + n; }", "(3)"),
+            new Construct("dsc_ternary", "(int n)", "(n)", "return n <= 1 ? 1 : n * SELF(n - 1);", "(5)"),
+            new Construct("dsc_condition", "(int n)", "(n)", "if (n > 0 && SELF(n - 1) >= 0) { return n; } return 0;", "(3)"),
+            new Construct("dsc_loop", "(int n)", "(n)", "if (n == 0) { return 1; } t = 0; for (i = 0; i < n; i++) { t += SELF(i); } return t;", "(4)"),
+            new Construct("dsc_nested_arg", "(int n)", "(n)", "if (n <= 1) { return n; } return SELF(SELF(n - 1));", "(5)"),
+            new Construct("dsc_two_args", "(int a, int b)", "(a, b)", "if (b == 0) { return a; } return SELF(b, a % b);", "(84, 36)"),
+            new Construct("dsc_with_callback_keep", "(int n)", "(n)", "if (n == 0) { return helper(1); } return SELF(n - 1) + 1;", "(3)"),
+            // Typed returns: a function calling itself returns a double through its calls to itself
+            // when the C# compiler accepts every return as a number; anything else keeps Variables.
+            new Construct("tr_fib", "(int n)", "(n)", "if (n < 2) { return n; } return SELF(n - 1) + SELF(n - 2);", "(12)"),
+            new Construct("tr_text_base", "(int n)", "(n)", "if (n == 0) { return \"end\"; } return SELF(n - 1);", "(3)"),
+            new Construct("tr_text_one_path", "(int n)", "(n)", "if (n == 0) { return 1; } if (n == 5) { return \"five\"; } return SELF(n - 1);", "(5)"),
+            new Construct("tr_truth", "(int n)", "(n)", "if (n == 0) { return n > -1; } return SELF(n - 1);", "(3)"),
+            new Construct("tr_concat", "(int n)", "(n)", "if (n == 0) { return 0; } return SELF(n - 1) + \"x\";", "(3)"),
+            new Construct("tr_local", "(int n)", "(n)", "if (n == 0) { return 3; } r = SELF(n - 1); return r * 2;", "(4)"),
+            new Construct("tr_double", "(double x)", "(x)", "if (x < 1) { return x; } return SELF(x / 3) + 1;", "(100)"),
+            new Construct("tr_int_step", "(int n)", "(n)", "if (n <= 1) { return n; } return n + SELF(n - 2);", "(8)"),
+            new Construct("tr_compare", "(int n)", "(n)", "if (n == 0) { return 5; } if (SELF(n - 1) > 4) { return 7; } return 1;", "(2)"),
+            new Construct("tr_ternary", "(int n)", "(n)", "if (n <= 1) { return 1; } a = SELF(n - 1); return a > 10 ? a : a * 2;", "(6)"),
+            // "for (x : a)" and "for (x of a)" are "for (x in a)" to the interpreter.
+            new Construct("fe_colon", "(int n)", "(n)", "a = {1, 2, 3}; t = 0; for (x : a) { t += x; } return t + n;", "(1)"),
+            new Construct("fe_of", "(int n)", "(n)", "a = {1, 2, 3}; t = 0; for (x of a) { t += x * 2; } return t + n;", "(1)"),
+            // "Size(x)" in a loop header is "x.Size": the call route emitted statements into it.
+            new Construct("size_in_for", "(int n)", "(n)", "rows = {1, 2, 3, 4}; t = 0; for (i = 1; i < Size(rows); i++) { t += rows[i]; } return t + n;", "(0)"),
+            new Construct("size_in_while", "(int n)", "(n)", "rows = {1, 2, 3}; i = 0; while (i < Size(rows)) { i++; } return i + n;", "(0)"),
+            new Construct("size_elem_in_for", "(variable m)", "(m)", "t = 0; for (i = 0; i < Size(m[1]); i++) { t++; } return t;", "({{1}, {1, 2, 3}})"),
+            new Construct("size_text_kept", "(int n)", "(n)", "s = \"abc\"; return Size(s) + n;", "(1)"),
+            // An escaped quote inside text stays escaped when a Variable accumulates it.
+            new Construct("esc_quote_accum", "(int n)", "(n)", "xs = {1, 2}; s = \"\"; for (p in xs) { s += \"o='\" + \"{\\\"a\\\": \\\"\" + p + \"\\\"}'>\"; } return s;", "(0)"),
+            new Construct("esc_quote_var", "(variable v)", "(v)", "s = \"\"; s += \"{\\\"a\\\": \\\"\" + v + \"\\\"}\"; return s;", "(7)"),
+            // The string built-ins read their arguments as values, so they are called with values.
+            new Construct("bi_substr_cond", "(variable v)", "(v)", "if (Substring(v, 0, 1) == \"-\") { return 1; } return 0;", "(\"-5\")"),
+            new Construct("bi_substr_asg", "(variable v)", "(v)", "b = Substring(v, 1, v.Length - 1); return b;", "(\"-123\")"),
+            // "gcount=" inside text is no assignment: gcount is still the global.
+            new Construct("text_looks_assigned", "(int n)", "(n)", "s = \"gcount=\" + gcount; return s + n;", "(1)"),
+            // A list literal in square brackets is the same literal as in braces -- where the
+            // interpreter reads one. Not after "return", where it does not, and the two agree.
+            new Construct("brlit_flat", "(int n)", "(n)", "f = [\"a\", \"b\", n]; return f.Size * 10 + f[2];", "(3)"),
+            new Construct("brlit_nested", "(int n)", "(n)", "h = [[\"k\", 1], [\"m\", 2]]; return h[1][0] + h[n][1];", "(0)"),
+            new Construct("brlit_subscript_kept", "(int n)", "(n)", "a = {5, 6, 7}; i = {0, 2}; return a[i[1]] + n;", "(1)"),
+            new Construct("brlit_in_map", "(int n)", "(n)", "m = {\"k\": [1, 2, 3]}; return m[\"k\"].Size + m[\"k\"][2] + n;", "(4)"),
+            // Inside a brace literal the interpreter does not see locals from a bracket literal.
+            new Construct("brlit_in_map_local_keep", "(int n)", "(n)", "m = {\"k\": [1, 2, n]}; return m[\"k\"].Size + m[\"k\"][2];", "(4)"),
+            new Construct("brlit_arg", "(int n)", "(n)", "return sumArr([1, 2, n]);", "(4)"),
+            // Text handed to the interpreter by name keeps the script's own escapes: a quote inside
+            // text, a backslash, a tab. (A map literal in the arguments takes that route.)
+            new Construct("esc_textroute_quote", "(int n)", "(n)", "return mapVal({\"k\": \"{\\\"a\\\": 1}\"}, \"k\") + n;", "(1)"),
+            new Construct("esc_textroute_backslash", "(int n)", "(n)", "return mapVal({\"k\": \"C:\\\\dir\\\\f\"}, \"k\") + n;", "(1)"),
+            new Construct("esc_textroute_tab", "(int n)", "(n)", "return mapVal({\"k\": \"a\\tb\"}, \"k\") + n;", "(1)"),
+            // Size(x) where a call has to stay inline: inside "&&" / "||" / "?:" as in a loop header.
+            new Construct("size_in_or", "(variable r)", "(r)", "if ((r == null) || (Size(r) < 2)) { return 1; } return 0;", "({1, 2, 3})"),
+            new Construct("size_in_and", "(int n)", "(n)", "a = {1, 2}; if (n > 0 && Size(a) == 2) { return 1; } return 0;", "(1)"),
+            // tokenize reads its arguments as values, so it is called with values.
+            new Construct("bi_tokenize", "(variable line)", "(line)", "toks = tokenize(line, \",\"); if (toks.Size < 3) { return 0; } return toks[2];", "(\"a,b,c\")"),
+            // A script function named like a command (show) takes values since September 2026, so
+            // its callers compile. (The names are from when they were kept on the interpreter.)
+            new Construct("cmd_named_call_keep", "(int n)", "(n)", "return show(!n);", "(0)"),
+            new Construct("cmd_named_var_keep", "(int n)", "(n)", "x = n + 1; return show(x);", "(1)"),
+            // "!" on a local held as a number: true exactly for 0.
+            new Construct("not_num_local", "(int n)", "(n)", "r = n * 2; if (!r) { return 1; } return 2;", "(0)"),
+            // Members are case-blind on an element too.
+            new Construct("elem_member_lower", "(int n)", "(n)", "a = {\"abcdef\"}; c = a[0].substring(0, 3); return c + a[0].upper + a[0].length;", "(0)"),
+            // Double(x) is double(x), inside a Math call as well.
+            new Construct("conv_case_in_math", "(variable d)", "(d)", "b = Math.Round(Double(d[1]), 1); return b;", "({1, \"2.25\"})"),
+            // Variable's C# members do what the script's do: Reverse reverses text as well, and
+            // Sort and Reverse give the Variable back.
+            new Construct("rev_text_var", "(variable s)", "(s)", "v = s; v.Reverse(); return v;", "(\"abc\")"),
+            new Construct("rev_list_ret", "(variable a)", "(a)", "r = a.Reverse(); return r;", "({1, 2, 3})"),
+            new Construct("sort_ret", "(int n)", "(n)", "a = {3, 1, 2}; return a.Sort();", "(0)"),
+            // A property the value does not have is the interpreter's error, not an empty value.
+            new Construct("field_missing_err", "(int n)", "(n)", "p = new Point(1, 2); return p.zz;", "(0)"),
+            new Construct("count_member_err", "(variable a)", "(a)", "return a.Count;", "({1, 2})"),
+            new Construct("veq_args", "(variable x, variable y)", "(x, y)", "r = x == y; return r;", "(3, 3)"),
+            new Construct("veq_text", "(variable x, variable y)", "(x, y)", "r = x == y; return r;", "(\"abc\", \"abc\")"),
+            new Construct("vne_text", "(variable x, variable y)", "(x, y)", "r = x != y; return r;", "(\"abc\", \"abc\")"),
+            new Construct("vor_value", "(variable x, variable y)", "(x, y)", "r = x || y; return r;", "(3, 0)"),
+            new Construct("vand_value", "(variable x, variable y)", "(x, y)", "r = x && y; return r;", "(2, 5)"),
+            new Construct("truth_list", "(variable x)", "(x)", "if (x) { return 1; } return 2;", "({1, 2})"),
+            new Construct("not_text", "(variable x)", "(x)", "r = !x; return r;", "(\"abc\")"),
+            new Construct("not_list_cond", "(variable x)", "(x)", "if (!x) { return 1; } return 2;", "({1, 2})"),
+            new Construct("rba_loop_and", "(int n)", "(n)", "s = \"\"; for (i = 0; i < n; i++) { if (i > 0 && prev < 5) { s += prev; } prev = i * 2; } return s;", "(4)"),
+            new Construct("rba_loop_or", "(int n)", "(n)", "s = 0; for (i = 0; i < n; i++) { if (i == 0 || last < i) { s += i; } last = i; } return s;", "(4)"),
+            new Construct("rba_loop_tern", "(int n)", "(n)", "s = \"\"; for (i = 0; i < n; i++) { s += i == 0 ? \"-\" : prev; prev = i; } return s;", "(4)"),
+            new Construct("rba_while_and", "(int n)", "(n)", "k = 0; s = 0; while (k < n) { if (k > 1 && p2 > 0) { s += k; } p2 = k; k++; } return s;", "(5)"),
+            new Construct("mathname_local", "(int n)", "(n)", "round = n * 2; return round + 1;", "(3)"),
+            new Construct("mathname_loop", "(int n)", "(n)", "max = 0; for (i = 0; i < n; i++) { if (i > max) { max = i; } } return max;", "(5)"),
+            new Construct("mathname_arg", "(double abs)", "(abs)", "return abs * 2 + Math.Abs(-abs);", "(3)"),
+            new Construct("mathname_text", "(int b)", "(b)", "sign = b < 0 ? \"\" : \"+\"; return \"a\" + sign + b;", "(3)"),
+            new Construct("size_lower_asg", "(variable text)", "(text)", "length = size(text); if (length < 3) { return 15; } return 10;", "({1, 2, 3, 4})"),
+            new Construct("size_asg_var", "(variable a)", "(a)", "n = Size(a); return n + 1;", "({1, 2})"),
+            new Construct("size_asg_text", "(variable a)", "(a)", "n = Size(a); return n + 1;", "(\"abc\")"),
+            new Construct("tern_var_asg", "(variable e)", "(e)", "key = e ? \"a\" : \"b\"; return key;", "(2.5)"),
+            new Construct("tern_var_asg_zero", "(variable e)", "(e)", "key = e ? \"a\" : \"b\"; return key;", "(0)"),
+            new Construct("tern_var_asg_num", "(variable e)", "(e)", "k = 1; k = e ? 10 : 20; return k;", "(1)"),
+            new Construct("type_call_cond", "(variable b)", "(b)", "if (type(b) == \"NUMBER\") { return 1; } return 0;", "(5)"),
+            new Construct("type_call_cond_text", "(variable b)", "(b)", "if (type(b) != \"NUMBER\") { return \"no\"; } return \"num\";", "(\"a\")"),
+            new Construct("type_call_asg", "(variable b)", "(b)", "t = type(b); return t + \"!\";", "({1, 2})"),
+            new Construct("type_call_ret", "(variable b)", "(b)", "return type(b);", "(2.5)"),
+            new Construct("ret_semicolon_text", "(variable t)", "(t)", "return t + \"});\";", "(\"a\")"),
+            new Construct("ret_semicolon_html", "(variable t, variable icon)", "(t, icon)", "return \"<script>Swal.fire({\" + \"title: '\" + t + \"',\" + \"icon: '\" + icon + \"'\" + \"});</script>\";", "(\"T\", \"error\")"),
+            new Construct("varg_reassign_member", "(variable v)", "(v)", "while (v.StartsWith(\"0\")) { v = v.Substring(1); } return v;", "(\"007\")"),
+            new Construct("varg_reassign_member_if", "(variable v)", "(v)", "if (v.StartsWith(\"0\")) { v = v.Substring(1); } return v;", "(\"07\")"),
+            new Construct("varg_assign_num", "(variable v)", "(v)", "if (v == 1) { return 1; } v = 5; return v + 1;", "(\"a\")"),
+            new Construct("varg_assign_text", "(variable v, int n)", "(v, n)", "if (n == 1) { v = \"text\"; } elif (n == 2) { v = n * 2.5; } return v;", "(\"x\", 1)"),
+            new Construct("size_eq_split", "(variable value)", "(value)", "numbers = value.Split(\"-\"); if (Size(numbers) != 3) { return 0; } return 1;", "(\"1-2-3\")"),
+            new Construct("size_eq_split_short", "(variable value)", "(value)", "numbers = value.Split(\"-\"); if (Size(numbers) == 3) { return 1; } return 0;", "(\"1-2\")"),
+            new Construct("tern_var_callarg", "(variable e)", "(e)", "return sign(e ? 2 : 5);", "(0)"),
+            new Construct("tern_var_concat", "(variable e)", "(e)", "k = \"<\" + (e ? \"a\" : \"b\") + \">\"; return k;", "(1)"),
+            new Construct("tern_var_elem", "(variable e)", "(e)", "d = {}; d[\"k\"] = (e ? \"g\" : \"r\"); return d[\"k\"];", "(2.5)"),
+            new Construct("not_chain_four", "(variable a, variable b, variable c, variable d)", "(a, b, c, d)", "if (!a && !b && c != \"\" && !d.Contains(c)) { return 1; } return 0;", "(0, 0, \"A\", {\"B\"})"),
+            new Construct("obj_local", "(variable a)", "(a)", "if (a > 1) { object = a * 2; } else { object = \"x\"; } return object;", "(3)"),
+            new Construct("obj_local_math", "(variable a)", "(a)", "object = a + 1; g = object * 2; return g + object;", "(1)"),
+            new Construct("lit_no_semicolon", "(variable a)", "(a)", "m = {\"s\": a}  k = m[\"s\"]; return k;", "(5)"),
+            new Construct("lit_no_semicolon_text", "(variable a)", "(a)", "m = {\"s\": a, \"t\": \"x}y\"}  k = m[\"t\"] + a; return k;", "(1)"),
+            new Construct("catch_nested_same", "(int n)", "(n)", "r = \"\"; try { throw \"outer\"; } catch (exc) { r += exc; try { throw \"inner\"; } catch (exc) { r += \"/\" + exc; } r += \"/\" + exc; } return r;", "(0)"),
+            new Construct("catch_sibling_same", "(int n)", "(n)", "r = \"\"; try { throw \"a\"; } catch (exc) { r += exc; } try { throw \"b\"; } catch (exc) { r += exc; } return r;", "(0)"),
+            new Construct("bslash_return", "(variable b)", "(b)", "return \"a\\\\\" + b;", "(\"q\")"),
+            new Construct("bslash_path", "(variable b)", "(b)", "p = \"C:\\\\dir\\\\\" + b + \"\\\\x\"; return p;", "(\"f\")"),
+            new Construct("bslash_cond", "(variable b)", "(b)", "if (b == \"q\\\\\") { return \"yes\"; } return \"no\\\\\";", "(\"q\\\\\")"),
+            new Construct("bslash_quote", "(variable b)", "(b)", "return Size(b) + \"\\\"x\\\\\" + b;", "(\"k\")"),
+            new Construct("join_member", "(variable l)", "(l)", "q = \"(\" + l.Join(\", \") + \")\"; return q;", "({\"x\", \"y\"})"),
+            new Construct("join_default", "(variable l)", "(l)", "return l.Join();", "({1, 2.5})"),
+            new Construct("join_text", "(variable l)", "(l)", "return l.Join(\"-\");", "(\"text\")"),
+            new Construct("for_from_varlocal", "(variable m)", "(m)", "lower = m[0]; upper = m[1]; s = 0; for (x = lower; x < upper; x++) { s += x; } return s + \"/\" + x;", "({0.5, 3})"),
+            new Construct("text_concat_to_string", "(variable v)", "(v)", "a = \"none\"; if (v[0] == 1) { a = \"<p>\" + v[1] + \" \" + v[2] + \"</p>\"; } return a + \"!\";", "({1, \"Ann\", 2.5})"),
+            new Construct("prefix_step_if", "(variable n)", "(n)", "k = 5; if (--k == 4) { return \"four\" + k; } return \"no\" + k;", "(0)"),
+            new Construct("prefix_step_and_kept", "(variable n)", "(n)", "k = 1; if (n > 0 && ++k > 1) { return k; } return -k;", "(0)"),
+            new Construct("prefix_step_in_text", "(variable n)", "(n)", "s = \"a++b\"; if (s == \"a++b\") { return 1; } return 0;", "(0)"),
+            new Construct("no_semicolon_return", "(variable a)", "(a)", "t = string(a)      return t + \"!\";", "(5)"),
+            new Construct("return_word_in_text", "(variable a)", "(a)", "s = \"x)return\"; return s + a;", "(1)"),
+            new Construct("builtin_in_call_arg", "(variable a)", "(a)", "return Substring(decimal(a / 3), 0, 5);", "(1)"),
+            new Construct("builtin_in_call_arg_asg", "(variable a)", "(a)", "r = Substring(decimal(a / 3), 0, 5); return r + \"!\";", "(2)"),
+            new Construct("size_quoted_key", "(variable j)", "(j)", "s = 0; for (i = 0; i < size(j[\"L\"]); i++) { s += j[\"L\"][i]; } return s;", "({\"L\": {1, 2, 3}})"),
+            new Construct("no_semicolon_call", "(variable n)", "(n)", "r = \"\"; for (i = 0; i < n; i++) { r += string(i)   r += \"-\"; } return r;", "(3)"),
+            new Construct("header_paren_kept", "(variable n)", "(n)", "try { x = n * 2; } catch (e) { x = 0; } return (x) + 1;", "(4)"),
+            new Construct("postfix_step_if", "(variable n)", "(n)", "k = 3; if (k-- > 2) { return \"gt\" + k; } return \"le\" + k;", "(0)"),
+            new Construct("bool_member_in_text", "(variable x)", "(x)", "r = \"<\" + x.Contains(\"a\") + \">\"; return r;", "(\"abc\")"),
+            new Construct("bool_member_in_text_false", "(variable x)", "(x)", "r = \"<\" + x.StartsWith(\"z\") + \">\"; return r;", "(\"abc\")"),
+            new Construct("bool_conv_in_text", "(variable x)", "(x)", "r = \"<\" + bool(x) + \">\"; return r;", "(2.5)"),
+            new Construct("bool_conv_numeric_text", "(variable x)", "(x)", "if (bool(x)) { return \"T\"; } return \"F\";", "(\"5\")"),
+            new Construct("text_result_truth", "(variable x)", "(x)", "if (x + \"!\") { return \"T\"; } return \"F\";", "(3)"),
+            new Construct("text_result_truth_stored", "(variable x)", "(x)", "r = x + \"!\"; if (r) { return \"T\"; } return \"F\";", "(3)"),
+            new Construct("text_result_truth_text", "(variable x)", "(x)", "r = x + \"!\"; if (r) { return \"T\"; } return \"F\";", "(\"abc\")"),
+            new Construct("list_arith_truth", "(variable x)", "(x)", "if (x + 1) { return \"T\"; } return \"F\";", "({1, 2})"),
+            new Construct("varg_compound_text", "(variable x)", "(x)", "x += \"!\"; return x;", "(3)"),
+            new Construct("varg_compound_mul_text", "(variable x)", "(x)", "x *= 3; return x;", "(\"abc\")"),
+            new Construct("varg_compound_list", "(variable x)", "(x)", "x += 1; return x;", "({1, 2, 3})"),
+            new Construct("varg_elem_read", "(variable x)", "(x)", "r = x[1] + x[0]; return r;", "({1, 2, 3})"),
+            new Construct("switch_strict_type", "(variable x)", "(x)", "switch (x) { case 3: return \"three\"; case \"abc\": return \"text\"; default: return \"other\"; }", "(\"3\")"),
+            new Construct("switch_strict_num", "(variable x)", "(x)", "switch (x) { case 3: return \"three\"; default: return \"other\"; }", "(3)"),
+            new Construct("not_group_and", "(variable x)", "(x)", "return !(x == 3) && x != \"\";", "(0)"),
+            new Construct("not_group_or_cond", "(variable x)", "(x)", "if (!(x > 1) || x == \"abc\") { return \"T\"; } return \"F\";", "(\"abc\")"),
+            new Construct("called_bool_arith", "(variable x)", "(x)", "r = x.Contains(\"a\") + 1; return r;", "(\"abc\")"),
+            new Construct("called_bool_arith_false", "(variable x)", "(x)", "r = x.StartsWith(\"z\") * 5 + 2; return r;", "(\"abc\")"),
+            new Construct("arith_as_condition", "(variable x)", "(x)", "if (x.Size * 2) { return \"T\"; } return \"F\";", "({1, 2})"),
+            new Construct("arith_as_condition_zero", "(variable x)", "(x)", "if (int(x) + 1) { return \"T\"; } return \"F\";", "(-1)"),
+            new Construct("field_step_post", "(int n)", "(n)", "p = new Point(n, 2); r = p.x++; return r * 10 + p.x;", "(3)"),
+            new Construct("field_step_pre_text", "(int n)", "(n)", "q = new Named(1, \"t\"); r = --q.v; return r + \"/\" + q.v;", "(0)"),
+            new Construct("text_times_int", "(int n)", "(n)", "return n * \"ab\" + \"!\";", "(3)"),
+            new Construct("text_times_text", "(int n)", "(n)", "return \"3\" * \"4\";", "(0)"),
+            new Construct("return_prefix_local", "(int n)", "(n)", "x = n; return ++x;", "(5)"),
+            new Construct("return_postfix_local", "(int n)", "(n)", "x = n; r = 0; r = x--; return r * 10 + x;", "(5)"),
+            new Construct("return_postfix_var", "(variable n)", "(n)", "x = n; return x++;", "(\"7\")"),
+            new Construct("return_prefix_field", "(int n)", "(n)", "p = new Point(n, 2); return --p.x;", "(5)"),
+            new Construct("return_prefix_elem", "(int n)", "(n)", "a = {n, 2}; return ++a[0];", "(5)"),
+            new Construct("field_step_text", "(int n)", "(n)", "q = new Named(1, \"t\"); q.name = \"7\"; q.name++; return q.name;", "(0)"),
+            // The interpreter's "?:" with text as the condition answers the branch alone, dropping
+            // the text around it; nothing compiled may answer otherwise.
+            new Construct("tern_text_cond_keep", "(string s)", "(s)", "return \"<\" + (s ? \"a\" : \"b\") + \">\";", "(\"x\")"),
+            new Construct("tern_var_cond_keep", "(variable e)", "(e)", "return \"<td>\" + (e ? \"edit\" : \"new\") + \"</td>\";", "(\"x\")"),
 
             // Left interpreted: text times a number inside a compound assignment.
             new Construct("str_mult_loop", "(int n)", "(n)", "s = \"\"; for (i = 0; i < n; i++) { s += \"ab\" * 2; } return s.Length;", "(3)"),
@@ -1594,11 +2064,11 @@ namespace cscs.Tests.IntegrationTests.Precompiler
         /// </summary>
         static readonly HashSet<string> Supported = new HashSet<string>
         {
-            "sw_continue", "fn_iff", "chained_compare", "class_tern", "sw_nested", "sw_nested_match", "sw_loop_in_case", "sw_while_in_case", "sw_label_text", "chain_lt_lt", "chain_lt_lt_false", "chain_lt_lt_zero", "chain_gt_gt", "chain_arg_first", "chain_lt_eq", "chain_four", "chain_eq_eq", "chain_le_ge", "chain_arith", "chain_in_and", "iff_num", "iff_nested", "iff_in_expr", "iff_call_branch", "iff_str_concat", "sw_continue_while", "sw_continue_inner", "sw_continue_nested", "sw_continue_fall", "class_tern_args", "class_tern_false",
+            "sw_continue", "fn_iff", "chained_compare", "class_tern", "var_local", "var_shadow_global", "var_shadow_callback", "var_shadow_print", "var_in_loop", "var_string", "var_enum_kept", "arg_camel", "arg_camel_var", "arg_camel_assign", "arg_camel_str", "arg_camel_loop", "arg_camel_member_kept", "vloop_bound", "vloop_bound_ne", "vloop_bound_ge", "vloop_bound_text", "vloop_call_start", "vloop_start_arg", "vloop_total_real", "lit_return", "lit_return_empty_args", "lit_return_map", "lit_return_in_block", "lit_return_nested", "lit_return_text", "lit_tern", "lit_tern_call", "lit_tern_map", "lit_case_block_keep", "vmem_at_expr", "vmem_at_assign", "vmem_equals", "vmem_trim_cmp", "vmem_at_num", "vmem_at_list", "vmem_call_first", "vmem_substr_var", "vmem_substr_var1", "vmem_substr_text_pos", "vmem_substr_past_end", "sw_case_braced", "sw_case_braced_nested", "sw_first_assign", "sw_first_assign_text", "sw_first_assign_mixed", "vmath_ratio", "vmath_text", "vmath_bool", "vmath_round_digits", "vmath_assign", "vmath_arg_unchanged", "vmath_in_if", "vmath_max_mixed", "vmath_text_num", "truth_glob_num", "truth_glob_str", "truth_glob_not", "truth_glob_not_str", "truth_glob_while", "truth_glob_elif", "truth_var_and_text", "truth_var_and_digit", "truth_var_and_num", "truth_var_or_zero", "truth_member_and", "truth_member_and_false", "truth_not_var_digit", "truth_not_var_zero", "vmath_nested_keep", "shadow_math_name", "shadow_math_name_expr", "bare_math_kept", "vop_bitwise", "vop_text_order", "vop_text_vs_var", "vop_text_vs_num", "vop_power", "vop_power_typed", "vmath_nested", "vmath_nested_text", "vmath_elem", "vcond_asg_while", "vcond_asg_if", "vcond_asg_pair", "vcond_asg_elif", "vcond_asg_text", "vcond_asg_text_num", "vcond_asg_truth", "vmath_local", "vmath_elem_local", "vmath_map_elem", "vtype_ne_text", "vtype_eq_num", "vtype_array", "glob_lower_member", "vtext_arg_starts", "vtext_arg_num", "vtext_scan", "str_starts_var", "vmem_at_expr_arg", "dsc_text", "dsc_double", "dsc_variable", "dsc_default_keep", "dsc_throw", "dsc_ternary", "dsc_condition", "dsc_loop", "dsc_nested_arg", "dsc_two_args", "dsc_with_callback_keep", "tr_fib", "tr_text_base", "tr_text_one_path", "tr_truth", "tr_concat", "tr_local", "tr_double", "tr_int_step", "tr_compare", "tr_ternary", "fe_colon", "fe_of", "size_in_for", "size_in_while", "size_elem_in_for", "size_text_kept", "esc_quote_accum", "esc_quote_var", "bi_substr_cond", "bi_substr_asg", "brlit_flat", "brlit_nested", "brlit_subscript_kept", "brlit_in_map", "brlit_arg", "esc_textroute_quote", "esc_textroute_backslash", "esc_textroute_tab", "size_in_or", "size_in_and", "bi_tokenize", "not_num_local", "elem_member_lower", "conv_case_in_math", "rev_text_var", "rev_list_ret", "sort_ret", "veq_args", "veq_text", "vne_text", "vor_value", "vand_value", "truth_list", "not_text", "not_list_cond", "rba_loop_and", "rba_loop_or", "rba_loop_tern", "rba_while_and", "mathname_local", "mathname_loop", "mathname_arg", "mathname_text", "size_lower_asg", "size_asg_var", "size_asg_text", "tern_var_asg", "tern_var_asg_zero", "tern_var_asg_num", "type_call_cond", "type_call_cond_text", "type_call_asg", "type_call_ret", "ret_semicolon_text", "ret_semicolon_html", "varg_reassign_member", "varg_reassign_member_if", "varg_assign_num", "varg_assign_text", "size_eq_split", "size_eq_split_short", "tern_var_callarg", "tern_var_concat", "tern_var_elem", "not_chain_four", "obj_local", "obj_local_math", "lit_no_semicolon", "lit_no_semicolon_text", "catch_nested_same", "catch_sibling_same", "bslash_return", "bslash_path", "bslash_cond", "bslash_quote", "join_member", "join_default", "join_text", "for_from_varlocal", "text_concat_to_string", "prefix_step_if", "prefix_step_and_kept", "prefix_step_in_text", "no_semicolon_return", "return_word_in_text", "builtin_in_call_arg", "builtin_in_call_arg_asg", "size_quoted_key", "no_semicolon_call", "header_paren_kept", "postfix_step_if", "bool_member_in_text", "bool_member_in_text_false", "bool_conv_in_text", "bool_conv_numeric_text", "text_result_truth", "text_result_truth_stored", "text_result_truth_text", "list_arith_truth", "varg_compound_text", "varg_compound_mul_text", "varg_compound_list", "varg_elem_read", "switch_strict_type", "switch_strict_num", "not_group_and", "not_group_or_cond", "called_bool_arith", "called_bool_arith_false", "arith_as_condition", "arith_as_condition_zero", "field_step_post", "field_step_pre_text", "text_times_int", "text_times_text", "return_prefix_local", "return_postfix_local", "return_postfix_var", "return_prefix_field", "return_prefix_elem", "field_step_text", "memcomp_pre_keep", "fold_chain", "text_looks_assigned", "arg_default_case", "varg_substring", "varg_substring_num", "varg_upper_call", "vlocal_upper_call", "varg_size_call", "varg_length_call", "grpasg_in_call_keep", "boolgrp_twice_keep", "retasg_call_keep", "elemwrite_nested_read_keep", "nullcmp_both_keep", "hoist_call_arg", "hoist_math_arg", "hoist_two_bools", "hoist_stmt", "hoist_name_read_first", "hoist_call_first", "fold_text_num", "fold_num_text", "fold_in_join", "nested_elem_member", "null_eq_null_ne", "str_mult_loop", "strict_mixed", "strict_elem_keep", "strict_var_num", "strict_var_text_num", "strict_var_text", "strict_str_num", "strict_elem_text_num", "strict_elem_num_text", "strict_elem_same", "varfed_num", "varfed_text", "varfed_join", "varfed_type_num", "varfed_type_text", "varfed_mul_text", "varfed_try", "varfed_counter", "vcmp_arg_eq", "vcmp_arg_eq_false", "vcmp_arg_ne_elif", "vcmp_num_vs_text", "vcmp_num_vs_text2", "vcmp_text_order", "vcmp_text_order2", "vcmp_return", "vcmp_map_elem", "vcmp_field", "vcmp_loop_count", "cmpnum_mul", "cmpnum_sum", "cmpnum_text", "cmpnum_text_join", "cmpnum_compound", "cmpnum_loop", "cmpnum_neg", "methchain_path", "methchain_path_len", "logic_call_right", "logic_call_left_or", "logic_call_not", "logic_call_return", "logic_call_text", "logic_call_while", "logic_call_hoisted", "boolgrp_compound", "boolgrp_compound2", "strcond_len_keep", "elemwrite_assign_read_keep", "elem_method_decl", "elem_method_map", "elem_field_decl", "elem_field_str", "rebind_foreach", "rebind_foreach_nested", "rebind_catch", "rebind_catch_loop", "rebind_sibling_loops", "rebind_catch_unused", "cond_asg_conflict", "class_in_new", "ifasg_num_then_str", "ifasg_str_then_num", "ifasg_bool_used", "ifasg_else", "new_in_new_second", "new_in_new_return", "new_in_new_twice", "call_self_fib", "call_self_acc", "call_helper_loop", "call_nested_args", "sw_nested", "sw_nested_match", "sw_loop_in_case", "sw_while_in_case", "sw_label_text", "chain_lt_lt", "chain_lt_lt_false", "chain_lt_lt_zero", "chain_gt_gt", "chain_arg_first", "chain_lt_eq", "chain_four", "chain_eq_eq", "chain_le_ge", "chain_arith", "chain_in_and", "iff_num", "iff_nested", "iff_in_expr", "iff_call_branch", "iff_str_concat", "sw_continue_while", "sw_continue_inner", "sw_continue_nested", "sw_continue_fall", "class_tern_args", "class_tern_false",
             "arith", "compound", "if_else", "while", "for", "break", "continue", "nested_loop",
             "modulo", "string_concat", "string_len", "string_upper", "string_sub",
             "string_idx", "string_repl", "math_calls", "multi_return", "string_num",
-            "increment", "nested_call", "logical", "bool_var", "array_add", "int_div", "else_if", "ternary", "not", "recursion", "call_cscs_fn", "call_expr_arg", "call_twice", "call_nested", "add_str_str", "add_str_num", "add_num_num", "add_lit_call", "add_members", "coll_ends", "coll_ends_str", "str_gt", "str_gt_false", "str_lit_left", "str_two_args", "str_range", "str_mixed_cmp", "str_while_cmp", "math_ceil", "map_by_key", "map_literal_rhs", "bit_compound", "not_bool_var", "elem_str_add", "map_arith", "map_elem_ops", "eq_str_num", "eq_str_pad", "eq_num_str", "ne_str_num", "nested_try", "catch_rethrow", "try_in_loop", "call_in_cond", "call_cond_and", "map_of_array", "strict_eq", "strict_eq_case", "strict_ne", "global_read", "global_mutate", "for_from_arg", "global_cmp", "global_index", "global_string", "map_in_map", "mixed_add", "truthy_elem", "truthy_key", "tern_literal", "tern_lit_else", "tern_lit_skip", "tern_map_skip", "elem_to_local", "elem_to_str", "elem_in_loop", "elem_then_math", "elem_member", "elem_upper", "elem_str_cmp", "acc_str", "acc_mixed", "acc_num", "acc_call", "cond_strlen", "while_strlen", "neg_elem", "neg_elem_str", "cmp_elem", "cmp_elstr2", "cmp_elle", "cmp_elnum", "cmp_elmath", "cmp_elcall", "cmp_elwhile", "tern_cmp", "tern_cmp_loc", "tern_cmp_nest", "tern_cmp_num", "asg_cmp", "asg_cmp_and", "conv_map_str", "conv_map_int", "conv_map_dbl", "loc_str_cmp", "loc_str_lit", "loc_num_cmp", "elem_sum", "elem_swap", "elem_ternary", "foreach_in", "call_in_while", "do_while", "call_idx", "call_idx_str", "trim_cmp", "trim_ret", "trim_len", "trim_asg", "fe_shadow", "idx_call", "idx_convert", "idx_call_asg", "idx_math", "fe_split", "fe_call", "fe_nested", "fe_elem_str", "fe_elem_num", "keys_add", "keys_remove", "split_rows", "tally_str", "acc_convert", "acc_int", "keys_sort", "keys_reverse", "kw_local", "kw_coll", "kw_foreach", "kw_string", "kw_catch", "kw_filter", "mul_str", "mul_str_num", "mul_str_trim", "mul_str_asg", "mul_num", "mix_mul", "mix_lt", "mix_gt_lit", "mix_zero_str", "bool_text", "truthy_str", "truthy_notstr", "truthy_notnum", "cmp_asg_str", "cmp_elem_str", "cmp_elem_sub", "step_elem_str", "plus_elem_str", "size_scalar", "size_coll", "for_fn", "for_fn_down", "lit_fn", "maplit_fn", "seed_fn", "var_step", "var_step_dn", "var_step_str", "gread_bare", "gread_key", "gread_2d", "gelem_fn", "gelem_fn_cmp", "add_fn", "elem_asg_fn", "elem_cmp_fn", "map_asg_fn", "elem_asg_2d", "elem_asg_str", "not_var", "not_var_par", "not_elem", "var_in_while", "chain_assign", "chain_three", "chain_str", "chain_expr", "eq_and", "eq_and_num", "eq_or", "eq_ternary", "eq_assigned", "eq_two_elems", "ne_two_elems", "eq_elem_lit", "eq_lit_elem", "eq_loop_var", "eq_elem_num", "eq_num_text", "eq_text_zero", "gelem_plus", "gelem_times", "gelem_step", "gelem_mapadd", "gelem_2dadd", "gelem_ixadd", "foreach_chars", "foreach_cat", "foreach_upper", "gelem_arr", "gelem_map", "gelem_newkey", "gelem_2d", "gelem_idx", "gelem_loop", "gelem_shadow", "bit_elem", "bit_elem_or", "bit_elem_xor", "bit_elem_trun", "cmp_member", "cmp_member2", "cmp_sub", "cmp_indexof", "chain_member", "global_accum", "global_step", "foreach_map", "class_newarg", "elem_predec", "fallback_mix", "class_two_add", "class_inarr", "class_nested", "class_fromm", "class_methfld", "class_mfstr", "class_iter", "switch_in_loop", "sw_break_loop", "sw_break_whl", "sw_ret_loop", "sw_no_break", "sw_deflt_only", "switch_after", "switch_deflt", "do_once", "do_break", "do_nested", "while_cont", "while_break", "foreach_str", "nested_assign", "power_two", "power_lits", "power_assign", "power_mixed", "power_tail", "power_call", "power_elem", "power_paren", "power_pboth", "power_assoc", "power_chain", "strict_eq_num", "strict_ne_num", "class_field", "class_two", "class_str", "class_method", "class_marg", "class_mstr", "class_write", "class_fldmem", "class_fldstr", "switch_fld", "switch_fnum", "switch_fdef", "math_nested2", "mix_grid", "string_split", "array_lit", "array_size", "map_lit", "map_set", "map_assign", "array_assign", "neg_index", "idx_expr", "idx_assign_expr", "switch", "switch_fall", "string_eq", "string_ne", "arg_reassign", "local_upper", "array_add_expr", "array_iterate", "elem_compound", "convert_int", "convert_half", "convert_str", "bitwise", "lit_arg", "lit_nested", "chain_idx", "bit_or_xor", "paren_arg", "cond_member", "cond_member2", "str_case", "str_nocase", "str_startcase", "str_equals", "str_eq_nocase", "str_sub_clamp", "coll_contains", "map_keys", "idx2_assign", "idx2_compound", "bit_not", "try_catch", "catch_value",
+            "increment", "nested_call", "logical", "bool_var", "array_add", "int_div", "else_if", "ternary", "not", "recursion", "call_cscs_fn", "call_expr_arg", "call_twice", "call_nested", "add_str_str", "add_str_num", "add_num_num", "add_lit_call", "add_members", "coll_ends", "coll_ends_str", "str_gt", "str_gt_false", "str_lit_left", "str_two_args", "str_range", "str_mixed_cmp", "str_while_cmp", "math_ceil", "map_by_key", "map_literal_rhs", "bit_compound", "not_bool_var", "elem_str_add", "map_arith", "map_elem_ops", "eq_str_num", "eq_str_pad", "eq_num_str", "ne_str_num", "nested_try", "catch_rethrow", "try_in_loop", "call_in_cond", "call_cond_and", "map_of_array", "strict_eq", "strict_eq_case", "strict_ne", "global_read", "global_mutate", "for_from_arg", "global_cmp", "global_index", "global_string", "map_in_map", "mixed_add", "truthy_elem", "truthy_key", "tern_literal", "tern_lit_else", "tern_lit_skip", "tern_map_skip", "elem_to_local", "elem_to_str", "elem_in_loop", "elem_then_math", "elem_member", "elem_upper", "elem_str_cmp", "acc_str", "acc_mixed", "acc_num", "acc_call", "cond_strlen", "while_strlen", "neg_elem", "neg_elem_str", "cmp_elem", "cmp_elstr2", "cmp_elle", "cmp_elnum", "cmp_elmath", "cmp_elcall", "cmp_elwhile", "tern_cmp", "tern_cmp_loc", "tern_cmp_nest", "tern_cmp_num", "asg_cmp", "asg_cmp_and", "conv_map_str", "conv_map_int", "conv_map_dbl", "loc_str_cmp", "loc_str_lit", "loc_num_cmp", "elem_sum", "elem_swap", "elem_ternary", "foreach_in", "call_in_while", "do_while", "call_idx", "call_idx_str", "trim_cmp", "trim_ret", "trim_len", "trim_asg", "fe_shadow", "idx_call", "idx_convert", "idx_call_asg", "idx_math", "fe_split", "fe_call", "fe_nested", "fe_elem_str", "fe_elem_num", "keys_add", "keys_remove", "split_rows", "tally_str", "acc_convert", "acc_int", "keys_sort", "keys_reverse", "kw_local", "kw_coll", "kw_foreach", "kw_string", "kw_catch", "kw_filter", "mul_str", "mul_str_num", "mul_str_trim", "mul_str_asg", "mul_num", "mix_mul", "mix_lt", "mix_gt_lit", "mix_zero_str", "bool_text", "truthy_str", "truthy_notstr", "truthy_notnum", "cmp_asg_str", "cmp_elem_str", "cmp_elem_sub", "str_size_keep", "trim_prop_keep", "chain_inc_index_keep", "chain_deep_keep", "chain_elem_member_keep", "cmd_named_call_keep", "cmd_named_var_keep", "str_members_expr", "sub_own_member", "sub_var_member", "sub_own_in_and", "sub_own_ternary", "sub_nested_index", "text_index_loop", "tern_mixed_types", "size_in_text", "cond_indexof", "cond_type", "int_local_div0", "int_local_mul", "int_mod_zero", "text_local_step", "text_local_times", "num_local_text", "bool_local_compound", "text_join_step", "lenum_type_keep", "lenum_member_type", "named_call_lits", "named_call_expr", "braceless_if_ret", "braceless_for", "braceless_while", "braceless_for_if", "braceless_throw", "foreach_var_literal", "for_var_step", "arg_index_math", "field_elem_read", "field_elem_write", "field_elem_compound", "field_elem_step", "chain_late_index", "chain_obj_index", "bit_shift", "shift_double", "shift_compound", "shift_elem", "bitcmp_elem", "try_ret_finally", "try_finally_only", "try_catch_ret_fin", "catch_message", "step_elem_str", "plus_elem_str", "size_scalar", "size_coll", "for_fn", "for_fn_down", "lit_fn", "maplit_fn", "seed_fn", "var_step", "var_step_dn", "var_step_str", "gread_bare", "gread_key", "gread_2d", "gelem_fn", "gelem_fn_cmp", "add_fn", "elem_asg_fn", "elem_cmp_fn", "map_asg_fn", "elem_asg_2d", "elem_asg_str", "not_var", "not_var_par", "not_elem", "var_in_while", "chain_assign", "chain_three", "chain_str", "chain_expr", "eq_and", "eq_and_num", "eq_or", "eq_ternary", "eq_assigned", "eq_two_elems", "ne_two_elems", "eq_elem_lit", "eq_lit_elem", "eq_loop_var", "eq_elem_num", "eq_num_text", "eq_text_zero", "gelem_plus", "gelem_times", "gelem_step", "gelem_mapadd", "gelem_2dadd", "gelem_ixadd", "foreach_chars", "foreach_cat", "foreach_upper", "gelem_arr", "gelem_map", "gelem_newkey", "gelem_2d", "gelem_idx", "gelem_loop", "gelem_shadow", "bit_elem", "bit_elem_or", "bit_elem_xor", "bit_elem_trun", "cmp_member", "cmp_member2", "cmp_sub", "cmp_indexof", "chain_member", "global_accum", "global_step", "foreach_map", "class_newarg", "elem_predec", "fallback_mix", "class_two_add", "class_inarr", "class_nested", "class_fromm", "class_methfld", "class_mfstr", "class_iter", "switch_in_loop", "sw_break_loop", "sw_break_whl", "sw_ret_loop", "sw_no_break", "sw_deflt_only", "switch_after", "switch_deflt", "do_once", "do_break", "do_nested", "while_cont", "while_break", "foreach_str", "nested_assign", "power_two", "power_lits", "power_assign", "power_mixed", "power_tail", "power_call", "power_elem", "power_paren", "power_pboth", "power_assoc", "power_chain", "strict_eq_num", "strict_ne_num", "class_field", "class_two", "class_str", "class_method", "class_marg", "class_mstr", "class_write", "class_fldmem", "class_fldstr", "switch_fld", "switch_fnum", "switch_fdef", "math_nested2", "mix_grid", "string_split", "array_lit", "array_size", "map_lit", "map_set", "map_assign", "array_assign", "neg_index", "idx_expr", "idx_assign_expr", "switch", "switch_fall", "string_eq", "string_ne", "arg_reassign", "local_upper", "array_add_expr", "array_iterate", "elem_compound", "convert_int", "convert_half", "convert_str", "bitwise", "lit_arg", "lit_nested", "chain_idx", "bit_or_xor", "paren_arg", "cond_member", "cond_member2", "str_case", "str_nocase", "str_startcase", "str_equals", "str_eq_nocase", "str_sub_clamp", "coll_contains", "map_keys", "idx2_assign", "idx2_compound", "bit_not", "try_catch", "catch_value",
             "alg_linsearch", "alg_binsearch", "alg_bubble", "alg_selsort", "alg_gcd", "alg_primes", "alg_fizzbuzz", "alg_transpose", "alg_dedup", "rec_fib", "rec_fib_split", "rec_twice", "at_palin", "at_reverse", "at_vowels", "at_caesar", "at_past_end", "at_frac_idx", "at_tally", "chain_at_up", "chain_sub_up", "chain_sub_nc", "chain_trim_up", "for_init_mem", "esc_tab", "esc_cr", "esc_tab_cmp", "neg_group", "neg_group_dbl", "neg_group_call", "neg_group_elem", "ret_paren", "ret_paren_str", "ret_paren_elem", "ret_paren_math", "ret_paren_call", "grp_call_add", "grp_call_str", "grp_call_cond", "eq_elem_arg", "eq_elem_sarg", "eq_elem_ctr", "eq_fe_arg",
             "sc_guard_and", "sc_guard_or", "sc_guard_tern", "sc_guard_while", "call_while_and", "call_for_cond", "callres_str_mul", "callres_str_tern", "callres_str_eq", "callres_str_lt", "callres_num_eq", "callres_accum", "callres_asg_add", "callres_asg_use", "callres_asg_loop", "conv_of_call", "conv_sqrt", "conv_in_cond", "conv_in_while", "conv_trailing", "cls_new_expr", "map_nested_lit", "map_nested_map", "elem_method_loc", "elem_sub_at", "fe_title", "fe_trim", "loc_member_cond", "arg_member_cond", "mul_precedence", "wf_most", "arr_merge2", "matrix_mul2", "grp_call_asg", "grp_call_two",
             "carg_sum", "carg_fe_max", "carg_contains", "carg_set", "carg_return", "carg_str_member", "carg_str_join", "carg_dbl_avg", "carg_map_keys", "carg_map_add", "carg_map_str", "carg_recursive", "varg_index", "int_ovf_cube", "int_ovf_mul", "int_ovf_add", "int_ovf_text", "int_arg_sub_expr", "int_arg_collatz", "int_arg_grow", "int_arg_step", "scope_anagram", "scope_branches", "scope_str_later", "scope_coll_later", "scope_bool_later", "scope_inst_later", "str_chain_prop", "int_arg_halve",
@@ -1724,6 +2194,8 @@ namespace cscs.Tests.IntegrationTests.Precompiler
                                "function callsBack(x) { return x * 2; }\n" +
                                "function throwsAlways(x) { throw \"boom\" + x; }\n" +
                                "function sumPoint(p) { return p.x + p.y; }\n" +
+                               "function sign(x) { return x + 100; }\n" +
+                               "function show(x) { return x; }\n" +
                                "class Counter { cv = 0; Counter(v) { cv = v; } " +
                                "function Value() { return cv; } }\n" +
                                "class WithDef { da = 0; db = 0; dc = 0; WithDef(x = 1, y = 2, z = 3) " +

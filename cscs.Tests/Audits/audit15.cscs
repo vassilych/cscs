@@ -1,0 +1,61 @@
+cfunction ttI(int n) { return n * 2; }
+cfunction ttD(double d) { return d / 4; }
+cfunction ttS(string s) { return "<" + s + ">"; }
+ttDiffs = 0;
+cfunction ttc1(double d) { return ttI(d); }
+function tti1(d) { return ttI(d); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttI(d); on 2.5 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc1")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc1(-3.7); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti1(-3.7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttI(d); on -3.7 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc1")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc1(1e20); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti1(1e20); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttI(d); on 1e20 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc1")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc1(7); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti1(7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttI(d); on 7 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc1")); }
+cfunction ttc2(double d) { return ttS(d); }
+function tti2(d) { return ttS(d); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttS(d); on 2.5 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc2")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc2(1e20); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti2(1e20); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttS(d); on 1e20 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc2")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc2(0.1); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti2(0.1); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttS(d); on 0.1 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc2")); }
+cfunction ttc3(string s) { return ttI(s); }
+function tti3(s) { return ttI(s); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttI(s); on '5' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc3")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc3("2.9"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti3("2.9"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttI(s); on '2.9' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc3")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttI(s); on 'abc' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc3")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttI(s); on '' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc3")); }
+cfunction ttc4(string s) { return ttD(s); }
+function tti4(s) { return ttD(s); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttD(s); on '5' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc4")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttD(s); on 'abc' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc4")); }
+cfunction ttc5(int n) { return ttS(n); }
+function tti5(n) { return ttS(n); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (int n) return ttS(n); on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc5")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc5(-1); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti5(-1); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (int n) return ttS(n); on -1 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc5")); }
+cfunction ttc6(int n) { return ttD(n); }
+function tti6(n) { return ttD(n); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (int n) return ttD(n); on 3 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc6")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc6(7); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti6(7); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (int n) return ttD(n); on 7 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc6")); }
+cfunction ttc7(double d) { return ttI(d) + ttD(d); }
+function tti7(d) { return ttI(d) + ttD(d); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (double d) return ttI(d) + ttD(d); on 2.5 -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc7")); }
+cfunction ttc8(string s) { return ttS(s + 1); }
+function tti8(s) { return ttS(s + 1); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc8("a"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti8("a"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttS(s + 1); on 'a' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc8")); }
+a1 = ""; a2 = ""; try { a1 = "" + ttc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + tti8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { ttDiffs++; print("DIFF (string s) return ttS(s + 1); on '5' -> [" + a1 + "] vs [" + a2 + "] pre=" + is_precompiled("ttc8")); }
+print("AUDIT15 DONE diffs " + ttDiffs);

@@ -1,0 +1,346 @@
+G = 0; GI = 0;
+function bump() { G = G + 10; }
+function bumpI() { GI = GI + 10; }
+glDiffs = 0; glCompiled = 0; glTotal = 0; glMissing = "";
+cfunction glc1(int n) { return G + 1; }
+function gli1(n) { return GI + 1; }
+glTotal++; glCompiled += is_precompiled("glc1"); if (!is_precompiled("glc1")) { glMissing += "return G + 1; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G + 1; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc2(int n) { G = G + 1; return G; }
+function gli2(n) { GI = GI + 1; return GI; }
+glTotal++; glCompiled += is_precompiled("glc2"); if (!is_precompiled("glc2")) { glMissing += "G = G + 1; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G + 1; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc3(int n) { G += 1; return G; }
+function gli3(n) { GI += 1; return GI; }
+glTotal++; glCompiled += is_precompiled("glc3"); if (!is_precompiled("glc3")) { glMissing += "G += 1; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G += 1; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc4(int n) { G++; return G; }
+function gli4(n) { GI++; return GI; }
+glTotal++; glCompiled += is_precompiled("glc4"); if (!is_precompiled("glc4")) { glMissing += "G++; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G++; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc5(int n) { G = "s"; return G; }
+function gli5(n) { GI = "s"; return GI; }
+glTotal++; glCompiled += is_precompiled("glc5"); if (!is_precompiled("glc5")) { glMissing += "G = 's'; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 's'; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc6(int n) { if (G) { return "T"; } return "F"; }
+function gli6(n) { if (GI) { return "T"; } return "F"; }
+glTotal++; glCompiled += is_precompiled("glc6"); if (!is_precompiled("glc6")) { glMissing += "if (G) { return 'T'; } return 'F'; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G) { return 'T'; } return 'F'; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc7(int n) { r = G; G = 9; return r + G; }
+function gli7(n) { r = GI; GI = 9; return r + GI; }
+glTotal++; glCompiled += is_precompiled("glc7"); if (!is_precompiled("glc7")) { glMissing += "r = G; G = 9; return r + G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF r = G; G = 9; return r + G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc8(int n) { G[0] = 5; return G; }
+function gli8(n) { GI[0] = 5; return GI; }
+glTotal++; glCompiled += is_precompiled("glc8"); if (!is_precompiled("glc8")) { glMissing += "G[0] = 5; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G[0] = 5; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc9(int n) { return G[0]; }
+function gli9(n) { return GI[0]; }
+glTotal++; glCompiled += is_precompiled("glc9"); if (!is_precompiled("glc9")) { glMissing += "return G[0]; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF return G[0]; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc10(int n) { G.Add(4); return G.Size; }
+function gli10(n) { GI.Add(4); return GI.Size; }
+glTotal++; glCompiled += is_precompiled("glc10"); if (!is_precompiled("glc10")) { glMissing += "G.Add(4); return G.Size; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G.Add(4); return G.Size; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc11(int n) { bump(); return G; }
+function gli11(n) { bumpI(); return GI; }
+glTotal++; glCompiled += is_precompiled("glc11"); if (!is_precompiled("glc11")) { glMissing += "bump(); return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF bump(); return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc12(int n) { G = 1; bump(); return G; }
+function gli12(n) { GI = 1; bumpI(); return GI; }
+glTotal++; glCompiled += is_precompiled("glc12"); if (!is_precompiled("glc12")) { glMissing += "G = 1; bump(); return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc13(int n) { G = 1; bump(); G += 1; return G; }
+function gli13(n) { GI = 1; bumpI(); GI += 1; return GI; }
+glTotal++; glCompiled += is_precompiled("glc13"); if (!is_precompiled("glc13")) { glMissing += "G = 1; bump(); G += 1; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = 1; bump(); G += 1; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc14(int n) { for (G = 0; G < 3; G++) { } return G; }
+function gli14(n) { for (GI = 0; GI < 3; GI++) { } return GI; }
+glTotal++; glCompiled += is_precompiled("glc14"); if (!is_precompiled("glc14")) { glMissing += "for (G = 0; G < 3; G++) { } return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF for (G = 0; G < 3; G++) { } return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc15(int n) { s = 0; for (G = 0; G < 3; G++) { s += G; } return s; }
+function gli15(n) { s = 0; for (GI = 0; GI < 3; GI++) { s += GI; } return s; }
+glTotal++; glCompiled += is_precompiled("glc15"); if (!is_precompiled("glc15")) { glMissing += "s = 0; for (G = 0; G < 3; G++) { s += G; } return s; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF s = 0; for (G = 0; G < 3; G++) { s += G; } return s; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc16(int n) { x = G; bump(); return x; }
+function gli16(n) { x = GI; bumpI(); return x; }
+glTotal++; glCompiled += is_precompiled("glc16"); if (!is_precompiled("glc16")) { glMissing += "x = G; bump(); return x; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF x = G; bump(); return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc17(int n) { G = G * 2; bump(); return G + 1; }
+function gli17(n) { GI = GI * 2; bumpI(); return GI + 1; }
+glTotal++; glCompiled += is_precompiled("glc17"); if (!is_precompiled("glc17")) { glMissing += "G = G * 2; bump(); return G + 1; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = G * 2; bump(); return G + 1; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc18(int n) { L = G; L += 1; return L; }
+function gli18(n) { L = GI; L += 1; return L; }
+glTotal++; glCompiled += is_precompiled("glc18"); if (!is_precompiled("glc18")) { glMissing += "L = G; L += 1; return L; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF L = G; L += 1; return L; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc19(int n) { if (G == 3) { G = "three"; } else { G = "other"; } return G; }
+function gli19(n) { if (GI == 3) { GI = "three"; } else { GI = "other"; } return GI; }
+glTotal++; glCompiled += is_precompiled("glc19"); if (!is_precompiled("glc19")) { glMissing += "if (G == 3) { G = 'three'; } else { G = 'other'; } return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF if (G == 3) { G = 'three'; } else { G = 'other'; } return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+cfunction glc20(int n) { G = !G; return G; }
+function gli20(n) { GI = !GI; return GI; }
+glTotal++; glCompiled += is_precompiled("glc20"); if (!is_precompiled("glc20")) { glMissing += "G = !G; return G; | "; }
+G = 3; GI = 3; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on 3 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 0; GI = 0; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on 0 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "abc"; GI = "abc"; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on 'abc' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = "5"; GI = "5"; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on '5' -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {1, 2, 3}; GI = {1, 2, 3}; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = {}; GI = {}; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on {} -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+G = 2.5; GI = 2.5; a1 = ""; a2 = ""; try { a1 = "" + glc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + gli20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2 || ("" + G) != ("" + GI)) { glDiffs++; print("DIFF G = !G; return G; on 2.5 -> [" + a1 + "] vs [" + a2 + "], G=" + G + " vs " + GI); }
+print("AUDIT12 DONE compiled " + glCompiled + " of " + glTotal + ", diffs " + glDiffs);
+print("NOT COMPILED: " + glMissing);

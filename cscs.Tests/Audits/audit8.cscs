@@ -1,0 +1,1062 @@
+cfunction tgI(int n) { return n * 2; }
+cfunction tgD(double d) { return d / 2; }
+cfunction tgS(string s) { return s + "!"; }
+cfunction tgV(variable v) { return v; }
+cfunction tgT(variable v) { return Type(v); }
+cfunction tgDef(int n, int m = 5) { return n + m; }
+cfunction tgIS(int n, string s) { return s + n; }
+function tgF(q) { return q; }
+cfDiffs = 0; cfCompiled = 0; cfTotal = 0; cfMissing = "";
+cfunction cfc1(variable x) { return tgI(x); }
+function cfi1(x) { return tgI(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc1"); if (!is_precompiled("cfc1")) { cfMissing += "tgI(x) @ret | "; }
+cfunction cfc2(variable x) { r = tgI(x); return r; }
+function cfi2(x) { r = tgI(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc2"); if (!is_precompiled("cfc2")) { cfMissing += "tgI(x) @asg | "; }
+cfunction cfc3(variable x) { if (tgI(x) == 6) { return "T"; } return "F"; }
+function cfi3(x) { if (tgI(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc3"); if (!is_precompiled("cfc3")) { cfMissing += "tgI(x) @cond | "; }
+cfunction cfc4(variable x) { return tgD(x); }
+function cfi4(x) { return tgD(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc4"); if (!is_precompiled("cfc4")) { cfMissing += "tgD(x) @ret | "; }
+cfunction cfc5(variable x) { r = tgD(x); return r; }
+function cfi5(x) { r = tgD(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc5"); if (!is_precompiled("cfc5")) { cfMissing += "tgD(x) @asg | "; }
+cfunction cfc6(variable x) { if (tgD(x) == 6) { return "T"; } return "F"; }
+function cfi6(x) { if (tgD(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc6"); if (!is_precompiled("cfc6")) { cfMissing += "tgD(x) @cond | "; }
+cfunction cfc7(variable x) { return tgS(x); }
+function cfi7(x) { return tgS(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc7"); if (!is_precompiled("cfc7")) { cfMissing += "tgS(x) @ret | "; }
+cfunction cfc8(variable x) { r = tgS(x); return r; }
+function cfi8(x) { r = tgS(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc8"); if (!is_precompiled("cfc8")) { cfMissing += "tgS(x) @asg | "; }
+cfunction cfc9(variable x) { if (tgS(x) == 6) { return "T"; } return "F"; }
+function cfi9(x) { if (tgS(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc9"); if (!is_precompiled("cfc9")) { cfMissing += "tgS(x) @cond | "; }
+cfunction cfc10(variable x) { return tgV(x); }
+function cfi10(x) { return tgV(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc10"); if (!is_precompiled("cfc10")) { cfMissing += "tgV(x) @ret | "; }
+cfunction cfc11(variable x) { r = tgV(x); return r; }
+function cfi11(x) { r = tgV(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc11"); if (!is_precompiled("cfc11")) { cfMissing += "tgV(x) @asg | "; }
+cfunction cfc12(variable x) { if (tgV(x) == 6) { return "T"; } return "F"; }
+function cfi12(x) { if (tgV(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc12"); if (!is_precompiled("cfc12")) { cfMissing += "tgV(x) @cond | "; }
+cfunction cfc13(variable x) { return tgT(x); }
+function cfi13(x) { return tgT(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc13"); if (!is_precompiled("cfc13")) { cfMissing += "tgT(x) @ret | "; }
+cfunction cfc14(variable x) { r = tgT(x); return r; }
+function cfi14(x) { r = tgT(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc14"); if (!is_precompiled("cfc14")) { cfMissing += "tgT(x) @asg | "; }
+cfunction cfc15(variable x) { if (tgT(x) == 6) { return "T"; } return "F"; }
+function cfi15(x) { if (tgT(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc15"); if (!is_precompiled("cfc15")) { cfMissing += "tgT(x) @cond | "; }
+cfunction cfc16(variable x) { return tgDef(x); }
+function cfi16(x) { return tgDef(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc16"); if (!is_precompiled("cfc16")) { cfMissing += "tgDef(x) @ret | "; }
+cfunction cfc17(variable x) { r = tgDef(x); return r; }
+function cfi17(x) { r = tgDef(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc17"); if (!is_precompiled("cfc17")) { cfMissing += "tgDef(x) @asg | "; }
+cfunction cfc18(variable x) { if (tgDef(x) == 6) { return "T"; } return "F"; }
+function cfi18(x) { if (tgDef(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc18"); if (!is_precompiled("cfc18")) { cfMissing += "tgDef(x) @cond | "; }
+cfunction cfc19(variable x) { return tgDef(x, x); }
+function cfi19(x) { return tgDef(x, x); }
+cfTotal++; cfCompiled += is_precompiled("cfc19"); if (!is_precompiled("cfc19")) { cfMissing += "tgDef(x, x) @ret | "; }
+cfunction cfc20(variable x) { r = tgDef(x, x); return r; }
+function cfi20(x) { r = tgDef(x, x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc20"); if (!is_precompiled("cfc20")) { cfMissing += "tgDef(x, x) @asg | "; }
+cfunction cfc21(variable x) { if (tgDef(x, x) == 6) { return "T"; } return "F"; }
+function cfi21(x) { if (tgDef(x, x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc21"); if (!is_precompiled("cfc21")) { cfMissing += "tgDef(x, x) @cond | "; }
+cfunction cfc22(variable x) { return tgIS(x, x); }
+function cfi22(x) { return tgIS(x, x); }
+cfTotal++; cfCompiled += is_precompiled("cfc22"); if (!is_precompiled("cfc22")) { cfMissing += "tgIS(x, x) @ret | "; }
+cfunction cfc23(variable x) { r = tgIS(x, x); return r; }
+function cfi23(x) { r = tgIS(x, x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc23"); if (!is_precompiled("cfc23")) { cfMissing += "tgIS(x, x) @asg | "; }
+cfunction cfc24(variable x) { if (tgIS(x, x) == 6) { return "T"; } return "F"; }
+function cfi24(x) { if (tgIS(x, x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc24"); if (!is_precompiled("cfc24")) { cfMissing += "tgIS(x, x) @cond | "; }
+cfunction cfc25(variable x) { return tgF(x); }
+function cfi25(x) { return tgF(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc25"); if (!is_precompiled("cfc25")) { cfMissing += "tgF(x) @ret | "; }
+cfunction cfc26(variable x) { r = tgF(x); return r; }
+function cfi26(x) { r = tgF(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc26"); if (!is_precompiled("cfc26")) { cfMissing += "tgF(x) @asg | "; }
+cfunction cfc27(variable x) { if (tgF(x) == 6) { return "T"; } return "F"; }
+function cfi27(x) { if (tgF(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc27"); if (!is_precompiled("cfc27")) { cfMissing += "tgF(x) @cond | "; }
+cfunction cfc28(variable x) { return tgI(x) + 1; }
+function cfi28(x) { return tgI(x) + 1; }
+cfTotal++; cfCompiled += is_precompiled("cfc28"); if (!is_precompiled("cfc28")) { cfMissing += "tgI(x) + 1 @ret | "; }
+cfunction cfc29(variable x) { r = tgI(x) + 1; return r; }
+function cfi29(x) { r = tgI(x) + 1; return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc29"); if (!is_precompiled("cfc29")) { cfMissing += "tgI(x) + 1 @asg | "; }
+cfunction cfc30(variable x) { if (tgI(x) + 1 == 6) { return "T"; } return "F"; }
+function cfi30(x) { if (tgI(x) + 1 == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc30"); if (!is_precompiled("cfc30")) { cfMissing += "tgI(x) + 1 @cond | "; }
+cfunction cfc31(variable x) { return tgS(x) + tgS(x); }
+function cfi31(x) { return tgS(x) + tgS(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc31"); if (!is_precompiled("cfc31")) { cfMissing += "tgS(x) + tgS(x) @ret | "; }
+cfunction cfc32(variable x) { r = tgS(x) + tgS(x); return r; }
+function cfi32(x) { r = tgS(x) + tgS(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc32"); if (!is_precompiled("cfc32")) { cfMissing += "tgS(x) + tgS(x) @asg | "; }
+cfunction cfc33(variable x) { if (tgS(x) + tgS(x) == 6) { return "T"; } return "F"; }
+function cfi33(x) { if (tgS(x) + tgS(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc33"); if (!is_precompiled("cfc33")) { cfMissing += "tgS(x) + tgS(x) @cond | "; }
+cfunction cfc34(variable x) { return tgI(tgI(x)); }
+function cfi34(x) { return tgI(tgI(x)); }
+cfTotal++; cfCompiled += is_precompiled("cfc34"); if (!is_precompiled("cfc34")) { cfMissing += "tgI(tgI(x)) @ret | "; }
+cfunction cfc35(variable x) { r = tgI(tgI(x)); return r; }
+function cfi35(x) { r = tgI(tgI(x)); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc35"); if (!is_precompiled("cfc35")) { cfMissing += "tgI(tgI(x)) @asg | "; }
+cfunction cfc36(variable x) { if (tgI(tgI(x)) == 6) { return "T"; } return "F"; }
+function cfi36(x) { if (tgI(tgI(x)) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc36"); if (!is_precompiled("cfc36")) { cfMissing += "tgI(tgI(x)) @cond | "; }
+cfunction cfc37(variable x) { return tgS(tgI(x)); }
+function cfi37(x) { return tgS(tgI(x)); }
+cfTotal++; cfCompiled += is_precompiled("cfc37"); if (!is_precompiled("cfc37")) { cfMissing += "tgS(tgI(x)) @ret | "; }
+cfunction cfc38(variable x) { r = tgS(tgI(x)); return r; }
+function cfi38(x) { r = tgS(tgI(x)); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc38"); if (!is_precompiled("cfc38")) { cfMissing += "tgS(tgI(x)) @asg | "; }
+cfunction cfc39(variable x) { if (tgS(tgI(x)) == 6) { return "T"; } return "F"; }
+function cfi39(x) { if (tgS(tgI(x)) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc39"); if (!is_precompiled("cfc39")) { cfMissing += "tgS(tgI(x)) @cond | "; }
+cfunction cfc40(variable x) { return tgLate(x); }
+function cfi40(x) { return tgLate(x); }
+cfTotal++; cfCompiled += is_precompiled("cfc40"); if (!is_precompiled("cfc40")) { cfMissing += "tgLate(x) @ret | "; }
+cfunction cfc41(variable x) { r = tgLate(x); return r; }
+function cfi41(x) { r = tgLate(x); return r; }
+cfTotal++; cfCompiled += is_precompiled("cfc41"); if (!is_precompiled("cfc41")) { cfMissing += "tgLate(x) @asg | "; }
+cfunction cfc42(variable x) { if (tgLate(x) == 6) { return "T"; } return "F"; }
+function cfi42(x) { if (tgLate(x) == 6) { return "T"; } return "F"; }
+cfTotal++; cfCompiled += is_precompiled("cfc42"); if (!is_precompiled("cfc42")) { cfMissing += "tgLate(x) @cond | "; }
+function tgLate(z) { return "late:" + z; }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc1(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi1(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc2(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi2(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc3(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi3(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc4(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi4(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc5(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi5(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc6(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi6(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgD(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc7(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi7(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc8(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi8(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc9(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi9(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc10(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi10(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc11(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi11(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc12(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi12(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgV(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc13(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi13(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc14(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi14(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc15(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi15(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgT(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc16(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi16(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc17(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi17(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc18(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi18(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc19(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi19(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc20(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi20(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc21(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi21(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgDef(x, x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc22(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi22(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc23(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi23(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc24(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi24(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgIS(x, x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc25(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi25(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc26(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi26(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc27(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi27(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgF(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc28(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi28(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc29(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi29(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc30(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi30(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(x) + 1 @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc31(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi31(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc32(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi32(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc33(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi33(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(x) + tgS(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc34(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi34(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc35(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi35(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc36(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi36(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgI(tgI(x)) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc37(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi37(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc38(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi38(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc39(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi39(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgS(tgI(x)) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc40(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi40(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @ret on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc41(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi41(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @asg on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42("7.5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42("7.5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on '7.5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(-4); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(-4); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on -4 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + cfc42(1e3); } catch (e) { a1 = "ERR"; } try { a2 = "" + cfi42(1e3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { cfDiffs++; print("DIFF tgLate(x) @cond on 1e3 -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT8 DONE compiled " + cfCompiled + " of " + cfTotal + ", diffs " + cfDiffs);
+print("NOT COMPILED: " + cfMissing);

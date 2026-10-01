@@ -43,7 +43,14 @@ do { n--; } while (n > 0);
 print("n =", n);
 ```
 
-Also available: `break`, `continue`, the ternary `cond ? a : b`, `+= -= *= /= %=`, `++` and `--`.
+Also available: `break`, `continue`, the ternary `cond ? a : b`, `+= -= *= /= %=`, `++` and `--`,
+the bitwise `& | ^ ~` and the shifts `<< >>` (on whole numbers), and `if`/`else` without braces
+for a single statement.
+
+A condition is true for a number other than 0, for text other than `""`, `"0"` and `"false"`, and
+for a non-empty list or map. `!`, `&&` and `||` follow the same rule and always give 1 or 0.
+`x += y` means `x = x + y`, so `n = 5; n += "!"` makes `"5!"`, and `++` on numeric text such as
+`"7"` gives 8.
 
 ## Collections
 
@@ -132,7 +139,9 @@ switch (3) {
 }
 ```
 
-`case` labels fall through until a `break`, as in C.
+`case` labels fall through until a `break`, as in C. The caught value `e` is the error's text, also
+available as `e.Message`. A `finally` block runs after `try` and `catch` as in C#, a `return` inside
+`try` still returns, and `try { ... } finally { ... }` needs no `catch`.
 
 ## Math, conversions, JSON and regular expressions
 
@@ -185,23 +194,18 @@ produces does not compile, the function quietly falls back to the interpreter an
 answer, only without the speed-up:
 
 ```cscs
-class Box {
-  w = 0;
-  Box(x) { w = x; }
-  function Area() { return w * w; }
+cfunction string where(int n) {
+  try { throw "bad " + n; } catch (e) { return e.Stack; }
 }
-cfunction double boxOfArea(int n) {
-  b = new Box(new Box(n).Area());
-  return b.w;
-}
-print("boxOfArea(3) =", boxOfArea(3));
+print(where(3));
 ```
 
 Pass scripts with `cfunction`s to **`explain_cscs`**, not `run_cscs`: it shows the generated C# for
-each one, whether it compiles, or the exact reason it falls back — here an object built inside
-another constructor's arguments, which the translator leaves to the interpreter. Chained
-comparisons (`1 < n < 10`), `iff(...)`, and `continue` inside a `switch` all compile; the report
-shows what they become. In this sandbox that C# is compiled but never executed, so every function runs
+each one, whether it compiles, or the exact reason it falls back. Here the reason is `e.Stack`: a
+caught error's stack is the interpreter's chain of calls, which compiled code has no record of. The
+translator refuses anything whose C# spelling would change an answer. Chained comparisons
+(`1 < n < 10`), `iff(...)`, `continue` inside a `switch`, and objects built inside another
+constructor's arguments all compile; the report shows what they become. In this sandbox that C# is compiled but never executed, so every function runs
 interpreted; `run_cscs` does not accept `cfunction` at all.
 
 ## What this sandbox does not allow

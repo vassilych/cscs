@@ -1,0 +1,843 @@
+svDiffs = 0; svCompiled = 0; svTotal = 0; svMissing = "";
+cfunction svc1(variable x) { r = x; r += 1; return r; }
+function svi1(x) { r = x; r += 1; return r; }
+svTotal++; svCompiled += is_precompiled("svc1"); if (!is_precompiled("svc1")) { svMissing += "r = x; r += 1; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc1(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc1({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi1({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += 1; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc2(variable x) { r = x; r += "!"; return r; }
+function svi2(x) { r = x; r += "!"; return r; }
+svTotal++; svCompiled += is_precompiled("svc2"); if (!is_precompiled("svc2")) { svMissing += "r = x; r += '!'; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc2(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc2({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi2({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r += '!'; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc3(variable x) { r = x; r -= 1; return r; }
+function svi3(x) { r = x; r -= 1; return r; }
+svTotal++; svCompiled += is_precompiled("svc3"); if (!is_precompiled("svc3")) { svMissing += "r = x; r -= 1; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc3(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc3({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi3({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r -= 1; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc4(variable x) { r = x; r *= 2; return r; }
+function svi4(x) { r = x; r *= 2; return r; }
+svTotal++; svCompiled += is_precompiled("svc4"); if (!is_precompiled("svc4")) { svMissing += "r = x; r *= 2; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc4(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc4({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi4({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r *= 2; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc5(variable x) { r = x; r /= 2; return r; }
+function svi5(x) { r = x; r /= 2; return r; }
+svTotal++; svCompiled += is_precompiled("svc5"); if (!is_precompiled("svc5")) { svMissing += "r = x; r /= 2; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc5(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc5({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi5({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r /= 2; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc6(variable x) { r = x; r %= 2; return r; }
+function svi6(x) { r = x; r %= 2; return r; }
+svTotal++; svCompiled += is_precompiled("svc6"); if (!is_precompiled("svc6")) { svMissing += "r = x; r %= 2; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc6(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc6({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi6({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r %= 2; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc7(variable x) { r = x; r++; return r; }
+function svi7(x) { r = x; r++; return r; }
+svTotal++; svCompiled += is_precompiled("svc7"); if (!is_precompiled("svc7")) { svMissing += "r = x; r++; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc7(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc7({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi7({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r++; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc8(variable x) { r = x; --r; return r; }
+function svi8(x) { r = x; --r; return r; }
+svTotal++; svCompiled += is_precompiled("svc8"); if (!is_precompiled("svc8")) { svMissing += "r = x; --r; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc8(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc8({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi8({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; --r; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc9(variable x) { x += 1; return x; }
+function svi9(x) { x += 1; return x; }
+svTotal++; svCompiled += is_precompiled("svc9"); if (!is_precompiled("svc9")) { svMissing += "x += 1; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc9(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc9({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi9({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += 1; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc10(variable x) { x += "!"; return x; }
+function svi10(x) { x += "!"; return x; }
+svTotal++; svCompiled += is_precompiled("svc10"); if (!is_precompiled("svc10")) { svMissing += "x += '!'; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc10(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc10({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi10({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x += '!'; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc11(variable x) { x++; return x; }
+function svi11(x) { x++; return x; }
+svTotal++; svCompiled += is_precompiled("svc11"); if (!is_precompiled("svc11")) { svMissing += "x++; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc11(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc11({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi11({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x++; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc12(variable x) { x *= 3; return x; }
+function svi12(x) { x *= 3; return x; }
+svTotal++; svCompiled += is_precompiled("svc12"); if (!is_precompiled("svc12")) { svMissing += "x *= 3; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc12(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc12({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi12({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x *= 3; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc13(variable x) { r = 5; r += x; return r; }
+function svi13(x) { r = 5; r += x; return r; }
+svTotal++; svCompiled += is_precompiled("svc13"); if (!is_precompiled("svc13")) { svMissing += "r = 5; r += x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc13(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc13({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi13({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 5; r += x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc14(variable x) { r = "s"; r += x; return r; }
+function svi14(x) { r = "s"; r += x; return r; }
+svTotal++; svCompiled += is_precompiled("svc14"); if (!is_precompiled("svc14")) { svMissing += "r = 's'; r += x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc14(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc14({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi14({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = 's'; r += x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc15(variable x) { r = {}; r.Add(x); return r; }
+function svi15(x) { r = {}; r.Add(x); return r; }
+svTotal++; svCompiled += is_precompiled("svc15"); if (!is_precompiled("svc15")) { svMissing += "r = {}; r.Add(x); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc15(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc15({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi15({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {}; r.Add(x); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc16(variable x) { r = {1}; r += x; return r; }
+function svi16(x) { r = {1}; r += x; return r; }
+svTotal++; svCompiled += is_precompiled("svc16"); if (!is_precompiled("svc16")) { svMissing += "r = {1}; r += x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc16(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc16({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi16({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {1}; r += x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc17(variable x) { r = x; r.Add(9); return r; }
+function svi17(x) { r = x; r.Add(9); return r; }
+svTotal++; svCompiled += is_precompiled("svc17"); if (!is_precompiled("svc17")) { svMissing += "r = x; r.Add(9); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc17(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc17({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi17({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Add(9); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc18(variable x) { r = x; r.Insert(0, 9); return r; }
+function svi18(x) { r = x; r.Insert(0, 9); return r; }
+svTotal++; svCompiled += is_precompiled("svc18"); if (!is_precompiled("svc18")) { svMissing += "r = x; r.Insert(0, 9); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc18(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc18({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi18({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Insert(0, 9); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc19(variable x) { r = x; r.Remove(2); return r; }
+function svi19(x) { r = x; r.Remove(2); return r; }
+svTotal++; svCompiled += is_precompiled("svc19"); if (!is_precompiled("svc19")) { svMissing += "r = x; r.Remove(2); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc19(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc19({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi19({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Remove(2); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc20(variable x) { r = x; r.RemoveAt(0); return r; }
+function svi20(x) { r = x; r.RemoveAt(0); return r; }
+svTotal++; svCompiled += is_precompiled("svc20"); if (!is_precompiled("svc20")) { svMissing += "r = x; r.RemoveAt(0); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc20(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc20({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi20({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.RemoveAt(0); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc21(variable x) { r = x; r.Sort(); return r; }
+function svi21(x) { r = x; r.Sort(); return r; }
+svTotal++; svCompiled += is_precompiled("svc21"); if (!is_precompiled("svc21")) { svMissing += "r = x; r.Sort(); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc21(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc21({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi21({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Sort(); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc22(variable x) { r = x; r.Reverse(); return r; }
+function svi22(x) { r = x; r.Reverse(); return r; }
+svTotal++; svCompiled += is_precompiled("svc22"); if (!is_precompiled("svc22")) { svMissing += "r = x; r.Reverse(); return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc22(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc22({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi22({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r.Reverse(); return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc23(variable x) { r = x[0]; return r; }
+function svi23(x) { r = x[0]; return r; }
+svTotal++; svCompiled += is_precompiled("svc23"); if (!is_precompiled("svc23")) { svMissing += "r = x[0]; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc23(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc23({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi23({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[0]; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc24(variable x) { r = x[1] + x[0]; return r; }
+function svi24(x) { r = x[1] + x[0]; return r; }
+svTotal++; svCompiled += is_precompiled("svc24"); if (!is_precompiled("svc24")) { svMissing += "r = x[1] + x[0]; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc24(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc24({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi24({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x[1] + x[0]; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc25(variable x) { x[0] = 7; return x; }
+function svi25(x) { x[0] = 7; return x; }
+svTotal++; svCompiled += is_precompiled("svc25"); if (!is_precompiled("svc25")) { svMissing += "x[0] = 7; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc25(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc25({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi25({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[0] = 7; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc26(variable x) { x[1] += 7; return x; }
+function svi26(x) { x[1] += 7; return x; }
+svTotal++; svCompiled += is_precompiled("svc26"); if (!is_precompiled("svc26")) { svMissing += "x[1] += 7; return x; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc26(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc26({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi26({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF x[1] += 7; return x; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc27(variable x) { m = {}; m[x] = 1; return m; }
+function svi27(x) { m = {}; m[x] = 1; return m; }
+svTotal++; svCompiled += is_precompiled("svc27"); if (!is_precompiled("svc27")) { svMissing += "m = {}; m[x] = 1; return m; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc27(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc27({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi27({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m[x] = 1; return m; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc28(variable x) { m = {}; m["k"] = x; return m["k"]; }
+function svi28(x) { m = {}; m["k"] = x; return m["k"]; }
+svTotal++; svCompiled += is_precompiled("svc28"); if (!is_precompiled("svc28")) { svMissing += "m = {}; m['k'] = x; return m['k']; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc28(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc28({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi28({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF m = {}; m['k'] = x; return m['k']; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc30(variable x) { s = ""; for (e : x) { s += e; } return s; }
+function svi30(x) { s = ""; for (e : x) { s += e; } return s; }
+svTotal++; svCompiled += is_precompiled("svc30"); if (!is_precompiled("svc30")) { svMissing += "s = ''; for (e : x) { s += e; } return s; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc30(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc30({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi30({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF s = ''; for (e : x) { s += e; } return s; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc32(variable x) { r = x == 3; return r; }
+function svi32(x) { r = x == 3; return r; }
+svTotal++; svCompiled += is_precompiled("svc32"); if (!is_precompiled("svc32")) { svMissing += "r = x == 3; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc32(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc32({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi32({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x == 3; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc33(variable x) { r = x != ""; return r; }
+function svi33(x) { r = x != ""; return r; }
+svTotal++; svCompiled += is_precompiled("svc33"); if (!is_precompiled("svc33")) { svMissing += "r = x != ''; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc33(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc33({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi33({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x != ''; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc34(variable x) { r = x < 2; return r; }
+function svi34(x) { r = x < 2; return r; }
+svTotal++; svCompiled += is_precompiled("svc34"); if (!is_precompiled("svc34")) { svMissing += "r = x < 2; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc34(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc34({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi34({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x < 2; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc35(variable x) { r = -x; return r; }
+function svi35(x) { r = -x; return r; }
+svTotal++; svCompiled += is_precompiled("svc35"); if (!is_precompiled("svc35")) { svMissing += "r = -x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc35(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc35({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi35({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = -x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc36(variable x) { r = x * x; return r; }
+function svi36(x) { r = x * x; return r; }
+svTotal++; svCompiled += is_precompiled("svc36"); if (!is_precompiled("svc36")) { svMissing += "r = x * x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc36(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc36({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi36({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x * x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc37(variable x) { r = x + x; return r; }
+function svi37(x) { r = x + x; return r; }
+svTotal++; svCompiled += is_precompiled("svc37"); if (!is_precompiled("svc37")) { svMissing += "r = x + x; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc37(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc37({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi37({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x + x; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc38(variable x) { r = x / 1; return r; }
+function svi38(x) { r = x / 1; return r; }
+svTotal++; svCompiled += is_precompiled("svc38"); if (!is_precompiled("svc38")) { svMissing += "r = x / 1; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc38(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc38({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi38({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x / 1; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc39(variable x) { t = ""; t = t + x + x; return t; }
+function svi39(x) { t = ""; t = t + x + x; return t; }
+svTotal++; svCompiled += is_precompiled("svc39"); if (!is_precompiled("svc39")) { svMissing += "t = ''; t = t + x + x; return t; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc39(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc39({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi39({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF t = ''; t = t + x + x; return t; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc40(variable x) { r = [x, x]; return r; }
+function svi40(x) { r = [x, x]; return r; }
+svTotal++; svCompiled += is_precompiled("svc40"); if (!is_precompiled("svc40")) { svMissing += "r = [x, x]; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc40(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc40({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi40({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = [x, x]; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc41(variable x) { r = {x, 1}; return r; }
+function svi41(x) { r = {x, 1}; return r; }
+svTotal++; svCompiled += is_precompiled("svc41"); if (!is_precompiled("svc41")) { svMissing += "r = {x, 1}; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc41(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc41({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi41({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = {x, 1}; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+cfunction svc42(variable x) { r = x; r = r + 1; r = r * 2; return r; }
+function svi42(x) { r = x; r = r + 1; r = r * 2; return r; }
+svTotal++; svCompiled += is_precompiled("svc42"); if (!is_precompiled("svc42")) { svMissing += "r = x; r = r + 1; r = r * 2; return r; | "; }
+a1 = ""; a2 = ""; try { a1 = "" + svc42(3); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42(3); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on 3 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42(0); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42(0); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on 0 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42(2.5); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42(2.5); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on 2.5 -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42("abc"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42("abc"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on 'abc' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42("5"); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42("5"); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on '5' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42(""); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42(""); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on '' -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42({1, 2, 3}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42({1, 2, 3}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on {1, 2, 3} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42({}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42({}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on {} -> [" + a1 + "] vs [" + a2 + "]"); }
+a1 = ""; a2 = ""; try { a1 = "" + svc42({"b", "a"}); } catch (e) { a1 = "ERR"; } try { a2 = "" + svi42({"b", "a"}); } catch (e) { a2 = "ERR"; }
+if (a1 != a2) { svDiffs++; print("DIFF r = x; r = r + 1; r = r * 2; return r; on {'b', 'a'} -> [" + a1 + "] vs [" + a2 + "]"); }
+print("AUDIT7 DONE compiled " + svCompiled + " of " + svTotal + ", diffs " + svDiffs);
+print("NOT COMPILED: " + svMissing);

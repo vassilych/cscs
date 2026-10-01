@@ -127,6 +127,16 @@ namespace SplitAndMerge
         public CSCSClass CurrentClass { get; set; }
         public CSCSClass.ClassInstance ClassInstance { get; set; }
 
+        // Named arguments: how deep in argument lists the parser is (Utils.GetArgs), and the
+        // parameter names of the script function whose own argument list is at NamedArgDepth.
+        // "f(s = \"q\")" there names a parameter and assigns nothing (AssignFunction).
+        public int ArgDepth { get; set; }
+        // Where the argument being read starts: a named argument is the whole argument, not an
+        // assignment inside one -- "helper((q = n * 2)) + q" assigns q.
+        public int ArgStart { get; set; } = -1;
+        public int NamedArgDepth { get; set; } = -1;
+        public HashSet<string> NamedArgNames { get; set; }
+
         public Interpreter InterpreterInstance { get; private set; }
 
         public static ParsingScript Default(object context = null)
@@ -664,7 +674,11 @@ namespace SplitAndMerge
             tempScript.StackLevel     = this.StackLevel;
             tempScript.AllLabels      = this.AllLabels;
             tempScript.LabelToFile    = this.LabelToFile;
-            tempScript.FunctionName   = this.FunctionName;            
+            tempScript.FunctionName   = this.FunctionName;
+            // A script compiled code runs looks its names up in the current execution level
+            // (Interpreter.GetVariable); a part of it -- the index in "x[x.Size-1]" -- has to as
+            // well, or the compiled function's own locals were not found there.
+            tempScript.Compiled       = this.Compiled;
 
             //tempScript.Debugger       = this.Debugger;
 

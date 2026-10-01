@@ -32,6 +32,23 @@ namespace SplitAndMerge
             return self.StartsWith(what, Comparison(mode));
         }
 
+        // A Variable where these read text -- "s.StartsWith(p)" with s typed string and p untyped:
+        // the interpreter reads the argument through GetSafeString, i.e. AsString().
+        public static bool StartsWithCscs(this string self, Variable what, string mode = "case")
+        {
+            return self.StartsWithCscs(what == null ? "" : what.AsString(), mode);
+        }
+
+        public static bool EndsWithCscs(this string self, Variable what, string mode = "case")
+        {
+            return self.EndsWithCscs(what == null ? "" : what.AsString(), mode);
+        }
+
+        public static bool ContainsCscs(this string self, Variable what, string mode = "case")
+        {
+            return self.ContainsCscs(what == null ? "" : what.AsString(), mode);
+        }
+
         public static bool EndsWithCscs(this string self, string what, string mode = "case")
         {
             return self.EndsWith(what, Comparison(mode));
@@ -93,6 +110,18 @@ namespace SplitAndMerge
             return string.Compare(new Variable((double)self).AsString(), what);
         }
 
+        /// <summary>Text against a Variable, either way round: the AsString() forms, as for a
+        /// number -- "rank(w) { if (w > \"melon\") ..." with w untyped.</summary>
+        public static int CompareCscs(this string self, Variable what)
+        {
+            return string.Compare(self, what == null ? "" : what.AsString());
+        }
+
+        public static int CompareCscs(this Variable self, string what)
+        {
+            return string.Compare(self == null ? "" : self.AsString(), what);
+        }
+
         /// <summary>
         /// The character at the index as a string of its own, or an empty string past the end,
         /// as the interpreter's At returns. The index is truncated the way GetSafeInt does it,
@@ -131,6 +160,270 @@ namespace SplitAndMerge
     /// Convert, so int("5.7") still parses and int(3.7) still truncates.
     /// </summary>
     /// <summary>
+    /// A name compiled code reads that nothing defined when it was translated -- a global the
+    /// script assigns later. Resolved when the code runs, by name, the way every call-by-name
+    /// callback resolves one, so it is a variable's value, a function's result, or the
+    /// interpreter's own "Couldn't find variable".
+    /// </summary>
+    public static class CscsLate
+    {
+        public static Variable Value(Interpreter interpreter, string name)
+        {
+            var action = "";
+            var script = new ParsingScript(interpreter, "", true);
+            var function = new ParserFunction(script, name, '(', ref action);
+            return function.GetValue(script);
+        }
+
+        /// <summary>"g[i]" and "g[i][j]" read as the interpreter reads them (GetVarFunction,
+        /// Utils.ExtractArrayElement): by position or by key, and an index past the end is
+        /// "Unknown index [..] for tuple of size ..".</summary>
+        public static Variable Element(Variable value, params object[] indices)
+        {
+            var list = new List<Variable>(indices.Length);
+            foreach (var index in indices)
+            {
+                list.Add(index as Variable ?? Variable.ConvertToVariable(index));
+            }
+            return Utils.ExtractArrayElement(value, list, null);
+        }
+
+        /// <summary>"++x" and "x--" on a variable read by name, as the interpreter steps one
+        /// (IncrementDecrementFunction, OperatorAssignFunction.Stepped): the stepped value written
+        /// back, and returned for a prefix; a postfix returns the value before the step. A missing
+        /// name is its error.</summary>
+        public static Variable Step(Interpreter interpreter, string name, string op, bool prefix)
+        {
+            var current = interpreter.GetVariableValue(name);
+            if (current == null)
+            {
+                throw new ArgumentException("Variable or function [" + name + "] doesn't exist.");
+            }
+            var before = current.DeepClone();
+            var updated = OperatorAssignFunction.Stepped(current, op == "++" ? 1 : -1);
+            interpreter.AddCompiledLocalVariable(name, new GetVarFunction(updated));
+            return prefix ? updated.DeepClone() : before;
+        }
+
+        /// <summary>The collection "name[k] = v" writes into: the interpreter's variable, or a new
+        /// one where there is none, which is what the interpreter's assignment then makes.</summary>
+        public static Variable OrNewCollection(Interpreter interpreter, string name)
+        {
+            return interpreter.GetVariableValue(name) ?? new Variable(Variable.VarType.ARRAY);
+        }
+
+        /// <summary>Hands the interpreter a value compiled code holds, as an assignment would
+        /// (AddCompiledLocalVariable: an existing global is written); true, so that it can stand
+        /// in front of a loop's condition.</summary>
+        public static bool Publish(Interpreter interpreter, string name, object value)
+        {
+            interpreter.AddCompiledLocalVariable(name, new GetVarFunction(Variable.ConvertToVariable(value)));
+            return true;
+        }
+
+        /// <summary>The interpreter's current value of a variable compiled code also keeps as a
+        /// local (ReadGlobalsThroughInterpreter): what a callback may have changed since.</summary>
+        public static Variable Current(Interpreter interpreter, string name)
+        {
+            return interpreter.GetVariableValue(name) ?? Value(interpreter, name);
+        }
+
+        /// <summary>The value of a name "x += 1" or "x++" works on, which the interpreter
+        /// requires to exist: a missing one is its error for the operator, not a new variable.</summary>
+        public static Variable Existing(Interpreter interpreter, string name, string missing)
+        {
+            var value = interpreter.GetVariableValue(name);
+            if (value == null)
+            {
+                throw new ArgumentException(missing);
+            }
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// A property read from compiled code, checked as the interpreter checks one: a property the
+    /// value does not have is "Object [name] doesn't exist." -- the name lower-cased, as the
+    /// interpreter converts it (GetVarFunction, Utils.CheckNotNull),
+    /// where GetProperty alone answers null and compiled code went on with an empty value.
+    /// </summary>
+    public static class CscsFields
+    {
+        /// <summary>"++p.x" and "p.x--" as the interpreter steps a member (IncrementDecrementFunction):
+        /// the field stepped (OperatorAssignFunction.Stepped) and set back on the object, the value
+        /// after the step for a prefix and before it for a postfix; a missing field is ReadField's
+        /// error.</summary>
+        public static Variable StepField(Variable holder, string name, string op, bool prefix)
+        {
+            var property = holder.ReadField(name);
+            var before = property.DeepClone();
+            var updated = OperatorAssignFunction.Stepped(property, op == "++" ? 1 : -1);
+            holder.SetProperty(name, updated, null);
+            return prefix ? updated.DeepClone() : before;
+        }
+
+        /// <summary>"b.l[1]++" and "--b.l[1]" on an element of a field's collection, as the
+        /// interpreter steps one (OperatorAssignFunction.Stepped): set back into the collection, the
+        /// value after the step for a prefix and before it for a postfix.</summary>
+        public static Variable StepElement(Variable holder, object index, string op, bool prefix)
+        {
+            var key = index as Variable ?? Variable.ConvertToVariable(index);
+            var before = Utils.ExtractArrayElement(holder, new List<Variable> { key }, null).DeepClone();
+            var updated = OperatorAssignFunction.Stepped(before, op == "++" ? 1 : -1);
+            holder.SetVariable(key, updated);
+            return prefix ? updated.DeepClone() : before;
+        }
+
+        public static Variable ReadField(this Variable holder, string name)
+        {
+            var value = holder?.GetProperty(name);
+            if (value == null)
+            {
+                throw new ArgumentException("Object [" + Constants.ConvertName(name) + "] doesn't exist.");
+            }
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// What generated code reads from a temporary that held a Variable, for one that now holds
+    /// a double (typed returns): the number itself, and its text as the interpreter writes it.
+    /// </summary>
+    public static class CscsNumberMembers
+    {
+        public static double AsDouble(this double value) { return value; }
+        public static string AsString(this double value) { return new Variable(value).AsString(); }
+    }
+
+    /// <summary>
+    /// A compiled function calling itself without the interpreter: typed arguments straight to
+    /// its typed body (Precompiler.MakeDirectSelfCalls). The conversions are PrepareArgs' own --
+    /// AsInt, AsDouble, AsString of the value as a Variable -- with a short cut for a value that
+    /// already has the type, and the depth counts against InterpreterSecurity.MaxCallDepth as a
+    /// pushed stack level does, so deep recursion stops with the interpreter's own error rather
+    /// than overflowing the process stack.
+    /// </summary>
+    public static class CscsDirect
+    {
+        [ThreadStatic] static int s_depth;
+
+        public static void Enter(Interpreter interpreter)
+        {
+            int max = InterpreterSecurity.MaxCallDepth;
+            if (max > 0 && interpreter.CallDepth + s_depth >= max)
+            {
+                throw new ArgumentException("Recursion too deep: more than " + max + " nested function calls.");
+            }
+            s_depth++;
+        }
+
+        public static void Leave()
+        {
+            s_depth--;
+        }
+
+        public static int Int(int value) { return value; }
+        public static int Int(double value) { return (int)value; }   // AsInt of a number
+        public static int Int(object value) { return Variable.ConvertToVariable(value).AsInt(); }
+
+        public static double Num(double value) { return value; }
+        public static double Num(int value) { return value; }
+        public static double Num(object value) { return Variable.ConvertToVariable(value).AsDouble(); }
+
+        public static string Text(string value) { return value; }
+        public static string Text(object value) { return value == null ? null : Variable.ConvertToVariable(value).AsString(); }
+
+        public static Variable Var(object value) { return Variable.ConvertToVariable(value); }
+
+        public static Variable Result(Variable value) { return value ?? Variable.EmptyInstance; }
+        // A typed return (Precompiler.TypedReturnBody): a double or an int only, so that anything
+        // else returned fails to compile and the untyped body is used.
+        public static double Number(double value) { return value; }
+        public static double Number(int value) { return value; }
+
+        /// <summary>The most arguments a typed call takes; more keep the interpreter's call.</summary>
+        public const int MaxArguments = 6;
+
+        /// <summary>
+        /// A call from compiled code to another compiled function. The name is looked up as the
+        /// interpreter looks it up, on every call, so a function redefined since keeps its new
+        /// meaning; when it is a compiled function with a typed entry point of the expected type,
+        /// that runs with the arguments converted (the lambda), and otherwise the interpreter's
+        /// call runs with them as they are. TFunc arrives as a typed null, to fix the lambda's types;
+        /// the name arrives in the form Constants.ConvertName gives it.
+        /// </summary>
+        public static Variable Call<TFunc>(Interpreter interpreter, string name, TFunc hint,
+            Func<TFunc, Interpreter, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter));
+            }
+            return CscsCalls.Call(interpreter, name);
+        }
+
+        public static Variable Call<TFunc, A0>(Interpreter interpreter, string name, TFunc hint, A0 a0,
+            Func<TFunc, Interpreter, A0, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0));
+            }
+            return CscsCalls.Call(interpreter, name, a0);
+        }
+
+        public static Variable Call<TFunc, A0, A1>(Interpreter interpreter, string name, TFunc hint, A0 a0, A1 a1,
+            Func<TFunc, Interpreter, A0, A1, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0, a1));
+            }
+            return CscsCalls.Call(interpreter, name, a0, a1);
+        }
+
+        public static Variable Call<TFunc, A0, A1, A2>(Interpreter interpreter, string name, TFunc hint, A0 a0, A1 a1, A2 a2,
+            Func<TFunc, Interpreter, A0, A1, A2, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0, a1, a2));
+            }
+            return CscsCalls.Call(interpreter, name, a0, a1, a2);
+        }
+
+        public static Variable Call<TFunc, A0, A1, A2, A3>(Interpreter interpreter, string name, TFunc hint, A0 a0, A1 a1, A2 a2, A3 a3,
+            Func<TFunc, Interpreter, A0, A1, A2, A3, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0, a1, a2, a3));
+            }
+            return CscsCalls.Call(interpreter, name, a0, a1, a2, a3);
+        }
+
+        public static Variable Call<TFunc, A0, A1, A2, A3, A4>(Interpreter interpreter, string name, TFunc hint, A0 a0, A1 a1, A2 a2, A3 a3, A4 a4,
+            Func<TFunc, Interpreter, A0, A1, A2, A3, A4, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0, a1, a2, a3, a4));
+            }
+            return CscsCalls.Call(interpreter, name, a0, a1, a2, a3, a4);
+        }
+
+        public static Variable Call<TFunc, A0, A1, A2, A3, A4, A5>(Interpreter interpreter, string name, TFunc hint, A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5,
+            Func<TFunc, Interpreter, A0, A1, A2, A3, A4, A5, Variable> invoke) where TFunc : class
+        {
+            if (interpreter.GetRegisteredFunction(name) is CustomCompiledFunction function && function.Precompiler?.Direct is TFunc direct)
+            {
+                return Result(invoke(direct, interpreter, a0, a1, a2, a3, a4, a5));
+            }
+            return CscsCalls.Call(interpreter, name, a0, a1, a2, a3, a4, a5);
+        }
+    }
+
+    /// <summary>
     /// A call to a script function as a single expression. Precompiled code normally runs one
     /// as statements placed ahead of the expression that uses it, which is not where it
     /// belongs inside "&amp;&amp;", "||" or "?:" -- it then runs whether or not the operator
@@ -138,12 +431,30 @@ namespace SplitAndMerge
     /// </summary>
     public static class CscsCalls
     {
+        /// <summary>The Contains built-in (ContainsFunction) on the value its first argument names:
+        /// whether that value has the index or key -- Variable.Exists, an empty element not
+        /// counting -- as the number 1 or 0.</summary>
+        public static Variable ContainsIn(object holder, object search)
+        {
+            var value = holder as Variable ?? Variable.ConvertToVariable(holder);
+            var what = search as Variable ?? Variable.ConvertToVariable(search);
+            return new Variable(value.Exists(what, true));
+        }
+
         public static Variable Call(Interpreter interpreter, string name, params object[] args)
         {
-            var function = interpreter.GetFunction(name) as CustomFunction;
+            var registered = interpreter.GetFunction(name);
+            var function = registered as CustomFunction;
             if (function == null)
             {
-                throw new ArgumentException("Function [" + name + "] is not defined.");
+                // Compiled code calls a function by name that was not defined when it was
+                // translated. Missing still: the interpreter's own error. A built-in after all:
+                // run the way a callback runs one, with the values published by name.
+                if (registered == null)
+                {
+                    throw new ArgumentException("Couldn't find function [" + name + "].");
+                }
+                return ByName(interpreter, name, args);
             }
             var list = new List<Variable>(args.Length);
             foreach (var arg in args)
@@ -154,6 +465,169 @@ namespace SplitAndMerge
             var result = function is CustomCompiledFunction compiled ?
                 compiled.Run(list) : function.Run(list);
             return result ?? Variable.EmptyInstance;
+        }
+
+        /// <summary>A built-in called with values: numbers and text as copies, as the interpreter
+        /// hands them over, a collection as the same collection.</summary>
+        static Variable ByName(Interpreter interpreter, string name, object[] args)
+        {
+            var names = new string[args.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                var value = Variable.ConvertToVariable(args[i]);
+                if (value.Type == Variable.VarType.NUMBER || value.Type == Variable.VarType.STRING)
+                {
+                    value = value.Clone();
+                }
+                names[i] = "__cscsbyname" + i;
+                interpreter.AddCompiledLocalOnlyVariable(names[i], new GetVarFunction(value));
+            }
+            var action = "";
+            var script = new ParsingScript(interpreter, string.Join(",", names), true);
+            var function = new ParserFunction(script, name, '(', ref action);
+            return function.GetValue(script) ?? Variable.EmptyInstance;
+        }
+
+        /// <summary>
+        /// A built-in function -- "Math.Sin", "Math.Round" -- run by the interpreter on values the
+        /// compiled code already holds. A built-in reads its arguments by parsing script text, so
+        /// the values are published under temporary names at the function's own level and the
+        /// call goes the way every interpreter callback goes; the answer is the interpreter's
+        /// whatever the arguments hold (text, a truth value). Clones, since a built-in may set
+        /// the value of the argument it was handed, as the interpreter's copies allow.
+        /// </summary>
+        public static Variable Builtin(Interpreter interpreter, string name, params object[] args)
+        {
+            var names = new string[args.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                names[i] = "__cscsbuiltinarg" + i;
+                interpreter.AddCompiledLocalOnlyVariable(names[i],
+                    new GetVarFunction(Variable.ConvertToVariable(args[i]).Clone()));
+            }
+            var action = "";
+            var script = new ParsingScript(interpreter, string.Join(",", names), true);
+            var function = new ParserFunction(script, name, '(', ref action);
+            return function.GetValue(script) ?? Variable.EmptyInstance;
+        }
+    }
+
+    /// <summary>
+    /// A comparison the C# operators cannot express -- a Variable against text, a bool, or
+    /// null -- answered by the interpreter itself (Parser.MergeCells), so it cannot differ from
+    /// what the script means. RoslynCompiler.RepairOperators writes calls to it where the
+    /// generated C# failed with CS0019.
+    /// </summary>
+    public static class CscsOps
+    {
+        public static bool Compare(Interpreter interpreter, object left, string action, object right)
+        {
+            var script = new ParsingScript(interpreter, "");
+            var result = Parser.MergePair(AsOperand(left), action, AsOperand(right), script);
+            return result.Value != 0;
+        }
+
+        /// <summary>An operator C# has no overload for between these operands -- "(n | 4)" with n a
+        /// Variable -- applied by the interpreter (Parser.MergeCells), so its answer is the
+        /// script's.</summary>
+        /// <summary>
+        /// "a && b" and "a || b" as the interpreter evaluates them (Parser.UpdateIfBool,
+        /// MergeCells): always 1 or 0, by the one truth rule (Variable.IsTrue). The right side
+        /// runs only when the left one does not decide.
+        /// </summary>
+        public static Variable And(Interpreter interpreter, object left, Func<object> right)
+        {
+            return Logical(interpreter, left, "&&", right);
+        }
+
+        public static Variable Or(Interpreter interpreter, object left, Func<object> right)
+        {
+            return Logical(interpreter, left, "||", right);
+        }
+
+        static Variable Logical(Interpreter interpreter, object left, string action, Func<object> right)
+        {
+            bool leftTrue = AsOperand(left).IsTrue();
+            if (action == "&&" ? !leftTrue : leftTrue)
+            {
+                return new Variable(leftTrue ? 1.0 : 0.0);
+            }
+            return new Variable(AsOperand(right()).IsTrue() ? 1.0 : 0.0);
+        }
+
+        /// <summary>
+        /// "g += v" and "g++" on a name the interpreter holds, as the interpreter does them
+        /// (OperatorAssignFunction.ProcessOperator and Stepped): on a copy, which the caller
+        /// writes back. A compound is "g = g op v"; a step is that with 1, numeric text read as
+        /// its number.
+        /// </summary>
+        public static Variable Compound(Variable current, string action, object right)
+        {
+            if (action == "++" || action == "--")
+            {
+                return OperatorAssignFunction.Stepped(current, action == "++" ? 1 : -1);
+            }
+            var updated = current.DeepClone();
+            OperatorAssignFunction.ProcessOperator(updated, AsOperand(right), action);
+            return updated;
+        }
+
+        /// <summary>Whether a switch value matches a case label as the interpreter decides it
+        /// (Interpreter.ProcessSwitch): the same type, and then Equals.</summary>
+        public static bool CaseMatches(object value, object label)
+        {
+            var left = AsOperand(value);
+            var right = AsOperand(label);
+            return left.Type == right.Type && left.Equals(right);
+        }
+
+        /// <summary>What a postfix step returns in the interpreter (IncrementDecrementFunction):
+        /// the value before the step, whatever its type.</summary>
+        public static Variable StepValue(object value)
+        {
+            return value is Variable variable ? variable.DeepClone() : Variable.ConvertToVariable(value);
+        }
+
+        /// <summary>The value of "!x" as the interpreter gives it: 1 or 0 for any value, by the
+        /// one truth rule (Variable.IsTrue). It used to leave anything but a number as it was:
+        /// "!\"abc\"" was "abc".</summary>
+        public static Variable Not(object value)
+        {
+            return new Variable(AsOperand(value).IsTrue() ? 0.0 : 1.0);
+        }
+
+        public static Variable Apply(Interpreter interpreter, object left, string action, object right)
+        {
+            var script = new ParsingScript(interpreter, "");
+            return Parser.MergePair(AsOperand(left), action, AsOperand(right), script);
+        }
+
+        /// <summary>"a ** b". Two numbers are Math.Pow, as the interpreter merges them; anything
+        /// else -- a Variable, which may hold text -- goes through the interpreter's merge.</summary>
+        public static double Power(double left, double right)
+        {
+            return Math.Pow(left, right);
+        }
+
+        public static Variable Power(object left, object right)
+        {
+            var script = new ParsingScript(Interpreter.LastInstance, "");
+            return Parser.MergePair(AsOperand(left), Constants.POWER, AsOperand(right), script);
+        }
+
+        /// <summary>The value as the interpreter holds it: a C# null is CSCS's null (the empty
+        /// value), and a C# bool -- a comparison's result -- is the number 1 or 0.</summary>
+        internal static Variable AsOperand(object value)
+        {
+            if (value == null)
+            {
+                return Variable.EmptyInstance;
+            }
+            if (value is bool flag)
+            {
+                return new Variable(flag ? 1 : 0);
+            }
+            return value as Variable ?? Variable.ConvertToVariable(value);
         }
     }
 
@@ -250,16 +724,10 @@ namespace SplitAndMerge
         }
 
         /// <summary>
-        /// The interpreter's own truth test: Convert.ToBoolean of the numeric field, so a
-        /// string is false whatever it holds -- "5" included. Its negation is not the opposite
-        /// of that: "!x" is true only for a number that is zero, so a string is false both
-        /// ways round. IsFalse mirrors that rather than negating IsTrue.
-        /// </summary>
-        /// <summary>
         /// What "for (x in v)" walks. The interpreter iterates a collection's elements, a
         /// string's characters -- each as a string of its own -- and a scalar exactly once.
         /// Needed because the type is not known until it runs: "for (ch in row)" where row
-        /// holds a line of text is a string, and asking such a value for its Size gives 0.
+        /// holds a line of text is a string, whose Size is its length, not an element count.
         /// </summary>
         public static Variable AsItems(Variable value)
         {
@@ -287,47 +755,41 @@ namespace SplitAndMerge
             return new Variable(items);
         }
 
+        // A condition is the one truth rule (Variable.IsTrue) -- if, while, for, "?:", "!", "&&"
+        // and "||" alike: a number unless 0, text unless empty, "0" or "false", a list unless
+        // empty, null never.
         public static bool IsTrue(Variable value)
         {
-            return value != null && value.Type == Variable.VarType.NUMBER && value.Value != 0;
+            return value != null && value.IsTrue();
         }
 
+        // The truth of "!value" in a condition: the opposite, null included.
         public static bool IsFalse(Variable value)
         {
-            return value != null && value.Type == Variable.VarType.NUMBER && value.Value == 0;
+            return !IsTrue(value);
         }
         /// <summary>
         /// The same two tests for a term whose C# type is not Variable -- a string local, an
-        /// argument. Text is a number in neither direction, so it is false both ways round;
-        /// taking "!IsTrue" instead would call "!x" true for "5" and diverge.
+        /// argument, a bool.
         /// </summary>
         public static bool IsTrue(object value)
         {
-            var variable = value as Variable;
-            if (variable != null)
+            switch (value)
             {
-                return IsTrue(variable);
+                case null: return false;
+                case Variable variable: return IsTrue(variable);
+                case bool flag: return flag;
+                case string text: return new Variable(text).IsTrue();
+                default: return Variable.ConvertToVariable(value).IsTrue();
             }
-            return !(value is string) && value != null && Convert.ToDouble(value) != 0;
         }
 
         public static bool IsFalse(object value)
         {
-            var variable = value as Variable;
-            if (variable != null)
-            {
-                return IsFalse(variable);
-            }
-            return !(value is string) && value != null && Convert.ToDouble(value) == 0;
+            return !IsTrue(value);
         }
 
         /// <summary>
-        /// A compound assignment, through the interpreter's own operator. It is not the same
-        /// as "x = x + v": it dispatches on the *left* type and uses the right side's numeric
-        /// field, so "r = 5; r += \"3\"" leaves 5 there -- the string contributes 0 -- while
-        /// "r = r + \"3\"" gives "53". Calling the interpreter's code is the only way to keep
-        /// every one of those corners in step.
-        /// </summary>
         /// <summary>
         /// The element a member write goes to: "a[i].v = x" in compiled code. The bounds check is
         /// the interpreter's own, from Utils.ExtractArrayElement, and so is the message. The
@@ -348,17 +810,35 @@ namespace SplitAndMerge
             return holder.Tuple[arrayIndex];
         }
 
+        /// <summary>
+        /// A compound assignment, through the interpreter's own operator: "x = x op v"
+        /// (OperatorAssignFunction.ProcessOperator), so "r = 5; r += \"3\"" is "53".
+        /// </summary>
         public static Variable Compound(Variable current, object value, string action)
         {
-            var left = current ?? new Variable(0.0);
+            // On a copy, as the interpreter's compound does (OperatorAssignFunction, DeepClone);
+            // every caller stores the result. In place, "L = G; L += 1" changed the global G,
+            // whose Variable the local held.
+            var left = current == null ? new Variable(0.0) : current.DeepClone();
             OperatorAssignFunction.ProcessOperator(left, Variable.ConvertToVariable(value), action);
             return left;
         }
 
+        /// <summary>A catch variable, as the interpreter binds one (Interpreter.ProcessTry): the
+        /// message text, which also answers e.Message.</summary>
+        public static Variable Caught(Exception exception)
+        {
+            var caught = new Variable(exception.Message);
+            caught.AddTextProperty("Message", new Variable(exception.Message));
+            return caught;
+        }
+
         public static bool ToFlag(object value)
         {
-            var variable = value as Variable;
-            return variable != null ? variable.AsBool() : Convert.ToBoolean(value);
+            // As the interpreter's bool(x) (ToBoolFunction): the text of the value, read by
+            // Utils.ConvertToBool -- "5" is true there, where Variable.AsBool took only "true".
+            var variable = value as Variable ?? Variable.ConvertToVariable(value);
+            return Utils.ConvertToBool(variable.AsString());
         }
     }
 }

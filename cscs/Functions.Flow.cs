@@ -522,10 +522,12 @@ namespace SplitAndMerge
                     throw new ArgumentException("Class [" + className + "] not found.");
                 }
 
-                // Copy over all the properties defined for this class.
+                // Copy over all the properties defined for this class -- a copy each: with the
+                // class's own Variable, "items = {}" in the class body was one list shared by every
+                // instance, and b1.Add(x) showed up in b2 and in every Box made later.
                 foreach (var entry in m_cscsClass.m_classProperties)
                 {
-                    SetProperty(entry.Key, entry.Value);
+                    SetProperty(entry.Key, entry.Value.DeepClone());
                 }
 
                 // Run "constructor" if any is defined for this number of args.
@@ -730,6 +732,9 @@ namespace SplitAndMerge
         {
             string varName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
             varName = Constants.ConvertName(varName);
+            // Its own ")": left behind, "NameExists(q) + 5" and "\"a\" + NameExists(q) + \"b\"" read
+            // it as the end of the expression, and the rest failed ("Couldn't find variable []").
+            script.MoveForwardIf(Constants.END_ARG);
 
             bool result = InterpreterInstance.GetVariable(varName, script) != null;
             return new Variable(result);
@@ -1029,7 +1034,8 @@ namespace SplitAndMerge
 
             for (int i = 0; i < args.Length; i++)
             {
-                string arg = args[i];
+                string arg = StripArgType(args[i], i);
+                RealArgs[i] = arg.Trim();
                 int ind = arg.IndexOf('=');
                 if (ind > 0)
                 {
@@ -1109,7 +1115,7 @@ namespace SplitAndMerge
                     {
                         if (args[i].Type == Variable.VarType.NONE ||
                            (!string.IsNullOrWhiteSpace(args[i].CurrentAssign) &&
-                            args[i].CurrentAssign != m_args[i]))
+                            !string.Equals(args[i].CurrentAssign, m_args[i], StringComparison.OrdinalIgnoreCase)))
                         {
                             int defIndex = -1;
                             if (!m_defArgMap.TryGetValue(i, out defIndex))
@@ -1159,7 +1165,7 @@ namespace SplitAndMerge
             int maxSize = Math.Min(args.Count, m_args.Length);
             for (int i = 0; i < maxSize; i++)
             {
-                var arg = new GetVarFunction(args[i]);
+                var arg = new GetVarFunction(ToArgType(args[i], i));
                 arg.Name = m_args[i];
                 m_stackLevel.Variables[m_args[i]] = arg;
             }
@@ -1189,10 +1195,27 @@ namespace SplitAndMerge
 
         protected override Variable Evaluate(ParsingScript script)
         {
-            List<Variable> args = InterpreterInstance.Translation.IsFunctWithSpace(m_name) ?
-                // Special case of extracting args.
-                Utils.GetFunctionArgsAsStrings(script) :
-                script.GetFunctionArgs();
+            // Values, whatever the name. A script function named like a command -- show, print,
+            // copy, write, run, ... -- got its arguments as raw text, the way the native command
+            // reads a path: "function show(x) { return x * 2; } show(3 + 1)" received "3 + 1".
+            // Only the native commands keep that; a function written in CSCS takes values.
+            // A named argument, "f(s = \"q\")", names one of these parameters and assigns nothing: it
+            // created "s" in the caller as well (AssignFunction). Only at this call's own level.
+            var outerNames = script.NamedArgNames;
+            var outerDepth = script.NamedArgDepth;
+            script.NamedArgNames = m_namedArgNames ?? (m_namedArgNames = new HashSet<string>(m_args));
+            script.NamedArgDepth = script.ArgDepth + 1;
+            List<Variable> args;
+            try
+            {
+                args = script.GetFunctionArgs();
+            }
+            finally
+            {
+                script.NamedArgNames = outerNames;
+                script.NamedArgDepth = outerDepth;
+            }
+
 
             Utils.ExtractParameterNames(args, m_name, script);
 
@@ -1212,10 +1235,24 @@ namespace SplitAndMerge
         }
         protected override async Task<Variable> EvaluateAsync(ParsingScript script)
         {
-            List<Variable> args = InterpreterInstance.Translation.IsFunctWithSpace(m_name) ?
-                // Special case of extracting args.
-                Utils.GetFunctionArgsAsStrings(script) :
-                await script.GetFunctionArgsAsync();
+            // Values, whatever the name: see Evaluate.
+            // A named argument, "f(s = \"q\")", names one of these parameters and assigns nothing: it
+            // created "s" in the caller as well (AssignFunction). Only at this call's own level.
+            var outerNames = script.NamedArgNames;
+            var outerDepth = script.NamedArgDepth;
+            script.NamedArgNames = m_namedArgNames ?? (m_namedArgNames = new HashSet<string>(m_args));
+            script.NamedArgDepth = script.ArgDepth + 1;
+            List<Variable> args;
+            try
+            {
+                args = await script.GetFunctionArgsAsync();
+            }
+            finally
+            {
+                script.NamedArgNames = outerNames;
+                script.NamedArgDepth = outerDepth;
+            }
+
 
             Utils.ExtractParameterNames(args, m_name, script);
 
@@ -1441,11 +1478,83 @@ namespace SplitAndMerge
         protected int m_parentOffset = 0;
         protected StackLevel m_stackLevel;
 
+        // "function f(int n, string s)": a parameter may carry a type, as a cfunction's does. The
+        // name was the whole "int n", so the body's "n" was not found. The type converts the argument
+        // the way a cfunction's argument is converted (Functions.OS PrepareArgs): an int truncates
+        // 4.7 to 4, a string takes the text of 5, a typed list or map is a converted copy.
+        Dictionary<int, Variable.VarType> m_argTypes = new Dictionary<int, Variable.VarType>();
+        // The parameter names a named argument may use, built on the first call and kept.
+        HashSet<string> m_namedArgNames;
+
+        string StripArgType(string arg, int index)
+        {
+            int eq = arg.IndexOf('=');
+            string head = (eq > 0 ? arg.Substring(0, eq) : arg).Trim();
+            int space = head.LastIndexOf(' ');
+            if (space <= 0)
+            {
+                return arg;
+            }
+            var type = Constants.StringToType(head.Substring(0, space).Replace(" ", ""));
+            if (type == Variable.VarType.NONE)
+            {
+                return arg;
+            }
+            m_argTypes[index] = type;
+            return head.Substring(space + 1) + (eq > 0 ? arg.Substring(eq) : "");
+        }
+
+        Variable ToArgType(Variable arg, int index)
+        {
+            if (arg == null || !m_argTypes.TryGetValue(index, out var type))
+            {
+                return arg;
+            }
+            switch (type)
+            {
+                case Variable.VarType.INT: return new Variable(arg.AsInt());
+                case Variable.VarType.NUMBER: return new Variable(arg.AsDouble());
+                case Variable.VarType.STRING: return new Variable(arg.AsString());
+                case Variable.VarType.ARRAY_INT:
+                case Variable.VarType.ARRAY_NUM:
+                case Variable.VarType.ARRAY_STR:
+                    var list = new List<Variable>();
+                    foreach (var item in arg.Tuple ?? new List<Variable>())
+                    {
+                        list.Add(type == Variable.VarType.ARRAY_STR ? new Variable(item.AsString()) :
+                                 type == Variable.VarType.ARRAY_INT ? new Variable(item.AsInt()) :
+                                                                      new Variable(item.AsDouble()));
+                    }
+                    return new Variable(list);
+                case Variable.VarType.MAP_NUM:
+                case Variable.VarType.MAP_STR:
+                    var map = new Variable(Variable.VarType.ARRAY);
+                    var keys = arg.GetKeys();
+                    for (int j = 0; arg.Tuple != null && j < arg.Tuple.Count && j < keys.Count; j++)
+                    {
+                        map.SetHashVariable(keys[j], type == Variable.VarType.MAP_STR ?
+                            new Variable(arg.Tuple[j].AsString()) : new Variable(arg.Tuple[j].AsDouble()));
+                    }
+                    return map;
+                default: return arg;
+            }
+        }
+
         List<Variable> m_defaultArgs = new List<Variable>();
         Dictionary<int, int> m_defArgMap = new Dictionary<int, int>();
 
-        public Dictionary<string, int> ArgMap { get; private set; } = new Dictionary<string, int>();
+        // Case-blind, as CSCS names are: a named argument keeps the spelling the script used
+        // ("smNs = 1"), and against the lower-cased parameter it did not match at all -- the
+        // argument was then taken by position.
+        public Dictionary<string, int> ArgMap { get; private set; } =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         public string[] RealArgs { get; private set; }
+
+        /// <summary>The default of the parameter at this position, or null when it has none.</summary>
+        internal Variable DefaultArgument(int index)
+        {
+            return m_defArgMap.TryGetValue(index, out int defIndex) ? m_defaultArgs[defIndex] : null;
+        }
     }
 
     class StringOrNumberFunction : ParserFunction
@@ -2030,7 +2139,8 @@ namespace SplitAndMerge
             if (script.TryPrev() == Constants.START_ARRAY)
             {
                 // There is an index given - it must be for an element of the tuple.
-                if (m_value.Tuple == null || m_value.Tuple.Count == 0)
+                // Text is indexed by character: "abc"[1] is "b" (Utils.ExtractArrayElement).
+                if ((m_value.Tuple == null || m_value.Tuple.Count == 0) && m_value.Type != Variable.VarType.STRING)
                 {
                     throw new ArgumentException("No tuple exists for the index");
                 }
@@ -2047,6 +2157,11 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices, script);
+                // Used once: this function is the variable's own, shared by every read of it, and a
+                // later read that sets no indices of its own -- "Size(g[\"k\"])" after
+                // "g[\"k\"][1]" -- took the stale ones: "Unknown index [k] for tuple of size 0".
+                m_arrayIndices = null;
+                m_delta = 0;
                 if (script.Prev == '.')
                 {
                     script.Backward();
@@ -2058,9 +2173,12 @@ namespace SplitAndMerge
                 }
                 script.Forward();
 
-                m_propName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-                Variable propValue = result.GetProperty(m_propName, script);
-                Utils.CheckNotNull(propValue, m_propName, script);
+                // A local, not m_propName: this function is the variable's own, shared by every read
+                // of it, and the name left there made the next plain read of it answer the member --
+                // after "x = g[\"k\"][g[\"k\"].Size - 1]", "g" was g.Size.
+                string elementProp = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                Variable propValue = result.GetProperty(elementProp, script);
+                Utils.CheckNotNull(propValue, elementProp, script);
                 return propValue;
             }
 
@@ -2089,7 +2207,8 @@ namespace SplitAndMerge
             if (script.TryPrev() == Constants.START_ARRAY)
             {
                 // There is an index given - it must be for an element of the tuple.
-                if (m_value.Tuple == null || m_value.Tuple.Count == 0)
+                // Text is indexed by character: "abc"[1] is "b" (Utils.ExtractArrayElement).
+                if ((m_value.Tuple == null || m_value.Tuple.Count == 0) && m_value.Type != Variable.VarType.STRING)
                 {
                     throw new ArgumentException("No tuple exists for the index");
                 }
@@ -2106,6 +2225,11 @@ namespace SplitAndMerge
                 }
 
                 Variable result = Utils.ExtractArrayElement(m_value, m_arrayIndices, script);
+                // Used once: this function is the variable's own, shared by every read of it, and a
+                // later read that sets no indices of its own -- "Size(g[\"k\"])" after
+                // "g[\"k\"][1]" -- took the stale ones: "Unknown index [k] for tuple of size 0".
+                m_arrayIndices = null;
+                m_delta = 0;
                 if (script.Prev == '.')
                 {
                     script.Backward();
@@ -2121,9 +2245,10 @@ namespace SplitAndMerge
                 // with the whitespace already stripped -- was read as a single name
                 // "Length>longest". Only the debugger runs this path, which is why it showed
                 // up only while stepping.
-                m_propName = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
-                Variable propValue = await result.GetPropertyAsync(m_propName, script); 
-                Utils.CheckNotNull(propValue, m_propName, script);
+                // A local, not m_propName: see Evaluate.
+                string elementProp = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                Variable propValue = await result.GetPropertyAsync(elementProp, script);
+                Utils.CheckNotNull(propValue, elementProp, script);
                 return propValue;
             }
 
@@ -2212,6 +2337,29 @@ namespace SplitAndMerge
             if (prefix)
             {// If it is a prefix we do not have the variable name yet.
                 Name = Utils.GetToken(script, Constants.TOKEN_SEPARATION);
+                // With its subscripts, as the postfix form has them: "++b.l[1]" read "b.l" alone,
+                // and the member branch stepped the whole list, into the text "[1, 2]1".
+                if (Name.IndexOf('.') > 0)
+                {
+                    var subscripts = "";
+                    while (script.StillValid() && script.Current == Constants.START_ARRAY)
+                    {
+                        var rest = script.Rest;
+                        int depth = 0, end = -1;
+                        for (int i = 0; i < rest.Length; i++)
+                        {
+                            if (rest[i] == Constants.START_ARRAY) { depth++; }
+                            else if (rest[i] == Constants.END_ARRAY && --depth == 0) { end = i; break; }
+                        }
+                        if (end < 0)
+                        {
+                            break;
+                        }
+                        subscripts += rest.Substring(0, end + 1);
+                        script.Forward(end + 1);
+                    }
+                    Name = Name + subscripts;
+                }
             }
 
             Utils.CheckForValidName(Name, script);
@@ -2225,11 +2373,19 @@ namespace SplitAndMerge
 
             // Value to be added to the variable:
             int valueDelta = action == Constants.INCREMENT ? 1 : -1;
-            int returnDelta = isPrefix ? valueDelta : 0;
 
             // Check if the variable to be set has the form of x[a][b],
             // meaning that this is an array element.
-            double newValue = 0;
+            Variable result = null;
+
+            if (OperatorAssignFunction.TryResolveMemberElement(script, name, out Variable incCollection,
+                                                               out List<Variable> incIndices))
+            {
+                Variable before = Utils.ExtractArrayElement(incCollection, incIndices, script).DeepClone();
+                Variable stepped = OperatorAssignFunction.Stepped(before, valueDelta, script);
+                OperatorAssignFunction.SetElementAt(incCollection, incIndices, stepped, script);
+                return isPrefix ? stepped.DeepClone() : before;
+            }
 
             // "p.x++" and "a[1].v++": a member, possibly through a subscript. Before
             // GetArrayIndices for the same reason as the compound assignment -- it turns "a[1].v"
@@ -2241,12 +2397,11 @@ namespace SplitAndMerge
                 Variable property = incOwnerValue.GetProperty(incMemberProp, script);
                 if (property != null)
                 {
-                    Variable updated = property.DeepClone();
-                    double memberResult = updated.Value + returnDelta;
-                    updated.Value += valueDelta;
+                    Variable before = property.DeepClone();
+                    Variable updated = OperatorAssignFunction.Stepped(before, valueDelta, script);
                     incOwnerValue.SetProperty(incMemberProp, updated, script, incRoot);
                     interpreter.AddGlobalOrLocalVariable(incRoot, new GetVarFunction(incRootValue), script);
-                    return new Variable(memberResult);
+                    return isPrefix ? updated.DeepClone() : before;
                 }
             }
 
@@ -2263,11 +2418,10 @@ namespace SplitAndMerge
                     if (ownProp.IndexOf('.') < 0 && script.ClassInstance.PropertyExists(ownProp))
                     {
                         Variable own = script.ClassInstance.GetProperty(ownProp, null, script).GetAwaiter().GetResult();
-                        Variable ownUpdated = (own ?? Variable.EmptyInstance).DeepClone();
-                        double ownResult = ownUpdated.Value + returnDelta;
-                        ownUpdated.Value += valueDelta;
+                        Variable ownBefore = (own ?? Variable.EmptyInstance).DeepClone();
+                        Variable ownUpdated = OperatorAssignFunction.Stepped(ownBefore, valueDelta, script);
                         script.ClassInstance.SetProperty(ownProp, ownUpdated, script).GetAwaiter().GetResult();
-                        return new Variable(ownResult);
+                        return isPrefix ? ownUpdated.DeepClone() : ownBefore;
                     }
                 }
             }
@@ -2291,18 +2445,20 @@ namespace SplitAndMerge
                 Variable element = Utils.ExtractArrayElement(currentValue, arrayIndices, script);
                 script.MoveForwardIf(Constants.END_ARRAY);
 
-                newValue = element.Value + returnDelta;
-                element.Value += valueDelta;
+                var elementBefore = element.DeepClone();
+                element.CopyValueFrom(OperatorAssignFunction.Stepped(elementBefore, valueDelta, script));
+                result = isPrefix ? element.DeepClone() : elementBefore;
             }
             else
             { // A normal variable.
-                newValue = currentValue.Value + returnDelta;
-                currentValue.Value += valueDelta;
+                var before = currentValue.DeepClone();
+                currentValue = OperatorAssignFunction.Stepped(before, valueDelta, script);
+                result = isPrefix ? currentValue.DeepClone() : before;
             }
 
             interpreter.AddGlobalOrLocalVariable(name,
                                                     new GetVarFunction(currentValue), script);
-            return new Variable(newValue);
+            return result;
         }
 
         override public ParserFunction NewInstance()
@@ -2379,11 +2535,62 @@ namespace SplitAndMerge
             return owner != null;
         }
 
+        /// <summary>
+        /// "b.l[0]" and "b.m[\"k\"][1]": an element of a member's collection. Resolves the
+        /// collection -- the member's own value, a reference, so a write into it is a write into
+        /// the member -- and the indices. A compound or a step on one threw "Object [b.l] doesn't
+        /// exist": the element branches read "b.l" as a variable name.
+        /// </summary>
+        internal static bool TryResolveMemberElement(ParsingScript script, string name,
+                                                     out Variable collection, out List<Variable> indices)
+        {
+            collection = null;
+            indices = null;
+            int bracket = name.IndexOf(Constants.START_ARRAY);
+            int dot = name.IndexOf('.');
+            if (bracket <= 0 || dot <= 0 || dot > bracket || !name.EndsWith(Constants.END_ARRAY.ToString()))
+            {
+                return false;
+            }
+            var ownerPath = name.Substring(0, bracket);
+            var tempScript = script.GetTempScript(ownerPath);
+            tempScript.Namespace = script.Namespace;
+            tempScript.CurrentClass = script.CurrentClass;
+            tempScript.ClassInstance = script.ClassInstance;
+            collection = tempScript.Execute();
+            if (collection == null || (collection.Tuple == null && collection.Type != Variable.VarType.ARRAY))
+            {
+                collection = null;
+                return false;
+            }
+            indices = Utils.GetArrayIndices(script, name.Substring(bracket - 1));
+            return indices.Count > 0;
+        }
+
+        /// <summary>Writes the value at the indices, the last one set on the element above it.</summary>
+        internal static void SetElementAt(Variable collection, List<Variable> indices, Variable value, ParsingScript script)
+        {
+            var parent = collection;
+            for (int i = 0; i < indices.Count - 1; i++)
+            {
+                parent = Utils.ExtractArrayElement(parent, new List<Variable> { indices[i] }, script);
+            }
+            parent.SetVariable(indices[indices.Count - 1], value);
+        }
+
         public static Variable ProcessOperator(string name, string action, ParsingScript script)
         {
             var interpreter = script.InterpreterInstance;
             // Value to be added to the variable:
             Variable right = Utils.GetItem(script);
+
+            if (TryResolveMemberElement(script, name, out Variable memberCollection, out List<Variable> memberIndices))
+            {
+                Variable element = Utils.ExtractArrayElement(memberCollection, memberIndices, script).DeepClone();
+                ProcessOperator(element, right, action, script, name);
+                SetElementAt(memberCollection, memberIndices, element, script);
+                return element;
+            }
 
             // A member write -- "p.x += 5", or through a subscript, "a[0].v += 3". This has to come
             // before GetArrayIndices, which rewrites "a[0].v" to plain "a" and drops the ".v"
@@ -2461,21 +2668,93 @@ namespace SplitAndMerge
             return left;
         }
 
-        public static void ProcessOperator(Variable left, Variable right, string action, 
+        /// <summary>
+        /// "x op= y" is "x = x op y": the value the binary operator gives (Parser.MergePair), put
+        /// into the left operand's own cell. It used to have rules of its own -- "3 += \"!\"" left
+        /// 3, "\"abc\" *= 3" left the text, "list += 1" gave 1 -- where "x = x op y" answers "3!",
+        /// "abc3" and the list joined with 1.
+        /// </summary>
+        public static void ProcessOperator(Variable left, Variable right, string action,
             ParsingScript script = null, string name = "")
         {
-            if (left.Type == Variable.VarType.NUMBER)
+            if (TryInPlace(left, right, action))
             {
-                NumberOperator(left, right, action);
+                return;
             }
-            else if (left.Type == Variable.VarType.DATETIME)
+            var op = action.EndsWith("=") ? action.Substring(0, action.Length - 1) : action;
+            var merged = Parser.MergePair(left, op, right, script ?? new ParsingScript(Interpreter.LastInstance, ""));
+            left.CopyValueFrom(merged);
+        }
+
+        /// <summary>
+        /// The common compounds done in place: arithmetic on two numbers, and "+=" joining text on
+        /// with numbers or text on both sides. MergePair's cell is left's MemberwiseClone with only
+        /// the value and the action changed, so this is what copying it back gives -- without the
+        /// two clones, the script and the field-by-field copy, which made "t += x" in a loop cost
+        /// about six times "t = t + x". Not when left IsReturn: MergeCells leaves such a cell as it is.
+        /// </summary>
+        static bool TryInPlace(Variable left, Variable right, string action)
+        {
+            if (left.IsReturn || left.GetType() != typeof(Variable))
             {
-                DateOperator(left, right, action, script, name);
+                return false;
+            }
+            if (left.Type == Variable.VarType.NUMBER && right.Type == Variable.VarType.NUMBER)
+            {
+                if (action.Length != 2 || action[1] != '=')
+                {
+                    return false;
+                }
+                double a = left.Value, b = right.Value;
+                switch (action[0])
+                {
+                    case '+': left.Value = a + b; break;
+                    case '-': left.Value = a - b; break;
+                    case '*': left.Value = a * b; break;
+                    case '/': left.Value = a / b; break;
+                    case '%': left.Value = a % b; break;
+                    default: return false;
+                }
+            }
+            else if (action == "+=" &&
+                (left.Type == Variable.VarType.STRING || left.Type == Variable.VarType.NUMBER) &&
+                (right.Type == Variable.VarType.STRING || right.Type == Variable.VarType.NUMBER))
+            {
+                // What MergeCells gives through MergeStrings.
+                left.String = left.AsString() + right.AsString();
             }
             else
             {
-                StringOperator(left, right, action);
+                return false;
             }
+            left.Action = Constants.NULL_ACTION;
+            return true;
+        }
+
+        /// <summary>
+        /// The value "x++" or "x--" leaves in x: a number, or text that reads as one, is that number
+        /// plus or minus 1 ("\"7\"" gives 8); nothing yet counts as 0; anything else is "x = x + 1"
+        /// or "x - 1" as the binary operator gives it. It used to set the number whatever the value
+        /// held, so "\"7\"++" gave 1.
+        /// </summary>
+        public static Variable Stepped(Variable current, int delta, ParsingScript script = null)
+        {
+            if (current == null || current.Type == Variable.VarType.NONE || current.Type == Variable.VarType.UNDEFINED)
+            {
+                return new Variable((double)delta);
+            }
+            if (current.Type == Variable.VarType.NUMBER)
+            {
+                return new Variable(current.Value + delta);
+            }
+            if (current.Type == Variable.VarType.STRING &&
+                double.TryParse(current.AsString(), System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out var number))
+            {
+                return new Variable(number + delta);
+            }
+            return Parser.MergePair(current, delta > 0 ? "+" : "-", new Variable(1.0),
+                                    script ?? new ParsingScript(Interpreter.LastInstance, ""));
         }
 
         public static void DateOperator(Variable valueA,
@@ -2497,55 +2776,6 @@ namespace SplitAndMerge
                    break;
             }
             valueA.AddToDate(valueB, sign);
-        }
-
-        public static void NumberOperator(Variable valueA,
-                                   Variable valueB, string action)
-        {
-            switch (action)
-            {
-                case "+=":
-                    valueA.Value += valueB.Value;
-                    break;
-                case "-=":
-                    valueA.Value -= valueB.Value;
-                    break;
-                case "*=":
-                    valueA.Value *= valueB.Value;
-                    break;
-                case "/=":
-                    valueA.Value /= valueB.Value;
-                    break;
-                case "%=":
-                    valueA.Value %= valueB.Value;
-                    break;
-                case "&=":
-                    valueA.Value = (int)valueA.Value & (int)valueB.Value;
-                    break;
-                case "|=":
-                    valueA.Value = (int)valueA.Value | (int)valueB.Value;
-                    break;
-                case "^=":
-                    valueA.Value = (int)valueA.Value ^ (int)valueB.Value;
-                    break;
-            }
-        }
-        public static void StringOperator(Variable valueA,
-          Variable valueB, string action)
-        {
-            switch (action)
-            {
-                case "+=":
-                    if (valueB.Type == Variable.VarType.STRING)
-                    {
-                        valueA.String += valueB.AsString();
-                    }
-                    else
-                    {
-                        valueA.String += valueB.Value;
-                    }
-                    break;
-            }
         }
 
         override public ParserFunction NewInstance()
@@ -2571,6 +2801,34 @@ namespace SplitAndMerge
         protected override Variable Evaluate(ParsingScript script)
         {
             return Assign(script, m_name);
+        }
+
+        static bool IsNamedArgument(ParsingScript script, string name)
+        {
+            if (script.NamedArgNames == null || script.ArgDepth != script.NamedArgDepth ||
+                name.IndexOfAny(new[] { '.', '[' }) >= 0 ||
+                !script.NamedArgNames.Contains(Constants.ConvertName(name)))
+            {
+                return false;
+            }
+            // The whole argument: the name first, then "=".
+            var text = script.String;
+            int at = script.ArgStart;
+            while (at >= 0 && at < text.Length && (text[at] == ' ' || text[at] == Constants.NEXT_ARG))
+            {
+                at++;
+            }
+            if (at < 0 || at + name.Length >= text.Length ||
+                string.Compare(text, at, name, 0, name.Length, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                return false;
+            }
+            int after = at + name.Length;
+            while (after < text.Length && text[after] == ' ')
+            {
+                after++;
+            }
+            return after < text.Length && text[after] == '=' && (after + 1 >= text.Length || text[after + 1] != '=');
         }
 
         public Variable Assign(ParsingScript script, string varName, bool localIfPossible = false)
@@ -2609,14 +2867,31 @@ namespace SplitAndMerge
                                     script, m_name);
             }
 
+            // A named argument -- "f(s = \"q\")" at f's own argument level, s one of f's
+            // parameters: the value, named, and no variable. It created "s" in the caller too.
+            if (IsNamedArgument(script, m_name))
+            {
+                Variable named = varValue.DeepClone(m_name);
+                named.CurrentAssign = m_name;
+                return named;
+            }
+
+            // "b.l[0] = 9": an element of a member's collection, written into it. ProcessObject
+            // below took the whole "l[0]" for a property and the write silently went nowhere.
+            if (OperatorAssignFunction.TryResolveMemberElement(script, m_name, out Variable memberCollection,
+                                                               out List<Variable> memberIndices))
+            {
+                OperatorAssignFunction.SetElementAt(memberCollection, memberIndices, varValue, script);
+                return varValue;
+            }
+
             // First try processing as an object (with a dot notation):
+            // Not also registered under the dotted name: "p.kid = {\"a\": 1}" left a variable called
+            // "p.kid" holding a copy, which a subscripted read ("p.kid[\"a\"]") found first -- so after
+            // "p.kid[\"a\"] += 4" it still read 1. The member lives on its owner alone.
             Variable result = ProcessObject(script, varValue);
             if (result != null)
             {
-                if (script.CurrentClass == null && script.ClassInstance == null)
-                {
-                    InterpreterInstance.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script, localIfPossible);
-                }
                 return result;
             }
 
@@ -2678,11 +2953,29 @@ namespace SplitAndMerge
                                     script, m_name);
             }
 
+            // A named argument: see Assign.
+            if (IsNamedArgument(script, m_name))
+            {
+                Variable named = varValue.DeepClone(m_name);
+                named.CurrentAssign = m_name;
+                return named;
+            }
+
+            // "b.l[0] = 9": an element of a member's collection -- see Assign. Missing here, the
+            // async write went nowhere, as the synchronous one had before.
+            if (OperatorAssignFunction.TryResolveMemberElement(script, m_name, out Variable memberCollection,
+                                                               out List<Variable> memberIndices))
+            {
+                OperatorAssignFunction.SetElementAt(memberCollection, memberIndices, varValue, script);
+                return varValue;
+            }
+
             // First try processing as an object (with a dot notation):
             Variable result = await ProcessObjectAsync(script, varValue);
             if (result != null)
             {
-                if (script.CurrentClass == null)
+                // Not under a dotted name: see Evaluate.
+                if (script.CurrentClass == null && m_name.IndexOf('.') < 0)
                 {
                     InterpreterInstance.AddGlobalOrLocalVariable(m_name, new GetVarFunction(result), script, localIfPossible);
                 }
@@ -3222,6 +3515,18 @@ namespace SplitAndMerge
     {
         protected override Variable Evaluate(ParsingScript script)
         {
+            // A value rather than a name -- "Size(\"abc\")", "Size({1, 2})": its own size. The name
+            // is read as a token, which drops the quotes, so "abc" was looked up as a variable.
+            script.MoveForwardIf(Constants.SPACE);
+            char first = script.TryCurrent();
+            if (first == Constants.QUOTE || first == Constants.START_GROUP || first == Constants.START_ARRAY ||
+                first == Constants.START_ARG || first == '-' || char.IsDigit(first))
+            {
+                Variable value = Utils.GetItem(script);
+                script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+                return new Variable(value.GetSize());
+            }
+
             // 1. Get the name of the variable.
             string varName = Utils.GetToken(script, Constants.END_ARG_ARRAY);
             Utils.CheckNotEnd(script, m_name);

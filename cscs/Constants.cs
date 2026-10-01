@@ -258,9 +258,9 @@ namespace SplitAndMerge
         public static string END_ARG_STR = END_ARG.ToString();
         public static string NULL_ACTION = END_ARG.ToString();
 
-        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "->", ":" };
+        public static string[] OPER_ACTIONS = { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=", "->", ":" };
         public static string[] MATH_ACTIONS = { "===", "!==",
-                                                "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
+                                                "<<", ">>", "&&", "||", "==", "!=", "<=", ">=", "++", "--", "**",
                                                 "%", "*", "/", "+", "-", "^", "&", "|", "<", ">", "=", "@"};
         // Actions: always decreasing by the number of characters.
         public static string[] ACTIONS = (OPER_ACTIONS.Union(MATH_ACTIONS)).ToArray();
@@ -398,6 +398,8 @@ namespace SplitAndMerge
                 case Variable.VarType.MAP_STR:
                 case Variable.VarType.MAP_NUM: return "MAP";
                 case Variable.VarType.OBJECT: return "OBJECT";
+                // An enum's own type: it was "NONE", as if the enum had no value.
+                case Variable.VarType.ENUM: return "ENUM";
                 case Variable.VarType.BREAK: return "BREAK";
                 case Variable.VarType.CONTINUE: return "CONTINUE";
                 case Variable.VarType.UNDEFINED: return "UNDEFINED";

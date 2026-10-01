@@ -1,0 +1,247 @@
+// The interpreter semantics settled in September 2026, as pinned in Scripts/Samples/test.cscs
+// (copied from there): the one truth rule, && and || as 1 or 0, compounds and steps as
+// x = x op y, finally, braceless bodies, shifts, typed parameters, text indexing, named
+// arguments, class field defaults, enum .Type, and the parser bugs fixed along the way.
+// AuditFixture runs it through Process and ProcessAsync; a mismatch prints a DIFF line.
+semDiffs = 0;
+function Test(calculated, expected) {
+  if (("" + calculated) != ("" + expected)) {
+    semDiffs++;
+    print("DIFF [" + calculated + "] expected [" + expected + "]");
+  }
+}
+// Interpreter semantics settled in September 2026. Each line was a quirk: the old answer
+// is in the comment.
+// finally: a return in try or catch stands unless finally itself returns (was: ignored).
+function smFin1(n) { r = 0; try { return n * 2; } catch (e) { return -1; } finally { r = 99; } return r; }
+function smFin2(n) { try { return "tryValue"; } catch (e) { return "c"; } finally { n = 5; } return "after"; }
+function smFin3() { try { return 1; } finally { return 2; } }
+Test(smFin1(4), 8);
+Test(smFin2(1), "tryValue");
+Test(smFin3(), 2);
+// try without catch (was: "Expecting a 'catch()'"); an uncaught error passes on after finally.
+function smFin4(n) { smFinRan = 0; try { return n; } finally { smFinRan = 1; } }
+Test(smFin4(7), 7);
+function smFin5() { try { throw "up"; } finally { smFinZ = 1; } }
+smFinMsg = ""; try { smFin5(); } catch (e) { smFinMsg = e; }
+Test(smFinMsg, "up");
+// if/else without braces (was: "Couldn't skip block").
+function smIf1(x) { if (x > 1) return "big"; return "small"; }
+function smIf2(x) { if (x > 1) return "big"; else if (x > 0) return "one"; else return "none"; }
+Test(smIf1(2) + smIf1(0), "bigsmall");
+Test(smIf2(5) + smIf2(1) + smIf2(-1), "bigonenone");
+// One truth rule: a number is true unless 0; text unless empty, "0" or "false"; a list unless
+// empty. It holds for if, ?:, !, && and || alike.
+smTe = "yes";
+smTk = smTe ? "a" : "b";
+Test(smTk, "a");
+function smTern(v) { return v ? "a" : "b"; }
+Test(smTern("yes") + smTern("") + smTern("0") + smTern({1}) + smTern({}), "abbab");
+smTh = "x"; smTh += "<" + (smTe ? "a" : "(new)") + ">";
+Test(smTh, "x<a>");
+// A number or list branch keeps what follows the group (was: "<7", and "<" for a list).
+Test("<" + (smTe ? 7 : "x") + ">", "<7>");
+Test("<" + (smTe ? {1} : "x") + ">", "<[1]>");
+Test(10 + (smTe ? 2 : 3) * 2, 14);
+Test({} ? "t" : "f", "f");
+Test({5} ? "t" : "f", "t");
+smT5 = "";
+if ("abc") { smT5 += "a"; }
+if ("0") { smT5 += "b"; }
+if ("False") { smT5 += "c"; }
+if (3 + "!") { smT5 += "d"; }
+if ("abc" + "!") { smT5 += "e"; }
+if ("") { smT5 += "f"; }
+if ({}) { smT5 += "g"; }
+if ({0}) { smT5 += "h"; }
+Test(smT5, "adeh");
+Test(!"abc", 0);
+Test(!"", 1);
+Test(!{1}, 0);
+Test(!{}, 1);
+// && and || are always 1 or 0 (was: "3 || 0" gave 3).
+smX8 = 2;
+Test(3 || 0, 1);
+Test(smX8 || 0, 1);
+Test("a" && "b", 1);
+Test("" || "", 0);
+// Typed parameters convert as a cfunction's do (was: "Couldn't find variable [n]").
+function smTyped(int n, string s = "d") { return n + 1 + s; }
+Test(smTyped(2.9), "3d");
+Test(smTyped(-2.9, 5), "-15");
+// Compound operators and steps are x = x op y (was: text counted as 0, "7"++ gave 1).
+smC1 = 3; smC1 += "!";
+Test(smC1, "3!");
+smC2 = "abc"; smC2 += 3;
+Test(smC2, "abc3");
+smC3 = "7"; smC3++;
+Test(smC3, 8);
+smC4 = "7"; smC5 = smC4--;
+Test(smC4, 6);
+Test(smC5, "7");
+// Bare Math names (was: "Couldn't find function [sqrt]").
+Test(Sqrt(16), 4);
+Test(Pow(2, 3), 8);
+// A literal list iterates its elements, with in as well as : (was: the characters of "ab").
+smIt = "";
+for (smV : {"ab", " a "}) { smIt += "[" + smV + "]"; }
+for (smV in {"ab", "cd"}) { smIt += "(" + smV + ")"; }
+Test(smIt, "[ab][ a ](ab)(cd)");
+// Size of text is its length, and Size takes a value (was: 0, and "abc" read as a name).
+smS = "abc";
+Test(Size("abc"), 3);
+Test(Size(smS), 3);
+Test(smS.Size, 3);
+// Text indexes by character (was: "No tuple exists for the index").
+Test(smS[0] + smS[2], "ac");
+smIdxMsg = ""; try { smIdxX = smS[5]; } catch (e) { smIdxMsg = "err"; }
+Test(smIdxMsg, "err");
+// A script function named like a command takes values (was: the text "n+1").
+function more(x) { return x; }
+smN = 5;
+Test(more(smN + 1), 6);
+Test(more(!smN), 0);
+// A bare Trim, Sort, Reverse or DeepCopy leaves the rest of the expression alone (was: taken
+// as its arguments and dropped).
+smTr = " a ";
+Test("[" + smTr.Trim + "]", "[a]");
+smSortL = {3, 1, 2};
+Test(smSortL.Sort + "!", "[1, 2, 3]!");
+Test(smSortL.DeepCopy + "?", "[1, 2, 3]?");
+// Subscripts inside subscripts (was: "Couldn't find variable [1]]", or the whole row).
+smG = {{1, 2}, {3, 4}};
+Test(smG[0][smG[0].Size - 1], 2);
+Test(smG[1][smG[0][0]], 4);
+smG[1][smG[0][0]] = 9;
+Test(smG[1][1], 9);
+// A member after a subscript does not stick to the variable (was: the next "smM" was smM.Size).
+smM = {"k": {1, 2}};
+smMx = smM["k"][smM["k"].Size - 1];
+Test(smMx, 2);
+Test(smM.Size, 1);
+Test(Size(smM["k"]), 2);
+Test(smM["k"][Size(smM["k"]) - 1], 2);
+// An element of an object's field: read, with an index reading another member, written,
+// compounded and stepped either way (was: NullReferenceException, a silent no-op for "=",
+// "Object [b.l] doesn't exist" for "+=" and "++", and "++b.l[1]" stepped the whole list).
+class SmFld { l = {}; m = {}; g = {}; SmFld() { l = {5, 6}; m = {"k": 1}; g = {{1, 2}}; } }
+smF = new SmFld();
+Test(smF.l[1] + smF.m["k"] + smF.g[0][1], 9);
+Test(smF.l[smF.l.Size - 1], 6);
+smF.l[0] = 9;
+smF.m["q"] = 7;
+Test(smF.l[0] + smF.m["q"], 16);
+smF.l[0] += 1;
+smF.m["k"] += 5;
+Test(smF.l[0] + smF.m["k"], 16);
+smF.l[1]++;
+++smF.l[1];
+smFv = --smF.g[0][1];
+Test(smF.l[1] + "|" + smF.g[0][1] + "|" + smFv, "8|1|1");
+// A collection a class body gives a field is each instance's own (was: one list shared by all).
+class SmShared {
+  items = {};
+  SmShared() { }
+  function Put(x) {
+    items.Add(x);
+    return items.Size;
+  }
+}
+smS1 = new SmShared();
+smS2 = new SmShared();
+smS1.Put("apple");
+Test(smS1.items.Size + "|" + smS2.items.Size, "1|0");
+smS3 = new SmShared();
+Test(smS3.items.Size, 0);
+// An enum's .Type is ENUM (was: NONE); a member's is its value's, NUMBER (was: its name,
+// which .Name still gives).
+SmColors = Enum {Red, Green, Blue};
+Test(SmColors.Type, "ENUM");
+Test(SmColors.Green.Type, "NUMBER");
+Test(SmColors.Green.Name, "Green");
+// ToString of an enum value is the member's name (was: 1, from the membership test).
+Test(SmColors.ToString(2), "Blue");
+Test(SmColors.ToString(SmColors.Green), "Green");
+Test(SmColors.Contains(1), 1);
+// A method of a field's collection, called through the path (was: "Expecting 1 arguments but
+// got 0 in add" -- the field took the call's arguments for its own).
+smS4 = new SmShared();
+smS4.items.Add("x");
+smS4.items.Add("y");
+Test(smS4.items.Size + "|" + smS4.items.Join("-"), "2|x-y");
+// "&&" and "||" after a comparison keep the comparison (was: "1 < 2 && 5" was 5); a false
+// "&&" skips only its own right side (was: "0 && x || 1" was 0); and "||" before a comparison
+// joined by "&&" no longer hangs the parser ("0 || r.Size < 2 && 0").
+smLg = "d";
+Test(1 < 2 && 5, 1);
+Test(1 > 2 || 7, 1);
+Test(0 || smLg.Size < 2 && 0, 0);
+Test(0 || 0 && smLg || 1, 1);
+smLgCalls = 0;
+function smLgF(v) { smLgCalls++; return v; }
+smLgW = 0 && smLgF(3) || smLgF(4);
+Test(smLgW + "|" + smLgCalls, "1|1");
+// Loop bodies without braces are one statement, an if/else chain included (was: the rest
+// of the script ran as the body).
+smLp = 0;
+for (i = 0; i < 3; i++) smLp += i;
+Test(smLp, 3);
+smLk = 0;
+while (smLk < 3) smLk++;
+Test(smLk, 3);
+smLs = "";
+for (smLc : {"a", "b"}) smLs += smLc;
+Test(smLs, "ab");
+smLt = 0;
+for (i = 0; i < 5; i++) if (i == 3) smLt += 100; else if (i == 4) smLt += 1000; else smLt += i;
+Test(smLt, 1103);
+// NameExists inside a larger expression (was: "Couldn't find variable []" -- its ")" was left).
+smNe = 1;
+Test(NameExists(smNe) + 5, 6);
+Test("a" + NameExists(smNe) + "|" + NameExists(smNeNotHere) + "b", "a1|0b");
+// A named argument names a parameter and assigns nothing in the caller (was: "f(s = 1)" also
+// created s); an assignment in parentheses, or to a name that is no parameter, still assigns.
+function smNamed(int smNn, string smNs = "d") { return smNn + smNs; }
+function smTwice(smNq) { return smNq * 2; }
+smNa = smNamed(smNs = "w", smNn = 1);
+Test(smNa + "|" + NameExists(smNs) + "|" + NameExists(smNn), "1w|0|0");
+smNaKeep = "keep";
+smNa2 = smNamed(smNaKeep = "z", 2);
+Test(smNa2 + "|" + smNaKeep, "02|z");
+smNa3 = smTwice((smNq = 4)) + smNq;
+Test(smNa3, 12);
+smNa4 = smNamed(smNn = smTwice(smNq2 = 3));
+Test(smNa4 + "|" + NameExists(smNq2), "6d|1");
+// A do-while body without braces is one statement (was: it hung).
+smDo = 0;
+do smDo++; while (smDo < 3);
+Test(smDo, 3);
+// A return in finally takes over from an exception the try did not catch (was: the exception).
+function smFinRet() { try { throw "boom"; } finally { return 7; } }
+Test(smFinRet(), 7);
+// A list literal as the first operand keeps the rest of the expression (was: "{1} || 0" was [1]).
+Test({1} || 0, 1);
+Test({} || 0, 0);
+Test({1} ? "t" : "f", "t");
+// Compounds on numbers and text are done in place, and must stay "x = x op y" exactly.
+smCv = {7, -2.5, 0, "4", "ab", ""};
+smCd = "";
+for (smCa : smCv) {
+  for (smCb : smCv) {
+    smC1 = smCa; smC1 += smCb; smC2 = smCa; smC2 = smC2 + smCb;
+    if (smC1 != smC2 || smC1.Type != smC2.Type) { smCd += "[" + smCa + "+" + smCb + "]"; }
+    if (Type(smCa) == "NUMBER" && Type(smCb) == "NUMBER") {
+      smC1 = smCa; smC1 -= smCb; smC2 = smCa - smCb; if (smC1 != smC2) { smCd += "-"; }
+      smC1 = smCa; smC1 *= smCb; smC2 = smCa * smCb; if (smC1 != smC2) { smCd += "*"; }
+      smC1 = smCa; smC1 /= smCb; smC2 = smCa / smCb; if (smC1 != smC2 && smCb != 0) { smCd += "/"; }
+      smC1 = smCa; smC1 %= smCb; smC2 = smCa % smCb; if (smC1 != smC2 && smCb != 0) { smCd += "%"; }
+    }
+  }
+}
+Test(smCd, "");
+// The caught value answers .Message (was: "Object [message] doesn't exist").
+smMsg = ""; try { throw "boom"; } catch (smEx) { smMsg = smEx.Message; }
+Test(smMsg, "boom");
+
+
+print("SEMANTICS DONE, diffs " + semDiffs);
