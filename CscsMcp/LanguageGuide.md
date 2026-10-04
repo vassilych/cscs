@@ -147,10 +147,14 @@ available as `e.Message`. A `finally` block runs after `try` and `catch` as in C
 
 ```cscs
 print(Math.Pow(2, 10), Math.Abs(-5), Math.Max(3, 9), Math.Floor(7.8));
+print(sqrt(16), round(2.567, 2), max(3, 9));
 print(int("42") + 1, double("1.5") * 2, string(7) + "!");
 r = Math.Random();
 print("random in [0,1):", r >= 0 && r < 1);
 ```
+
+The Math functions answer to their bare names too (`sqrt`, `round`, `max`, ...); the constants
+do not: write `Math.PI` and `Math.E`.
 
 ```cscs
 v = 7;

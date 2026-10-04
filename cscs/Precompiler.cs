@@ -10855,10 +10855,13 @@ namespace SplitAndMerge
                 m_statementPrelude = outerPrelude;
                 // In a for header (the ")" came along) the step ends the header: no ";", which
                 // ended the loop there with an empty body and ran the block once.
+                // As a statement, published like any other write (RegisterVariableString): without
+                // it a callback after "g += i" saw the old value, and the interpreter's copy was
+                // never read back for this local either (ReadGlobalsThroughInterpreter).
                 return closing.Length > 0 ?
                     valuePrelude + name + " = CscsConvert.Compound(" + name + ", " + resolved + ", \"" + candidate + "\")" + closing :
                     valuePrelude + m_depth + name + " = CscsConvert.Compound(" + name + ", " +
-                    resolved + ", \"" + candidate + "\");\n";
+                    resolved + ", \"" + candidate + "\");\n" + RegisterVariableString(name);
             }
             return null;
         }
@@ -11565,6 +11568,19 @@ namespace SplitAndMerge
                 m_variableLocals.Add(name);
                 m_stringLocals.Remove(name);
             }
+            // A global this function assigns, where it calls back into the interpreter: the callee
+            // can store a value of another type in it -- text where the function stored a number --
+            // which a double or string local cannot hold, and reading it back converted it
+            // (ReadGlobalsThroughInterpreter): "g = 5; setText(); return g;" answered 0 where the
+            // interpreter answers the text. Such a local is a Variable, and so is what it feeds.
+            if (m_emitInterpreterSync)
+            {
+                foreach (var name in GlobalBoundNames())
+                {
+                    m_variableLocals.Add(name);
+                    m_stringLocals.Remove(name);
+                }
+            }
 
             // A "variable" argument holds whatever the caller passed -- a number, text, a
             // collection -- so what it feeds is a Variable too, as with a loop variable:
@@ -12101,7 +12117,8 @@ namespace SplitAndMerge
                     }
                     m_converted.AppendLine("     " + entry.Value + " " + name + " = " +
                         (entry.Value == "string" ? "\"\"" : entry.Value == "bool" ? "false" : "0") + ";");
-                    m_newVariables.Add(name);                    // Recorded too, so a later read of a bool one -- "b + 10" -- gets the conversion
+                    m_newVariables.Add(name);
+                    // Recorded too, so a later read of a bool one -- "b + 10" -- gets the conversion
                     // to the number CSCS uses; the plain-assignment record never sees this name.
                     if (!m_localTypes.ContainsKey(name))
                     {
@@ -12562,7 +12579,8 @@ namespace SplitAndMerge
                 if (TryRewriteStringComparison(rest, out var rewritten))
                 {
                     return indent + keyword + " " + rewritten + tail;
-                }                // A number as the whole condition -- "if (b)" over a double local, "if ((b = n + 2))",
+                }
+                // A number as the whole condition -- "if (b)" over a double local, "if ((b = n + 2))",
                 // "while ((t = t - 1))". The interpreter's truth for a number is exactly "!= 0"; C#
                 // has no truth value for a double at all (CS0029). Only a certain number: a bool, a
                 // Variable, an element or a string has its own handling.

@@ -61,6 +61,14 @@ static class Allowlist
     /// <summary>The Math module registers everything under "Math." -- pure functions, all kept.</summary>
     static readonly string s_mathPrefix = Constants.ConvertName("Math.");
 
+    /// <summary>
+    /// The Math module also registers its functions by their bare names -- "sqrt(x)", "round(x, 2)"
+    /// -- as the same objects, so a function of that module is kept under any name. Matched by the
+    /// function, not the name: a bare name that something else registered first ("log", say) is
+    /// not the Math function and stays out.
+    /// </summary>
+    static readonly System.Reflection.Assembly s_mathModule = typeof(CSCSMath.CscsMathModule).Assembly;
+
     static readonly string s_cfunction = Constants.ConvertName(Constants.COMPILED_FUNCTION);
 
     /// <summary>
@@ -74,6 +82,7 @@ static class Allowlist
         s_names.Contains(name) ||
         (ExplainMode && name == s_cfunction) ||
         name.StartsWith(s_mathPrefix, StringComparison.Ordinal) ||
+        function?.GetType().Assembly == s_mathModule ||
         // A registered constant: an enum value the interpreter set up. It is only a value, and
         // with .NET access off a value cannot be turned into anything else.
         function is GetVarFunction;

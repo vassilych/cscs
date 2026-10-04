@@ -1,0 +1,310 @@
+0 BodyText | The Parser That Couldn't Compile Itself
+1 BodyText | 
+2 BodyText | An expression parser that builds no syntax tree is small, quick to sta
+3 BodyText | 
+4 Heading2 | An Article, an Email, and a VR Tool
+5 BodyText | Split-and-Merge is an algorithm for evaluating expressions that I came
+6 BodyText | 
+7 BodyText | Those articles led somewhere unexpected. The lead of Microsoft Maquett
+8 BodyText | 
+9 BodyText | The Jan/Feb 2020 issue described how CSCS could compile a function to 
+10 BodyText | 
+11 BodyText | This article returns to both pieces of work. What prompted it was not 
+12 BodyText | 
+13 PullQuote | The decision that makes the interpreter elegant is the same decision t
+14 Heading2 | Split and Merge in One Page
+15 BodyText | Split-and-Merge evaluates an expression in two passes. The split pass 
+16 BodyText | 
+17 CodeSnippet | [3, +]   [4, *]   [2, -]   [1, )]
+18 BodyText | 
+19 BodyText | The last cell carries a null action, which has the lowest priority of 
+20 BodyText | 
+21 BodyText | The merge pass then walks the list from left to right and merges each 
+22 BodyText | 
+23 CodeSnippet | private static Variable Merge(Variable current, ref int index,
+24 CodeSnippet |     List&lt;Variable&gt; listToMerge, ParsingScript script,
+25 CodeSnippet |     bool mergeOneOnly = false)
+26 CodeSnippet | {
+27 CodeSnippet |     while (index &lt; listToMerge.Count)
+28 CodeSnippet |     {
+29 CodeSnippet |         Variable next = listToMerge[index++];
+30 CodeSnippet |         while (!CanMergeCells(current, next))
+31 CodeSnippet |         {
+32 CodeSnippet |             // 1+2*3: merge 2*3 first, getting 6, then 1+6.
+33 CodeSnippet |             Merge(next, ref index, listToMerge, script,
+34 CodeSnippet |                   true /* mergeOneOnly */);
+35 CodeSnippet |         }
+36 CodeSnippet |         MergeCells(current, next, script);
+37 CodeSnippet |         if (mergeOneOnly) { break; }
+38 CodeSnippet |     }
+39 CodeSnippet |     return current;
+40 CodeSnippet | }
+41 BodyText | 
+42 Figure [IMG] | 
+43 FigureCaption | Figure 1: The split of 3 + 4 * 2 - 1 into cells, and the three merges 
+44 BodyText | 
+45 BodyText | When two cells merge, the result inherits the operator of the right ce
+46 BodyText | 
+47 Heading3 | The bug in the &gt;=
+48 BodyText | Whether a cell merges now or defers is decided by CanMergeCells, which
+49 BodyText | 
+50 CodeSnippet | static bool CanMergeCells(Variable leftCell,
+51 CodeSnippet |                           Variable rightCell)
+52 CodeSnippet | {
+53 CodeSnippet |     return GetPriority(leftCell.Action) &gt;=
+54 CodeSnippet |            GetPriority(rightCell.Action);
+55 CodeSnippet | }
+56 BodyText | 
+57 BodyText | Associativity is not written down anywhere. It is implied by the &gt;=
+58 BodyText | 
+59 BodyText | There is a reason for that convention, and most textbooks skip it. Lef
+60 BodyText | 
+61 BodyText | The fix is a two-line guard in front of the &gt;=: if both cells carry
+62 BodyText | 
+63 BodyText | The fused cell has a second consequence. A cell fuses an operand with 
+64 BodyText | 
+65 Heading2 | Where It Sits among the Known Algorithms
+66 BodyText | Split-and-Merge was designed without reference to Pratt's paper or the
+67 BodyText | 
+68 BodyText | Split-and-Merge computes what precedence climbing computes. The recurs
+69 BodyText | 
+70 BodyText | It is a bad property for a compiler, as the rest of this article shows
+71 BodyText | 
+72 Heading2 | The Compiler That Couldn't
+73 BodyText | The 2020 precompiler worked like this. The interpreter handed a cfunct
+74 BodyText | 
+75 BodyText | The backend was the easy part to replace. The new RoslynCompiler calls
+76 BodyText | 
+77 BodyText | Here is what the translator produces for a small cfunction. The CSCS s
+78 BodyText | 
+79 CodeSnippet | cfunction double compound(double principal,
+80 CodeSnippet |                           double rate, int years) {
+81 CodeSnippet |   total = principal;
+82 CodeSnippet |   for (i = 0; i &lt; years; i++) {
+83 CodeSnippet |     total = total * (1 + rate);
+84 CodeSnippet |   }
+85 CodeSnippet |   return Math.Round(total, 2);
+86 CodeSnippet | }
+87 BodyText | 
+88 BodyText | And the C# method generated for it, reformatted, with seven unused tem
+89 BodyText | 
+90 CodeSnippet | public static Variable compound(
+91 CodeSnippet |     Interpreter __interpreter,
+92 CodeSnippet |     List&lt;string&gt; __varStr, List&lt;double&gt; __varNum,
+93 CodeSnippet |     List&lt;int&gt; __varInt,
+94 CodeSnippet |     List&lt;List&lt;string&gt;&gt; __varArrStr,
+95 CodeSnippet |     List&lt;List&lt;double&gt;&gt; __varArrNum,
+96 CodeSnippet |     List&lt;List&lt;int&gt;&gt; __varArrInt,
+97 CodeSnippet |     List&lt;Dictionary&lt;string, string&gt;&gt; __varMapStr,
+98 CodeSnippet |     List&lt;Dictionary&lt;string, double&gt;&gt; __varMapNum,
+99 CodeSnippet |     List&lt;Variable&gt; __varVar)
+100 CodeSnippet | {
+101 CodeSnippet |     double total = __varNum[0];
+102 CodeSnippet |     int i;
+103 CodeSnippet |     for (i = 0; i &lt; __varInt[0]; i++) {
+104 CodeSnippet |         total = total * (1 + __varNum[1]);
+105 CodeSnippet |     }
+106 CodeSnippet |     return Variable.ConvertToVariable(
+107 CodeSnippet |         Math.Round(total, 2));
+108 CodeSnippet | }
+109 BodyText | 
+110 BodyText | The hard part was the translator, and every hard problem came back to 
+111 BodyText | 
+112 NumberedBodyText | Every CSCS number is a double. Copy 3/2 into C# verbatim and you get i
+113 NumberedBodyText | Integers overflow; CSCS numbers don't. An int argument used in arithme
+114 NumberedBodyText | Truth values are numbers. A CSCS comparison yields 1 or 0, so "v=" + (
+115 NumberedBodyText | Operators decide the type at run time. return helper(n) + helper(n) re
+116 NumberedBodyText | Calls go through text. Calling a CSCS function passes the arguments as
+117 NumberedBodyText | Evaluation order is part of the meaning. To call a CSCS function insid
+118 BodyText | 
+119 BodyText | Failures 1, 2, 4, and 6 are the dangerous kind: the generated C# compi
+120 BodyText | 
+121 Heading2 | The Interpreter as the Specification
+122 BodyText | CSCS has no formal specification. It has an interpreter, and that turn
+123 BodyText | 
+124 BodyText | The test that does this is PrecompilerCoverageFixture. It writes every
+125 BodyText | 
+126 BodyText | Of the 11 fallbacks, most are deliberate. CSCS has no shift operator, 
+127 BodyText | 
+128 PullQuote | Program testing can be used to show the presence of bugs, but never to
+129 PullQuote | -- Edsger W. Dijkstra
+130 BodyText | The oracle has a catch: it can be wrong. Building the compiler meant r
+131 BodyText | 
+132 Heading2 | Tiered Fallback
+133 BodyText | The old precompiler had one failure mode: if the translator couldn't h
+134 BodyText | 
+135 CodeSnippet | Precompiler.FallbackToInterpreter = true;         // the default
+136 CodeSnippet | Precompiler.Fallbacks["myFunc"]                    // why it was not c
+137 CodeSnippet | is_precompiled("myFunc")                           // from a script: 1
+138 BodyText | 
+139 BodyText | This inverts the risk. A gap in the translator now costs performance, 
+140 BodyText | 
+141 BodyText | Fallback does have a limit. It catches translation failures, but it ca
+142 BodyText | 
+143 BodyText | Many of this year's coverage gains came from one cheap trick: rewrite 
+144 BodyText | 
+145 CodeSnippet | 1 &lt; n &lt; 10      →   (1&lt;n?1:0)&lt;10
+146 CodeSnippet | 1 &lt; n == 1      →   (1&lt;n?1:0)==1
+147 BodyText | 
+148 BodyText | The second line matters. CSCS ranks &lt; above ==, as C# does, and the
+149 BodyText | 
+150 BodyText | The other trick runs the opposite way. Some comparisons have no C# ope
+151 BodyText | 
+152 CodeSnippet | if (__p0 == "stock")
+153 CodeSnippet | // error CS0019: Operator '==' cannot be applied to
+154 CodeSnippet | // operands of type 'Variable' and 'string'
+155 BodyText | 
+156 BodyText | CS0019 is the C# compiler's error for an operator that is not defined 
+157 BodyText | 
+158 CodeSnippet | if (CscsOps.Compare(__interpreter, (object)(__p0), "==",
+159 CodeSnippet |                     (object)("stock")))
+160 BodyText | 
+161 BodyText | The answer cannot differ from the script's, and code that already comp
+162 BodyText | 
+163 Heading2 | What "Compiled" Does and Doesn't Mean
+164 BodyText | Here are measurements from the current code: a Release build on an App
+165 BodyText | 
+166 TableCaption | Table 1: Interpreted and compiled, same body
+167 TABLE FunctionInterpretedCompiledRatioNumeric loop, 100,000 iterations2,558 ms4 ms~640×Integer loop with % and if, 100,000 ite
+168 BodyText | 
+169 BodyText | The loops are what the 2020 article promised, and more. For the numeri
+170 BodyText | 
+171 BodyText | Recursion is the counterexample. Measured for the first draft of this 
+172 BodyText | 
+173 CodeSnippet | __interpreter.AddCompiledLocalVariable("n",
+174 CodeSnippet |     new GetVarFunction(
+175 CodeSnippet |         Variable.ConvertToVariable(__varInt[0])));
+176 CodeSnippet | __argsTempStr = "n-1";
+177 CodeSnippet | __scriptTempVar = new ParsingScript(__interpreter,
+178 CodeSnippet |     __argsTempStr, true);
+179 CodeSnippet | __funcTempVar = new ParserFunction(__scriptTempVar,
+180 CodeSnippet |     "fibC", '(', ref __actionTempVar);
+181 CodeSnippet | __varTempVar = __funcTempVar.GetValue(__scriptTempVar);
+182 BodyText | 
+183 BodyText | The call is compiled, but what it compiles to is: publish n to the int
+184 BodyText | 
+185 BodyText | Writing that paragraph is what got it fixed. A call with plain argumen
+186 BodyText | 
+187 CodeSnippet | __varTempVar = CscsCalls.Call(__interpreter, "fibC",
+188 CodeSnippet |     (double)(__varInt[0]) - 1);
+189 CodeSnippet | Variable __varTempVar1 = __varTempVar;
+190 CodeSnippet | __varTempVar = CscsCalls.Call(__interpreter, "fibC",
+191 CodeSnippet |     (double)(__varInt[0]) - 2);
+192 CodeSnippet | Variable __varTempVar2 = __varTempVar;
+193 CodeSnippet | return Variable.ConvertToVariable(
+194 CodeSnippet |     __varTempVar1 + __varTempVar2);
+195 BodyText | 
+196 BodyText | The call still goes through the same entry point an interpreted call u
+197 BodyText | 
+198 BodyText | That change has now been made, in two steps. The first is typed, direc
+199 BodyText | 
+200 BodyText | The second step is typed returns. For a function that calls itself, th
+201 BodyText | 
+202 CodeSnippet | public static double fibC__numbody(
+203 CodeSnippet |     Interpreter __interpreter, int __p0) {
+204 CodeSnippet |   if (__p0 &lt; 2) {
+205 CodeSnippet |     return CscsDirect.Number(__p0);
+206 CodeSnippet |   }
+207 CodeSnippet |   double __varTempVar1 = fibC__numdirect(__interpreter,
+208 CodeSnippet |       CscsDirect.Int((double)(__p0) - 1));
+209 CodeSnippet |   double __varTempVar2 = fibC__numdirect(__interpreter,
+210 CodeSnippet |       CscsDirect.Int((double)(__p0) - 2));
+211 CodeSnippet |   return CscsDirect.Number(__varTempVar1 + __varTempVar2);
+212 CodeSnippet | }
+213 BodyText | 
+214 BodyText | Whether every value a function returns is a number is exactly the kind
+215 BodyText | 
+216 Heading2 | Try It From Your Own AI Assistant
+217 BodyText | To try all of this without installing anything, use the public CSCS pl
+218 BodyText | 
+219 CodeSnippet | https://cscs.brainpingpong.com/mcp
+220 CodeSnippet | 
+221 CodeSnippet | claude mcp add --transport http cscs \
+222 CodeSnippet |     https://cscs.brainpingpong.com/mcp
+223 BodyText | 
+224 BodyText | It offers three tools. cscs_guide teaches the assistant CSCS before it
+225 BodyText | 
+226 BodyText | Running strangers' code safely took more than a function allowlist, an
+227 BodyText | 
+228 BullettedBodyText | an allowlist of 113 kept functions (93 are removed);
+229 BullettedBodyText | a watchdog: 5 seconds, 256 MB, and a cap of 2,000 nested calls, which 
+230 BullettedBodyText | one process per script, with a low-privilege Windows account;
+231 BullettedBodyText | a Windows AppContainer with no capabilities, inside a Job Object, so t
+232 BodyText | 
+233 Figure [IMG] | 
+234 FigureCaption | Figure 2: The playground's layers, from the assistant's request to the
+235 BodyText | 
+236 BodyText | explain_cscs compiles the generated C# in memory and never loads it. O
+237 BodyText | 
+238 Heading2 | Reading Your Own Code with an AI
+239 BodyText | How does this kind of work go in practice? Not by handing over a repos
+240 BodyText | 
+241 PullQuote | Everyone knows that debugging is twice as hard as writing a program in
+242 PullQuote | -- Brian W. Kernighan and P. J. Plauger
+243 BodyText | Give the model an oracle. Every claim about the compiler could be chec
+244 BodyText | 
+245 BodyText | Expect it to be wrong, and to catch it. The model was wrong often, and
+246 BodyText | 
+247 BullettedBodyText | It diagnosed several interpreter bugs from the symptom first and got t
+248 BullettedBodyText | For a whole day it ran the unit tests against a stale compiled library
+249 BullettedBodyText | The proposal for this article claimed that x = -n had never parsed. Th
+250 BullettedBodyText | During one edit, a script matched the wrong end marker and deleted sev
+251 BodyText | 
+252 BodyText | Make it write things down. The most valuable artifact is not the code.
+253 BodyText | 
+254 BodyText | The division of labour was simple. The model did the reading, the hypo
+255 BodyText | 
+256 Heading2 | What to Keep, and What to Change
+257 BodyText | The tree-less evaluation is worth keeping. For an interpreter embedded
+258 BodyText | 
+259 BodyText | Here is the bill, stated plainly. The interpreter's precedence engine 
+260 BodyText | 
+261 PullQuote | The first 90 percent of the code accounts for the first 90 percent of 
+262 PullQuote | -- Tom Cargill
+263 BodyText | The source code is on GitHub at github.com/vassilych/cscs, and the pla
+264 BodyText | 
+265 BodyText | 
+266 BodyText | 
+267 SidebarCaption | References
+268 SideBar | 
+269 SideBar | CSCS repository:
+270 SideBar | https://github.com/vassilych/cscs
+271 SideBar | 
+272 SideBar | CSCS Playground (MCP endpoint):
+273 SideBar | https://cscs.brainpingpong.com/mcp
+274 SideBar | 
+275 SideBar | CSCS Visual Studio Code Debugger Extension:
+276 SideBar | https://marketplace.visualstudio.com/items?itemName=vassilik.cscs-debu
+277 SideBar | 
+278 SideBar | Compiling Scripts to Get Compiled-Language Performance (CODE Magazine,
+279 SideBar | https://www.codemag.com/Article/2001071/Compiling-Scripts-to-Get-Compi
+280 SideBar | 
+281 SideBar | Prototyping with Microsoft Maquette (CODE Magazine, Sep/Oct 2020):
+282 SideBar | https://www.codemag.com/Article/2009071/Prototyping-with-Microsoft-Maq
+283 SideBar | 
+284 SideBar | Model Context Protocol:
+285 SideBar | https://modelcontextprotocol.io
+286 SideBar | 
+287 SideBar | Vaughan Pratt, “Top Down Operator Precedence,” 1973.
+288 BodyText | 
+289 SidebarCaption | The Numbers in This Article
+290 SideBar | 
+291 SideBar | Precompiler coverage: 1,129 of 1,142 constructs compile to C#, 12 fall
+292 SideBar | 
+293 SideBar | Regression suites: 1,016 compiled-versus-interpreted assertions and 63
+294 SideBar | 
+295 SideBar | Cold Roslyn compile: about 1.1 s; a cached compile is effectively free
+296 SideBar | 
+297 SideBar | Code size: Parser.cs 965 lines, of which the precedence engine is abou
+298 SideBar | 
+299 SideBar | Timings: CPU time, Release build, Apple M1 Pro, each run at least twic
+300 AuthorName | 
+301 AuthorName | Vassili Kaplan
+302 AuthorEmailandPhone | VassiliK@gmail.com
+303 AuthorEmailandPhone | 
+304 Bio | Vassili was a Microsoft Lync developer between 2008 and 2011.
+305 Bio | He also worked on the Microsoft Maquette Mixed Reality Prototyping too
+306 Bio | 
+307 Bio | Vassili has a Masters in Applied Mathematics with Specialization in Co
+308 Bio | 
+309 Bio | Vassili currently lives in Zurich, Switzerland. His hobbies are travel

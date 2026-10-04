@@ -341,6 +341,31 @@ namespace SplitAndMerge
         public static double Number(double value) { return value; }
         public static double Number(int value) { return value; }
 
+        /// <summary>
+        /// "a % b" on two ints as the interpreter computes it, in doubles (WidenIntArithmetic),
+        /// without paying for fmod: the int remainder is the same number, its sign the dividend's,
+        /// except that a zero from a negative dividend is -0, which the interpreter writes as
+        /// such. A divisor of 0 (NaN, not DivideByZeroException) or -1 (int.MinValue overflows)
+        /// takes the doubles. "t += i % 7" in a loop ran 18 times slower than "t += i".
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static double Mod(int a, int b)
+        {
+            if (b == 0 || b == -1)
+            {
+                return (double)a % b;
+            }
+            int r = a % b;
+            return r == 0 && a < 0 ? -0.0 : r;
+        }
+
+        /// <summary>An operand the same pass widened -- "var k" holding an int is declared double
+        /// -- is a double by the time it gets here: fmod, as before.</summary>
+        public static double Mod(double a, double b)
+        {
+            return a % b;
+        }
+
         /// <summary>The most arguments a typed call takes; more keep the interpreter's call.</summary>
         public const int MaxArguments = 6;
 
@@ -767,7 +792,7 @@ namespace SplitAndMerge
         public static bool IsFalse(Variable value)
         {
             return !IsTrue(value);
-        }
+        }
         /// <summary>
         /// The same two tests for a term whose C# type is not Variable -- a string local, an
         /// argument, a bool.

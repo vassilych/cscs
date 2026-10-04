@@ -1,0 +1,1 @@
+cfunction double f(int n) { return n * 2; } print(f(3));

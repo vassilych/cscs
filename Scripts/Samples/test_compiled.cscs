@@ -5741,6 +5741,32 @@ Test(smMore(" ab "), smMoreI(" ab "));
 Test(smMore(" ab "), "[ab]405");
 Test(smMore(""), smMoreI(""));
 Test(is_precompiled("smMore"), 1);
+// A global the function assigns, changed by a callback to another type: compiled code held it
+// in a double and read back 0 for the text (now a Variable). A compound on it is published, so
+// the callback sees each new value.
+smGl = 0;
+function smGlText() { smGl = "hello"; }
+function smGlBump() { smGl = smGl + 10; }
+cfunction smGlC(int a) { smGl = 5; smGlText(); x = smGl; return x; }
+function smGlI(a) { smGl = 5; smGlText(); x = smGl; return x; }
+Test(smGlC(1), smGlI(1));
+Test(smGlC(1), "hello");
+cfunction smGlLoop(int n) { smGl = 1; for (i = 0; i < n; i++) { smGl += i; smGlBump(); } return smGl * 2; }
+function smGlLoopI(n) { smGl = 1; for (i = 0; i < n; i++) { smGl += i; smGlBump(); } return smGl * 2; }
+Test(smGlLoop(4), smGlLoopI(4));
+Test(smGlLoop(4), 94);
+// "%" on two ints: the int remainder, with the interpreter's -0 and NaN.
+cfunction smMod(int a, int b) { return a % b; }
+function smModI(a, b) { return a % b; }
+smModD = "";
+for (smMa : {7, -7, -6, 0, 2147483647, -2147483647}) {
+  for (smMb : {3, -3, 2, 1, -1, 0}) {
+    if (smMod(smMa, smMb) + "" != smModI(smMa, smMb) + "") { smModD += "[" + smMa + "%" + smMb + "]"; }
+  }
+}
+Test(smModD, "");
+Test(smMod(-6, 3) + "|" + smMod(7, 0), smModI(-6, 3) + "|" + smModI(7, 0));
+Test(is_precompiled("smGlC") + is_precompiled("smGlLoop") + is_precompiled("smMod"), 3);
 
 testSummary("test_compiled.cscs");
 

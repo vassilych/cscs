@@ -76,10 +76,22 @@ public class SandboxTests
         {
             CollectionAssert.DoesNotContain(kept.ToList(), name, $"{name} must not be available in the sandbox");
         }
-        foreach (var name in new[] { "print", "function", "class", "new", "try", "switch", "math.sqrt", "regex" })
+        foreach (var name in new[] { "print", "function", "class", "new", "try", "switch", "math.sqrt", "sqrt", "round", "regex" })
         {
             CollectionAssert.Contains(kept.ToList(), name, $"{name} should be available");
         }
+    }
+
+    [TestMethod]
+    public async Task BareMathNames_Run()
+    {
+        // The Math module registers sqrt, round, max, ... by their bare names too, as the same
+        // functions; the allowlist keeps them by what they are, not by name.
+        var outcome = await s_runner.RunAsync("print(sqrt(16) + \"|\" + round(2.567, 2) + \"|\" + max(3, 7));",
+            "t", CancellationToken.None);
+
+        Assert.IsNull(outcome.Error, outcome.Error);
+        StringAssert.Contains(outcome.Output, "4|2.57|7");
     }
 
     // ── Limits ────────────────────────────────────────────────────────────────────────────────

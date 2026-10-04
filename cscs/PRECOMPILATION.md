@@ -2579,16 +2579,28 @@ The interpreter against HEAD, same machine and script: numeric loop 1,790 vs 1,7
 of the difference is spread across the parser's new checks (the ternary, `&&`/`||` at the same
 level), not one place: `g + 1` evaluates about 8% slower.
 
+### A global changed by a callback, and "%" on ints (October 2026)
+
+The last divergence the Known limits listed: a global the function assigns was held in a typed
+local, and read back from the interpreter after a callback (`ReadGlobalsThroughInterpreter`)
+converted to that type -- `g = 5; setText(); return g;` answered 0 where the interpreter answers
+the text the callback stored. Where the function calls back (the second pass,
+`m_emitInterpreterSync`), such a global is a `Variable` local now (`CollectVariableLocals`), and
+so is what it feeds. That exposed a gap the type-changing locals already had: `g += i` on a
+`Variable` local (`TryBuildVariableCompound`) was never published, so a callback saw the old
+value and the read back was skipped for the local. It is published like any other write. The
+loop-counter entry turned out to be stale as well; both are pinned in `test_compiled.cscs`.
+
+`%` between two ints was computed in doubles, for the interpreter's NaN on a zero divisor and its
+-0 from a negative dividend; fmod made `t += i % 7` 18 times slower than `t += i` (270 against
+15 ms for 10M). `CscsDirect.Mod` takes the int remainder, which is the same number with the
+dividend's sign, writes -0 for a zero from a negative dividend, and leaves divisors 0 and -1
+(`int.MinValue % -1` overflows) to the doubles. Release, M1 Pro: the 10M loop with `% 7` 270 ->
+13 ms; 1M recursive `gcd` calls (`a % b`) 242 -> 186 ms. An operand the same pass widens from int
+to double (`var k`) takes `Mod(double, double)`, plain fmod as before.
+
 ## Known limits
 
-- A global the function assigns and keeps in a typed local (a number, say) is read back from the
-  interpreter after a callback (`ReadGlobalsThroughInterpreter`), but converted to the local's
-  type: a callback that stores text there gives 0 where the interpreter gives the text. Names
-  read before they are assigned are Variables and not affected.
-
-- A loop counter that shares its name with a global stays local in compiled code, while the
-  interpreted form leaves the global at the value the loop exited on. The write-back sits
-  inside the loop body, so the exit value is not available to it.
 - The translator is a token-level transpiler, not a parser. Unusual statement shapes fall
   back to the interpreter rather than compiling; Roslyn says exactly where when the
   fallback is disabled.
@@ -2619,12 +2631,8 @@ level), not one place: `g + 1` evaluates about 8% slower.
   a value containing a top-level `?` (nor for widened int and collection arguments), and with
   that the coercion keeps every one of those constructs compiling.
 
-  Still open, with their emitters identified: `t += b` gives `double += bool` and comes out of
-  the plain assignment path (`lhs + tokens[1] + rhs`), not the `CscsConvert.Compound`
-  builders; `b == 1` comes from the condition path; and `"v=" + b` still answers `v=True`
-  against the interpreter's `v=1` -- a divergence -- because a statement holding a quote is
-  rejected by `IsKnownExpression` and reaches neither funnel. `"t=" + x.Type` falls back for
-  the same reason.
+  The shapes once left open here -- `t += b`, `b == 1`, `"v=" + b` (which answered `v=True`)
+  and `"t=" + x.Type` -- compile and agree with the interpreter now (checked October 2026).
 - **`c = a + b` on two collections compiles** (2026-09-12), and the two-part shape of the fix is
   the point. Joining two collections yields their *text* -- the interpreter answers `[1, 2][3]`,
   whose `.Type` is STRING, `.Length` 9 and `.Size` 0, and a pair of maps gives

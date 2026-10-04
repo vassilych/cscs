@@ -790,8 +790,8 @@ namespace SplitAndMerge
         /// an int argument -- divided by 0 with "x /= 0" threw DivideByZeroException where the
         /// interpreter answers NaN, overflowed with "x *= n" (1410065408 for 10^10), and gave 0
         /// for -2 % 2 where the interpreter writes -0. Such a local is declared double, and "%"
-        /// between two ints is computed in doubles. Loop counters proven to stay integers are
-        /// declared "int" explicitly (FindIntCounters) and keep that.
+        /// between two ints gives the double the interpreter does (CscsDirect.Mod). Loop counters
+        /// proven to stay integers are declared "int" explicitly (FindIntCounters) and keep that.
         /// </summary>
         public static string WidenIntArithmetic(string source)
         {
@@ -824,7 +824,7 @@ namespace SplitAndMerge
                     replacements[modulo] = rewritten =>
                     {
                         var m = (BinaryExpressionSyntax)rewritten;
-                        return SyntaxFactory.ParseExpression("((double)(" + m.Left + ") % (" + m.Right + "))")
+                        return SyntaxFactory.ParseExpression("CscsDirect.Mod(" + m.Left + ", " + m.Right + ")")
                             .WithTriviaFrom(rewritten);
                     };
                 }

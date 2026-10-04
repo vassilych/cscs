@@ -1,0 +1,1 @@
+cfunction double fibC(int n) { if (n < 2) { return n; } return fibC(n - 1) + fibC(n - 2); } print(fibC(10));
