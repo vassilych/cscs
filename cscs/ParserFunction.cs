@@ -52,6 +52,12 @@ namespace SplitAndMerge
                 return;
             }
 
+            m_impl = InterpreterInstance.GetLiteralArrayFunction(item, script, action);
+            if (m_impl != null)
+            {
+                return;
+            }
+
             item = Constants.ConvertName(item);
 
             m_impl = InterpreterInstance.GetRegisteredAction(item, script, ref action);

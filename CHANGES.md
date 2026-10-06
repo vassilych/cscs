@@ -39,7 +39,7 @@ These scripts ran before and now give a different answer.
   after `+ -`, before the comparisons (`1 << 2 + 1` is 8).
 - Typed parameters in plain functions, converted as a `cfunction` converts them:
   `function f(int n, string s = "d")`.
-- Text indexing: `s[i]` is the character at `i`.
+- Text indexing: `s[i]` is the character at `i`, on a variable or directly on a literal (`"abc"[1]`).
 - Bare Math names: `Sqrt`, `Round`, `Pow` and the rest, next to `Math.*`.
 - A caught value has `.Message` and `.Stack`: `catch (e) { print(e.Message); }`.
 - `NameExists(x)` inside a larger expression, such as `NameExists(q) + 5`.

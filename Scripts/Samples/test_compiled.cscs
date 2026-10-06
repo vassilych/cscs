@@ -5767,6 +5767,13 @@ for (smMa : {7, -7, -6, 0, 2147483647, -2147483647}) {
 Test(smModD, "");
 Test(smMod(-6, 3) + "|" + smMod(7, 0), smModI(-6, 3) + "|" + smModI(7, 0));
 Test(is_precompiled("smGlC") + is_precompiled("smGlLoop") + is_precompiled("smMod"), 3);
+// A subscript on a text literal: the index's parameter was never renamed (CS0103, a fallback).
+cfunction smLit(int k) { t = "abc"[k] + "!"; if ("abc"[k] == "b") { t += "B"; } return t + "a[b"[1] + "xyz"[k - 1]; }
+function smLitI(k) { t = "abc"[k] + "!"; if ("abc"[k] == "b") { t += "B"; } return t + "a[b"[1] + "xyz"[k - 1]; }
+Test(smLit(1), smLitI(1));
+Test(smLit(1), "b!B[x");
+Test(smLit(2), smLitI(2));
+Test(is_precompiled("smLit"), 1);
 
 testSummary("test_compiled.cscs");
 

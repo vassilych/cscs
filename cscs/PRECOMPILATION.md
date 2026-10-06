@@ -2599,6 +2599,15 @@ dividend's sign, writes -0 for a zero from a negative dividend, and leaves divis
 13 ms; 1M recursive `gcd` calls (`a % b`) 242 -> 186 ms. An operand the same pass widens from int
 to double (`var k`) takes `Mod(double, double)`, plain fmod as before.
 
+### A subscript on a text literal (October 2026)
+
+`"abc"[1]` failed in the interpreter with "Couldn't find variable" (the token went on to a variable
+lookup); `Interpreter.GetLiteralArrayFunction` reads it as a subscript on a variable holding the
+text, before the token is lower-cased, with a same-length stand-in name so a "[" inside the quotes
+is not taken for the subscript. In compiled code such a token has no name, so `ProcessToken`
+copied it through as written and a parameter in the index was never renamed (CS0103, a
+fallback); it is now `CscsLate.Element` over the literal, each index translated.
+
 ## Known limits
 
 - The translator is a token-level transpiler, not a parser. Unusual statement shapes fall

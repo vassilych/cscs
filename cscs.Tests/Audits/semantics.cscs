@@ -239,6 +239,11 @@ for (smCa : smCv) {
   }
 }
 Test(smCd, "");
+// A subscript on a text literal (was: "Couldn't find variable ["abc"[1]]").
+smLk = 2;
+Test("abc"[1], "b");
+Test("abc"[0] + "abc"[smLk] + "a[b"[1] + 'xyz'[2] + "abc"[1].Upper, "ac[zB");
+Test(Size("abc"[1]) + ("abc"[smLk - 1] == "b"), 2);
 // The caught value answers .Message (was: "Object [message] doesn't exist").
 smMsg = ""; try { throw "boom"; } catch (smEx) { smMsg = smEx.Message; }
 Test(smMsg, "boom");

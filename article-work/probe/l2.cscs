@@ -1,3 +1,0 @@
-cfunction double compound(double principal, double rate, int years) { total = principal; for (i = 0; i < years; i++) { total = total * (1 + rate); } return Math.Round(total, 2); }
-cfunction cmpReq(variable request) { if (request == "stock") { return 1; } return 0; }
-print(compound(100, 0.05, 3), cmpReq("stock"));

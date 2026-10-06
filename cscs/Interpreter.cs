@@ -2892,7 +2892,45 @@ namespace SplitAndMerge
             return varFunc;
         }
 
-        public ParserFunction GetArrayFunction(string name, ParsingScript script, string action)
+        /// <summary>
+        /// A subscript on a text literal -- "abc"[1], "a,b"[0] + x -- read as a subscript on a
+        /// variable holding that text: "Couldn't find variable ["abc"[1]]", since the token went on
+        /// to a variable lookup. Taken before the token is lower-cased, which would have changed
+        /// the text. The literal is handed to GetArrayFunction as a same-length stand-in name, so
+        /// its offsets hold and a "[" inside the quotes is not taken for the subscript.
+        /// </summary>
+        public ParserFunction GetLiteralArrayFunction(string item, ParsingScript script, string action)
+        {
+            if (item.Length < 4 || (item[0] != Constants.QUOTE && item[0] != Constants.QUOTE1))
+            {
+                return null;
+            }
+            char quote = item[0];
+            int close = -1;
+            for (int i = 1; i < item.Length; i++)
+            {
+                if (item[i] == '\\')
+                {
+                    i++;
+                }
+                else if (item[i] == quote)
+                {
+                    close = i;
+                    break;
+                }
+            }
+            if (close < 0 || close + 1 >= item.Length || item[close + 1] != Constants.START_ARRAY)
+            {
+                return null;
+            }
+            // The literal as the parser reads it anywhere else, escapes included.
+            Variable text = new ParsingScript(this, item.Substring(0, close + 1)).Execute();
+            string standIn = new string('L', close + 1) + item.Substring(close + 1);
+            return GetArrayFunction(standIn, script, action, new GetVarFunction(text));
+        }
+
+        public ParserFunction GetArrayFunction(string name, ParsingScript script, string action,
+                                               GetVarFunction value = null)
         {
             int arrayStart = name.IndexOf(Constants.START_ARRAY);
             if (arrayStart < 0)
@@ -2916,7 +2954,7 @@ namespace SplitAndMerge
                 return null;
             }
 
-            ParserFunction pf = GetVariable(arrayName, script);
+            ParserFunction pf = value ?? GetVariable(arrayName, script);
             GetVarFunction varFunc = pf as GetVarFunction;
             if (varFunc == null)
             {

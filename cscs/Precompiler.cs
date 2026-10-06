@@ -3487,6 +3487,24 @@ namespace SplitAndMerge
         /// <summary>Whether the quote at the position is escaped: an odd number of backslashes
         /// right before it. "a\\" ends with an escaped backslash and the quote closes the text; a test
         /// of the one character before it took the quote for escaped and ran the string on.</summary>
+        /// <summary>Where the text literal that starts the token ends (its closing quote), or -1
+        /// when the token does not start with one.</summary>
+        static int TextLiteralEnd(string token)
+        {
+            if (string.IsNullOrEmpty(token) || token[0] != '"')
+            {
+                return -1;
+            }
+            for (int i = 1; i < token.Length; i++)
+            {
+                if (token[i] == '"' && !IsEscapedQuote(token, i))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         static bool IsEscapedQuote(string text, int at)
         {
             int count = 0;
@@ -6124,6 +6142,33 @@ namespace SplitAndMerge
             {
                 result += ReplaceArgsInString(token);
                 return;
+            }
+
+            // A subscript on a text literal -- "abc"[k], "abc"[k]) in a condition: the token has
+            // no name, so it went out as written, its index too, and a parameter in the index was
+            // never renamed (CS0103, a fallback). The element as the interpreter takes it, each
+            // index translated, as for a text argument.
+            int literalEnd = TextLiteralEnd(token);
+            if (literalEnd > 0 && literalEnd + 1 < token.Length && token[literalEnd + 1] == '[')
+            {
+                var literalRead = "CscsLate.Element(Variable.ConvertToVariable(" + token.Substring(0, literalEnd + 1) + ")";
+                int at = literalEnd + 1;
+                while (at < token.Length && token[at] == '[')
+                {
+                    int close = FindMatchingBracket(token, at);
+                    if (close < 0)
+                    {
+                        break;
+                    }
+                    literalRead += ", (object)(" + ReplaceArgsInString(token.Substring(at + 1, close - at - 1)) + ")";
+                    at = close + 1;
+                }
+                var literalRest = token.Substring(at);
+                if (literalRest.Trim(')').Length == 0)
+                {
+                    result += literalRead + ")" + literalRest;
+                    return;
+                }
             }
 
             string functionName = GetFunctionName(token, out string suffix, out bool isArray);

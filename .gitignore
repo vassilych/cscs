@@ -358,3 +358,4 @@ Article/*
 
 # Build output from the dllfunction test in Scripts/Samples/test.cscs
 RunCycle.dll
+article-work/
