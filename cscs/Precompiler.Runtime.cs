@@ -178,6 +178,18 @@ namespace SplitAndMerge
         /// <summary>"g[i]" and "g[i][j]" read as the interpreter reads them (GetVarFunction,
         /// Utils.ExtractArrayElement): by position or by key, and an index past the end is
         /// "Unknown index [..] for tuple of size ..".</summary>
+        /// <summary>The list literal "{a, b}" as the interpreter builds it (ListOfFunction): what
+        /// compiled code makes of one that is an operand (Precompiler.RewriteListOperands).</summary>
+        public static Variable ListOf(params object[] items)
+        {
+            var list = new List<Variable>(items.Length);
+            foreach (var item in items)
+            {
+                list.Add(Variable.ConvertToVariable(item));
+            }
+            return ListOfFunction.Build(list);
+        }
+
         public static Variable Element(Variable value, params object[] indices)
         {
             var list = new List<Variable>(indices.Length);
@@ -279,7 +291,8 @@ namespace SplitAndMerge
             var value = holder?.GetProperty(name);
             if (value == null)
             {
-                throw new ArgumentException("Object [" + Constants.ConvertName(name) + "] doesn't exist.");
+                // Spelled as the script wrote it, as the interpreter's message has it (Utils.CheckNotNull).
+                throw new ArgumentException("Object [" + name + "] doesn't exist.");
             }
             return value;
         }

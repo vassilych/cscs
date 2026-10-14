@@ -3167,6 +3167,10 @@ namespace SplitAndMerge
         public VarType Type { get; set; }
         public OriginalType Original { get; set; }
         public bool IsReturn { get; set; }
+        /// <summary>Inside a chain of comparisons ("1 &lt; n &lt; 10"), the truth of the ones merged
+        /// so far; the cell itself holds the middle operand for the next one (Parser.MergeCells).
+        /// Null everywhere else.</summary>
+        internal double? ChainTruth { get; set; }
         public string ParsingToken { get; set; }
         public int Index { get; set; }
         public string CurrentAssign { get; set; } = "";

@@ -818,7 +818,12 @@ namespace SplitAndMerge
 #if __ANDROID__ == false && __IOS__ == false
             Precompiler.RegisterReturnType(funcName, funcReturn);
 
-            string[] args = Utils.GetCompiledFunctionSignature(script, out Dictionary<string, Variable> argsMap);
+            // An untyped parameter of a cfunction holds whatever the caller passed, as in a plain
+            // function. It was text: "cfunction f(x) { return x + 1; }" gave f(5) = "51" when it
+            // compiled and 6 when it fell back to the interpreter. A csfunction's body is C#, where
+            // an untyped parameter stays the string it always was.
+            string[] args = Utils.GetCompiledFunctionSignature(script, out Dictionary<string, Variable> argsMap,
+                m_scriptInCSharp ? Variable.VarType.STRING : Variable.VarType.VARIABLE);
 
             script.MoveForwardIf(Constants.START_GROUP, Constants.SPACE);
             script.ParentOffset = script.Pointer;

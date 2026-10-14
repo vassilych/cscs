@@ -544,6 +544,65 @@ namespace SplitAndMerge
         /// at it, so this runs on every translation: each such comparison becomes the
         /// interpreter's (CscsOps.Compare, Parser.MergeCells).
         /// </summary>
+        /// <summary>
+        /// A chain of comparisons the source rewrite left as it was -- one holding text or a call,
+        /// "a &lt; b &lt; \"z\"" -- reaches C# as written, where "a &lt; b &lt; c" parses as "(a &lt; b) &lt; c":
+        /// a bool against the next operand, which does not compile. CSCS means each neighboring
+        /// pair joined by "&&" (Parser.MergeCells), so that is what it becomes; the repairs then
+        /// take each comparison on its own. Only when the middle operand can be read twice: a
+        /// name, a literal, a member or an element of those, no call. A parenthesized left side,
+        /// "(a &lt; b) &lt; c", is a 1 or 0 compared on purpose and is not a chain.
+        /// </summary>
+        public static string SplitComparisonChains(string source)
+        {
+            if (string.IsNullOrEmpty(source) || (source.IndexOf('<') < 0 && source.IndexOf('>') < 0))
+            {
+                return source;
+            }
+            var tree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Latest));
+            var root = tree.GetRoot();
+            var chains = root.DescendantNodes().OfType<BinaryExpressionSyntax>()
+                .Where(b => IsRelationalKind(b) && b.Left is BinaryExpressionSyntax inner && IsRelationalKind(inner) &&
+                            IsPure(inner.Right))
+                .ToList();
+            if (chains.Count == 0)
+            {
+                return source;
+            }
+            var rewritten = root.ReplaceNodes(chains, (original, current) =>
+            {
+                var b = (BinaryExpressionSyntax)current;
+                var inner = (BinaryExpressionSyntax)b.Left;
+                return SyntaxFactory.ParseExpression("((" + inner + ") && (" + inner.Right + " " +
+                    b.OperatorToken.Text + " " + b.Right + "))").WithTriviaFrom(original);
+            });
+            return rewritten.ToFullString();
+        }
+
+        static bool IsRelationalKind(BinaryExpressionSyntax b) =>
+            b.IsKind(SyntaxKind.LessThanExpression) || b.IsKind(SyntaxKind.LessThanOrEqualExpression) ||
+            b.IsKind(SyntaxKind.GreaterThanExpression) || b.IsKind(SyntaxKind.GreaterThanOrEqualExpression);
+
+        static bool IsPure(ExpressionSyntax e)
+        {
+            switch (e)
+            {
+                case IdentifierNameSyntax _:
+                case LiteralExpressionSyntax _:
+                    return true;
+                case MemberAccessExpressionSyntax m:
+                    return IsPure(m.Expression);
+                case ElementAccessExpressionSyntax el:
+                    return IsPure(el.Expression) && el.ArgumentList.Arguments.All(a => IsPure(a.Expression));
+                case ParenthesizedExpressionSyntax p:
+                    return IsPure(p.Expression);
+                case CastExpressionSyntax c:
+                    return IsPure(c.Expression);
+                default:
+                    return false;
+            }
+        }
+
         public static string FixVariableEquality(string source)
         {
             if (string.IsNullOrEmpty(source) || (source.IndexOf("==", StringComparison.Ordinal) < 0 &&

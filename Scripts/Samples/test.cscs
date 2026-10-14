@@ -2453,6 +2453,17 @@ smLk = 2;
 Test("abc"[1], "b");
 Test("abc"[0] + "abc"[smLk] + "a[b"[1] + 'xyz'[2] + "abc"[1].Upper, "ac[zB");
 Test(Size("abc"[1]) + ("abc"[smLk - 1] == "b"), 2);
+// A chain of comparisons is each neighboring pair joined by && (was: 1 or 0 compared with the
+// next, so "1 < n < 10" was always true). == and != still compare the 1 or 0 before them.
+smCh = 20;
+Test((1 < smCh < 10) + "" + (1 < 5 < 10) + (1 < 10 <= 10) + (0 <= 5 < 10 < 20) + ("a" < "b" < "c"), "01111");
+Test((1 < smCh == 1) + "" + (smCh > 0 == 1 > 0) + (1 + 1 < 3 < 2 * 2), "111");
+// A list literal ends at its own "}" (was: one before a ")" took the ")" too, so
+// "(a == {1}) + 5" was 0 and the rest of the expression was lost).
+smLa = {1};
+Test((smLa == {1}) + 5, 6);
+Test("s" + ({1} == {1}) + "|x", "s1|x");
+Test(({1} == {2}) + 5, 5);
 // The caught value answers .Message (was: "Object [message] doesn't exist").
 smMsg = ""; try { throw "boom"; } catch (smEx) { smMsg = smEx.Message; }
 Test(smMsg, "boom");

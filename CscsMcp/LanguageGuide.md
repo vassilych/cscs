@@ -177,7 +177,8 @@ square(12);
 ## Precompiled functions: `cfunction` and `explain_cscs`
 
 A `cfunction` is a function CSCS translates to C# and compiles, so it runs as native code instead
-of being interpreted. It declares a return type and typed parameters (`int`, `double`, `string`):
+of being interpreted. It declares a return type and typed parameters (`int`, `double`, `string`);
+an untyped parameter takes any value, as in a plain `function`:
 
 ```cscs
 cfunction double hypot(double a, double b) { return Math.Sqrt(a * a + b * b); }

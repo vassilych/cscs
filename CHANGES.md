@@ -16,6 +16,7 @@ These scripts ran before and now give a different answer.
 | **One truth rule**, used by `if`, `while`, `for`, `?:`, `!`, `&&`, `||` | A condition read the value's numeric field, so all text was false (unless an operation had left a number under it), and an empty list was true | A number is true unless it is 0 or NaN. Text is true unless it is empty, `"0"` or `"false"` (in any case). A list or map is true unless it is empty. `null` is never true |
 | **`&&` and `\|\|` give 1 or 0** | `3 \|\| 0` was 3 and `1 < 2 && 5` was 5 | 1 and 1 |
 | `0 && x \|\| 1` | 0: a false `&&` skipped the whole rest | 1: a false `&&` skips only its own right side |
+| **Chained comparisons** (`<`, `<=`, `>`, `>=`) | `1 < n < 10` was `(1 < n) < 10`: 1 or 0 compared with 10, always true | Each neighboring pair joined by `&&`, as in Python and mathematics: `1 < n && n < 10`. `==` and `!=` still compare the 1 or 0 before them (`x > 0 == y > 0`) |
 | **Compound assignment is `x = x op y`** | Text counted as 0 | `5 += "3"` is `"53"`; `s = "7"; s += 1` is `"71"`; `"5" -= 3` is the same error that `"5" - 3` gives |
 | **`++`/`--`** | `"7"++` was 1; `++` on an unset element was NaN | `"7"++` is 8 (numeric text counts as its number); anything else is `x + 1`; a postfix step returns the old value itself |
 | **`return` and `finally`** | A `return` in `try` or `catch` was ignored after `finally`; an uncaught exception won over a `return` in `finally` | As in C#: a `return` in `try` or `catch` stands, and `finally` overrides it only by returning, breaking or continuing itself |
@@ -23,10 +24,12 @@ These scripts ran before and now give a different answer.
 | **Class fields initialized in the class body** | `items = {}` was one list shared by every instance, so `b1.items.Add(x)` also showed up in `b2` | Each instance gets its own copy |
 | **Enums** | `Colors.Type` was `NONE`; `Colors.Red.Type` was the member's name; `Colors.ToString(2)` was 1 | `ENUM`; `NUMBER` (use `.Name` for the name); `"Blue"` |
 | **Named arguments** | `f(s = 1)` bound `s` and also created or overwrote a variable `s` in the caller | `f(s = 1)` only binds the parameter. Parentheses around the assignment (`f((s = 1))`), or a name that is not a parameter, still assigns |
+| **An untyped `cfunction` parameter** (`cfunction f(x)`) | Text when the function compiled: `f(5)` with `x + 1` gave `"51"`, but `6` when the function fell back to the interpreter | Any value, as in a plain `function`, compiled or not: `6`. Typed parameters (`int x`, `string s`) are unchanged, and so is `csfunction`, whose body is C# |
 | **A script function named like a command** (`show`, `copy`, `run`, ...) | Received its arguments as text: `show(n+1)` got `"n+1"` | Receives the values |
 | **Loop bodies without braces** (`for`, `while`, `do`, `foreach`) | The rest of the script ran as the body, and `do x++; while (...)` hung | The body is one statement; an `if`/`else` chain counts as one statement |
 | **Iterating a literal list** | `for (c : {"ab"})` went over the characters of `"ab"` | Goes over the elements, with `:`, `in` or `of` |
 | **A list literal as the first operand** | `{1} \|\| 0` was `[1]`: the rest of the expression was dropped | 1 |
+| **A list literal before a `)`** | `(a == {1}) + 5` was 0: the literal took the group's `)` too, and the rest of the expression was lost | 6: a literal ends at its own `}` |
 | **A bare `Trim`, `Sort`, `Reverse` or `DeepCopy` followed by an operator** | Took the rest of the expression as its arguments, and it was lost | Leaves the rest of the expression alone |
 | **A member after a subscript** | `m[0].Size` made the next plain read of `m` return `m.Size` | Stays on that one expression |
 | **Console host preprocessing** (`Utils.GetSubscript`, which moves declarations ahead of the script) | Went through a `class` or `namespace` body one statement at a time. A method could be hoisted out as a global function, or the script stopped with "Unbalanced curly braces" | The body is skipped whole. **A function declared inside a `namespace` is no longer also defined globally before the script runs**; call it through its namespace |

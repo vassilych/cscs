@@ -221,6 +221,7 @@ namespace SplitAndMerge
             RegisterFunction(Constants.SIGNAL, new SignalWaitFunction(true));
             RegisterFunction(Constants.SINGLETON, new SingletonFunction());
             RegisterFunction(Constants.SIZE, new SizeFunction());
+            RegisterFunction(Constants.LIST_OF, new ListOfFunction());
             RegisterFunction(Constants.SLEEP, new SleepFunction());
             RegisterFunction(Constants.START_DEBUGGER, new DebuggerFunction(true));
             RegisterFunction(Constants.STOP_DEBUGGER, new DebuggerFunction(false));

@@ -3511,6 +3511,41 @@ namespace SplitAndMerge
         }
     }
 
+    /// <summary>
+    /// "__ListOf(a, b)" is the list "{a, b}", built as Utils.ProcessList builds it: each item and
+    /// then the list made a map where its items are pairs. The translator writes a list literal
+    /// that is an operand -- "{k} || 0", "{1, 2} + k" -- as this call, which every path of it
+    /// knows how to compile; the interpreted function keeps the literal.
+    /// </summary>
+    class ListOfFunction : ParserFunction
+    {
+        protected override Variable Evaluate(ParsingScript script)
+        {
+            return Build(script.GetFunctionArgs());
+        }
+        protected override async Task<Variable> EvaluateAsync(ParsingScript script)
+        {
+            return Build(await script.GetFunctionArgsAsync());
+        }
+        internal static Variable Build(List<Variable> items)
+        {
+            var value = new Variable();
+            var list = new List<Variable>();
+            foreach (var item in items)
+            {
+                if (item.Type == Variable.VarType.NONE)
+                {
+                    break;
+                }
+                item.TrySetAsMap();
+                list.Add(item);
+            }
+            value.Tuple = list;
+            value.TrySetAsMap();
+            return value;
+        }
+    }
+
     class SizeFunction : ParserFunction, INumericFunction
     {
         protected override Variable Evaluate(ParsingScript script)

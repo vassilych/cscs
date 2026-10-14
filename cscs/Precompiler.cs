@@ -358,7 +358,7 @@ namespace SplitAndMerge
             if (!scriptInCSharp)
             {
                 m_cscsCode = RewriteNestedNew(RewriteIfAssignment(RewriteTernaryNew(RewriteComparisonsAsNumbers(
-                    RewriteChainedComparisons(RewriteIff(RewriteTextTimesNumber(RewriteBraceLiterals(RewriteVariableMemberCalls(RewriteVarDeclarations(RewriteCaseBlocks(RewriteSizeCalls(RewriteForEachSeparator(RewriteBracketLiterals(RewriteTypeCalls(RewritePrefixStepInIf(RewriteReturnStep(RewriteForEachLiterals(RewriteBracelessBodies(TerminateLiteralStatements(RewriteNamedArgumentCalls(NormalizeArgSpelling(m_cscsCode))))))))))))))))))))));
+                    RewriteChainedComparisons(RewriteIff(RewriteTextTimesNumber(RewriteBraceLiterals(RewriteVariableMemberCalls(RewriteVarDeclarations(RewriteCaseBlocks(RewriteSizeCalls(RewriteForEachSeparator(RewriteBracketLiterals(RewriteTypeCalls(RewritePrefixStepInIf(RewriteReturnStep(RewriteForEachLiterals(RewriteBracelessBodies(TerminateLiteralStatements(RewriteNamedArgumentCalls(RewriteListOperands(NormalizeArgSpelling(m_cscsCode)))))))))))))))))))))));
             }
             RemoveIrrelevant(m_cscsCode);
             m_assignedAnywhere = AssignedAnywhere(m_cscsCode);
@@ -410,12 +410,20 @@ namespace SplitAndMerge
                 {
                     m_untypedCSharpCode = StepValueReturns(m_untypedCSharpCode);
                 }
+                // The list operands RewriteListOperands wrote as calls, built by the runtime.
+                CSharpCode = CSharpCode.Replace(Constants.LIST_OF + "(", "CscsLate.ListOf(");
+                if (m_untypedCSharpCode != null)
+                {
+                    m_untypedCSharpCode = m_untypedCSharpCode.Replace(Constants.LIST_OF + "(", "CscsLate.ListOf(");
+                }
                 CSharpCode = RoslynCompiler.InterpreterCompoundsAndElements(RoslynCompiler.NumbersForBoolsInText(
-                    RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(CSharpCode))));
+                    RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(
+                        RoslynCompiler.SplitComparisonChains(CSharpCode)))));
                 if (m_untypedCSharpCode != null)
                 {
                     m_untypedCSharpCode = RoslynCompiler.InterpreterCompoundsAndElements(RoslynCompiler.NumbersForBoolsInText(
-                        RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(m_untypedCSharpCode))));
+                        RoslynCompiler.FixVariableEquality(RoslynCompiler.WidenIntArithmetic(
+                            RoslynCompiler.SplitComparisonChains(m_untypedCSharpCode)))));
                 }
             }
             return CSharpCode;
@@ -2341,6 +2349,14 @@ namespace SplitAndMerge
                 {
                     thrown = thrown.Substring(1, thrown.Length - 2).Trim();
                 }
+                // The interpreter throws its first argument and never reads the rest
+                // (ThrowFunction takes one item): "throw("diff=", diff)" went out as
+                // ConvertToVariable("diff=", diff), whose second parameter is a Type (CS1503).
+                var thrownParts = SplitTopLevel(thrown, ',');
+                if (thrownParts.Count > 1)
+                {
+                    thrown = thrownParts[0].Trim();
+                }
                 if (string.IsNullOrWhiteSpace(thrown))
                 {
                     return m_depth + "throw new ArgumentException(\"\");\n";
@@ -3849,7 +3865,7 @@ namespace SplitAndMerge
         static string RewriteBracelessBodies(string code)
         {
             var text = code ?? "";
-            if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\w.])(if|for|while|else)\b"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\w.])(if|for|while|else|do)\b"))
             {
                 return text;
             }
@@ -3903,6 +3919,18 @@ namespace SplitAndMerge
             {
                 int b = SkipSpaces(text, after);
                 if (b >= text.Length || text[b] == '{' || WordAt(text, b) == "if")
+                {
+                    return -1;
+                }
+                return b;
+            }
+            // "do x++; while (x < n);": the body runs up to its ";", and the "while" after it
+            // closes the loop (Interpreter.ProcessDoWhile). Without braces the translator took
+            // "do" for a call and glued the statement to a temporary's name (CS0103).
+            if (word == "do")
+            {
+                int b = SkipSpaces(text, after);
+                if (b >= text.Length || text[b] == '{')
                 {
                     return -1;
                 }
@@ -4619,10 +4647,120 @@ namespace SplitAndMerge
         }
 
         /// <summary>
+        /// A list literal that is an operand -- "{k} || 0", "{1, 2} + k", "{1} == {1}", "{} ? a : b"
+        /// -- as the call "__ListOf(...)", which builds the same list (ListOfFunction) and which the
+        /// translator compiles like any other call, its arguments in order. As written, the literal
+        /// went out as C# braces: a syntax error, or a block the statement splitter tore apart.
+        /// Only a literal with an operator on one side, after an operator, a grouping "(" or
+        /// "return", and holding no braces, ";" or ":" (a map, a nested literal, a ternary inside):
+        /// never a block, an argument, an assignment's whole value or a foreach list.
+        /// </summary>
+        static string RewriteListOperands(string code)
+        {
+            if (string.IsNullOrEmpty(code) || code.IndexOf('{') < 0)
+            {
+                return code;
+            }
+            var sb = new StringBuilder(code.Length);
+            bool inString = false;
+            char quote = '\0';
+            for (int i = 0; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    sb.Append(c);
+                    if (c == '\\' && i + 1 < code.Length) { sb.Append(code[++i]); }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; sb.Append(c); continue; }
+                if (c == '{')
+                {
+                    int close = MatchingListBrace(code, i);
+                    if (close > i && IsListOperand(code, i, close))
+                    {
+                        // "return{1,2}+k": spaces are gone by now, and the call must not join the keyword.
+                        if (sb.Length > 0 && (char.IsLetterOrDigit(sb[sb.Length - 1]) || sb[sb.Length - 1] == '_'))
+                        {
+                            sb.Append(' ');
+                        }
+                        sb.Append(Constants.LIST_OF).Append('(').Append(code, i + 1, close - i - 1).Append(')');
+                        i = close;
+                        continue;
+                    }
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        // The "}" closing the brace at "open" when nothing but text and plain characters lie
+        // between: -1 at a nested brace, a ";" or a ":" outside quotes.
+        static int MatchingListBrace(string code, int open)
+        {
+            bool inString = false;
+            char quote = '\0';
+            for (int i = open + 1; i < code.Length; i++)
+            {
+                char c = code[i];
+                if (inString)
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { inString = false; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { inString = true; quote = c; continue; }
+                if (c == '}') { return i; }
+                if (c == '{' || c == ';' || c == ':') { return -1; }
+            }
+            return -1;
+        }
+
+        static bool IsListOperand(string code, int open, int close)
+        {
+            int b = open - 1;
+            while (b >= 0 && char.IsWhiteSpace(code[b])) { b--; }
+            int a = close + 1;
+            while (a < code.Length && char.IsWhiteSpace(code[a])) { a++; }
+            char before = b >= 0 ? code[b] : '\0';
+            char after = a < code.Length ? code[a] : '\0';
+            char afterNext = a + 1 < code.Length ? code[a + 1] : '\0';
+
+            bool opAfter = "|&+-*/%<>?".IndexOf(after) >= 0 ||
+                           ((after == '=' || after == '!') && afterNext == '=');
+            bool opBefore = "|&+-*/%<>?!".IndexOf(before) >= 0 ||
+                            (before == '=' && b > 0 && "=!<>".IndexOf(code[b - 1]) >= 0);
+            if (!opBefore)
+            {
+                // A grouping "(" -- not a call's: what precedes it is no name, or is a keyword.
+                bool grouping = false;
+                if (before == '(')
+                {
+                    int w = b - 1;
+                    while (w >= 0 && char.IsWhiteSpace(code[w])) { w--; }
+                    int wordEnd = w;
+                    while (w >= 0 && (char.IsLetterOrDigit(code[w]) || code[w] == '_')) { w--; }
+                    var word = code.Substring(w + 1, wordEnd - w);
+                    grouping = word.Length == 0 ? (wordEnd < 0 || "([,=|&+-*/%<>?!".IndexOf(code[wordEnd]) >= 0)
+                                                : word == "if" || word == "while" || word == "return";
+                }
+                bool afterReturn = before == 'n' && b >= 5 && code.Substring(b - 5, 6) == "return" &&
+                                   (b < 6 || !char.IsLetterOrDigit(code[b - 6]));
+                if (!(grouping || afterReturn))
+                {
+                    return false;
+                }
+            }
+            return opBefore || opAfter;
+        }
+
+        /// <summary>
         /// Chained comparisons the way CSCS evaluates them. CSCS ranks the operators as C# does
-        /// (&lt; &lt;= &gt; &gt;= above == !=) and applies each level left to right, but every
-        /// comparison yields the number 1 or 0, which the next one compares -- so "1 &lt; n &lt; 10"
-        /// is "(1&lt;n?1:0)&lt;10" and "1 &lt; n == 1" is "(1&lt;n?1:0)==1". Copied through, both are
+        /// (&lt; &lt;= &gt; &gt;= above == !=). A chain of relational ones is each neighboring pair joined
+        /// by "&&" (since October 2026; it was 1 or 0 compared with the next), and == or != compare
+        /// the 1 or 0 of the group before -- so "1 &lt; n &lt; 10" is "(1&lt;n&&n&lt;10)" and "1 &lt; n == 1"
+        /// is "(1&lt;n?1:0)==1". Copied through, both are
         /// C#'s "bool against int" (CS0019) and fell back. Only a run of plain operands (names,
         /// numbers, members, subscripts, arithmetic) joined by two or more comparisons is
         /// rewritten; a parenthesised operand leaves the run as it was.
@@ -4850,6 +4988,12 @@ namespace SplitAndMerge
             {
                 return run;
             }
+            // A middle operand of a chain is read by two comparisons now; a step in one would
+            // run twice. Left to the interpreter.
+            if (operands.Any(o => o.Contains("++") || o.Contains("--")))
+            {
+                return run;
+            }
 
             // Split at == / != into groups of relational comparisons.
             var groups = new List<Tuple<List<string>, List<string>>>();
@@ -4884,17 +5028,23 @@ namespace SplitAndMerge
             return expr;
         }
 
-        /// <summary>A left-to-right chain of relational comparisons, as a C# bool.</summary>
+        /// <summary>A chain of relational comparisons, as a C# bool: each neighboring pair,
+        /// joined by "&&" -- "1&lt;n&lt;10" is "(1&lt;n&&n&lt;10)", as the interpreter merges it
+        /// (Parser.MergeCells). A middle operand is read twice, which the run's operands allow:
+        /// names, numbers, members and subscripts, no calls (and no steps, see RewriteComparisonRun).</summary>
         static string RelationalChain(Tuple<List<string>, List<string>> group)
         {
-            var expr = group.Item1[0];
             var ops = group.Item2;
+            if (ops.Count == 1)
+            {
+                return group.Item1[0] + ops[0] + group.Item1[1];
+            }
+            var pairs = new List<string>();
             for (int k = 0; k < ops.Count; k++)
             {
-                var step = expr + ops[k] + group.Item1[k + 1];
-                expr = k < ops.Count - 1 ? "(" + step + "?1:0)" : step;
+                pairs.Add(group.Item1[k] + ops[k] + group.Item1[k + 1]);
             }
-            return expr;
+            return "(" + string.Join("&&", pairs) + ")";
         }
 
         /// <summary>
@@ -6167,6 +6317,14 @@ namespace SplitAndMerge
                 if (literalRest.Trim(')').Length == 0)
                 {
                     result += literalRead + ")" + literalRest;
+                    return;
+                }
+                // "abc"[k].Upper: the member read off the element as the interpreter reads it
+                // (Variable.GetProperty, through ReadField). Not a call: "abc"[k].Foo() goes on.
+                var member = System.Text.RegularExpressions.Regex.Match(literalRest, @"^\.([A-Za-z_]\w*)(\)*)$");
+                if (member.Success)
+                {
+                    result += literalRead + ").ReadField(\"" + member.Groups[1].Value + "\")" + member.Groups[2].Value;
                     return;
                 }
             }
@@ -11140,6 +11298,14 @@ namespace SplitAndMerge
                     return null;
                 }
                 var target = m_paramMap.ContainsKey(name) ? m_paramMap[name] : name;
+                if (m_variableLocals.Contains(name) && !m_paramMap.ContainsKey(name))
+                {
+                    // A local holding a Variable: the interpreter's compound, as "+=" on one is
+                    // (CscsConvert.Compound). "(int)x" of a Variable did not compile (CS0030).
+                    return m_depth + target + " = CscsConvert.Compound(" + target + ", " +
+                        ReplaceArgsInString(value) + ", \"" + op + "\");\n" +
+                        RegisterVariableString(name, target);
+                }
                 var binary = op.Substring(0, op.Length - 1);
                 // An int, which converts to whatever the target is: a (double) here could not go
                 // back into an int local ("y = n; y <<= 3" was CS0266).

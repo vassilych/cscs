@@ -100,6 +100,8 @@ namespace SplitAndMerge
         public const string DECODE = "decode";
         public const string DEEP_COPY = "DeepCopy";
         public const string DEFINE_LOCAL = "DefineLocal";
+        // The list {a, b} as a call, for compiled code (Precompiler.RewriteListOperands).
+        public const string LIST_OF = "__ListOf";
         public const string DOWNLOAD = "Download";
         public const string ENV = "env";
         public const string ENCODE = "encode";

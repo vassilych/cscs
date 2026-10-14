@@ -2608,6 +2608,64 @@ is not taken for the subscript. In compiled code such a token has no name, so `P
 copied it through as written and a parameter in the index was never renamed (CS0103, a
 fallback); it is now `CscsLate.Element` over the literal, each index translated.
 
+### Untyped parameters, multi-argument throw, and the other projects again (October 2026)
+
+The probe of the author's other projects was rebuilt (its inputs had been lost): every top-level
+function of their CSCS scripts, 488 of them, declared as a `cfunction` with the same parameters.
+458 compiled. Most of the rest had untyped parameters, which a `cfunction` read as text, and then
+used them as numbers (`sin(x)`, `i < loops`, `n * factorial(n - 1)`). That was also a divergence of
+its own: `cfunction f(x) { return x + 1; }` gave `f(5)` = "51" when it compiled and 6 when it fell
+back, since the fallback runs the body as a plain function. An untyped parameter now holds whatever
+the caller passed, as in a plain function (`CompiledFunctionCreator` asks
+`GetCompiledFunctionSignature` for VARIABLE; a `csfunction`, whose body is C#, keeps text).
+`throw("diff=", diff)` threw its first argument in the interpreter (`ThrowFunction` reads one item)
+and went out as `ConvertToVariable("diff=", diff)`, CS1503; only the first argument is thrown now.
+
+476 of 488 compile. Of the 12 that do not, 8 read `init`, a global flag in their own app that
+another app defines as a function, which the probe loads into the same interpreter; 3 use `dloc`,
+a command only the CSCS-web host defines; 1 reads a caught exception's `Stack` (deliberate).
+
+### Chained comparisons, changed in the language (October 2026)
+
+`1 < n < 10` was `(1 < n) < 10`: 1 or 0 compared with 10, always true, and the compiled code
+reproduced that (`(1<n?1:0)<10`). The language changed instead, in the interpreter first: a chain of
+`<`, `<=`, `>`, `>=` is each neighboring pair joined by `&&`, as in Python. `Parser.MergeCells` keeps,
+while both cells carry a relational operator, the middle operand in the merged cell and the truth so
+far in `Variable.ChainTruth`; `==` and `!=` rank lower and still compare the 1 or 0 before them
+(`x > 0 == y > 0`). Every operand is still evaluated once, by the split. The translator's
+`RelationalChain` emits `(1<n&&n<10)`; the run's operands have no calls, and one with a step
+(`++`, `--`) leaves the run to the interpreter, since the middle operand is read twice.
+
+### Shapes of the newest features (October 2026)
+
+A probe of 30 shapes, each a cfunction and a plain function run on the same input: none disagreed,
+22 compiled. Four more compile now:
+
+- **A chain over text or Variables** (`a < b < "m"`): the source rewrite leaves a run holding a
+  quote or a call as it was, and C# parses `a < b < c` as `(a < b) < c`, a bool against text
+  (CS0019). `RoslynCompiler.SplitComparisonChains` turns it into `(a < b) && (b < c)` before the
+  repairs, when the middle operand can be read twice (a name, literal, member or element, no call);
+  `(a < b) < c`, parenthesized, is a 1 or 0 compared on purpose and stays.
+- **`do` without braces** (`do x++; while (x < n);`): `RewriteBracelessBodies` takes `do` too. The
+  translator read `do` as a call and glued the statement to a temporary's name (CS0103).
+- **A shift compound on a Variable local** (`x >>= 1`): `CscsConvert.Compound`, as `+=` on one is;
+  `(int)x` of a Variable was CS0030.
+- **A member after a literal subscript** (`"abc"[k].Upper`): read through `ReadField`, whose
+  "doesn't exist" message now keeps the script's spelling, as the interpreter's does.
+
+**List literals as operands** (`{k} || 0`, `{1, 2} + k`, `{1} == {1}`, `{} ? a : b`) compile too:
+`RewriteListOperands` writes such a literal as the call `__ListOf(...)` before translation, which every
+path of the translator compiles with its arguments in order, and the call becomes `CscsLate.ListOf`,
+which builds the list as the interpreter does (`ListOfFunction`, `Utils.ProcessList`). Only a literal
+with an operator beside it and no braces, ";" or ":" inside: over the 488 functions of the other
+projects it rewrites nothing. Comparing the two found an interpreter bug first: `ProcessList` read
+items until a ")" or the end of the script, so a literal right before a ")" took the group's ")"
+too -- `(a == {1}) + 5` was 0 and the rest was lost. It stops at its own "}" now.
+
+Still falling back, all agreeing: `return` inside
+`finally` (C# forbids it, CS0157), and a step on a string parameter (`s++`: the C# string cannot
+hold the number it becomes).
+
 ## Known limits
 
 - The translator is a token-level transpiler, not a parser. Unusual statement shapes fall

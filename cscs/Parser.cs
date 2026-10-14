@@ -786,7 +786,42 @@ namespace SplitAndMerge
             return leftCell;
         }
 
+        static bool IsRelational(string action) =>
+            action == "<" || action == ">" || action == "<=" || action == ">=";
+
+        /// <summary>
+        /// A chain of comparisons is each neighboring pair, joined by "&&", as in Python and in
+        /// mathematics: "1 &lt; n &lt; 10" is "1 &lt; n &amp;&amp; n &lt; 10". It was "(1 &lt; n) &lt; 10" -- 1 or 0
+        /// compared with 10, always true. Only &lt; &lt;= &gt; &gt;=, which share a priority; == and != rank
+        /// lower and keep comparing the 1 or 0 ("x &gt; 0 == y &gt; 0"). Every operand is evaluated
+        /// once, by the split, as before.
+        /// </summary>
         private static void MergeCells(Variable leftCell, Variable rightCell, ParsingScript script)
+        {
+            bool chained = IsRelational(leftCell.Action) && IsRelational(rightCell.Action);
+            double? earlier = IsRelational(leftCell.Action) ? leftCell.ChainTruth : null;
+            Variable middle = chained ? rightCell.Clone() : null;
+
+            MergeCellsCore(leftCell, rightCell, script);
+
+            if (earlier.HasValue)
+            {
+                leftCell.Value = earlier.Value != 0 && leftCell.Value != 0 ? 1 : 0;
+                leftCell.ChainTruth = null;
+            }
+            if (chained)
+            {
+                // The comparison's truth goes along; the cell becomes the middle operand, which
+                // the next comparison reads.
+                double truth = leftCell.Value;
+                string action = leftCell.Action;
+                leftCell.CopyValueFrom(middle);
+                leftCell.Action = action;
+                leftCell.ChainTruth = truth;
+            }
+        }
+
+        private static void MergeCellsCore(Variable leftCell, Variable rightCell, ParsingScript script)
         {
             if (leftCell.IsReturn ||
                 leftCell.Type == Variable.VarType.BREAK ||

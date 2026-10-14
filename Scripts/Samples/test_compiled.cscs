@@ -5774,6 +5774,42 @@ Test(smLit(1), smLitI(1));
 Test(smLit(1), "b!B[x");
 Test(smLit(2), smLitI(2));
 Test(is_precompiled("smLit"), 1);
+// throw with more than one argument throws the first and never reads the rest (was: CS1503, a fallback).
+cfunction smThrow(int d) { try { throw("x" + d, d, "z"); } catch (e) { return "[" + e.Message + "]"; } }
+function smThrowI(d) { try { throw("x" + d, d, "z"); } catch (e) { return "[" + e.Message + "]"; } }
+Test(smThrow(7), smThrowI(7));
+Test(smThrow(7), "[x7]");
+Test(is_precompiled("smThrow"), 1);
+// An untyped parameter takes any value, as in a plain function -- compiled or not (was: text when
+// compiled, so f(5) with x + 1 gave "51" compiled and 6 when the function fell back).
+cfunction smUntyped(x) { return Type(x) + ":" + (x + 1); }
+cfunction smUntypedFb(x) { try { y = 1; } catch (e) { print(e.Stack); } return Type(x) + ":" + (x + 1); }
+Test(smUntyped(5), "NUMBER:6");
+Test(smUntyped(5), smUntypedFb(5));
+Test(smUntyped("5"), "STRING:51");
+Test(is_precompiled("smUntyped") + is_precompiled("smUntypedFb"), 1);
+// Compiled since October 2026: a chain over text or Variables, a do without braces, a shift
+// compound on a Variable local, a member after a literal subscript.
+cfunction smChainV(variable a, variable b) { return (a < b < "m") + "|" + (a <= b > 2); }
+function smChainVI(a, b) { return (a < b < "m") + "|" + (a <= b > 2); }
+Test(smChainV("a", "b") + smChainV(3, 1) + smChainV("b", "a"), smChainVI("a", "b") + smChainVI(3, 1) + smChainVI("b", "a"));
+cfunction smDoB(int n) { x = 0; t = ""; do if (x % 2 == 0) t += "e"; else t += "o"; while (++x < n); return t + x; }
+function smDoBI(n) { x = 0; t = ""; do if (x % 2 == 0) t += "e"; else t += "o"; while (++x < n); return t + x; }
+Test(smDoB(5), smDoBI(5));
+Test(smDoB(5), "eoeoe5");
+cfunction smShiftV(int n) { x = n << 3; x >>= 2; x <<= 1; x = x + "!"; return x; }
+function smShiftVI(n) { x = n << 3; x >>= 2; x <<= 1; x = x + "!"; return x; }
+Test(smShiftV(3) + smShiftV(-5), smShiftVI(3) + smShiftVI(-5));
+cfunction smLitMem(int k) { return "aBc"[k].Upper + "xyz"[k].Size; }
+function smLitMemI(k) { return "aBc"[k].Upper + "xyz"[k].Size; }
+Test(smLitMem(1), smLitMemI(1));
+Test(is_precompiled("smChainV") + is_precompiled("smDoB") + is_precompiled("smShiftV") + is_precompiled("smLitMem"), 4);
+// A list literal as an operand compiles (CscsLate.ListOf; was: C# braces, a fallback).
+cfunction smListOp(int k) { return ({k} || 0) + "|" + ({} && 1) + "|" + ({1, k} == {1, k}) + "|" + ({k} ? "y" : "n") + "|" + ({1, 2} + k); }
+function smListOpI(k) { return ({k} || 0) + "|" + ({} && 1) + "|" + ({1, k} == {1, k}) + "|" + ({k} ? "y" : "n") + "|" + ({1, 2} + k); }
+Test(smListOp(3), smListOpI(3));
+Test(smListOp(3), "1|0|1|y|[1, 2]3");
+Test(is_precompiled("smListOp"), 1);
 
 testSummary("test_compiled.cscs");
 

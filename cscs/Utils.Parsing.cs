@@ -77,6 +77,12 @@ namespace SplitAndMerge
                  action != "<=" && action != ">=" && action != "===" && action != "!=="))
             {
                 script.Pointer = start;
+                // A last argument's ")", as GetItem takes it after any other value: ProcessList
+                // stops at its own "}" now.
+                if (eatLast)
+                {
+                    script.MoveForwardIf(Constants.END_ARG, Constants.SPACE);
+                }
                 return list;
             }
             var interpreter = script.InterpreterInstance;
@@ -159,7 +165,11 @@ namespace SplitAndMerge
             List<Variable> args = new List<Variable>();
             var rest = script.Rest;
             script.MoveForwardIf(Constants.START_GROUP); // Skip the first brace.
-            while (script.StillValid())
+            // The items end at this literal's own "}". Read until the end of the script, the
+            // literal went on into what followed it inside a group: "({1} == {1}) + \"|x\"" took
+            // "== {1}" as more items, answered 0 and lost the rest.
+            int end = ListLiteralEnd(script.String, script.Pointer);
+            while (script.StillValid() && (end < 0 || script.Pointer <= end))
             {
                 Variable item = Utils.GetItem(script);
                 if (item.Type == Variable.VarType.NONE)
@@ -173,12 +183,47 @@ namespace SplitAndMerge
                     break;
                 }
             }
+            if (end >= 0)
+            {
+                // Right after the "}", even when the last item's read took the ")" after it --
+                // the enclosing group's: "(a == {1}) + 5" lost its ")" and then the "+ 5".
+                script.Pointer = end + 1;
+            }
             var rest2 = script.Rest;
             value.Tuple = args;
             value.TrySetAsMap();
 
             return value;
         }
+        /// <summary>The "}" closing a list literal whose items start at "from" (just past its "{"),
+        /// past nested braces and quoted text; -1 when there is none.</summary>
+        static int ListLiteralEnd(string text, int from)
+        {
+            int depth = 0;
+            char quote = '\0';
+            for (int i = from; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (quote != '\0')
+                {
+                    if (c == '\\') { i++; }
+                    else if (c == quote) { quote = '\0'; }
+                    continue;
+                }
+                if (c == '"' || c == '\'') { quote = c; }
+                else if (c == '{') { depth++; }
+                else if (c == '}')
+                {
+                    if (depth == 0)
+                    {
+                        return i;
+                    }
+                    depth--;
+                }
+            }
+            return -1;
+        }
+
         public static Variable ProcessArrayMap(ParsingScript script)
         {
             bool isList = true;
@@ -871,7 +916,8 @@ namespace SplitAndMerge
             return args;
         }
 
-        public static string[] GetCompiledFunctionSignature(ParsingScript script, out Dictionary<string, Variable> dict)
+        public static string[] GetCompiledFunctionSignature(ParsingScript script, out Dictionary<string, Variable> dict,
+            Variable.VarType untyped = Variable.VarType.STRING)
         {
             script.MoveForwardIf(Constants.START_ARG, Constants.SPACE);
 
@@ -909,7 +955,7 @@ namespace SplitAndMerge
                 string[] pair = arg1.Split(sep, StringSplitOptions.RemoveEmptyEntries);
                 var pair1 = pair[0];
                 var pair2 = pair[pair.Length - 1];
-                Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair1) : Variable.VarType.STRING;
+                Variable.VarType type = pair.Length > 1 ? Constants.StringToType(pair1) : untyped;
                 dict.Add(pair2, new Variable(type));
                 args[i] = defValue == null ? pair2 : pair2 + " = " + defValue;
             }
